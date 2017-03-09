@@ -26,13 +26,14 @@ class Reader(Iterator):
         raise ArmyAntException("Reader not implemented")
 
 class Document(object):
-    def __init__(self, text, triples = None):
+    def __init__(self, doc_id, text, triples = None):
+        self.doc_id = doc_id
         self.text = text
         self.triples = triples
 
     def __str__(self):
-        return '-----------------\nTEXT:\n%s\n\nTRIPLES:\n%s\n-----------------\n' % (
-            self.text, '\n'.join([str(triple) for triple in self.triples]))
+        return '-----------------\nDOC ID:\n%s\n\nTEXT:\n%s\n\nTRIPLES:\n%s\n-----------------\n' % (
+            self.doc_id, self.text, '\n'.join([str(triple) for triple in self.triples]))
 
 class WikipediaDataReader(Reader):
     def __init__(self, source_path):
@@ -54,18 +55,21 @@ class WikipediaDataReader(Reader):
         return triples
 
     def next(self):
+        url = None
         entity = None
         html = ''
         for line in self.f:
             if line == '\n':
                 return Document(
+                    doc_id = url,
                     text = self.to_plain_text(html),
                     triples = self.to_triples(entity, html))
 
             elif line.startswith('url='):
-                match = re.search(r'url=http://en\.wikipedia\.org/wiki/(.*)', line.strip())
+                match = re.search(r'url=(http://en\.wikipedia\.org/wiki/(.*))', line.strip())
                 if match:
-                    entity = match.group(1).replace('_', ' ')
+                    url = match.group(1)
+                    entity = match.group(2).replace('_', ' ')
 
             else:
                 html = html + line
