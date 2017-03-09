@@ -25,7 +25,9 @@ class Index(object):
         raise ArmyAntException("Graph index not implemented")
 
 class GraphOfWord(Index):
-    pass
+    def index(self):
+        for item in self.reader:
+            print(item)
 
 class GraphOfEntity(Index):
     pass
