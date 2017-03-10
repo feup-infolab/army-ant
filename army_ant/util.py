@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf8 -*-
 #
 # util.py
@@ -19,4 +19,4 @@ def html_to_text(html):
     chunks = [phrase.strip() for line in lines for phrase in line.split(' ')]
     text = ' '.join(chunk for chunk in chunks if chunk)
     
-    return text.encode('utf-8')
+    return text#.encode('utf-8')

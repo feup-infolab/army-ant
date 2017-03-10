@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf8 -*-
 #
 # reader.py
@@ -7,11 +7,10 @@
 
 import tarfile, re
 from bs4 import BeautifulSoup, SoupStrainer
-from collections import Iterator
-from util import html_to_text
-from exception import ArmyAntException
+from army_ant.util import html_to_text
+from army_ant.exception import ArmyAntException
 
-class Reader(Iterator):
+class Reader(object):
     @staticmethod
     def factory(source_path, source_reader):
         if source_reader == 'wikipedia_data':
@@ -22,8 +21,11 @@ class Reader(Iterator):
     def __init__(self, source_path):
         self.source_path = source_path
 
-    def next(self):
-        raise ArmyAntException("Reader not implemented")
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        raise ArmyAntException("Reader __next__ not implemented")
 
 class Document(object):
     def __init__(self, doc_id, text, triples = None):
@@ -45,7 +47,7 @@ class WikipediaDataReader(Reader):
         return html_to_text(html)
 
     def to_triples(self, entity, html):
-        soup = BeautifulSoup(html, parseOnlyThese=SoupStrainer('a'))
+        soup = BeautifulSoup(html, 'html.parser', parse_only=SoupStrainer('a'))
 
         triples = []
         for link in soup:
@@ -54,11 +56,12 @@ class WikipediaDataReader(Reader):
 
         return triples
 
-    def next(self):
+    def __next__(self):
         url = None
         entity = None
         html = ''
         for line in self.f:
+            line = line.decode('utf-8')
             if line == '\n':
                 return Document(
                     doc_id = url,
