@@ -11,11 +11,14 @@ from army_ant.reader import Reader
 from army_ant.index import Index
 
 logging.basicConfig(
-    format='army-ant: %(levelname)s: %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S')
-logging.getLogger().setLevel(logging.DEBUG)
+    format='army-ant: [%(name)s] %(levelname)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    level=logging.INFO)
 
 class CommandLineInterface(object):
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+
     def index(self, source_path, source_reader, index_path, index_type='gow'):
         try:
             reader = Reader.factory(source_path, source_reader)
@@ -23,7 +26,7 @@ class CommandLineInterface(object):
             index.index()
 
         except ArmyAntException as e:
-            logging.error(e)
+            self.logger.error(e)
 
 if __name__ == '__main__':
     fire.Fire(CommandLineInterface)

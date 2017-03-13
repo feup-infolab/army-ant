@@ -3,4 +3,5 @@ gremlinrestclient
 bs4
 nltk==3.2.1
 html5lib
-goblin
+aiogremlin
+aiocache

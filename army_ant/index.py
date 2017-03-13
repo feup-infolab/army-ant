@@ -6,15 +6,13 @@
 # 2017-03-09
 
 import logging, string, asyncio
-from goblin import driver
-from functools import lru_cache
+from aiogremlin import Cluster
+from threading import RLock
 from concurrent.futures import ThreadPoolExecutor
 from nltk import word_tokenize
 from nltk.corpus import stopwords
-from army_ant.gremlin import load_gremlin_script
+from army_ant.util import load_gremlin_script
 from army_ant.exception import ArmyAntException
-
-THREAD_POOL = ThreadPoolExecutor(10)
 
 class Index(object):
     @staticmethod
@@ -34,59 +32,59 @@ class Index(object):
         raise ArmyAntException("Graph index not implemented")
 
 class GraphOfWord(Index):
-    def __init__(self, index_path, index_type):
+    def __init__(self, index_path, index_type, window_size=3):
         super(GraphOfWord, self).__init__(index_path, index_type)
-        #self.client = gremlinrestclient.GremlinRestClient()
+        self.window_size = 3
+        self.logger = logging.getLogger(__name__)
+    
+    # TODO cache results without aiocache (has logging issue; cannot disable)
+    async def get_or_create_vertex(self, vertex_name, data=None):
+        result_set = await self.client.submit(
+            load_gremlin_script('get_or_create_vertex'),
+            {'vertex_name': vertex_name, 'data': data})
+        results = await result_set.all()
+        return results[0] if len(results) > 0 else None
 
-    @lru_cache(maxsize=500)
-    async def get_or_create_vertex(self, loop, vertex_name, data=None):
-        logging.debug(vertex_name)
-        #resp = self.client.execute(
-            #load_gremlin_script('get_or_create_vertex'),
-            #bindings={'vertex_name': vertex_name})
-        conn = await driver.Connection.open('ws://localhost:8182/gremlin', loop)
-        async with conn:
-            print(conn.submit(
-                gremlin=load_gremlin_script('get_or_create_vertex'),
-                bindings={'vertex_name': vertex_name}))
-
-        #logging.debug(resp)
-        #return resp.data
-
-    def create_edge(self, source_vertex, target_vertex, edge_type='before', data=None):
-        pass
+    async def get_or_create_edge(self, source_vertex, target_vertex, edge_type='before', data=None):
+        result_set = await self.client.submit(
+            load_gremlin_script('get_or_create_edge'), {
+                'source_id': source_vertex.id,
+                'target_id': target_vertex.id,
+                'edge_type': edge_type,
+                'data': data
+            })
+        results = await result_set.all()
+        return results[0] if len (results) > 0 else None
 
     def index(self):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.index_async(loop))
-        loop.close()
+        self.loop = asyncio.get_event_loop()
+        try:
+            return self.loop.run_until_complete(self.index_async())
+        finally:
+            self.loop.run_until_complete(self.loop.shutdown_asyncgens())
+            self.loop.close()
 
-    #async def index_async(self, loop):
-        #script = "g.addV('developer').property(k1, v1)"
-        #bindings = {'k1': 'name', 'v1': 'Leif'}
-        #conn = await driver.Connection.open(
-            #'ws://localhost:8182/gremlin', loop)
-        #async with conn:
-            #resp = await conn.submit(gremlin=script, bindings=bindings)
-            #async for msg in resp:
-                #print(msg)
+    async def index_async(self):
+        self.cluster = await Cluster.open(self.loop)
+        self.client = await self.cluster.connect()
 
-    async def index_async(self, loop):
         for doc in self.reader:
             tokens = word_tokenize(doc.text.lower())
             tokens = [token for token in tokens if token not in stopwords.words('english') and not token[0] in string.punctuation]
+            # TODO generate sliding windows of size 3
 
-            for i in range(len(tokens)-1):
-                #source_vertex = await self.get_or_create_vertex(tokens[i])
-                #target_vertex = await self.get_or_create_vertex(tokens[i+1])
-                futures = [
-                    loop.run_in_executor(THREAD_POOL, self.get_or_create_vertex, tokens[i]),
-                    loop.run_in_executor(THREAD_POOL, self.get_or_create_vertex, tokens[i+1])
-                ]
-                await asyncio.wait(futures)
-                for future in futures:
-                    print(future.result())
-                #self.create_edge(source_vertex, target_vertex, data={'doc_id': doc.doc_id})
+            self.logger.info("Indexing %s" % doc.doc_id)
+            self.logger.debug(doc.text)
+
+            for i in range(len(tokens)-self.window_size):
+                for j in range(1, self.window_size + 1):
+                    self.logger.debug("%s -> %s" % (tokens[i], tokens[i+j]))
+                    source_vertex = await self.get_or_create_vertex(tokens[i])
+                    target_vertex = await self.get_or_create_vertex(tokens[i+j])
+                    edge = await self.get_or_create_edge(
+                        source_vertex, target_vertex, data={'doc_id': doc.doc_id})
+
+        await self.cluster.close()
 
 class GraphOfEntity(Index):
     pass

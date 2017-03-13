@@ -5,6 +5,7 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
+import os, logging
 from bs4 import BeautifulSoup
 
 def html_to_text(html):
@@ -20,3 +21,7 @@ def html_to_text(html):
     text = ' '.join(chunk for chunk in chunks if chunk)
     
     return text#.encode('utf-8')
+
+def load_gremlin_script(script_name):
+    with open(os.path.join('gremlin', script_name + '.groovy'), 'r') as f:
+        return f.read()
