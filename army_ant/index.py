@@ -31,6 +31,9 @@ class Index(object):
     def index(self):
         raise ArmyAntException("Graph index not implemented")
 
+    def query(self, query):
+        raise ArmyAntException("Graph query not implemented")
+
 class GraphOfWord(Index):
     def __init__(self, index_path, index_type, window_size=3):
         super(GraphOfWord, self).__init__(index_path, index_type)
@@ -63,6 +66,9 @@ class GraphOfWord(Index):
         finally:
             self.loop.run_until_complete(self.loop.shutdown_asyncgens())
             self.loop.close()
+
+    def query(self, query):
+        pass
 
     async def index_async(self):
         self.cluster = await Cluster.open(self.loop)
