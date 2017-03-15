@@ -15,18 +15,23 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S',
     level=logging.INFO)
 
-class CommandLineInterface(object):
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
-    def index(self, source_path, source_reader, index_path, index_type='gow'):
+class CommandLineInterface(object):
+    def index(self, source_path, source_reader, index_location='localhost', index_type='gow'):
         try:
             reader = Reader.factory(source_path, source_reader)
-            index = Index.factory(reader, index_path, index_type)
+            index = Index.factory(reader, index_location, index_type)
             index.index()
-
         except ArmyAntException as e:
-            self.logger.error(e)
+            logger.error(e)
+
+    def search(self, query, index_location='localhost', index_type='gow'):
+        try:
+            index = Index.open(index_location, index_type)
+            index.search(query)
+        except ArmyAntException as e:
+            logger.error(e)
 
 if __name__ == '__main__':
     fire.Fire(CommandLineInterface)
