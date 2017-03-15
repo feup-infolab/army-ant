@@ -69,7 +69,7 @@ class WikipediaDataReader(Reader):
                     triples = self.to_triples(entity, html))
 
             elif line.startswith('url='):
-                match = re.search(r'url=(http://en\.wikipedia\.org/wiki/(.*))', line.strip())
+                match = re.search(r'url=(http://[^.]+\.wikipedia\.org/wiki/(.*))', line.strip())
                 if match:
                     url = match.group(1)
                     entity = match.group(2).replace('_', ' ')

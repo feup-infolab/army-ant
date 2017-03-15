@@ -1,9 +1,9 @@
 get_or_create_edge: {
-  def it = g.V(source_id).out().hasId(target_id)
+  def it = g.V(sourceID).outE().has("doc_id", data["doc_id"]).inV().hasId(targetID)
   if (it.hasNext()) {
     it.next()
   } else {
-    edge = g.V(source_id).addE(edge_type).to(g.V(target_id))
+    edge = g.V(sourceID).addE(edgeType).to(g.V(targetID))
     if (data != null) {
       data.each { k, v -> 
         edge.property(k, v)

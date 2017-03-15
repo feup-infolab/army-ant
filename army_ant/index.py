@@ -59,16 +59,16 @@ class GraphOfWord(Index):
     async def get_or_create_vertex(self, vertex_name, data=None):
         result_set = await self.client.submit(
             load_gremlin_script('get_or_create_vertex'),
-            {'vertex_name': vertex_name, 'data': data})
+            {'vertexName': vertex_name, 'data': data})
         results = await result_set.all()
         return results[0] if len(results) > 0 else None
 
     async def get_or_create_edge(self, source_vertex, target_vertex, edge_type='before', data=None):
         result_set = await self.client.submit(
             load_gremlin_script('get_or_create_edge'), {
-                'source_id': source_vertex.id,
-                'target_id': target_vertex.id,
-                'edge_type': edge_type,
+                'sourceID': source_vertex.id,
+                'targetID': target_vertex.id,
+                'edgeType': edge_type,
                 'data': data
             })
         results = await result_set.all()
@@ -110,7 +110,7 @@ class GraphOfWord(Index):
 
         result_set = await self.client.submit(
             load_gremlin_script('graph_of_word_query'), {
-                'query_tokens': query_tokens
+                'queryTokens': query_tokens
             })
         results = await result_set.all()
         print(results)
