@@ -9,6 +9,7 @@ import fire, logging
 from army_ant.exception import ArmyAntException
 from army_ant.reader import Reader
 from army_ant.index import Index
+from army_ant.server import app
 
 logging.basicConfig(
     format='army-ant: [%(name)s] %(levelname)s: %(message)s',
@@ -32,6 +33,9 @@ class CommandLineInterface(object):
             index.search(query)
         except ArmyAntException as e:
             logger.error(e)
+
+    def server(self):
+        app.run(debug=True)
 
 if __name__ == '__main__':
     fire.Fire(CommandLineInterface)

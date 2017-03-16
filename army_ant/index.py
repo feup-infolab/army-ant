@@ -102,8 +102,10 @@ class GraphOfWord(Index):
             self.loop.run_until_complete(self.loop.shutdown_asyncgens())
             self.loop.close()
 
-    async def search_async(self, query):
-        self.cluster = await Cluster.open(self.loop, hosts=[self.index_location])
+    async def search_async(self, query, loop=None):
+        if loop is None: loop = self.loop
+
+        self.cluster = await Cluster.open(loop, hosts=[self.index_location])
         self.client = await self.cluster.connect()
 
         query_tokens = self.analyze(query)
