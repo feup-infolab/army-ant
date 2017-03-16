@@ -120,7 +120,9 @@ class GraphOfWord(Index):
 
         return results[0] if len (results) > 0 else None
 
-    def search(self, query):
+    def search(self, query, loop=None):
+        if loop: return loop.run_until_complete(self.search_async(query, loop))
+
         self.loop = asyncio.get_event_loop()
         try:
             return self.loop.run_until_complete(self.search_async(query))

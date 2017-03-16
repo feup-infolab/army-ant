@@ -5,11 +5,11 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import fire, logging
+import fire, logging, asyncio
 from army_ant.exception import ArmyAntException
 from army_ant.reader import Reader
 from army_ant.index import Index
-from army_ant.server import app
+from army_ant.server import run_app
 
 logging.basicConfig(
     format='army-ant: [%(name)s] %(levelname)s: %(message)s',
@@ -30,12 +30,12 @@ class CommandLineInterface(object):
     def search(self, query, index_location='localhost', index_type='gow'):
         try:
             index = Index.open(index_location, index_type)
-            index.search(query)
+            index.search(query, self.loop)
         except ArmyAntException as e:
             logger.error(e)
 
     def server(self):
-        app.run(debug=True)
+        run_app(asyncio.get_event_loop())
 
 if __name__ == '__main__':
     fire.Fire(CommandLineInterface)

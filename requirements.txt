@@ -6,3 +6,6 @@ html5lib
 aiogremlin
 aiocache
 flask
+aiohttp
+aiohttp_jinja2
+jinja2

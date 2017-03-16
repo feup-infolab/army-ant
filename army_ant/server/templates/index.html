@@ -1,7 +1,7 @@
 <!doctype html>
 <title>Hello from Flask</title>
-{% if format == 'html' %}
-  <h1>Hello {{ format }}!</h1>
+{% if results|length > 0 %}
+  <h1>Hello {{ results }}!</h1>
 {% else %}
-  <h1>Hello, World!</h1>
+  <h1>No results found.</h1>
 {% endif %}
