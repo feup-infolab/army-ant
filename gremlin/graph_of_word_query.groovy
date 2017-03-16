@@ -24,9 +24,21 @@ graph_of_word_query: {
     .by(bothE().groupCount().by("doc_id"))
     .collectEntries { e -> [(e["v"]): e["docFreq"].size()] }
 
-  docLengths = g.E().group().by("doc_id").by(inV().count())
+  docLengthsPipe = g.E().group().by("doc_id").by(inV().count())
 
-  #avgDocLength = 
+  docLengths = []
+  docLengthsPipe.clone().fill(docLengths)
 
-  docsIndegreePerToken
+  avgDocLength = docLengthsPipe.clone()[0].values().sum() / docLengthsPipe.clone()[0].values().size()
+  
+  corpusSize = g.E().values("doc_id").unique().size()
+
+  indegreePerTokenPerDoc.collect { token ->
+    token['indegree'].collect { docID, indegree ->
+      ['docID': docID, 'twIdf': twIdf(indegree, docFrequencyPerToken[token['v']], docLengths[docID][0], avgDocLength, corpusSize)]
+    }
+  }.flatten()
+  .groupBy { item -> item['docID'] }
+  .collectEntries { docID, item -> [docID, item['twIdf'].sum()] }
+  .sort { -it.value }
 }
