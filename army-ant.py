@@ -8,8 +8,10 @@
 import fire, logging, asyncio
 from army_ant.exception import ArmyAntException
 from army_ant.reader import Reader
+from army_ant.database import Database
 from army_ant.index import Index
 from army_ant.server import run_app
+from army_ant.extras import fetch_wikipedia_images
 
 logging.basicConfig(
     format='army-ant: [%(name)s] %(levelname)s: %(message)s',
@@ -19,28 +21,42 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class CommandLineInterface(object):
-    def index(self, source_path, source_reader, index_location='localhost', index_type='gow'):
+    def index(self, source_path, source_reader, index_location='localhost', index_type='gow', db_location='localhost', db_type='mongo'):
         try:
             reader = Reader.factory(source_path, source_reader)
 
             loop = asyncio.get_event_loop()
             try:
                 index = Index.factory(reader, index_location, index_type, loop)
-                loop.run_until_complete(index.index())
+                if db_location and db_type:
+                    db = Database.factory(db_location, db_type, loop)
+                    loop.run_until_complete(db.store(index.index()))
+                else:
+                    loop.run_until_complete(index.index())
             finally:
                 loop.run_until_complete(loop.shutdown_asyncgens())
                 loop.close()
         except ArmyAntException as e:
             logger.error(e)
 
-    def search(self, query, index_location='localhost', index_type='gow'):
+    def search(self, query, index_location='localhost', index_type='gow', db_location='localhost', db_type='mongo'):
         try:
             loop = asyncio.get_event_loop()
             try:
                 index = Index.open(index_location, index_type, loop)
                 results = loop.run_until_complete(index.search(query))
+
+                if db_location and db_type:
+                    db = Database.factory(db_location, db_type, loop)
+                    metadata = loop.run_until_complete(db.retrieve(results))
+                
                 for (result, i) in zip(results, range(len(results))):
                     print("===> %3d %7.2f %s" % (i+1, result['score'], result['docID']))
+                    doc_id = result['docID']
+                    if doc_id in metadata:
+                        for item in metadata[doc_id].items():
+                            print("\t%10s: %s" % item)
+                        print()
             finally:
                 loop.run_until_complete(loop.shutdown_asyncgens())
                 loop.close()
@@ -51,6 +67,14 @@ class CommandLineInterface(object):
         loop = asyncio.get_event_loop()
         try:
             run_app(loop)
+        finally:
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.close()
+
+    def fetch_wikipedia_images(self, db_location='localhost', db_type='mongo'):
+        loop = asyncio.get_event_loop()
+        try:
+            loop.run_until_complete(fetch_wikipedia_images(db_location, db_type, loop))
         finally:
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()

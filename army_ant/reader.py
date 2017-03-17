@@ -28,14 +28,15 @@ class Reader(object):
         raise ArmyAntException("Reader __next__ not implemented")
 
 class Document(object):
-    def __init__(self, doc_id, text, triples = None):
+    def __init__(self, doc_id, text, triples = None, metadata = None):
         self.doc_id = doc_id
         self.text = text
         self.triples = triples
+        self.metadata = metadata
 
     def __str__(self):
-        return '-----------------\nDOC ID:\n%s\n\nTEXT:\n%s\n\nTRIPLES:\n%s\n-----------------\n' % (
-            self.doc_id, self.text, '\n'.join([str(triple) for triple in self.triples]))
+        return '-----------------\nDOC ID:\n%s\n\nTEXT:\n%s\n\nTRIPLES:\n%s\n\nMETADATA:\n%s\n-----------------\n' % (
+            self.doc_id, self.text, '\n'.join([str(triple) for triple in self.triples]), '\n'.join([str((k, v)) for k, v in self.metadata.items()]))
 
 class WikipediaDataReader(Reader):
     def __init__(self, source_path):
@@ -66,7 +67,8 @@ class WikipediaDataReader(Reader):
                 return Document(
                     doc_id = url,
                     text = self.to_plain_text(html),
-                    triples = self.to_triples(entity, html))
+                    triples = self.to_triples(entity, html),
+                    metadata = { 'url': url, 'name': entity })
 
             elif line.startswith('url='):
                 match = re.search(r'url=(http://[^.]+\.wikipedia\.org/wiki/(.*))', line.strip())

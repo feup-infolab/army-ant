@@ -1,7 +1,8 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ app.router.static.url(filename='img/ant_army_logo_2.png') }}" />
+    <!--<meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />-->
     <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/spectre.css/dist/spectre.min.css') }}" />
     <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/font-awesome/css/font-awesome.min.css') }}" />
     <link rel="stylesheet" href="{{ app.router.static.url(filename='css/army-ant.css') }}" />
@@ -66,8 +67,14 @@
 
             {% else %}
             
-            <th>Document</th>
+            {% if metadata|length > 0 %}
+
+            <th>Image</th>
+
+            {% endif %}
             
+            <th>Document</th>
+
             {% endif %}
           </tr>
         </thead>
@@ -84,7 +91,8 @@
           {% else %}
 
           <tr>
-            <td> <a href="{{ result.docID }}" target="_blank">{{ result.docID }}</a> </td>
+            <td> <img class="image" src="{{ metadata[result.docID].img_url }}" /> </td>
+            <td> <a href="{{ metadata[result.docID].url }}" target="_blank">{{ metadata[result.docID].name }}</a> </td>
           </tr>
 
           {% endif %}

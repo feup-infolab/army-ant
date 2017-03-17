@@ -19,3 +19,8 @@
 .form-select {
   width: 100% !important;
 }
+
+.image {
+  max-width: 80px;
+  max-height: 150px;
+}

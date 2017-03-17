@@ -5,7 +5,7 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import logging, string, asyncio
+import logging, string, asyncio, pymongo
 from aiogremlin import Cluster
 from threading import RLock
 from concurrent.futures import ThreadPoolExecutor
@@ -92,6 +92,8 @@ class GraphOfWord(Index):
                     target_vertex = await self.get_or_create_vertex(tokens[i+j])
                     edge = await self.get_or_create_edge(
                         source_vertex, target_vertex, data={'doc_id': doc.doc_id})
+
+            yield doc
 
         await self.cluster.close()
 
