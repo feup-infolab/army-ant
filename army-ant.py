@@ -22,20 +22,38 @@ class CommandLineInterface(object):
     def index(self, source_path, source_reader, index_location='localhost', index_type='gow'):
         try:
             reader = Reader.factory(source_path, source_reader)
-            index = Index.factory(reader, index_location, index_type)
-            index.index()
+
+            loop = asyncio.get_event_loop()
+            try:
+                index = Index.factory(reader, index_location, index_type, loop)
+                loop.run_until_complete(index.index())
+            finally:
+                loop.run_until_complete(loop.shutdown_asyncgens())
+                loop.close()
         except ArmyAntException as e:
             logger.error(e)
 
     def search(self, query, index_location='localhost', index_type='gow'):
         try:
-            index = Index.open(index_location, index_type)
-            index.search(query, self.loop)
+            loop = asyncio.get_event_loop()
+            try:
+                index = Index.open(index_location, index_type, loop)
+                results = loop.run_until_complete(index.search(query))
+                for (result, i) in zip(results, range(len(results))):
+                    print("===> %3d %7.2f %s" % (i+1, result['score'], result['docID']))
+            finally:
+                loop.run_until_complete(loop.shutdown_asyncgens())
+                loop.close()
         except ArmyAntException as e:
             logger.error(e)
 
     def server(self):
-        run_app(asyncio.get_event_loop())
+        loop = asyncio.get_event_loop()
+        try:
+            run_app(loop)
+        finally:
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.close()
 
 if __name__ == '__main__':
     fire.Fire(CommandLineInterface)

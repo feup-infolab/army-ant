@@ -1,0 +1,8 @@
+{
+  "name": "army-ant",
+  "version": "0.0.1",
+  "dependencies": {
+    "spectre.css": "0.2.9",
+    "font-awesome": "4.7.0"
+  }
+}

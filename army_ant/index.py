@@ -18,36 +18,37 @@ logger = logging.getLogger(__name__)
 
 class Index(object):
     @staticmethod
-    def factory(reader, index_location, index_type):
+    def factory(reader, index_location, index_type, loop):
         if index_type == 'gow':
-            return GraphOfWord(reader, index_location)
+            return GraphOfWord(reader, index_location, loop)
         elif index_type == 'goe':
-            return GraphOfEntity(reader, index_location)
+            return GraphOfEntity(reader, index_location, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 
     @staticmethod
-    def open(index_location, index_type):
+    def open(index_location, index_type, loop):
         if index_type == 'gow':
-            return GraphOfWord(None, index_location, index_type)
+            return GraphOfWord(None, index_location, loop)
         elif index_type == 'goe':
-            return GraphOfEntity(None, index_location, index_type)
+            return GraphOfEntity(None, index_location, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 
-    def __init__(self, reader, index_location):
+    def __init__(self, reader, index_location, loop):
         self.reader = reader
         self.index_location = index_location
+        self.loop = loop
 
-    def index(self):
-        raise ArmyAntException("Graph index not implemented")
+    async def index(self):
+        raise ArmyAntException("Index not implemented for %s" % self.__class__.__name__)
 
-    def search(self, query):
-        raise ArmyAntException("Graph search not implemented")
+    async def search(self, query):
+        raise ArmyAntException("Search not implemented for %s" % self.__class__.__name__)
 
 class GraphOfWord(Index):
-    def __init__(self, index_location, index_type, window_size=3):
-        super(GraphOfWord, self).__init__(index_location, index_type)
+    def __init__(self, reader, index_location, loop, window_size=3):
+        super().__init__(reader, index_location, loop)
         self.window_size = 3
     
     def analyze(self, text):
@@ -74,7 +75,7 @@ class GraphOfWord(Index):
         results = await result_set.all()
         return results[0] if len (results) > 0 else None
 
-    async def index_async(self):
+    async def index(self):
         self.cluster = await Cluster.open(self.loop, hosts=[self.index_location])
         self.client = await self.cluster.connect()
 
@@ -94,18 +95,8 @@ class GraphOfWord(Index):
 
         await self.cluster.close()
 
-    def index(self):
-        self.loop = asyncio.get_event_loop()
-        try:
-            return self.loop.run_until_complete(self.index_async())
-        finally:
-            self.loop.run_until_complete(self.loop.shutdown_asyncgens())
-            self.loop.close()
-
-    async def search_async(self, query, loop=None):
-        if loop is None: loop = self.loop
-
-        self.cluster = await Cluster.open(loop, hosts=[self.index_location])
+    async def search(self, query):
+        self.cluster = await Cluster.open(self.loop, hosts=[self.index_location])
         self.client = await self.cluster.connect()
 
         query_tokens = self.analyze(query)
@@ -115,20 +106,9 @@ class GraphOfWord(Index):
                 'queryTokens': query_tokens
             })
         results = await result_set.all()
-        print(results)
         await self.cluster.close()
 
-        return results[0] if len (results) > 0 else None
-
-    def search(self, query, loop=None):
-        if loop: return loop.run_until_complete(self.search_async(query, loop))
-
-        self.loop = asyncio.get_event_loop()
-        try:
-            return self.loop.run_until_complete(self.search_async(query))
-        finally:
-            self.loop.run_until_complete(self.loop.shutdown_asyncgens())
-            self.loop.close()
+        return results
 
 class GraphOfEntity(Index):
     pass

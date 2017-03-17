@@ -39,6 +39,6 @@ graph_of_word_query: {
     }
   }.flatten()
   .groupBy { item -> item['docID'] }
-  .collectEntries { docID, item -> [docID, item['twIdf'].sum()] }
-  .sort { -it.value }
+  .collect { docID, item -> [docID: docID, score: item['twIdf'].sum()] }
+  .sort { -it.score }
 }

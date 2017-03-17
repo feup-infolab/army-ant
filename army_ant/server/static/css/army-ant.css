@@ -1,0 +1,21 @@
+.header {
+  line-height: 2em;
+}
+
+.logo {
+  width: 100%;
+  max-height: 100px;
+}
+
+.message {
+  margin-top: 1em !important;
+}
+
+.form-horizontal {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.form-select {
+  width: 100% !important;
+}
