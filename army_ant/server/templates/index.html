@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/spectre.css/dist/spectre.min.css') }}" />
     <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/font-awesome/css/font-awesome.min.css') }}" />
     <link rel="stylesheet" href="{{ app.router.static.url(filename='css/army-ant.css') }}" />
-    <title>Army ANT</title>
+    <title>{{ query }} {% if query %} - {% endif %} Army ANT</title>
   </head>
   <body>
     <div class="container grid-960">

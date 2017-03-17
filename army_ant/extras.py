@@ -5,8 +5,8 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-17
 
-import logging, pymongo, re, wikipedia
-from wikipedia.exceptions import DisambiguationError
+import logging, pymongo, re, requests
+from lxml import html
 from army_ant.exception import ArmyAntException
 from army_ant.database import Database
 
@@ -22,11 +22,8 @@ async def fetch_wikipedia_images(db_location, db_type, loop):
                 logger.warn("%s is not a Wikipedia URL, skipping" % url)
                 next
 
-            try:
-                data = wikipedia.page(match.group(1).replace('_', ' '))
-                if len(data.images) > 0:
-                    img_url = data.images[0]
-                    await db.set_metadata(record['doc_id'], 'img_url', img_url)
-            except DisambiguationError as e:
-                logger.warn("%s is ambiguous, skipping" % url)
-                next
+            page = requests.get(url)
+            tree = html.fromstring(page.content)
+            img_url = tree.xpath('(//table[contains(@class, "infobox")]//img)[1]/@src')
+            if len(img_url) > 0:
+                await db.set_metadata(record['doc_id'], 'img_url', img_url[0])

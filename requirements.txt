@@ -11,3 +11,4 @@ aiohttp_jinja2
 jinja2
 pymongo
 wikipedia
+lxml
