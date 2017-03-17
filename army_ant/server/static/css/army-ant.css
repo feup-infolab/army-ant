@@ -22,5 +22,7 @@
 
 .image {
   max-width: 80px;
-  max-height: 150px;
+  max-height: 80px;
+  display: block !important;
+  border-radius: 50% !important;
 }
