@@ -1,5 +1,6 @@
 import aiohttp_jinja2, jinja2, asyncio
 from aiohttp import web
+from aiohttp.errors import ClientOSError
 from army_ant.index import Index
 from army_ant.database import Database
 from army_ant.exception import ArmyAntException
@@ -18,7 +19,7 @@ async def search(request):
             results = await index.search(query)
             db = Database.factory('localhost', 'mongo', loop)
             metadata = await db.retrieve(results)
-        except ArmyAntException as e:
+        except (ArmyAntException, ClientOSError) as e:
             error = e
     else:
         results = {}
