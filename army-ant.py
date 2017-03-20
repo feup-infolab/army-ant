@@ -65,11 +65,7 @@ class CommandLineInterface(object):
 
     def server(self):
         loop = asyncio.get_event_loop()
-        try:
-            run_app(loop)
-        finally:
-            loop.run_until_complete(loop.shutdown_asyncgens())
-            loop.close()
+        run_app(loop)
 
     def fetch_wikipedia_images(self, db_location='localhost', db_type='mongo'):
         loop = asyncio.get_event_loop()
