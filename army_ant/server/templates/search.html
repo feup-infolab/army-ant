@@ -6,20 +6,29 @@
     <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/spectre.css/dist/spectre.min.css') }}" />
     <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/font-awesome/css/font-awesome.min.css') }}" />
     <link rel="stylesheet" href="{{ app.router.static.url(filename='css/army-ant.css') }}" />
-    <title>{{ query }} {% if query %} - {% endif %} Army ANT</title>
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({
+        tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+      });
+    </script>
+    <script type="text/javascript" async
+      src="{{ app.router.static.url(filename='node_modules/mathjax/MathJax.js') }}?config=TeX-MML-AM_CHTML">
+    </script>
+
+    <title>{{ query if query }} {% if query %} - {% endif %} Army ANT</title>
   </head>
   <body>
     <div class="container grid-960">
       <div class="columns">
         <div class="column col-2">
-          <img class="logo" src="{{ app.router.static.url(filename='img/ant_army_logo_2.svg') }}">
+          <a class="logo centered" href="."></a>
         </div>
         <div class="column col-10">
           <h1 class="header">
             Army ANT
             <small>
               The altruistic ant
-              <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4320217/" target="_blank">
+              <a class="tooltip tooltip-right" href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4320217/" target="_blank" data-tooltip="Why Army ANT?">
                 <i class="fa fa-link"></i>
               </a>
             </small>
@@ -45,11 +54,11 @@
             </select>
           </div>
 
-          <div class="column col-2">
+          <div class="column col-3">
             <!-- form switch control -->
-            <label class="form-switch">
+            <label class="form-switch switch-lg">
               <input type="checkbox" id="debug" name="debug" {% if debug == 'on' %} checked="checked" {% endif %}/>
-              <i class="form-icon"></i> Debug
+              <i class="form-icon"></i> Learn mode
             </label>
           </div>
         </div>
@@ -57,13 +66,49 @@
 
       {% if results|length > 0 %}
 
+      {% if debug == 'on' %}
+      {% if engine == 'gow' %}
+      <dl>
+        <dt>TW-IDF</dt>
+        <dd>
+          TW-IDF is calculated using the indegree of the nodes that match each query term in the graph-of-word for each document as the term weight (TW). The formula used is the following:
+
+          $$TW\text{-}IDF(q, d) = \sum_{t \in q}^d \left( \frac{tw(t, d)}{1 - b + b \times \frac{|d|}{avdl}} \times log \frac{N + 1}{df(t)} \right)$$
+
+          Where:
+          <ul>
+            <li>$b = 0.003$,</li>
+            <li>$tw(t, d)$ is the indegree of the node for term $t$, in the graph-of-word, for document $d$,</li>
+            <li>$|d|$ is the document length,</li>
+            <li>$avdl$ is the average document length for the whole corpus,</li>
+            <li>$N$ is the size of the corpus,</li>
+            <li>$df(t)$ is the document frequency of term $t$, i.e. the number of documents that contain term $t$.</li>
+          </ul>
+        </dd>
+
+        <dt>Doc ID</dt>
+        <dd>Doc ID can be a number or a string, but it must be a unique identifier for documents (e.g. a URI).</dd>
+      </dl>
+
+      <br>
+
+      <blockquote>
+        <p>François Rousseau and Michalis Vazirgiannis. 2013. Graph-of-word and TW-IDF: new approach to ad hoc IR. In Proceedings of the 22nd ACM international conference on Information &amp; Knowledge Management (CIKM '13). ACM, New York, NY, USA, 59-68. DOI=http://dx.doi.org/10.1145/2505515.2505671</p>
+        <cite><a href="http://dl.acm.org/citation.cfm?id=2505671" target="_blank">ACM Digital Library</a></cite>
+      </blockquote>
+      
+      <br>
+
+      {% endif %}
+      {% endif %}
+
       <table class="table table-striped table-hover">
         <thead>
           <tr>
             {% if debug == 'on' %}
             
-            <th>Score</th>
-            <th>Document</th>
+            <th>TW-IDF(q, d)</th>
+            <th>Doc ID</th>
 
             {% else %}
             
@@ -84,14 +129,14 @@
           {% if debug == 'on' %}
           
           <tr>
-            <td class="text-right"> {{ '%.2f' % result.score|float }} </td>
+            <td class="text-right"> {{ '%f' % result.score|float }} </td>
             <td> <a href="{{ result.docID }}" target="_blank">{{ result.docID }}</a> </td>
           </tr>
           
           {% else %}
 
           <tr>
-            <td> <img class="image" src="{{ metadata[result.docID].img_url }}" /> </td>
+            <td> <div class="image" style="background-image: url('{{ metadata[result.docID].img_url }}')"></div> </td>
             <td> <a href="{{ metadata[result.docID].url }}" target="_blank">{{ metadata[result.docID].name }}</a> </td>
           </tr>
 

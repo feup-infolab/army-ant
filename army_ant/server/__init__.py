@@ -4,7 +4,7 @@ from army_ant.index import Index
 from army_ant.database import Database
 from army_ant.exception import ArmyAntException
 
-@aiohttp_jinja2.template('index.html')
+@aiohttp_jinja2.template('search.html')
 async def search(request):
     engine = request.GET.get('engine')
     if engine is None: engine = 'gow'

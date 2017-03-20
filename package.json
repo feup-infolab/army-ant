@@ -1,8 +1,11 @@
 {
   "name": "army-ant",
   "version": "0.0.1",
+  "description": "Army ANT is a framework for exploratory graph-based entity-oriented search.",
+  "private": true,
   "dependencies": {
-    "spectre.css": "0.2.9",
-    "font-awesome": "4.7.0"
+    "font-awesome": "^4.7.0",
+    "mathjax": "^2.7.0",
+    "spectre.css": "^0.2.9"
   }
 }
