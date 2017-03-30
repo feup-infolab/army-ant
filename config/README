@@ -1,0 +1,4 @@
+# LOCATION OF CONFIGURATION FILES
+
+/opt/apache-tinkerpop-gremlin-server-3.2.4/conf/gremlin-server-neo4j.yaml
+/opt/apache-tinkerpop-gremlin-server-3.2.4/scripts/army-ant.groovy
