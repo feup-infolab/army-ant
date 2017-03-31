@@ -10,6 +10,13 @@ async def search(request):
     engine = request.GET.get('engine')
     if engine is None: engine = 'gow'
 
+    if engine == 'gow':
+        database = 'graph_of_word'
+    elif engine == 'goe':
+        database = 'graph_of_entity'
+    else:
+        database = 'army_ant'
+
     query = request.GET.get('query')
     error = None
     if query:
@@ -17,7 +24,7 @@ async def search(request):
             loop = asyncio.get_event_loop()
             index = Index.open('localhost', engine, loop)
             results = await index.search(query)
-            db = Database.factory('localhost', 'mongo', loop)
+            db = Database.factory('localhost', database, 'mongo', loop)
             metadata = await db.retrieve(results)
         except (ArmyAntException, ClientOSError) as e:
             error = e

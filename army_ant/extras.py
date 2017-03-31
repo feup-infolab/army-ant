@@ -12,8 +12,8 @@ from army_ant.database import Database
 
 logger = logging.getLogger(__name__)
 
-async def fetch_wikipedia_images(db_location, db_type, loop):
-    db = Database.factory(db_location, db_type, loop)
+async def fetch_wikipedia_images(db_location, db_name, db_type, loop):
+    db = Database.factory(db_location, db_name, db_type, loop)
     async for record in db.cursor():
         if 'metadata' in record and 'url' in record['metadata']:
             url = record['metadata']['url']

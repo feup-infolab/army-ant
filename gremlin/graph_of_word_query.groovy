@@ -27,7 +27,10 @@ graph_of_word_query: {
   docLengthsPipe = g.E().group().by("doc_id").by(inV().count())
 
   docLengths = []
+
   docLengthsPipe.clone().fill(docLengths)
+
+  if (docLengths.isEmpty()) return []
 
   avgDocLength = docLengthsPipe.clone()[0].values().sum() / docLengthsPipe.clone()[0].values().size()
   

@@ -40,6 +40,11 @@ class Index(object):
         self.index_location = index_location
         self.loop = loop
 
+    def analyze(self, text):
+        tokens = word_tokenize(text.lower())
+        tokens = [token for token in tokens if token not in stopwords.words('english') and not token[0] in string.punctuation]
+        return tokens
+
     async def index(self):
         raise ArmyAntException("Index not implemented for %s" % self.__class__.__name__)
 
@@ -51,11 +56,6 @@ class GraphOfWord(Index):
         super().__init__(reader, index_location, loop)
         self.window_size = 3
     
-    def analyze(self, text):
-        tokens = word_tokenize(text.lower())
-        tokens = [token for token in tokens if token not in stopwords.words('english') and not token[0] in string.punctuation]
-        return tokens
-
     # TODO cache results without aiocache (has logging issue; cannot disable)
     async def get_or_create_vertex(self, vertex_name, data=None):
         result_set = await self.client.submit(

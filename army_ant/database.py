@@ -13,14 +13,15 @@ logger = logging.getLogger(__name__)
 
 class Database(object):
     @staticmethod
-    def factory(db_location, db_type, loop):
+    def factory(db_location, db_name, db_type, loop):
         if db_type == 'mongo':
-            return MongoDatabase(db_location, loop)
+            return MongoDatabase(db_location, db_name, loop)
         else:
             raise ArmyAntException("Unsupported database type %s" % db_type)
 
-    def __init__(self, db_location, loop):
+    def __init__(self, db_location, db_name, loop):
         self.db_location = db_location
+        self.db_name = db_name
         self.loop = loop
 
     async def store(self, index):
@@ -30,8 +31,8 @@ class Database(object):
         raise ArmyAntException("Retrieve not implemented for %s" % self.__class__.__name__)
 
 class MongoDatabase(Database):
-    def __init__(self, db_location, loop):
-        super().__init__(db_location, loop)
+    def __init__(self, db_location, db_name, loop):
+        super().__init__(db_location, db_name, loop)
         
         db_location_parts = db_location.split(':')
         
@@ -42,7 +43,7 @@ class MongoDatabase(Database):
             db_port = 27017
 
         self.client = MongoClient(db_location, db_port)
-        self.db = self.client['army_ant']
+        self.db = self.client[self.db_name]
 
     async def store(self, index):
         async for doc in index:
