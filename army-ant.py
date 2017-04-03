@@ -16,12 +16,12 @@ from army_ant.extras import fetch_wikipedia_images
 logging.basicConfig(
     format='army-ant: [%(name)s] %(levelname)s: %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
-    level=logging.INFO)
+    level=logging.DEBUG)
 
 logger = logging.getLogger(__name__)
 
 class CommandLineInterface(object):
-    def index(self, source_path, source_reader, index_location='localhost', index_type='gow', db_location='localhost', db_type='mongo'):
+    def index(self, source_path, source_reader, index_location='localhost', index_type='gow', db_location='localhost', db_name='graph_of_entity', db_type='mongo'):
         try:
             reader = Reader.factory(source_path, source_reader)
 
@@ -29,7 +29,7 @@ class CommandLineInterface(object):
             try:
                 index = Index.factory(reader, index_location, index_type, loop)
                 if db_location and db_type:
-                    db = Database.factory(db_location, db_type, loop)
+                    db = Database.factory(db_location, db_name, db_type, loop)
                     loop.run_until_complete(db.store(index.index()))
                 else:
                     loop.run_until_complete(index.index())
@@ -39,7 +39,7 @@ class CommandLineInterface(object):
         except ArmyAntException as e:
             logger.error(e)
 
-    def search(self, query, index_location='localhost', index_type='gow', db_location='localhost', db_name='graph_of_word', db_type='mongo'):
+    def search(self, query, index_location='localhost', index_type='gow', db_location='localhost', db_name='graph_of_entity', db_type='mongo'):
         try:
             loop = asyncio.get_event_loop()
             try:
@@ -63,9 +63,9 @@ class CommandLineInterface(object):
         except ArmyAntException as e:
             logger.error(e)
 
-    def server(self):
+    def server(self, index_location='localhost', db_location='localhost', db_name='graph_of_entity', db_type='mongo'):
         loop = asyncio.get_event_loop()
-        run_app(loop)
+        run_app(loop, index_location, db_location, db_name, db_type)
 
     def fetch_wikipedia_images(self, db_location='localhost', db_name='graph_of_word', db_type='mongo'):
         loop = asyncio.get_event_loop()

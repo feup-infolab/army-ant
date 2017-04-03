@@ -1,5 +1,6 @@
 get_or_create_vertex: {
   def it = g.V().has("name", vertexName)
+
   if (it.hasNext()) {
     it.next()
   } else {

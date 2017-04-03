@@ -10,21 +10,14 @@ async def search(request):
     engine = request.GET.get('engine')
     if engine is None: engine = 'gow'
 
-    if engine == 'gow':
-        database = 'graph_of_word'
-    elif engine == 'goe':
-        database = 'graph_of_entity'
-    else:
-        database = 'army_ant'
-
     query = request.GET.get('query')
     error = None
     if query:
         try:
             loop = asyncio.get_event_loop()
-            index = Index.open('localhost', engine, loop)
+            index = Index.open(request.app['index_location'], engine, loop)
             results = await index.search(query)
-            db = Database.factory('localhost', database, 'mongo', loop)
+            db = Database.factory(request.app['db_location'], request.app['db_name'], request.app['db_type'], loop)
             metadata = await db.retrieve(results)
         except (ArmyAntException, ClientOSError) as e:
             error = e
@@ -56,8 +49,14 @@ async def search(request):
     else:
         return response
 
-def run_app(loop):
+def run_app(loop, index_location, db_location, db_name, db_type):
     app = web.Application(loop=loop)
+
+    app['index_location'] = index_location
+    app['db_location'] = db_location
+    app['db_name'] = db_name
+    app['db_type'] = db_type
+    
     aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('army_ant/server/templates'))
 
     app.router.add_get('/', search)
