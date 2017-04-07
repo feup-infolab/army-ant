@@ -139,21 +139,21 @@ class GraphOfEntity(Index):
 
                 # Load word synonyms, linking to original term
 
-                source_syns = set([ss.name().split('.')[0] for ss in wn.synsets(tokens[i])])
+                source_syns = set([ss.name().split('.')[0].replace('_', ' ') for ss in wn.synsets(tokens[i])])
                 source_syns = source_syns.difference(tokens[i])
 
-                target_syns = set([ss.name().split('.')[0] for ss in wn.synsets(tokens[i+1])])
+                target_syns = set([ss.name().split('.')[0].replace('_', ' ') for ss in wn.synsets(tokens[i+1])])
                 target_syns = target_syns.difference(tokens[i+1])
 
                 for syn in source_syns:
                     logger.debug("%s -[synonym]-> %s" % (tokens[i], syn))
                     syn_vertex = await self.get_or_create_vertex(syn, data={'type': 'term'})
-                    edge = await self.get_or_create_edge(source_vertex, syn_vertex)
+                    edge = await self.get_or_create_edge(source_vertex, syn_vertex, edge_type='synonym')
 
                 for syn in target_syns:
                     logger.debug("%s -[synonym]-> %s" % (tokens[i+1], syn))
                     syn_vertex = await self.get_or_create_vertex(syn, data={'type': 'term'})
-                    edge = await self.get_or_create_edge(target_vertex, syn_vertex)
+                    edge = await self.get_or_create_edge(target_vertex, syn_vertex, edge_type='synonym')
 
                 # Load word-entity occurrence
 
@@ -161,12 +161,12 @@ class GraphOfEntity(Index):
                     if len(re.findall(r'\b' + tokens[i] + r'\b', e1.lower())) > 0:
                         logger.debug("%s -[contained_in]-> %s" % (tokens[i], e1))
                         e1_vertex = await self.get_or_create_vertex(e1, data={'type': 'entity'})
-                        edge = await self.get_or_create_edge(source_vertex, e1_vertex)
+                        edge = await self.get_or_create_edge(source_vertex, e1_vertex, edge_type='contained_in')
 
                     if len(re.findall(r'\b' + tokens[i+1] + r'\b', e2.lower())) > 0:
                         logger.debug("%s -[contained_in]-> %s" % (tokens[i+1], e2))
                         e2_vertex = await self.get_or_create_vertex(e2, data={'type': 'entity'})
-                        edge = await self.get_or_create_edge(source_vertex, e2_vertex)
+                        edge = await self.get_or_create_edge(target_vertex, e2_vertex, edge_type='contained_in')
 
             yield doc
 
