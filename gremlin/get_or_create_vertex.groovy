@@ -1,5 +1,11 @@
 get_or_create_vertex: {
-  def it = g.V().has("name", vertexName)
+  def it;
+
+  if (data != null && data.containsKey("type")) {
+    it = g.V().has("name", vertexName).has("type", data["type"])
+  } else {
+    it = g.V().has("name", vertexName).hasNot("type")
+  }
 
   if (it.hasNext()) {
     it.next()
