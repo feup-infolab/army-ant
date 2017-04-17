@@ -12,21 +12,21 @@ def twIdf(indegree, docFreq, docLength, avgDocLength, corpusSize, b=0.003) {
   indegree / (1 - b + b * docLength / avgDocLength) * Math.log((corpusSize + 1) / docFreq)
 }
 
-//queryTokens = ['born', 'new', 'york']
+queryTokens = ['born', 'new', 'york']
 
-graph_of_word_query: {
+graph_of_entity_query: {
   query = g.V().has("name", within(queryTokens))
 
   indegreePerTokenPerDoc = query.clone()
     .project("v", "indegree").by()
-    .by(inE().values("doc_id").groupCount())
+    .by(inE().has("doc_id").values("doc_id").groupCount())
   
   docFrequencyPerToken = query.clone()
     .project("v", "docFreq").by()
-    .by(bothE().groupCount().by("doc_id"))
+    .by(bothE().has("doc_id").groupCount().by("doc_id"))
     .collectEntries { e -> [(e["v"]): e["docFreq"].size()] }
 
-  docLengthsPipe = g.E().group().by("doc_id").by(inV().count())
+  docLengthsPipe = g.E().has("doc_id").group().by("doc_id").by(inV().count())
 
   docLengths = []
 
@@ -36,7 +36,7 @@ graph_of_word_query: {
 
   avgDocLength = docLengthsPipe.clone()[0].values().sum() / docLengthsPipe.clone()[0].values().size()
   
-  corpusSize = g.E().values("doc_id").unique().size()
+  corpusSize = g.E().has("doc_id").values("doc_id").unique().size()
 
   indegreePerTokenPerDoc.collect { token ->
     token['indegree'].collect { docID, indegree ->
