@@ -8,7 +8,7 @@
  * @param corpusSize The number of documents in the corpus.
  * @param b The slope parameter of the tilting. Fixed at 0.003 for TW-IDF.
  */
-def twIdf(indegree, docFreq, docLength, avgDocLength, corpusSize, b=0.003) {
+def nwIdf(pole_score, docFreq, docLength, avgDocLength, corpusSize, b=0.003) {
   indegree / (1 - b + b * docLength / avgDocLength) * Math.log((corpusSize + 1) / docFreq)
 }
 
@@ -17,14 +17,41 @@ queryTokens = ['born', 'new', 'york']
 graph_of_entity_query: {
   query = g.withSack(0f).V().has("name", within(queryTokens))
 
+  docFrequencyPerToken = query.clone()
+    .project("v", "docFreq")
+    .by()
+    .by(bothE().has("doc_id").groupCount().by("doc_id"))
+    .collectEntries { e -> [(e["v"]): e["docFreq"].size()] }
+
+  docLengthsPipe = g.E()
+    .has("doc_id")
+    .group()
+      .by("doc_id")
+      .by(inV().count())
+
+  docLengths = []
+
+  docLengthsPipe.clone().fill(docLengths)
+
+  if (docLengths.isEmpty()) return []
+
+  avgDocLength = docLengthsPipe.clone()[0].values().sum() / docLengthsPipe.clone()[0].values().size()
+  
+  corpusSize = g.E()
+    .has("doc_id")
+    .values("doc_id")
+    .unique()
+    .size()  
+
   pole_scores = query.clone()
     .union(
       __.out("contained_in"),
       __.where(__.not(out("contained_in"))))
+    .dedup()
     .choose(
       has("type", "entity"),
       group()
-        .by("name")
+        .by()
         .by(
           fold()
             .sack(sum).by(count(local))
@@ -32,12 +59,24 @@ graph_of_entity_query: {
             .sack()
         ),
       group()
-        .by("name")
+        .by()
         .by(constant(1d))
     )
     .unfold()
     .order()
     .by(values, decr)
 
-  pole_scores
+  distances_to_poles = pole_scores.clone().select(keys).as("pole")
+    .repeat(both().where(neq("pole")))
+    .times(2)
+    .where(has("type", "entity"))
+    .path().as("path")
+    .project("entity", "pole", "distance")
+      .by { it.getAt(4) }
+      .by { it.getAt(2) }
+      .by(sack(assign).by(count(local)).sack(sum).by(constant(-2)).sack())
+    .group()
+      .by(select("entity").by("name"))
+      .by(group().by(select("pole")).by(select("distance").fold()))
+    .unfold()
 }
