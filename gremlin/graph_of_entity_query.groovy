@@ -15,35 +15,29 @@ def twIdf(indegree, docFreq, docLength, avgDocLength, corpusSize, b=0.003) {
 queryTokens = ['born', 'new', 'york']
 
 graph_of_entity_query: {
-  query = g.V().has("name", within(queryTokens))
+  query = g.withSack(0f).V().has("name", within(queryTokens))
 
-  indegreePerTokenPerDoc = query.clone()
-    .project("v", "indegree").by()
-    .by(inE().has("doc_id").values("doc_id").groupCount())
-  
-  docFrequencyPerToken = query.clone()
-    .project("v", "docFreq").by()
-    .by(bothE().has("doc_id").groupCount().by("doc_id"))
-    .collectEntries { e -> [(e["v"]): e["docFreq"].size()] }
+  pole_scores = query.clone()
+    .union(
+      __.out("contained_in"),
+      __.where(__.not(out("contained_in"))))
+    .choose(
+      has("type", "entity"),
+      group()
+        .by("name")
+        .by(
+          fold()
+            .sack(sum).by(count(local))
+            .sack(div).by(unfold().in("contained_in").dedup().count())
+            .sack()
+        ),
+      group()
+        .by("name")
+        .by(constant(1d))
+    )
+    .unfold()
+    .order()
+    .by(values, decr)
 
-  docLengthsPipe = g.E().has("doc_id").group().by("doc_id").by(inV().count())
-
-  docLengths = []
-
-  docLengthsPipe.clone().fill(docLengths)
-
-  if (docLengths.isEmpty()) return []
-
-  avgDocLength = docLengthsPipe.clone()[0].values().sum() / docLengthsPipe.clone()[0].values().size()
-  
-  corpusSize = g.E().has("doc_id").values("doc_id").unique().size()
-
-  indegreePerTokenPerDoc.collect { token ->
-    token['indegree'].collect { docID, indegree ->
-      ['docID': docID, 'twIdf': twIdf(indegree, docFrequencyPerToken[token['v']], docLengths[docID][0], avgDocLength, corpusSize)]
-    }
-  }.flatten()
-  .groupBy { item -> item['docID'] }
-  .collect { docID, item -> [docID: docID, score: item['twIdf'].sum()] }
-  .sort { -it.score }
+  pole_scores
 }
