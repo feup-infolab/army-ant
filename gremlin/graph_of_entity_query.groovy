@@ -13,6 +13,7 @@ def nwIdf(pole_score, docFreq, docLength, avgDocLength, corpusSize, b=0.003) {
 }
 
 queryTokens = ['born', 'new', 'york']
+//queryTokens = ['nirvana', 'members']
 
 graph_of_entity_query: {
   query = g.withSack(0f).V().has("name", within(queryTokens))
@@ -43,7 +44,7 @@ graph_of_entity_query: {
     .unique()
     .size()  
 
-  pole_scores = query.clone()
+  poleScoresPipe = query.clone()
     .union(
       __.out("contained_in"),
       __.where(__.not(out("contained_in"))))
@@ -66,17 +67,44 @@ graph_of_entity_query: {
     .order()
     .by(values, decr)
 
-  distances_to_poles = pole_scores.clone().select(keys).as("pole")
+  poleScores = poleScoresPipe.clone()
+    .collectEntries { [(it.key): (it.value)] }
+
+  //return poleScoresPipe.collectEntries { [(it.key.value("name")): it.value] }
+
+  maxDistance = 2
+
+  distancesToPolesPerEntity = poleScoresPipe.clone().select(keys).as("pole")
     .repeat(both().where(neq("pole")))
-    .times(2)
+    .times(maxDistance)
     .where(has("type", "entity"))
     .path().as("path")
     .project("entity", "pole", "distance")
-      .by { it.getAt(4) }
+      .by { it.getAt(maxDistance+2) }
       .by { it.getAt(2) }
       .by(sack(assign).by(count(local)).sack(sum).by(constant(-2)).sack())
     .group()
-      .by(select("entity").by("name"))
+      .by(select("entity"))
       .by(group().by(select("pole")).by(select("distance").fold()))
     .unfold()
+
+  //return distancesToPolesPerEntity.collectEntries { [(it.key.value("name")): it.value] }
+
+  node_weight = distancesToPolesPerEntity.clone()
+    .collectEntries {
+      node = it.key.value("name")
+      //poleCount = it.value.size()
+      coverage = it.value.size() / poleScores.size()
+
+      weight = it.value.collect { d ->
+        a = d.value.collect { v ->
+          poleScores.get(d.key, 0f) * 1f / v
+        }
+        a.sum() / a.size()
+      }
+      weight = coverage * weight.sum() / weight.size()
+
+      [(node): weight]
+    }
+    .sort { -it.value }
 }
