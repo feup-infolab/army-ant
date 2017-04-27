@@ -12,7 +12,7 @@ def nwIdf(pole_score, docFreq, docLength, avgDocLength, corpusSize, b=0.003) {
   indegree / (1 - b + b * docLength / avgDocLength) * Math.log((corpusSize + 1) / docFreq)
 }
 
-queryTokens = ['born', 'new', 'york']
+//queryTokens = ['born', 'new', 'york']
 //queryTokens = ['nirvana', 'members']
 
 graph_of_entity_query: {
@@ -90,9 +90,9 @@ graph_of_entity_query: {
 
   //return distancesToPolesPerEntity.collectEntries { [(it.key.value("name")): it.value] }
 
-  node_weight = distancesToPolesPerEntity.clone()
-    .collectEntries {
-      node = it.key.value("name")
+  node_weights = distancesToPolesPerEntity.clone()
+    .collect {
+      docID = "http://en.wikipedia.org/wiki/${it.key.value("name").replace(" ", "_")}"
       //poleCount = it.value.size()
       coverage = it.value.size() / poleScores.size()
 
@@ -104,7 +104,9 @@ graph_of_entity_query: {
       }
       weight = coverage * weight.sum() / weight.size()
 
-      [(node): weight]
+      [docID: docID, score: weight]
     }
-    .sort { -it.value }
+    .sort { -it.score }
+
+  node_weights
 }
