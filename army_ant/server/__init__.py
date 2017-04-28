@@ -1,4 +1,4 @@
-import aiohttp_jinja2, jinja2, asyncio, configparser
+import aiohttp_jinja2, jinja2, asyncio, configparser, math
 from collections import OrderedDict
 from aiohttp import web
 from aiohttp.errors import ClientOSError
@@ -19,7 +19,13 @@ async def search(request):
         try:
             loop = asyncio.get_event_loop()
             index = Index.open(request.app['engines'][engine]['index_location'], engine, loop)
-            results = await index.search(query, offset, limit)
+            engine_response = await index.search(query, offset, limit)
+
+            results = engine_response['results']
+            num_docs = engine_response['numDocs']
+            page = int((offset+limit) / limit) 
+            pages = math.ceil(engine_response['numDocs'] / limit)
+            
             db = Database.factory(
                 request.app['engines'][engine]['db_location'],
                 request.app['engines'][engine]['db_name'],
@@ -29,7 +35,10 @@ async def search(request):
         except (ArmyAntException, ClientOSError) as e:
             error = e
     else:
-        results = {}
+        results = []
+        num_docs = 0
+        page = None
+        pages = None
         metadata = {}
 
     debug = request.GET.get('debug', 'off')
@@ -48,7 +57,9 @@ async def search(request):
             'debug': debug,
             'offset': offset,
             'limit': limit,
-            'page': int((offset+limit) / limit),
+            'numDocs': num_docs,
+            'page': page,
+            'pages': pages,
             'results': results,
             'metadata': metadata
         }

@@ -121,7 +121,7 @@ class GraphOfWord(ServiceIndex):
                 'offset': offset,
                 'limit': limit
             })
-        results = await result_set.all()
+        results = await result_set.one()
         await self.cluster.close()
 
         return results
@@ -142,6 +142,7 @@ class GraphOfEntity(ServiceIndex):
                 target_vertex = await self.get_or_create_vertex(e2.label, data={'uri': e2.uri, 'type': 'entity'})
                 edge = await self.get_or_create_edge(source_vertex, target_vertex, edge_type=rel)
                 yield Document(doc_id = e1.uri, metadata = { 'url': e1.uri, 'name': e1.label })
+                yield Document(doc_id = e2.uri, metadata = { 'url': e2.uri, 'name': e2.label })
 
             tokens = self.analyze(doc.text)
 
@@ -183,7 +184,7 @@ class GraphOfEntity(ServiceIndex):
                         e2_vertex = await self.get_or_create_vertex(e2.label, data={'type': 'entity'})
                         edge = await self.get_or_create_edge(target_vertex, e2_vertex, edge_type='contained_in')
 
-            yield doc
+            #yield doc
 
         await self.cluster.close()
 
@@ -199,7 +200,7 @@ class GraphOfEntity(ServiceIndex):
                 'offset': offset,
                 'limit': limit
             })
-        results = await result_set.all()
+        results = await result_set.one()
         await self.cluster.close()
 
         return results

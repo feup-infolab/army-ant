@@ -93,8 +93,6 @@ graph_of_entity_query: {
   //return distancesToPolesPerEntity.collectEntries { [(it.key.value("name")): it.value] }
 
   nodeWeights = distancesToPolesPerEntity.clone()
-    .collect()
-    .flatten()
     .collect {
       docID = "http://en.wikipedia.org/wiki/${it.key.value("name").replace(" ", "_")}"
       //poleCount = it.value.size()
@@ -115,5 +113,5 @@ graph_of_entity_query: {
     .drop(offset)
     .take(limit)
 
-  nodeWeights
+  [[results: nodeWeights, numDocs: distancesToPolesPerEntity.clone().count().next()]]
 }

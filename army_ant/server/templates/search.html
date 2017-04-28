@@ -108,7 +108,14 @@
           <tr>
             {% if debug == 'on' %}
             
+            {% if engine == 'gow' %}
             <th>TW-IDF(q, d)</th>
+            {% elif engine == 'goe' %}
+            <th>NW-IDF(q, d)</th>
+            {% else %}
+            <th>Score(q, d)</th>
+            {% endif %}
+
             <th>Doc ID</th>
 
             {% else %}
@@ -152,6 +159,29 @@
           {% endfor %}
         </tbody>
       </table>
+
+      {{ pages }}
+      {{ offset }}
+      {{ limit }}
+      <ul class="pagination" style="justify-content: center">
+        <li class="page-item">
+          <a href="#" {% if offset == 0 %} disabled tabindex="-1" {% endif %} }}>Previous</a>
+        </li>
+        {% for p in range(page, page+3 if page+3 < pages else page+2) %}
+        <li class="page-item {% if p == page %} active {% endif %}">
+          <a href="#">{{p}}</a>
+        </li>
+        {% endfor %}
+        <li class="page-item">
+          <span>...</span>
+        </li>
+        <li class="page-item">
+          <a href="#">{{ pages }}</a>
+        </li>
+        <li class="page-item">
+          <a href="#">Next</a>
+        </li>
+      </ul>
 
       {% elif error %}
 
