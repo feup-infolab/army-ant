@@ -28,7 +28,7 @@ class Reader(object):
         raise ArmyAntException("Reader __next__ not implemented")
 
 class Document(object):
-    def __init__(self, doc_id, text, triples = None, metadata = None):
+    def __init__(self, doc_id, text = None, triples = None, metadata = None):
         self.doc_id = doc_id
         self.text = text
         self.triples = triples

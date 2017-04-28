@@ -11,6 +11,7 @@ from threading import RLock
 from concurrent.futures import ThreadPoolExecutor
 from nltk import word_tokenize
 from nltk.corpus import stopwords, wordnet as wn
+from army_ant.reader import Document
 from army_ant.util import load_gremlin_script
 from army_ant.exception import ArmyAntException
 
@@ -140,6 +141,7 @@ class GraphOfEntity(ServiceIndex):
                 source_vertex = await self.get_or_create_vertex(e1.label, data={'uri': e1.uri, 'type': 'entity'})
                 target_vertex = await self.get_or_create_vertex(e2.label, data={'uri': e2.uri, 'type': 'entity'})
                 edge = await self.get_or_create_edge(source_vertex, target_vertex, edge_type=rel)
+                yield Document(doc_id = e1.uri, metadata = { 'url': e1.uri, 'name': e1.label })
 
             tokens = self.analyze(doc.text)
 
