@@ -67,16 +67,27 @@ class Index(object):
     async def index(self):
         raise ArmyAntException("Index not implemented for %s" % self.__class__.__name__)
 
-    async def search(self, query):
+    async def search(self, query, offset, limit):
         raise ArmyAntException("Search not implemented for %s" % self.__class__.__name__)
 
-class GraphOfWord(Index):
+class ServiceIndex(Index):
+    def __init__(self, reader, index_location, loop):
+        super().__init__(reader, index_location, loop)
+        index_location_parts = self.index_location.split(":")
+        if len(index_location_parts) > 1:
+            self.index_host = index_location_parts[0]
+            self.index_port = index_location_parts[1]
+        else:
+            self.index_host = self.index_location
+            self.index_port = 8182
+
+class GraphOfWord(ServiceIndex):
     def __init__(self, reader, index_location, loop, window_size=3):
         super().__init__(reader, index_location, loop)
         self.window_size = 3
     
     async def index(self):
-        self.cluster = await Cluster.open(self.loop, hosts=[self.index_location])
+        self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
         self.client = await self.cluster.connect()
 
         for doc in self.reader:
@@ -97,24 +108,26 @@ class GraphOfWord(Index):
 
         await self.cluster.close()
 
-    async def search(self, query):
-        self.cluster = await Cluster.open(self.loop, hosts=[self.index_location])
+    async def search(self, query, offset, limit):
+        self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
         self.client = await self.cluster.connect()
 
         query_tokens = self.analyze(query)
 
         result_set = await self.client.submit(
             load_gremlin_script('graph_of_word_query'), {
-                'queryTokens': query_tokens
+                'queryTokens': query_tokens,
+                'offset': offset,
+                'limit': limit
             })
         results = await result_set.all()
         await self.cluster.close()
 
         return results
 
-class GraphOfEntity(Index):
+class GraphOfEntity(ServiceIndex):
     async def index(self):
-        self.cluster = await Cluster.open(self.loop, hosts=[self.index_location])
+        self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
         self.client = await self.cluster.connect()
 
         for doc in self.reader:
@@ -123,9 +136,9 @@ class GraphOfEntity(Index):
 
             # Load entities and relations (knowledge base)
             for (e1, rel, e2) in doc.triples:
-                logger.debug("%s -[%s]-> %s" % (e1, rel, e2))
-                source_vertex = await self.get_or_create_vertex(e1, data={'type': 'entity'})
-                target_vertex = await self.get_or_create_vertex(e2, data={'type': 'entity'})
+                logger.debug("%s -[%s]-> %s" % (e1.label, rel, e2.label))
+                source_vertex = await self.get_or_create_vertex(e1.label, data={'uri': e1.uri, 'type': 'entity'})
+                target_vertex = await self.get_or_create_vertex(e2.label, data={'uri': e2.uri, 'type': 'entity'})
                 edge = await self.get_or_create_edge(source_vertex, target_vertex, edge_type=rel)
 
             tokens = self.analyze(doc.text)
@@ -158,29 +171,31 @@ class GraphOfEntity(Index):
                 # Load word-entity occurrence
 
                 for (e1, _, e2) in doc.triples:
-                    if len(re.findall(r'\b' + tokens[i] + r'\b', e1.lower())) > 0:
-                        logger.debug("%s -[contained_in]-> %s" % (tokens[i], e1))
-                        e1_vertex = await self.get_or_create_vertex(e1, data={'type': 'entity'})
+                    if len(re.findall(r'\b' + tokens[i] + r'\b', e1.label.lower())) > 0:
+                        logger.debug("%s -[contained_in]-> %s" % (tokens[i], e1.label))
+                        e1_vertex = await self.get_or_create_vertex(e1.label, data={'type': 'entity'})
                         edge = await self.get_or_create_edge(source_vertex, e1_vertex, edge_type='contained_in')
 
-                    if len(re.findall(r'\b' + tokens[i+1] + r'\b', e2.lower())) > 0:
-                        logger.debug("%s -[contained_in]-> %s" % (tokens[i+1], e2))
-                        e2_vertex = await self.get_or_create_vertex(e2, data={'type': 'entity'})
+                    if len(re.findall(r'\b' + tokens[i+1] + r'\b', e2.label.lower())) > 0:
+                        logger.debug("%s -[contained_in]-> %s" % (tokens[i+1], e2.label))
+                        e2_vertex = await self.get_or_create_vertex(e2.label, data={'type': 'entity'})
                         edge = await self.get_or_create_edge(target_vertex, e2_vertex, edge_type='contained_in')
 
             yield doc
 
         await self.cluster.close()
 
-    async def search(self, query):
-        self.cluster = await Cluster.open(self.loop, hosts=[self.index_location])
+    async def search(self, query, offset, limit):
+        self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
         self.client = await self.cluster.connect()
 
         query_tokens = self.analyze(query)
 
         result_set = await self.client.submit(
             load_gremlin_script('graph_of_entity_query'), {
-                'queryTokens': query_tokens
+                'queryTokens': query_tokens,
+                'offset': offset,
+                'limit': limit
             })
         results = await result_set.all()
         await self.cluster.close()

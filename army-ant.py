@@ -28,7 +28,7 @@ class CommandLineInterface(object):
             loop = asyncio.get_event_loop()
             try:
                 index = Index.factory(reader, index_location, index_type, loop)
-                if db_location and db_type:
+                if db_location and db_name and db_type:
                     db = Database.factory(db_location, db_name, db_type, loop)
                     loop.run_until_complete(db.store(index.index()))
                 else:
@@ -39,18 +39,18 @@ class CommandLineInterface(object):
         except ArmyAntException as e:
             logger.error(e)
 
-    def search(self, query, index_location='localhost', index_type='gow', db_location='localhost', db_name='graph_of_entity', db_type='mongo'):
+    def search(self, query, offset=0, limit=10, index_location='localhost', index_type='gow', db_location='localhost', db_name='graph_of_entity', db_type='mongo'):
         try:
             loop = asyncio.get_event_loop()
             try:
                 index = Index.open(index_location, index_type, loop)
-                results = loop.run_until_complete(index.search(query))
+                results = loop.run_until_complete(index.search(query, offset, limit))
 
                 if db_location and db_name and db_type:
                     db = Database.factory(db_location, db_name, db_type, loop)
                     metadata = loop.run_until_complete(db.retrieve(results))
                 
-                for (result, i) in zip(results, range(len(results))):
+                for (result, i) in zip(results, range(offset, offset+limit)):
                     print("===> %3d %7.2f %s" % (i+1, result['score'], result['docID']))
                     doc_id = result['docID']
                     if doc_id in metadata:
@@ -63,9 +63,9 @@ class CommandLineInterface(object):
         except ArmyAntException as e:
             logger.error(e)
 
-    def server(self, index_location='localhost', db_location='localhost', db_name='graph_of_entity', db_type='mongo'):
+    def server(self):
         loop = asyncio.get_event_loop()
-        run_app(loop, index_location, db_location, db_name, db_type)
+        run_app(loop)
 
     def fetch_wikipedia_images(self, db_location='localhost', db_name='graph_of_word', db_type='mongo'):
         loop = asyncio.get_event_loop()

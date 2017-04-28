@@ -13,6 +13,8 @@ def twIdf(indegree, docFreq, docLength, avgDocLength, corpusSize, b=0.003) {
 }
 
 //queryTokens = ['born', 'new', 'york']
+//offset = 0
+//limit = 10
 
 graph_of_word_query: {
   query = g.V().has("name", within(queryTokens))
@@ -38,12 +40,18 @@ graph_of_word_query: {
   
   corpusSize = g.E().values("doc_id").unique().size()
 
-  indegreePerTokenPerDoc.collect { token ->
-    token['indegree'].collect { docID, indegree ->
-      ['docID': docID, 'twIdf': twIdf(indegree, docFrequencyPerToken[token['v']], docLengths[docID][0], avgDocLength, corpusSize)]
+  twIdf = indegreePerTokenPerDoc
+    .collect { token ->
+      token['indegree'].collect { docID, indegree ->
+        ['docID': docID, 'twIdf': twIdf(indegree, docFrequencyPerToken[token['v']], docLengths[docID][0], avgDocLength, corpusSize)]
+      }
     }
-  }.flatten()
-  .groupBy { item -> item['docID'] }
-  .collect { docID, item -> [docID: docID, score: item['twIdf'].sum()] }
-  .sort { -it.score }
+    .flatten()
+    .groupBy { item -> item['docID'] }
+    .collect { docID, item -> [docID: docID, score: item['twIdf'].sum()] }
+    .sort { -it.score }
+    .drop(offset)
+    .take(limit)
+
+  twIdf
 }

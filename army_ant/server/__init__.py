@@ -1,4 +1,5 @@
-import aiohttp_jinja2, jinja2, asyncio
+import aiohttp_jinja2, jinja2, asyncio, configparser
+from collections import OrderedDict
 from aiohttp import web
 from aiohttp.errors import ClientOSError
 from army_ant.index import Index
@@ -13,11 +14,17 @@ async def search(request):
     query = request.GET.get('query')
     error = None
     if query:
+        offset = int(request.GET.get('offset', "0"))
+        limit = int(request.GET.get('limit', "10"))
         try:
             loop = asyncio.get_event_loop()
-            index = Index.open(request.app['index_location'], engine, loop)
-            results = await index.search(query)
-            db = Database.factory(request.app['db_location'], request.app['db_name'], request.app['db_type'], loop)
+            index = Index.open(request.app['engines'][engine]['index_location'], engine, loop)
+            results = await index.search(query, offset, limit)
+            db = Database.factory(
+                request.app['engines'][engine]['db_location'],
+                request.app['engines'][engine]['db_name'],
+                request.app['engines'][engine]['db_type'],
+                loop)
             metadata = await db.retrieve(results)
         except (ArmyAntException, ClientOSError) as e:
             error = e
@@ -39,6 +46,9 @@ async def search(request):
             'engine': engine,
             'query': query,
             'debug': debug,
+            'offset': offset,
+            'limit': limit,
+            'page': int((offset+limit) / limit),
             'results': results,
             'metadata': metadata
         }
@@ -49,14 +59,17 @@ async def search(request):
     else:
         return response
 
-def run_app(loop, index_location, db_location, db_name, db_type):
+def run_app(loop):
+    config = configparser.ConfigParser()
+    config.read('server.cfg')
+
     app = web.Application(loop=loop)
 
-    app['index_location'] = index_location
-    app['db_location'] = db_location
-    app['db_name'] = db_name
-    app['db_type'] = db_type
-    
+    app['engines'] = OrderedDict()
+    for section in config.sections():
+        if section != 'DEFAULT':
+            app['engines'][section] = dict(config[section])
+
     aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('army_ant/server/templates'))
 
     app.router.add_get('/', search)

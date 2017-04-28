@@ -38,6 +38,14 @@ class Document(object):
         return '-----------------\nDOC ID:\n%s\n\nTEXT:\n%s\n\nTRIPLES:\n%s\n\nMETADATA:\n%s\n-----------------\n' % (
             self.doc_id, self.text, '\n'.join([str(triple) for triple in self.triples]), '\n'.join([str((k, v)) for k, v in self.metadata.items()]))
 
+class WikipediaEntity(object):
+    def __init__(self, uri, label):
+        self.uri = uri
+        self.label = label
+
+    def __str__(self):
+        return "%s\t%s" % (self.uri, self.label)
+
 class WikipediaDataReader(Reader):
     def __init__(self, source_path):
         super(WikipediaDataReader, self).__init__(source_path)
@@ -47,13 +55,19 @@ class WikipediaDataReader(Reader):
     def to_plain_text(self, html):
         return html_to_text(html)
 
+    def to_wikipedia_entity(self, label):
+        return WikipediaEntity("http://en.wikipedia.org/wiki/%s" % label.replace(" ", "_"), label)
+
     def to_triples(self, entity, html):
         soup = BeautifulSoup(html, 'html.parser', parse_only=SoupStrainer('a'))
 
         triples = []
         for link in soup:
             if link.has_attr('relation'):
-                triples.append((entity, link['relation'], link['title']))
+                triples.append((
+                    self.to_wikipedia_entity(entity),
+                    link['relation'],
+                    self.to_wikipedia_entity(link['title'])))
 
         return triples
 

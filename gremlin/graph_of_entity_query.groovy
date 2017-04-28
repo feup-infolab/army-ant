@@ -8,12 +8,14 @@
  * @param corpusSize The number of documents in the corpus.
  * @param b The slope parameter of the tilting. Fixed at 0.003 for TW-IDF.
  */
-def nwIdf(pole_score, docFreq, docLength, avgDocLength, corpusSize, b=0.003) {
-  indegree / (1 - b + b * docLength / avgDocLength) * Math.log((corpusSize + 1) / docFreq)
+def nwIdf(nodeWeight, docFreq, docLength, avgDocLength, corpusSize, b=0.003) {
+  nodeWeight / (1 - b + b * docLength / avgDocLength) * Math.log((corpusSize + 1) / docFreq)
 }
 
 //queryTokens = ['born', 'new', 'york']
 //queryTokens = ['nirvana', 'members']
+//offset = 0
+//limit = 10
 
 graph_of_entity_query: {
   query = g.withSack(0f).V().has("name", within(queryTokens))
@@ -90,7 +92,9 @@ graph_of_entity_query: {
 
   //return distancesToPolesPerEntity.collectEntries { [(it.key.value("name")): it.value] }
 
-  node_weights = distancesToPolesPerEntity.clone()
+  nodeWeights = distancesToPolesPerEntity.clone()
+    .collect()
+    .flatten()
     .collect {
       docID = "http://en.wikipedia.org/wiki/${it.key.value("name").replace(" ", "_")}"
       //poleCount = it.value.size()
@@ -104,9 +108,12 @@ graph_of_entity_query: {
       }
       weight = coverage * weight.sum() / weight.size()
 
-      [docID: docID, score: weight]
+      // TODO implement docFrequentyPerNode (terms and entities) to apply nwIdf 
+      [docID: docID.toString(), score: weight]
     }
     .sort { -it.score }
+    .drop(offset)
+    .take(limit)
 
-  node_weights
+  nodeWeights
 }

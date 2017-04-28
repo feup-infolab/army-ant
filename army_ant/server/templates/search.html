@@ -49,8 +49,9 @@
           <div class="column col-3">
             <!-- form radio control -->
             <select class="form-select select-lg" id="engine" name="engine">
-              <option value="gow" {% if engine == 'gow' %} selected="selected" {% endif %}>Graph of Word</option>
-              <option value="goe" {% if engine == 'goe' %} selected="selected" {% endif %}>Graph of Entity</option>
+              {% for app_engine in app.engines %}
+              <option value="{{app_engine}}" {% if engine == app_engine %} selected="selected" {% endif %}>{{app.engines[app_engine].name}}</option>
+              {% endfor %}
             </select>
           </div>
 
@@ -111,13 +112,8 @@
             <th>Doc ID</th>
 
             {% else %}
-            
-            {% if metadata|length > 0 %}
 
             <th>Image</th>
-
-            {% endif %}
-            
             <th>Document</th>
 
             {% endif %}
@@ -136,8 +132,19 @@
           {% else %}
 
           <tr>
-            <td> <div class="image" style="background-image: url('{{ metadata[result.docID].img_url }}')"></div> </td>
+            {% if result.docID in metadata %}
+
+            <td> <div class="image" style="background-image: url('{{
+                metadata[result.docID].img_url or app.router.static.url(filename='img/thumbnail_placeholder.png') }}')"></div> </td>
             <td> <a href="{{ metadata[result.docID].url }}" target="_blank">{{ metadata[result.docID].name }}</a> </td>
+            
+            {% else %}
+            
+            <td> <div class="image" style="background-image: url('{{
+                app.router.static.url(filename='img/thumbnail_placeholder.png') }}')"></div> </td>
+            <td> <a href="{{ result.docID if result.docID.startswith('http') else '#' }}" target="_blank">{{ result.docID }}</a> </td>
+            
+            {% endif %}
           </tr>
 
           {% endif %}
