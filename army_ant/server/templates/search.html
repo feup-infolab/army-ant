@@ -163,6 +163,7 @@
       {{ pages }}
       {{ offset }}
       {{ limit }}
+      {{ offset|paginate }}
       <ul class="pagination" style="justify-content: center">
         <li class="page-item">
           <a href="#" {% if offset == 0 %} disabled tabindex="-1" {% endif %} }}>Previous</a>

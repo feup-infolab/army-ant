@@ -70,6 +70,10 @@ async def search(request):
     else:
         return response
 
+# TODO
+def paginate(offset):
+    return "./?offset=%s" % offset
+
 def run_app(loop):
     config = configparser.ConfigParser()
     config.read('server.cfg')
@@ -81,7 +85,7 @@ def run_app(loop):
         if section != 'DEFAULT':
             app['engines'][section] = dict(config[section])
 
-    aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('army_ant/server/templates'))
+    aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('army_ant/server/templates'), filters={'paginate':paginate})
 
     app.router.add_get('/', search)
     app.router.add_static('/static', 'army_ant/server/static', name='static', follow_symlinks=True)
