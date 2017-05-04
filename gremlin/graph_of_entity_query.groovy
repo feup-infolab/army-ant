@@ -46,7 +46,7 @@ graph_of_entity_query: {
     .unique()
     .size()  
 
-  poleScoresPipe = query.clone()
+  seedScoresPipe = query.clone()
     .union(
       __.out("contained_in"),
       __.where(__.not(out("contained_in"))))
@@ -69,38 +69,36 @@ graph_of_entity_query: {
     .order()
     .by(values, decr)
 
-  poleScores = poleScoresPipe.clone()
+  seedScores = seedScoresPipe.clone()
     .collectEntries { [(it.key): (it.value)] }
-
-  //return poleScoresPipe.collectEntries { [(it.key.value("name")): it.value] }
 
   maxDistance = 2
 
-  distancesToPolesPerEntity = poleScoresPipe.clone().select(keys).as("pole")
-    .repeat(both().where(neq("pole")))
+  distancesToSeedsPerEntity = seedScoresPipe.clone().select(keys).as("seed")
+    .repeat(both().where(neq("seed")))
     .times(maxDistance)
     .where(has("type", "entity"))
     .path().as("path")
-    .project("entity", "pole", "distance")
+    .project("entity", "seed", "distance")
       .by { it.getAt(maxDistance+2) }
       .by { it.getAt(2) }
       .by(sack(assign).by(count(local)).sack(sum).by(constant(-2)).sack())
     .group()
       .by(select("entity"))
-      .by(group().by(select("pole")).by(select("distance").fold()))
+      .by(group().by(select("seed")).by(select("distance").fold()))
     .unfold()
 
-  //return distancesToPolesPerEntity.collectEntries { [(it.key.value("name")): it.value] }
+  //return distancesToSeedsPerEntity.collectEntries { [(it.key.value("name")): it.value] }
 
-  nodeWeights = distancesToPolesPerEntity.clone()
+  nodeWeights = distancesToSeedsPerEntity.clone()
     .collect {
       docID = "http://en.wikipedia.org/wiki/${it.key.value("name").replace(" ", "_")}"
-      //poleCount = it.value.size()
-      coverage = it.value.size() / poleScores.size()
+      //seedCount = it.value.size()
+      coverage = it.value.size() / seedScores.size()
 
       weight = it.value.collect { d ->
         a = d.value.collect { v ->
-          poleScores.get(d.key, 0f) * 1f / v
+          seedScores.get(d.key, 0f) * 1f / v
         }
         a.sum() / a.size()
       }
@@ -113,5 +111,5 @@ graph_of_entity_query: {
     .drop(offset)
     .take(limit)
 
-  [[results: nodeWeights, numDocs: distancesToPolesPerEntity.clone().count().next()]]
+  [[results: nodeWeights, numDocs: distancesToSeedsPerEntity.clone().count().next()]]
 }
