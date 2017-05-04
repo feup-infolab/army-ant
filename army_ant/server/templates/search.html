@@ -160,29 +160,47 @@
         </tbody>
       </table>
 
-      {{ pages }}
-      {{ offset }}
-      {{ limit }}
-      {{ offset|paginate }}
+      {% if offset is not none %}
+      {% set border_pages = 2 %}
+
       <ul class="pagination" style="justify-content: center">
         <li class="page-item">
-          <a href="#" {% if offset == 0 %} disabled tabindex="-1" {% endif %} }}>Previous</a>
+          <a href="{{ page_link(page-1, limit) }}" {% if offset == 0 %} disabled tabindex="-1" {% endif %} }}>Previous</a>
         </li>
-        {% for p in range(page, page+3 if page+3 < pages else page+2) %}
-        <li class="page-item {% if p == page %} active {% endif %}">
-          <a href="#">{{p}}</a>
-        </li>
-        {% endfor %}
+
+        {% if page-border_pages > 1 %}
         <li class="page-item">
           <span>...</span>
         </li>
-        <li class="page-item">
-          <a href="#">{{ pages }}</a>
+        {% endif %}
+
+        {% for p in range(page-border_pages if page-border_pages > 0 else 1, (page+border_pages if page+border_pages <= pages else pages)+1) %}
+        {% if p == page %}
+        
+        <li class="page-item active">
+          <a href="#">{{p}}</a>
         </li>
+        
+        {% else %}
+        
         <li class="page-item">
-          <a href="#">Next</a>
+          <a href="{{ page_link(p, limit) }}">{{p}}</a>
+        </li>
+        
+        {% endif %}
+        {% endfor %}
+
+        {% if pages > page+border_pages %}
+        <li class="page-item">
+          <span>...</span>
+        </li>
+        {% endif %}
+        
+        <li class="page-item">
+          <a href="{{ page_link(page+1, limit) }}" {% if page == pages %} disabled tabindex="-1" {% endif %}>Next</a>
         </li>
       </ul>
+      {% endif %}
 
       {% elif error %}
 

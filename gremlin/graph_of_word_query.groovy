@@ -50,8 +50,12 @@ graph_of_word_query: {
     .groupBy { item -> item['docID'] }
     .collect { docID, item -> [docID: docID, score: item['twIdf'].sum()] }
     .sort { -it.score }
+
+  numDocs = twIdf.size()
+
+  twIdf = twIdf
     .drop(offset)
     .take(limit)
 
-  [[results: twIdf, numDocs: indegreePerTokenPerDoc.clone().count().next()]]
+  [[results: twIdf, numDocs: numDocs]]
 }

@@ -6,6 +6,15 @@ from army_ant.index import Index
 from army_ant.database import Database
 from army_ant.exception import ArmyAntException
 
+async def page_link(request):
+    def _page_link(page, limit):
+        query = dict(request.url.query)
+        offset = (page - 1) * limit
+        if offset < 0: offset = 0
+        query['offset'] = offset
+        return request.url.with_query(query)
+    return { 'page_link': _page_link}
+
 @aiohttp_jinja2.template('search.html')
 async def search(request):
     engine = request.GET.get('engine')
@@ -13,9 +22,12 @@ async def search(request):
 
     query = request.GET.get('query')
     error = None
+    offset = 0
+    limit = 5
+
     if query:
-        offset = int(request.GET.get('offset', "0"))
-        limit = int(request.GET.get('limit', "10"))
+        offset = int(request.GET.get('offset', str(offset)))
+        limit = int(request.GET.get('limit', str(limit)))
         try:
             loop = asyncio.get_event_loop()
             index = Index.open(request.app['engines'][engine]['index_location'], engine, loop)
@@ -70,10 +82,6 @@ async def search(request):
     else:
         return response
 
-# TODO
-def paginate(offset):
-    return "./?offset=%s" % offset
-
 def run_app(loop):
     config = configparser.ConfigParser()
     config.read('server.cfg')
@@ -85,7 +93,10 @@ def run_app(loop):
         if section != 'DEFAULT':
             app['engines'][section] = dict(config[section])
 
-    aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('army_ant/server/templates'), filters={'paginate':paginate})
+    aiohttp_jinja2.setup(
+        app,
+        loader=jinja2.FileSystemLoader('army_ant/server/templates'),
+        context_processors=[page_link, aiohttp_jinja2.request_processor])
 
     app.router.add_get('/', search)
     app.router.add_static('/static', 'army_ant/server/static', name='static', follow_symlinks=True)
