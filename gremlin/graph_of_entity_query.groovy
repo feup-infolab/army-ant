@@ -48,7 +48,7 @@ graph_of_entity_query: {
 
   seedScoresPipe = query.clone()
     .union(
-      __.out("contained_in"),
+      __.out("contained_in"),//.has("name", "New York"), // TODO remove new york constraint (test only)
       __.where(__.not(out("contained_in"))))
     .dedup()
     .choose(
@@ -77,7 +77,11 @@ graph_of_entity_query: {
   distancesToSeedsPerEntity = seedScoresPipe.clone().select(keys).as("seed")
     .repeat(both().where(neq("seed")))
     .times(maxDistance)
-    .where(has("type", "entity"))
+    .where(
+      has("type", "entity")
+      .and()
+      .outE().where(__.not(hasLabel("contained_in"))).inV() // constrains to the "documents"
+    )
     .path().as("path")
     .project("entity", "seed", "distance")
       .by { it.getAt(maxDistance+2) }

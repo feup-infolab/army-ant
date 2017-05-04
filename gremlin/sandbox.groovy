@@ -10,3 +10,11 @@ g.V().has("name", within(["born", "new", "york"])).as("q").union(__.out("contain
 # Example of a more complex sack() usage.
 g.withSack(0f).V().has("name", within(["born", "new", "york"])).as("q").out("contained_in").as("e").group().by().by(sack(assign).by(count()).sack(sum).by(both().count()).sack())
 
+# Select nodes with a minimum of 3 facts.
+g.V().has("type", "entity").where(__.outE().where(__.not(hasLabel("contained_in"))).inV().count().is(gt(3))).values("name")
+
+# Select entity nodes with facts about them (the documents?).
+g.V().has("type", "entity").where(__.outE().where(__.not(hasLabel("contained_in"))).inV()).values("name")
+
+# Path between two nodes based on name matching, with a maximum distance of 2.
+g.V().has("name", "William Rockefeller").repeat(outE().inV()).until(or(filter { it.get().value("name").contains("New York") }, loops().is(eq(2)))).path().by("name").by(label)
