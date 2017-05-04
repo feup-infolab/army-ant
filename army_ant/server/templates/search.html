@@ -170,6 +170,12 @@
 
         {% if page-border_pages > 1 %}
         <li class="page-item">
+          <a href="{{ page_link(1, limit) }}">1</a>
+        </li>
+        {% endif %}
+
+        {% if page-border_pages > 2 %}
+        <li class="page-item">
           <span>...</span>
         </li>
         {% endif %}
@@ -190,9 +196,15 @@
         {% endif %}
         {% endfor %}
 
-        {% if pages > page+border_pages %}
+        {% if pages > page+border_pages+1 %}
         <li class="page-item">
           <span>...</span>
+        </li>
+        {% endif %}
+        
+        {% if pages > page+border_pages %}
+        <li class="page-item">
+          <a href="{{ page_link(pages, limit) }}">{{pages}}</a>
         </li>
         {% endif %}
         
