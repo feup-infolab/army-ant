@@ -39,12 +39,12 @@ class Document(object):
             self.doc_id, self.text, '\n'.join([str(triple) for triple in self.triples]), '\n'.join([str((k, v)) for k, v in self.metadata.items()]))
 
 class WikipediaEntity(object):
-    def __init__(self, uri, label):
-        self.uri = uri
+    def __init__(self, url, label):
+        self.url = url
         self.label = label
 
     def __str__(self):
-        return "%s\t%s" % (self.uri, self.label)
+        return "%s\t%s" % (self.url, self.label)
 
 class WikipediaDataReader(Reader):
     def __init__(self, source_path):

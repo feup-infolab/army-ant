@@ -138,11 +138,11 @@ class GraphOfEntity(ServiceIndex):
             # Load entities and relations (knowledge base)
             for (e1, rel, e2) in doc.triples:
                 logger.debug("%s -[%s]-> %s" % (e1.label, rel, e2.label))
-                source_vertex = await self.get_or_create_vertex(e1.label, data={'uri': e1.uri, 'type': 'entity'})
-                target_vertex = await self.get_or_create_vertex(e2.label, data={'uri': e2.uri, 'type': 'entity'})
+                source_vertex = await self.get_or_create_vertex(e1.label, data={'url': e1.url, 'type': 'entity'})
+                target_vertex = await self.get_or_create_vertex(e2.label, data={'url': e2.url, 'type': 'entity'})
                 edge = await self.get_or_create_edge(source_vertex, target_vertex, edge_type=rel)
-                yield Document(doc_id = e1.uri, metadata = { 'url': e1.uri, 'name': e1.label })
-                yield Document(doc_id = e2.uri, metadata = { 'url': e2.uri, 'name': e2.label })
+                yield Document(doc_id = e1.url, metadata = { 'url': e1.url, 'name': e1.label })
+                yield Document(doc_id = e2.url, metadata = { 'url': e2.url, 'name': e2.label })
 
             tokens = self.analyze(doc.text)
 
