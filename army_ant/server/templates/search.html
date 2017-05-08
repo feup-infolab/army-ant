@@ -6,11 +6,13 @@
     <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/spectre.css/dist/spectre.min.css') }}" />
     <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/font-awesome/css/font-awesome.min.css') }}" />
     <link rel="stylesheet" href="{{ app.router.static.url(filename='css/army-ant.css') }}" />
+    
     <script type="text/x-mathjax-config">
       MathJax.Hub.Config({
         tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
       });
     </script>
+
     <script type="text/javascript" async
       src="{{ app.router.static.url(filename='node_modules/mathjax/MathJax.js') }}?config=TeX-MML-AM_CHTML">
     </script>
@@ -238,5 +240,11 @@
       <br>
       <br>
     </div>
+
+    <script type="text/javascript">
+      (function() {
+        document.getElementById("query").focus();
+      })();
+    </script>
   </body>
 </html>

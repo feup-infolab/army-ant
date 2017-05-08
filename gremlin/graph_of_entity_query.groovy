@@ -1,19 +1,20 @@
 /**
- * Calculate the EW-ILE, from Graph of Entity model, for an entity node linked to a seed node.
+ * Calculate the EW-ILF, from Graph of Entity model, for an entity node linked to a seed node.
+ * EW-ILF stands for Entity Weight - Inverse Link Frequency
  *
- * @param indegree Term vertice indegree.
- * @param docFreq Document frequency of the term. The number of documents containing the term.
- * @param docLength The number of characters of the document.
- * @param avgDocLength The average number of characters of the documents in the corpus.
- * @param corpusSize The number of documents in the corpus.
- * @param b The slope parameter of the tilting. Fixed at 0.003 for TW-IDF.
+ * @param entityWeight Entity weight, based on seed coverage, distance to seeds and seed weight.
+ * @param avgReachableEntitiesFromSeeds Average number of entity nodes with an undirected path of maximum length 2 to a seed node (analogy: DF).
+ * @param entityRelationCount The number of relations to other entities (analogy: document length).
+ * @param avgEntityRelationCount The average number of relations between a pair of entities in the graph (analogy: avg. document length).
+ * @param entityCount The number of entities in the graph (analogy: corpus size).
+ * @param b The slope parameter of the tilting. Using 0.003, like TW-IDF (should be tuned).
  */
-def ewIle(entityWeight, avgReachableEntitiesFromSeeds, entityRelationCount, avgEntityRelationCount, entityCount, b=0.003) {
+def ewIlf(entityWeight, avgReachableEntitiesFromSeeds, entityRelationCount, avgEntityRelationCount, entityCount, b=0.003) {
   entityWeight / (1 - b + b * entityRelationCount / avgEntityRelationCount) * Math.log((entityCount + 1) / avgReachableEntitiesFromSeeds)
+  //entityWeight
 }
 
 //queryTokens = ['born', 'new', 'york']
-//queryTokens = ['nirvana', 'members']
 //offset = 0
 //limit = 10
 
@@ -94,8 +95,6 @@ graph_of_entity_query: {
       .by(group().by(select("seed")).by(select("distance").fold()))
     .unfold()
 
-  //return distancesToSeedsPerEntity.collectEntries { [(it.key.value("name")): it.value] }
-
   avgReachableEntitiesFromSeedsPipe = seedScoresPipe.clone()
     .select(keys)
     .group()
@@ -116,10 +115,9 @@ graph_of_entity_query: {
   avgReachableEntitiesFromSeeds = avgReachableEntitiesFromSeedsPipe.clone().select(values).sum().next() /
     avgReachableEntitiesFromSeedsPipe.clone().select(values).count().next()
 
-  ewIle = distancesToSeedsPerEntity.clone()
+  ewIlf = distancesToSeedsPerEntity.clone()
     .collect {
       docID = "http://en.wikipedia.org/wiki/${it.key.value("name").replace(" ", "_")}"
-      //seedCount = it.value.size()
       coverage = it.value.size() / seedScores.size()
 
       // Iterate over each seed.
@@ -131,7 +129,7 @@ graph_of_entity_query: {
         a.sum() / a.size()
       }
       entityWeight = coverage * weight.sum() / weight.size()
-      score = ewIle(entityWeight, avgReachableEntitiesFromSeeds, entityRelationCount.get(it.key, 0), avgEntityRelationCount, entityCount, b=0.003)
+      score = ewIlf(entityWeight, avgReachableEntitiesFromSeeds, entityRelationCount.get(it.key, 0), avgEntityRelationCount, entityCount, b=0.003)
         
       [docID: docID.toString(), score: score]
     }
@@ -139,5 +137,5 @@ graph_of_entity_query: {
     .drop(offset)
     .take(limit)
 
-  [[results: ewIle, numDocs: distancesToSeedsPerEntity.clone().count().next()]]
+  [[results: ewIlf, numDocs: distancesToSeedsPerEntity.clone().count().next()]]
 }
