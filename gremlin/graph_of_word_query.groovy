@@ -19,6 +19,8 @@ def twIdf(indegree, docFreq, docLength, avgDocLength, corpusSize, b=0.003) {
 graph_of_word_query: {
   query = g.V().has("name", within(queryTokens))
 
+  if (query.clone().count().next() < 1) return [[results: [:], numDocs: 0]]
+
   indegreePerTokenPerDoc = query.clone()
     .project("v", "indegree").by()
     .by(inE().values("doc_id").groupCount())
@@ -34,7 +36,7 @@ graph_of_word_query: {
 
   docLengthsPipe.clone().fill(docLengths)
 
-  if (docLengths.isEmpty()) return []
+  if (docLengths.isEmpty()) return [[results: [:], numDocs: 0]]
 
   avgDocLength = docLengthsPipe.clone()[0].values().sum() / docLengthsPipe.clone()[0].values().size()
   

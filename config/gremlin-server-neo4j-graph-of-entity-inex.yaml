@@ -26,11 +26,11 @@
 # Neo4j is licensed AGPL. 
 
 host: localhost
-port: 8182
+port: 8183
 scriptEvaluationTimeout: 30000
 channelizer: org.apache.tinkerpop.gremlin.server.channel.WebSocketChannelizer
 graphs: {
-  graph: conf/neo4j-graph-of-word.properties}
+  graph: conf/neo4j-graph-of-entity-inex.properties}
 plugins:
   - tinkerpop.neo4j
 scriptEngines: {

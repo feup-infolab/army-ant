@@ -21,6 +21,8 @@ def ewIlf(entityWeight, avgReachableEntitiesFromSeeds, entityRelationCount, avgE
 graph_of_entity_query: {
   query = g.withSack(0f).V().has("name", within(queryTokens))
 
+  if (query.clone().count().next() < 1) return [[results: [:], numDocs: 0]]
+
   // Number of relations as an analogy to document lengths.
   entityRelationCountPipe = g.V()
     .has("type", "entity")
