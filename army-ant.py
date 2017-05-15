@@ -14,7 +14,7 @@ from army_ant.server import run_app
 from army_ant.extras import fetch_wikipedia_images
 
 logging.basicConfig(
-    format='army-ant: [%(name)s] %(levelname)s: %(message)s',
+    format='%(asctime)s army-ant: [%(name)s] %(levelname)s: %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
     level=logging.DEBUG)
 

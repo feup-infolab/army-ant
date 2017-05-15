@@ -5,16 +5,22 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import tarfile, re
+import tarfile, re, logging, os
+from lxml import etree
 from bs4 import BeautifulSoup, SoupStrainer
 from army_ant.util import html_to_text
 from army_ant.exception import ArmyAntException
+from io import StringIO
+
+logger = logging.getLogger(__name__)
 
 class Reader(object):
     @staticmethod
     def factory(source_path, source_reader):
         if source_reader == 'wikipedia_data':
             return WikipediaDataReader(source_path)
+        elif source_reader == 'inex':
+            return INEXReader(source_path)
         else:
             raise ArmyAntException("Unsupported source reader %s" % source_reader)
 
@@ -34,17 +40,27 @@ class Document(object):
         self.triples = triples
         self.metadata = metadata
 
-    def __str__(self):
+    def __repr__(self):
+        if self.triples is None:
+            triples = []
+        else:
+            triples = '\n'.join([str(triple) for triple in self.triples])
+
+        if self.metadata is None:
+            metadata = []
+        else:
+            metadata = '\n'.join([str((k, v)) for k, v in self.metadata.items()])
+
         return '-----------------\nDOC ID:\n%s\n\nTEXT:\n%s\n\nTRIPLES:\n%s\n\nMETADATA:\n%s\n-----------------\n' % (
-            self.doc_id, self.text, '\n'.join([str(triple) for triple in self.triples]), '\n'.join([str((k, v)) for k, v in self.metadata.items()]))
+            self.doc_id, self.text, triples, metadata)
 
 class WikipediaEntity(object):
     def __init__(self, url, label):
         self.url = url
         self.label = label
 
-    def __str__(self):
-        return "%s\t%s" % (self.url, self.label)
+    def __repr__(self):
+        return "(%s, %s)" % (self.url, self.label)
 
 class WikipediaDataReader(Reader):
     def __init__(self, source_path):
@@ -95,52 +111,73 @@ class WikipediaDataReader(Reader):
 
         raise StopIteration
 
-# TODO
 class INEXReader(Reader):
-    def __init__(self, source_path, limit):
+    def __init__(self, source_path, limit=None):
         super(INEXReader, self).__init__(source_path)
-        tar = tarfile.open(source_path)
-        self.f = tar.extractfile(tar.getmember('wikipedia_datav1.0/wikipedia.train'))
+        self.limit = limit
 
-    def to_plain_text(self, html):
-        return html_to_text(html)
+        self.counter = 0
+        self.parser = etree.XMLParser(remove_blank_text=True, resolve_entities=False)
+        self.doc_xpath = '//bdy/descendant-or-self::*[not(ancestor-or-self::template) and not(self::caption)]'
+
+        logger.info("Loading members from tar file")
+        self.tar = tarfile.open(source_path)
+        self.members = self.filter_xml_files(self.tar.getmembers())
+        logger.info("Members from tar file loaded")
+
+    def to_plain_text(self, bdy):
+        return re.sub(r'\s+', ' ', ''.join(bdy.xpath('%s/text()' % self.doc_xpath)))
 
     def to_wikipedia_entity(self, label):
         return WikipediaEntity("http://en.wikipedia.org/wiki/%s" % label.replace(" ", "_"), label)
 
-    def to_triples(self, entity, html):
-        soup = BeautifulSoup(html, 'html.parser', parse_only=SoupStrainer('a'))
-
+    def to_triples(self, title, bdy):
         triples = []
-        for link in soup:
-            if link.has_attr('relation'):
-                triples.append((
-                    self.to_wikipedia_entity(entity),
-                    link['relation'],
-                    self.to_wikipedia_entity(link['title'])))
+        for link in bdy.xpath('//link'):
+            related = self.get_first(link.xpath('text()'))
+            if related is None: continue
+            related = related.strip()
+
+            triples.append((
+                self.to_wikipedia_entity(title),
+                'related_to',
+                self.to_wikipedia_entity(related)))
 
         return triples
+
+    def filter_xml_files(self, members):
+        for member in members:
+            if os.path.splitext(member.name)[1] == '.xml':
+                yield member
+
+    def get_first(self, lst, default=None):
+        return next(iter(lst or []), default)
 
     def __next__(self):
         url = None
         entity = None
         html = ''
-        for line in self.f:
-            line = line.decode('utf-8')
-            if line == '\n':
-                return Document(
-                    doc_id = url,
-                    text = self.to_plain_text(html),
-                    triples = self.to_triples(entity, html),
-                    metadata = { 'url': url, 'name': entity })
 
-            elif line.startswith('url='):
-                match = re.search(r'url=(http://[^.]+\.wikipedia\.org/wiki/(.*))', line.strip())
-                if match:
-                    url = match.group(1)
-                    entity = match.group(2).replace('_', ' ')
+        for member in self.members:
+            logger.debug("Reading %s" % (member.name))
 
-            else:
-                html = html + line
+            if self.limit is not None and self.counter >= self.limit: break
+            self.counter += 1
+
+            article = etree.parse(self.tar.extractfile(member), self.parser)
+            title = self.get_first(article.xpath('//header/title/text()'))
+
+            bdy = self.get_first(article.xpath('//bdy'))
+            if bdy is None: continue
+
+            template = bdy.xpath('//template')
+
+            url = self.to_wikipedia_entity(title).url
+
+            return Document(
+                doc_id = member.name,
+                text = self.to_plain_text(bdy),
+                triples = self.to_triples(title, bdy),
+                metadata = { 'url': url, 'name': title })
 
         raise StopIteration
