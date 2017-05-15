@@ -10,8 +10,8 @@
  * @param b The slope parameter of the tilting. Using 0.003, like TW-IDF (should be tuned).
  */
 def ewIlf(entityWeight, avgReachableEntitiesFromSeeds, entityRelationCount, avgEntityRelationCount, entityCount, b=0.003) {
-  entityWeight / (1 - b + b * entityRelationCount / avgEntityRelationCount) * Math.log((entityCount + 1) / avgReachableEntitiesFromSeeds)
-  //entityWeight
+  //entityWeight / (1 - b + b * entityRelationCount / avgEntityRelationCount) * Math.log((entityCount + 1) / avgReachableEntitiesFromSeeds)
+  entityWeight
 }
 
 //queryTokens = ['born', 'new', 'york']
