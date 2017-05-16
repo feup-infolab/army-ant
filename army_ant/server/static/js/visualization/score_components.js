@@ -17,16 +17,19 @@ ScoreComponents.resultsToComponents = function(results) {
 }
 
 ScoreComponents.prototype.render = function() {
-  var colors = d3.scale.category20();
+  var colors = d3.scale.category10();
 
   // interact with this variable from a javascript console
-  var pc1 = d3.parcoords()(this.selector)
+  var plot = d3.parcoords()(this.selector)
     .data(this.components)
-    .hideAxis(["docID"])
-    //.composite("darken")
+    .composite("darken")
+    .margin({ top: 24, left: 225, bottom: 12, right: 0 })    
     .color(function(d) { return colors(d.docID); })
     .alpha(0.8)
     .render()
     .brushMode("1D-axes")  // enable brushing
     .interactive(); // command line mode  
+
+  plot.svg.selectAll("text")
+    .style("font", "10px sans-serif");
 }

@@ -77,7 +77,12 @@
 
       {% if debug == 'on' %}
       {% if engine in ['gow', 'goe'] %}
-      <div id="score-components-plot" class="parcoords"></div>
+      <dl>
+        <dt>Parallel Axis Plot for Non-Static Score Components</dt>
+        <dd>
+          <div id="score-components-plot" class="parcoords"></div>
+        </dd>
+      </dl>
       {% endif %}
 
       {% if engine == 'gow' %}
