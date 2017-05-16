@@ -10,13 +10,15 @@
  * @param b The slope parameter of the tilting. Using 0.003, like TW-IDF (should be tuned).
  */
 def ewIlf(entityWeight, avgReachableEntitiesFromSeeds, entityRelationCount, avgEntityRelationCount, entityCount, b=0.003) {
-  entityWeight / (1 - b + b * entityRelationCount / avgEntityRelationCount) * Math.log((entityCount + 1) / avgReachableEntitiesFromSeeds)
-  //entityWeight
+  //entityWeight / (1 - b + b * entityRelationCount / avgEntityRelationCount) * Math.log((entityCount + 1) / avgReachableEntitiesFromSeeds)
+  //entityWeight / (1 - b + b * entityRelationCount / avgEntityRelationCount) * entityCount / avgReachableEntitiesFromSeeds
+  entityWeight
 }
 
 //queryTokens = ['born', 'new', 'york']
-//offset = 0
-//limit = 10
+queryTokens = ['musician', 'architect']
+offset = 0
+limit = 5
 
 graph_of_entity_query: {
   query = g.withSack(0f).V().has("name", within(queryTokens))
@@ -32,9 +34,20 @@ graph_of_entity_query: {
     .groupCount()
 
   entityRelationCount = []
-
   entityRelationCountPipe.clone().fill(entityRelationCount)
   entityRelationCount = entityRelationCount[0]
+
+  entityTermFrequency = g.V().outE("before")
+    .dedup()
+    .where(inV().has("name", within(queryTokens)))
+    .project("entity", "term")
+      .by { g.V().has("url", it.value("doc_id")).next() }
+      .by(inV())
+    .group()
+      .by(select("entity"))
+      .by(count())
+    .unfold()
+    .collectEntries { [(it.key): (it.value)] }
 
   if (entityRelationCount.isEmpty()) return []
 
@@ -76,26 +89,35 @@ graph_of_entity_query: {
   seedScores = seedScoresPipe.clone()
     .collectEntries { [(it.key): (it.value)] }
 
-  maxDistance = 2
+  maxDistance = 1
 
+  // shortest path
   distancesToSeedsPerEntity = seedScoresPipe.clone()
     .select(keys).as("seed")
-    .repeat(both().where(neq("seed")))
-    .times(maxDistance)
-    .where(
+    .repeat(both().simplePath().where(neq("seed")))
+    .until(
       has("type", "entity")
+      .and()
+      .outE().where(__.not(hasLabel("contained_in"))) // same argument as entityCount
+      .or()
+      .loops().is(eq(maxDistance))
+    )
+    .where(
+      __.has("type", "entity")
       .and()
       .outE().where(__.not(hasLabel("contained_in"))) // same argument as entityCount
     )
     .path().as("path")
     .project("entity", "seed", "distance")
-      .by { it.getAt(maxDistance+2) }
+      .by { it.getAt(it.size() - 1) }
       .by { it.getAt(2) }
       .by(sack(assign).by(count(local)).sack(sum).by(constant(-2)).sack())
     .group()
       .by(select("entity"))
-      .by(group().by(select("seed")).by(select("distance").fold()))
+      .by(group().by(select("seed")).by(select("distance").min()))
     .unfold()
+
+  //return distancesToSeedsPerEntity
 
   avgReachableEntitiesFromSeedsPipe = seedScoresPipe.clone()
     .select(keys)
@@ -124,33 +146,33 @@ graph_of_entity_query: {
 
       // Iterate over each seed.
       weight = it.value.collect { s ->
-        // Iterate over each path length for seed s.
-        a = s.value.collect { v ->
-          seedScores.get(s.key, 0f) * 1f / v
-        }
-        a.sum() / a.size()
+        seedScores.get(s.key, 0f) * 1f / s.value
       }
       avgWeightedInversePathLength = weight.sum() / weight.size()
       entityWeight = coverage * avgWeightedInversePathLength
-      score = ewIlf(entityWeight, avgReachableEntitiesFromSeeds, entityRelationCount.get(it.key, 0), avgEntityRelationCount, entityCount, b=0.003)
+      b = 0.003
+      //score = ewIlf(entityWeight, avgReachableEntitiesFromSeeds, entityRelationCount.get(it.key, 0), avgEntityRelationCount, entityCount, b=b)
+      score = 0.5 * entityWeight + 0.5 * entityTermFrequency.get(it.key, 0)
         
       [
         docID: docID.toString(),
         score: score,
+        debug: [pathLengthsToSeeds: it.value],
         components: [[
           docID: docID.toString(),
-          c: coverage.doubleValue(),
-          w: avgWeightedInversePathLength,
-          pLNorm: (1 - b + b * entityRelationCount.get(it.key, 0) / avgEntityRelationCount).doubleValue(),
-          ew: (entityWeight / (1 - b + b * entityRelationCount.get(it.key, 0) / avgEntityRelationCount)).doubleValue(),
-          ilf: Math.log((entityCount + 1) / avgReachableEntitiesFromSeeds).doubleValue(),
-          ewIlf: score
-          //avgReachableEntitiesFromSeeds: avgReachableEntitiesFromSeeds.doubleValue(),
-          //entityRelationCount: entityRelationCount.get(it.key, 0),
-          //avgEntityRelationCount: avgEntityRelationCount.doubleValue(),
+          'c(e, S)': coverage.doubleValue(),
+          'w(e)': avgWeightedInversePathLength,
+          'wNorm(e, E)': (1 - b + b * entityRelationCount.get(it.key, 0) / avgEntityRelationCount).doubleValue(),
+          'ew(e, E, b)': (entityWeight / (1 - b + b * entityRelationCount.get(it.key, 0) / avgEntityRelationCount)).doubleValue(),
+          'etf(t, e)': entityTermFrequency.get(it.key, 0)
+          //'|E|': entityCount,
+          //'avgle': avgReachableEntitiesFromSeeds.doubleValue(),
+          //'ilf(E)': Math.log((entityCount + 1) / avgReachableEntitiesFromSeeds).doubleValue(),
+          //'ewIlf(e, E, Se, S)': score
         ]]
       ]
     }
+    // TODO merge type-only results from entityTermFrequency
     .sort { -it.score }
     .drop(offset)
     .take(limit)

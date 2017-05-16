@@ -52,11 +52,13 @@ graph_of_word_query: {
           twIdf: score,
           components: [
             docID: docID,
-            tw: indegree,
-            dft: docFrequencyPerToken[token['v']],
-            dl: docLengths[docID][0],
+            'tw(t, d)': indegree,
+            b: 0.003d,
+            '|d|': docLengths[docID][0],
             avdl: avgDocLength.doubleValue(),
-            twIdf: score
+            N: corpusSize,
+            'df(t)': docFrequencyPerToken[token['v']],
+            'tw-idf(t, d)': score
           ]
         ]
       }

@@ -13,7 +13,7 @@ ScoreComponents.resultsToComponents = function(results) {
       return components;
     });
   });
-  return Array.prototype.concat.apply([], components);
+  return Array.prototype.concat.apply([], components).reverse();
 }
 
 ScoreComponents.prototype.render = function() {
@@ -22,8 +22,7 @@ ScoreComponents.prototype.render = function() {
   // interact with this variable from a javascript console
   var plot = d3.parcoords()(this.selector)
     .data(this.components)
-    .composite("darken")
-    .margin({ top: 24, left: 225, bottom: 12, right: 0 })    
+    .margin({ top: 24, left: 230, bottom: 12, right: 0 })    
     .color(function(d) { return colors(d.docID); })
     .alpha(0.8)
     .render()

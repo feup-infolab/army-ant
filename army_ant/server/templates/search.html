@@ -3,6 +3,7 @@
   <head>
     <link rel="icon" type="image/png" sizes="192x192" href="{{ app.router.static.url(filename='img/ant_army_logo_2.png') }}" />
     <!--<meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />-->
+
     <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/spectre.css/dist/spectre.min.css') }}" />
     <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/font-awesome/css/font-awesome.min.css') }}" />
     <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/d3.parcoords.js/d3.parcoords.css') }}" />
@@ -15,7 +16,9 @@
     
     <script type="text/x-mathjax-config">
       MathJax.Hub.Config({
-        tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+        tex2jax: {
+          inlineMath: [['$','$'], ['\\(','\\)']]
+        }
       });
     </script>
 
@@ -78,7 +81,7 @@
       {% if debug == 'on' %}
       {% if engine in ['gow', 'goe'] %}
       <dl>
-        <dt>Parallel Axis Plot for Non-Static Score Components</dt>
+        <dt>Parallel Coordinates Plot: Score Components</dt>
         <dd>
           <div id="score-components-plot" class="parcoords"></div>
         </dd>
@@ -128,7 +131,7 @@
             {% if engine == 'gow' %}
             <th>TW-IDF(q, d)</th>
             {% elif engine == 'goe' %}
-            <th>NW-IDF(q, d)</th>
+            <th>EW-ILF(q, e)</th>
             {% else %}
             <th>Score(q, d)</th>
             {% endif %}
@@ -259,7 +262,10 @@
     <script type="text/javascript">
       (function() {
         document.getElementById("query").focus();
-        visScoreComponents = new ScoreComponents(ScoreComponents.resultsToComponents({{ results }}), '#score-components-plot');
+
+        var visScoreComponents = new ScoreComponents(
+          ScoreComponents.resultsToComponents({{ results }}),
+          '#score-components-plot');
         visScoreComponents.render();
       })();
     </script>
