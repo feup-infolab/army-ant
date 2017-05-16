@@ -4,6 +4,7 @@
   "description": "Army ANT is a framework for exploratory graph-based entity-oriented search.",
   "private": true,
   "dependencies": {
+    "d3.parcoords.js": "^0.7.0",
     "font-awesome": "^4.7.0",
     "mathjax": "^2.7.0",
     "spectre.css": "^0.2.9"

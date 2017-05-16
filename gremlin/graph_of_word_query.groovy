@@ -45,12 +45,25 @@ graph_of_word_query: {
   twIdf = indegreePerTokenPerDoc.clone()
     .collect { token ->
       token['indegree'].collect { docID, indegree ->
-        ['docID': docID, 'twIdf': twIdf(indegree, docFrequencyPerToken[token['v']], docLengths[docID][0], avgDocLength, corpusSize)]
+        score = twIdf(indegree, docFrequencyPerToken[token['v']], docLengths[docID][0], avgDocLength, corpusSize)
+
+        [
+          docID: docID,
+          twIdf: score,
+          components: [
+            docID: docID,
+            tw: indegree,
+            dft: docFrequencyPerToken[token['v']],
+            dl: docLengths[docID][0],
+            avdl: avgDocLength.doubleValue(),
+            twIdf: score
+          ]
+        ]
       }
     }
     .flatten()
     .groupBy { item -> item['docID'] }
-    .collect { docID, item -> [docID: docID, score: item['twIdf'].sum()] }
+    .collect { docID, item -> [docID: docID, score: item['twIdf'].sum(), components: item['components']] }
     .sort { -it.score }
 
   numDocs = twIdf.size()

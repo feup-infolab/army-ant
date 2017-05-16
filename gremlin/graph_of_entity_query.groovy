@@ -10,8 +10,8 @@
  * @param b The slope parameter of the tilting. Using 0.003, like TW-IDF (should be tuned).
  */
 def ewIlf(entityWeight, avgReachableEntitiesFromSeeds, entityRelationCount, avgEntityRelationCount, entityCount, b=0.003) {
-  //entityWeight / (1 - b + b * entityRelationCount / avgEntityRelationCount) * Math.log((entityCount + 1) / avgReachableEntitiesFromSeeds)
-  entityWeight
+  entityWeight / (1 - b + b * entityRelationCount / avgEntityRelationCount) * Math.log((entityCount + 1) / avgReachableEntitiesFromSeeds)
+  //entityWeight
 }
 
 //queryTokens = ['born', 'new', 'york']
@@ -130,10 +130,26 @@ graph_of_entity_query: {
         }
         a.sum() / a.size()
       }
-      entityWeight = coverage * weight.sum() / weight.size()
+      avgWeightedInversePathLength = weight.sum() / weight.size()
+      entityWeight = coverage * avgWeightedInversePathLength
       score = ewIlf(entityWeight, avgReachableEntitiesFromSeeds, entityRelationCount.get(it.key, 0), avgEntityRelationCount, entityCount, b=0.003)
         
-      [docID: docID.toString(), score: score]
+      [
+        docID: docID.toString(),
+        score: score,
+        components: [[
+          docID: docID.toString(),
+          c: coverage.doubleValue(),
+          w: avgWeightedInversePathLength,
+          pLNorm: (1 - b + b * entityRelationCount.get(it.key, 0) / avgEntityRelationCount).doubleValue(),
+          ew: (entityWeight / (1 - b + b * entityRelationCount.get(it.key, 0) / avgEntityRelationCount)).doubleValue(),
+          ilf: Math.log((entityCount + 1) / avgReachableEntitiesFromSeeds).doubleValue(),
+          ewIlf: score
+          //avgReachableEntitiesFromSeeds: avgReachableEntitiesFromSeeds.doubleValue(),
+          //entityRelationCount: entityRelationCount.get(it.key, 0),
+          //avgEntityRelationCount: avgEntityRelationCount.doubleValue(),
+        ]]
+      ]
     }
     .sort { -it.score }
     .drop(offset)

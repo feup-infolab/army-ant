@@ -5,7 +5,13 @@
     <!--<meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />-->
     <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/spectre.css/dist/spectre.min.css') }}" />
     <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/font-awesome/css/font-awesome.min.css') }}" />
+    <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/d3.parcoords.js/d3.parcoords.css') }}" />
     <link rel="stylesheet" href="{{ app.router.static.url(filename='css/army-ant.css') }}" />
+
+    <script type="text/javascript" src="{{ app.router.static.url(filename='node_modules/d3.parcoords.js/node_modules/d3/d3.min.js')}}"></script>
+    <script type="text/javascript" src="{{ app.router.static.url(filename='node_modules/d3.parcoords.js/d3.parcoords.js')}}"></script>
+    <script type="text/javascript" src="{{ app.router.static.url(filename='js/util.js')}}"></script>
+    <script type="text/javascript" src="{{ app.router.static.url(filename='js/visualization/score_components.js')}}"></script>
     
     <script type="text/x-mathjax-config">
       MathJax.Hub.Config({
@@ -70,6 +76,10 @@
       {% if results|length > 0 %}
 
       {% if debug == 'on' %}
+      {% if engine in ['gow', 'goe'] %}
+      <div id="score-components-plot" class="parcoords"></div>
+      {% endif %}
+
       {% if engine == 'gow' %}
       <dl>
         <dt>TW-IDF</dt>
@@ -135,7 +145,7 @@
           
           <tr>
             <td class="text-right"> {{ '%f' % result.score|float }} </td>
-            <td> <a href="{{ result.docID }}" target="_blank">{{ result.docID }}</a> </td>
+            <td>{{ result.docID }}</td>
           </tr>
           
           {% else %}
@@ -244,6 +254,8 @@
     <script type="text/javascript">
       (function() {
         document.getElementById("query").focus();
+        visScoreComponents = new ScoreComponents(ScoreComponents.resultsToComponents({{ results }}), '#score-components-plot');
+        visScoreComponents.render();
       })();
     </script>
   </body>

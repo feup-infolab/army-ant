@@ -40,3 +40,7 @@
   width: 80px;
   height: 80px;
 }
+
+#score-components-plot {
+  height: 200px;
+}
