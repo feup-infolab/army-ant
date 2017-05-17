@@ -18,3 +18,15 @@ g.V().has("type", "entity").where(__.outE().where(__.not(hasLabel("contained_in"
 
 # Path between two nodes based on name matching, with a maximum distance of 2.
 g.V().has("name", "William Rockefeller").repeat(outE().inV()).until(or(filter { it.get().value("name").contains("New York") }, loops().is(eq(2)))).path().by("name").by(label)
+
+## Count edges of different types for graph-of-entity
+# All
+g.V().outE().count()
+# Synonym
+g.V().outE("synonym").count()
+# Contained In
+g.V().outE("contained_in").count()
+# Before
+g.V().outE("before").count()
+# Relation
+g.V().outE().where(__.not(hasLabel("contained_in").or().hasLabel("synonym").or().hasLabel("before"))).count()
