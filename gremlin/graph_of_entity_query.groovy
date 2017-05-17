@@ -155,7 +155,8 @@ graph_of_entity_query: {
       entityWeight = coverage * avgWeightedInversePathLength
       b = 0.003
       //score = ewIlf(entityWeight, avgReachableEntitiesFromSeeds, entityRelationCount.get(it.key, 0), avgEntityRelationCount, entityCount, b=b)
-      score = 0.7 * entityWeight + 0.3 * termEntityFrequency.get(it.key, 0)
+      //score = 0.7 * entityWeight + 0.3 * termEntityFrequency.get(it.key, 0)
+      score = entityWeight
         
       [
         docID: docID.toString(),
@@ -177,7 +178,8 @@ graph_of_entity_query: {
     .plus(termEntityFrequency.collect {
       docID = "http://en.wikipedia.org/wiki/${it.key.value("name").replace(" ", "_")}"
 
-      score = 0.1 * it.value
+      //score = 0.3 * it.value
+      score = 0
 
       [
         docID: docID.toString(),

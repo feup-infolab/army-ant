@@ -42,8 +42,7 @@ graph_of_word_query: {
   
   corpusSize = g.E().values("doc_id").unique().size()
 
-  twIdf = indegreePerTokenPerDoc.clone()
-    .collect { token ->
+  twIdf = indegreePerTokenPerDoc.clone().collect { token ->
       token['indegree'].collect { docID, indegree ->
         score = twIdf(indegree, docFrequencyPerToken[token['v']], docLengths[docID][0], avgDocLength, corpusSize)
 

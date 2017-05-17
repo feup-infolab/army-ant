@@ -155,21 +155,21 @@ class GraphOfEntity(ServiceIndex):
 
                 # Load word synonyms, linking to original term
 
-                source_syns = set([ss.name().split('.')[0].replace('_', ' ') for ss in wn.synsets(tokens[i])])
-                source_syns = source_syns.difference(tokens[i])
+                #source_syns = set([ss.name().split('.')[0].replace('_', ' ') for ss in wn.synsets(tokens[i])])
+                #source_syns = source_syns.difference(tokens[i])
 
-                target_syns = set([ss.name().split('.')[0].replace('_', ' ') for ss in wn.synsets(tokens[i+1])])
-                target_syns = target_syns.difference(tokens[i+1])
+                #target_syns = set([ss.name().split('.')[0].replace('_', ' ') for ss in wn.synsets(tokens[i+1])])
+                #target_syns = target_syns.difference(tokens[i+1])
 
-                for syn in source_syns:
-                    logger.debug("%s -[synonym]-> %s" % (tokens[i], syn))
-                    syn_vertex = await self.get_or_create_vertex(syn, data={'type': 'term'})
-                    edge = await self.get_or_create_edge(source_vertex, syn_vertex, edge_type='synonym')
+                #for syn in source_syns:
+                    #logger.debug("%s -[synonym]-> %s" % (tokens[i], syn))
+                    #syn_vertex = await self.get_or_create_vertex(syn, data={'type': 'term'})
+                    #edge = await self.get_or_create_edge(source_vertex, syn_vertex, edge_type='synonym')
 
-                for syn in target_syns:
-                    logger.debug("%s -[synonym]-> %s" % (tokens[i+1], syn))
-                    syn_vertex = await self.get_or_create_vertex(syn, data={'type': 'term'})
-                    edge = await self.get_or_create_edge(target_vertex, syn_vertex, edge_type='synonym')
+                #for syn in target_syns:
+                    #logger.debug("%s -[synonym]-> %s" % (tokens[i+1], syn))
+                    #syn_vertex = await self.get_or_create_vertex(syn, data={'type': 'term'})
+                    #edge = await self.get_or_create_edge(target_vertex, syn_vertex, edge_type='synonym')
 
                 # Load word-entity occurrence
 

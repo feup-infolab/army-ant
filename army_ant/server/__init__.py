@@ -1,4 +1,4 @@
-import aiohttp_jinja2, jinja2, asyncio, configparser, math
+import aiohttp_jinja2, jinja2, asyncio, configparser, math, time
 from collections import OrderedDict
 from aiohttp import web
 from aiohttp.errors import ClientOSError
@@ -17,6 +17,8 @@ async def page_link(request):
 
 @aiohttp_jinja2.template('search.html')
 async def search(request):
+    start_time = time.time()
+
     engine = request.GET.get('engine')
     if engine is None: engine = list(request.app['engines'].keys())[0]
 
@@ -25,7 +27,7 @@ async def search(request):
     query = request.GET.get('query')
     error = None
     offset = 0
-    limit = 20 if debug == 'on' else 5
+    limit = 30 if debug == 'on' else 5
 
     if query:
         offset = int(request.GET.get('offset', str(offset)))
@@ -58,11 +60,14 @@ async def search(request):
         pages = None
         metadata = {}
 
+    end_time = time.time()
+
     if error:
         response = {
             'engine': engine,
             'query': query,
             'debug': debug,
+            'time': end_time - start_time,
             'error': str(error)
         }
     else:
@@ -70,6 +75,7 @@ async def search(request):
             'engine': engine,
             'query': query,
             'debug': debug,
+            'time': end_time - start_time,
             'offset': offset,
             'limit': limit,
             'numDocs': num_docs,

@@ -1,5 +1,6 @@
-function ScoreComponents(components, selector) {
-  this.components = components;
+function ScoreComponents(results, selector) {
+  this.components = ScoreComponents.resultsToComponents(results);
+  this.numDocs = ScoreComponents.countUniqueDocIDs(this.components);
   this.selector = selector;
 }
 
@@ -16,10 +17,19 @@ ScoreComponents.resultsToComponents = function(results) {
   return Array.prototype.concat.apply([], components).reverse();
 }
 
+ScoreComponents.countUniqueDocIDs = function(components) {
+  var docIDs = {};
+  for (var i=0; i < components.length; i++) {
+    docIDs[components[i].docID] = true;
+  }
+  return Object.keys(docIDs).length;
+}
+
 ScoreComponents.prototype.render = function() {
   var colors = d3.scale.category10();
 
-  $(this.selector).css('height', (this.components.length * 1.5) + 'em');
+  console.log(this.components);
+  $(this.selector).css('height', (this.numDocs * 1.5) + 'em');
 
   // interact with this variable from a javascript console
   var plot = d3.parcoords()(this.selector)
