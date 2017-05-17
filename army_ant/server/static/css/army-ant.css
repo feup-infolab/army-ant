@@ -42,6 +42,16 @@
 }
 
 #score-components-plot {
-  height: 200px;
+  height: 500px;
   margin: 1em 0 2em 0;
+}
+
+.table-transposed th {
+  border-bottom: .1rem solid #efefef;
+}
+
+code {
+  font-size: 0.9em;
+  line-height: 1.5;
+  white-space: pre-line;
 }

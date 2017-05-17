@@ -10,7 +10,9 @@
     <link rel="stylesheet" href="{{ app.router.static.url(filename='css/army-ant.css') }}" />
 
     <script type="text/javascript" src="{{ app.router.static.url(filename='node_modules/d3.parcoords.js/node_modules/d3/d3.min.js')}}"></script>
+    <script type="text/javascript" src="{{ app.router.static.url(filename='node_modules/d3.parcoords.js/examples/lib/sylvester.js')}}"></script>
     <script type="text/javascript" src="{{ app.router.static.url(filename='node_modules/d3.parcoords.js/d3.parcoords.js')}}"></script>
+    <script type="text/javascript" src="{{ app.router.static.url(filename='node_modules/zepto/dist/zepto.min.js')}}"></script>
     <script type="text/javascript" src="{{ app.router.static.url(filename='js/util.js')}}"></script>
     <script type="text/javascript" src="{{ app.router.static.url(filename='js/visualization/score_components.js')}}"></script>
     
@@ -27,6 +29,10 @@
     </script>
 
     <title>{{ query if query }} {% if query %} - {% endif %} Army ANT</title>
+
+    {% set border_pages = 2 %}
+    {% set index_type = engine.split('-')[0] %}
+    {% set dataset = engine.split('-', 1)[1] %}
   </head>
   <body>
     <div class="container grid-960">
@@ -49,7 +55,7 @@
 
       <form class="form-horizontal">
         <div class="form-group">
-          <div class="column col-6">
+          <div class="column col-5">
             <!-- form input control -->
             <div class="input-group">
               <input class="form-input input-lg" type="text" id="query" name="query" placeholder="Search" value="{{ query if query }}" />
@@ -57,7 +63,7 @@
             </div>
           </div>
 
-          <div class="column col-3">
+          <div class="column col-4">
             <!-- form radio control -->
             <select class="form-select select-lg" id="engine" name="engine">
               {% for app_engine in app.engines %}
@@ -79,85 +85,245 @@
       {% if results|length > 0 %}
 
       {% if debug == 'on' %}
-      {% if engine in ['gow', 'goe'] %}
-      <dl>
-        <dt>Parallel Coordinates Plot: Score Components</dt>
-        <dd>
-          <div id="score-components-plot" class="parcoords"></div>
-        </dd>
-      </dl>
+      <div class="container">
+        <div id="learn" class="panel">
+          <div class="panel-header text-center">
+            <figure class="avatar avatar-lg">
+              <img src="{{ app.router.static.url(filename='img/hexagon-2307348.svg') }}">
+            </figure>
+            <div class="panel-title mt-10">Learn Mode</div>
+            <div class="panel-subtitle">EXPLORE, UNDERSTAND, ANALYZE</div>
+          </div>
+
+          <nav class="panel-nav">
+            <ul class="tab tab-block">
+              {% if index_type in ['gow', 'goe'] %}
+              <li class="tab-item">
+                <a href="#score-components-plot">
+                  Parallel Coordinates Plot: Score Components
+                </a>
+              </li>
+              {% endif %}
+              <li class="tab-item">
+                <a href="#score-explanation">
+                  Score
+                </a>
+              </li>
+              <li class="tab-item">
+                <a href="#dataset">
+                  Dataset
+                </a>
+              </li>
+              <li class="tab-item">
+                <a href="#results">
+                  Results
+                </a>
+              </li>
+            </ul>
+          </nav>
+
+          <div class="panel-body">
+            {% if index_type in ['gow', 'goe'] %}
+            <div id="score-components-plot" class="parcoords tab-content hide"></div>
+            {% endif %}
+
+            <div id="score-explanation" class="tab-content container hide">
+              <div class="column">
+                {% if index_type == 'gow' %}
+                <dl>
+                  <dt>TW-IDF</dt>
+                  <dd>
+                    TW-IDF is calculated using the indegree of the nodes that match each query term in the graph-of-word for each document as the term weight (TW). The formula used is the following:
+
+                    $$TW\text{-}IDF(q, d) = \sum_{t \in q}^d \left( \frac{tw(t, d)}{1 - b + b \times \frac{|d|}{avdl}} \times log \frac{N + 1}{df(t)} \right)$$
+
+                    Where:
+                    <ul>
+                      <li>$b = 0.003$,</li>
+                      <li>$tw(t, d)$ is the indegree of the node for term $t$, in the graph-of-word, for document $d$,</li>
+                      <li>$|d|$ is the document length,</li>
+                      <li>$avdl$ is the average document length for the whole corpus,</li>
+                      <li>$N$ is the size of the corpus,</li>
+                      <li>$df(t)$ is the document frequency of term $t$, i.e. the number of documents that contain term $t$.</li>
+                    </ul>
+                  </dd>
+
+                  <dt>Doc ID</dt>
+                  <dd>Doc ID can be a number or a string, but it must be a unique identifier for documents (e.g. a URI).</dd>
+
+                  <dt>Paper</dt>
+                  <dd>
+                    <blockquote>
+                      <p>François Rousseau and Michalis Vazirgiannis. 2013. Graph-of-word and TW-IDF: new approach to ad hoc
+                        IR. In Proceedings of the 22nd ACM international conference on Information &amp; Knowledge
+                        Management (CIKM '13). ACM, New York, NY, USA, 59-68.
+                        DOI=http://dx.doi.org/10.1145/2505515.2505671</p>
+                      <cite><a href="http://dl.acm.org/citation.cfm?id=2505671" target="_blank">ACM Digital Library</a></cite>
+                    </blockquote>
+                  </dd>
+                </dl>
+
+                {% else %}
+
+                <span class="label label-error">There is no information about this ranking function to display.</span>
+
+                {% endif %}
+              </div>
+            </div>
+
+            <div id="dataset" class="tab-content hide">
+              <div class="container">
+                <div class="column">
+                  {% if dataset == 'wikipedia_data' %}
+
+                  <dl>
+                    <dt>Source</dt>
+                    <dd>
+                      <a href="http://cs.iit.edu/~culotta/data/wikipedia.html" target="_blank">
+                        Wikipedia Relation Extraction Data v1.0
+                      </a>
+                    </dd>
+                    
+                    <dt>Description</dt>
+                    <dd>
+                      <i>
+                        "This data contains Wikipedia pages for which links between pages have been annotated with a
+                        relation type, e.g. father, education, superior, etc. This data was created in collaboration
+                        between the University of Massachusetts and Google, Inc."
+                      </i>
+                    </dd>
+
+                    <dt>Example</dt>
+                    <dd>
+                      <code>url=http://en.wikipedia.org/wiki/Charles_Darwin
+                        In recognition of Darwin's pre-eminence, he was buried in &lt;a href="/wiki/Westminster_Abbey"
+                        title="Westminster Abbey" relation="death_place"&gt;Westminster Abbey&lt;/a&gt;, close to &lt;a
+                        href="/wiki/William_Herschel" title="William Herschel"&gt;William Herschel&lt;/a&gt; and &lt;a
+                        href="/wiki/Isaac_Newton" title="Isaac Newton"&gt;Isaac Newton&lt;/a&gt;.</code>
+                    </dd>
+
+                    <dt>Paper</dt>
+                    <dd>
+                      <blockquote>
+                        <p>Aron Culotta, Andrew McCallum, and Jonathan Betz. 2006. Integrating probabilistic
+                          extraction models and data mining to discover relations and patterns in text. In Proceedings
+                          of the main conference on Human Language Technology Conference of the North American Chapter
+                          of the Association of Computational Linguistics (HLT-NAACL '06). Association for
+                          Computational Linguistics, Stroudsburg, PA, USA, 296-303.
+                          DOI=http://dx.doi.org/10.3115/1220835.1220873</p>
+                        <cite><a href="http://dl.acm.org/citation.cfm?id=1220873" target="_blank">ACM Digital Library</a></cite>
+                      </blockquote>
+                    </dd>
+                  </table>
+
+                  {% elif dataset == 'inex' %}
+
+                  <dl>
+                    <dt>Source</dt>
+                    <dd>
+                      <a href="http://inex.mmci.uni-saarland.de/data/documentcollection.html#wikipedia" target="_blank">
+                        INEX Document Collections - Adhoc Track (2009-2010) and Wikipedia Collection (2009-)
+                      </a>
+                    </dd>
+
+                    <dt>Date</dt>
+                    <dd>
+                      October 8, 2008
+                    </dd>
+                    
+                    <dt>Description</dt>
+                    <dd>
+                      <i>
+                        <p>"Starting in 2009, INEX uses a new document collection based on the Wikipedia. The original Wiki
+                          syntax has been converted into XML, using both general tags of the layout structure (like
+                          article, section, paragraph, title, list and item), typographical tags (like bold, emphatic),
+                          and frequently occurring link-tags. The annotation is enhanced with semantic markup of articles
+                          and outgoing links, based on the semantic knowledge base YAGO, explicitly labeling more than
+                          5,800 classes of entities like persons, movies, cities, and many more. For a more technical
+                          description of a preliminary version of this collection, see [9].</p>
+
+                        <p>The collection was created from the October 8, 2008 dump of the English Wikipedia articles and
+                          incorporates semantic annotations from the 2008-w40- 2 version of YAGO. It contains 2,666,190
+                          Wikipedia articles and has a total uncompressed size of 50.7 Gb. There are 101,917,424 XML
+                          elements of at least 50 characters (excluding white-space)."</p>
+                      </i>
+                    </dd>
+
+                    <dt>Example</dt>
+                    <dd>
+                      <code>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+                        &lt;!-- generated by CLiX/Wiki2XML [MPI-Inf, MMCI@UdS] $LastChangedRevision: 92 $ on 16.04.2009 15:20:32[mciao0825] --&gt;
+                        &lt;!DOCTYPE article SYSTEM &quot;../article.dtd&quot;&gt;
+                        &lt;article xmlns:xlink=&quot;http://www.w3.org/1999/xlink&quot;&gt;
+                        &lt;series  confidence=&quot;0.9511911446218017&quot; wordnetid=&quot;108457976&quot;&gt;
+                        &lt;fictional_character  confidence=&quot;0.9508927676800064&quot; wordnetid=&quot;109587565&quot;&gt;
+                        &lt;research_worker  confidence=&quot;0.9511911446218017&quot; wordnetid=&quot;110523076&quot;&gt;</code>
+                    </dd>
+
+                    <dt>Paper</dt>
+                    <dd>
+                      <blockquote>
+                        <p>Geva S., Kamps J., Lethonen M., Schenkel R., Thom J.A., Trotman A. (2010) Overview of the
+                          INEX 2009 Ad Hoc Track. In: Geva S., Kamps J., Trotman A. (eds) Focused Retrieval and
+                          Evaluation. INEX 2009. Lecture Notes in Computer Science, vol 6203. Springer, Berlin,
+                          Heidelberg</p>
+                        <cite><a href="https://link.springer.com/chapter/10.1007/978-3-642-14556-8_4" target="_blank">Springer Link</a></cite>
+                      </blockquote>
+                    </dd>
+                  </table>
+
+                  {% else %}
+
+                  <span class="label">There is no information about this dataset to display.</span>
+
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <div id="results" class="tab-content hide">
+              <table class="table table-striped table-hover">
+                <thead>
+                  <tr>
+                    <th class="text-right">Rank</th>
+
+                    {% if index_type == 'gow' %}
+                    <th title="Term Weight x Inverse Document Frequency" class="text-right">TW-IDF(q, d)</th>
+                    {% elif index_type == 'goe' %}
+                    <th title="Entity Weight x Term Entity Frequency" class="text-right">EW-TEF(q, e)</th>
+                    {% else %}
+                    <th class="text-right">Score(q, d)</th>
+                    {% endif %}
+
+                    <th>Doc ID</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for result in results %}
+                  <tr>
+                    <td class="text-right">{{ loop.index }}</td>
+                    <td class="text-right"> {{ '%f' % result.score|float }} </td>
+                    <td>{{ result.docID }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
       {% endif %}
 
-      {% if engine == 'gow' %}
-      <dl>
-        <dt>TW-IDF</dt>
-        <dd>
-          TW-IDF is calculated using the indegree of the nodes that match each query term in the graph-of-word for each document as the term weight (TW). The formula used is the following:
-
-          $$TW\text{-}IDF(q, d) = \sum_{t \in q}^d \left( \frac{tw(t, d)}{1 - b + b \times \frac{|d|}{avdl}} \times log \frac{N + 1}{df(t)} \right)$$
-
-          Where:
-          <ul>
-            <li>$b = 0.003$,</li>
-            <li>$tw(t, d)$ is the indegree of the node for term $t$, in the graph-of-word, for document $d$,</li>
-            <li>$|d|$ is the document length,</li>
-            <li>$avdl$ is the average document length for the whole corpus,</li>
-            <li>$N$ is the size of the corpus,</li>
-            <li>$df(t)$ is the document frequency of term $t$, i.e. the number of documents that contain term $t$.</li>
-          </ul>
-        </dd>
-
-        <dt>Doc ID</dt>
-        <dd>Doc ID can be a number or a string, but it must be a unique identifier for documents (e.g. a URI).</dd>
-      </dl>
-
-      <br>
-
-      <blockquote>
-        <p>François Rousseau and Michalis Vazirgiannis. 2013. Graph-of-word and TW-IDF: new approach to ad hoc IR. In Proceedings of the 22nd ACM international conference on Information &amp; Knowledge Management (CIKM '13). ACM, New York, NY, USA, 59-68. DOI=http://dx.doi.org/10.1145/2505515.2505671</p>
-        <cite><a href="http://dl.acm.org/citation.cfm?id=2505671" target="_blank">ACM Digital Library</a></cite>
-      </blockquote>
-      
-      <br>
-
-      {% endif %}
-      {% endif %}
-
+      {% if debug == 'off' %}
       <table class="table table-striped table-hover">
         <thead>
           <tr>
-            {% if debug == 'on' %}
-            
-            {% if engine == 'gow' %}
-            <th>TW-IDF(q, d)</th>
-            {% elif engine == 'goe' %}
-            <th>EW-ILF(q, e)</th>
-            {% else %}
-            <th>Score(q, d)</th>
-            {% endif %}
-
-            <th>Doc ID</th>
-
-            {% else %}
-
             <th>Image</th>
             <th>Document</th>
-
-            {% endif %}
           </tr>
         </thead>
         <tbody>
           {% for result in results %}
-
-          {% if debug == 'on' %}
-          
-          <tr>
-            <td class="text-right"> {{ '%f' % result.score|float }} </td>
-            <td>{{ result.docID }}</td>
-          </tr>
-          
-          {% else %}
-
           <tr>
             {% if result.docID in metadata %}
 
@@ -173,15 +339,12 @@
             
             {% endif %}
           </tr>
-
-          {% endif %}
-
           {% endfor %}
         </tbody>
       </table>
+      {% endif %}
 
-      {% if offset is not none and pages > 1 %}
-      {% set border_pages = 2 %}
+      {% if debug == 'off' and offset is not none and pages > 1 %}
 
       <ul class="pagination" style="justify-content: center">
         <li class="page-item">
@@ -262,6 +425,18 @@
     <script type="text/javascript">
       (function() {
         document.getElementById("query").focus();
+
+        $('#learn .tab-item:first-child').addClass('active');
+        $('#learn .tab-content:first-child').removeClass('hide');
+        
+        $('#learn .tab-item a').on('click', function(e) {
+          $('#learn .tab-item').removeClass('active');
+          $(this).parent('.tab-item').addClass('active');
+          var tabContentID = $(this).attr('href');
+          $('.tab-content').addClass('hide');
+          $(tabContentID).removeClass('hide');
+          return false;
+        });
 
         var visScoreComponents = new ScoreComponents(
           ScoreComponents.resultsToComponents({{ results }}),

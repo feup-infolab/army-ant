@@ -18,19 +18,24 @@ async def page_link(request):
 @aiohttp_jinja2.template('search.html')
 async def search(request):
     engine = request.GET.get('engine')
-    if engine is None: engine = 'gow'
+    if engine is None: engine = list(request.app['engines'].keys())[0]
+
+    debug = request.GET.get('debug', 'off')
 
     query = request.GET.get('query')
     error = None
     offset = 0
-    limit = 5
+    limit = 20 if debug == 'on' else 5
 
     if query:
         offset = int(request.GET.get('offset', str(offset)))
         limit = int(request.GET.get('limit', str(limit)))
         try:
             loop = asyncio.get_event_loop()
-            index = Index.open(request.app['engines'][engine]['index_location'], engine, loop)
+            index = Index.open(
+                request.app['engines'][engine]['index_location'],
+                request.app['engines'][engine]['index_type'],
+                loop)
             engine_response = await index.search(query, offset, limit)
 
             results = engine_response['results']
@@ -52,8 +57,6 @@ async def search(request):
         page = None
         pages = None
         metadata = {}
-
-    debug = request.GET.get('debug', 'off')
 
     if error:
         response = {

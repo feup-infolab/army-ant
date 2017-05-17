@@ -19,12 +19,15 @@ ScoreComponents.resultsToComponents = function(results) {
 ScoreComponents.prototype.render = function() {
   var colors = d3.scale.category10();
 
+  $(this.selector).css('height', (this.components.length * 1.5) + 'em');
+
   // interact with this variable from a javascript console
   var plot = d3.parcoords()(this.selector)
     .data(this.components)
     .margin({ top: 24, left: 230, bottom: 12, right: 0 })    
     .color(function(d) { return colors(d.docID); })
     .alpha(0.8)
+    //.smoothness(.2)
     .render()
     .brushMode("1D-axes")  // enable brushing
     .interactive(); // command line mode  
