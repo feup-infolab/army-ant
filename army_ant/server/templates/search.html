@@ -180,7 +180,7 @@
         </tbody>
       </table>
 
-      {% if offset is not none %}
+      {% if offset is not none and pages > 1 %}
       {% set border_pages = 2 %}
 
       <ul class="pagination" style="justify-content: center">

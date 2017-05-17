@@ -16,9 +16,10 @@ def ewIlf(entityWeight, avgReachableEntitiesFromSeeds, entityRelationCount, avgE
 }
 
 //queryTokens = ['born', 'new', 'york']
-queryTokens = ['musician', 'architect']
-offset = 0
-limit = 5
+//queryTokens = ['born']
+//queryTokens = ['musician', 'architect']
+//offset = 0
+//limit = 5
 
 graph_of_entity_query: {
   query = g.withSack(0f).V().has("name", within(queryTokens))
@@ -41,13 +42,16 @@ graph_of_entity_query: {
     .dedup()
     .where(inV().has("name", within(queryTokens)))
     .project("entity", "term")
-      .by { g.V().has("url", it.value("doc_id")).next() }
+      .by { p = g.V().has("url", it.value("doc_id")); if (p.hasNext()) return p.next() else return none }
       .by(inV())
+    .where(__.not(select("entity").is(none)))
     .group()
       .by(select("entity"))
       .by(count())
     .unfold()
-    .collectEntries { [(it.key): (it.value)] }
+    .collectEntries { [(it.key): (1 + Math.log(it.value))] }
+
+  //return entityTermFrequency
 
   if (entityRelationCount.isEmpty()) return []
 
@@ -139,8 +143,7 @@ graph_of_entity_query: {
   avgReachableEntitiesFromSeeds = avgReachableEntitiesFromSeedsPipe.clone().select(values).sum().next() /
     avgReachableEntitiesFromSeedsPipe.clone().select(values).count().next()
 
-  ewIlf = distancesToSeedsPerEntity.clone()
-    .collect {
+  ewIlf = distancesToSeedsPerEntity.clone().collect {
       docID = "http://en.wikipedia.org/wiki/${it.key.value("name").replace(" ", "_")}"
       coverage = it.value.size() / seedScores.size()
 
@@ -152,12 +155,11 @@ graph_of_entity_query: {
       entityWeight = coverage * avgWeightedInversePathLength
       b = 0.003
       //score = ewIlf(entityWeight, avgReachableEntitiesFromSeeds, entityRelationCount.get(it.key, 0), avgEntityRelationCount, entityCount, b=b)
-      score = 0.5 * entityWeight + 0.5 * entityTermFrequency.get(it.key, 0)
+      score = 0.7 * entityWeight + 0.3 * entityTermFrequency.get(it.key, 0)
         
       [
         docID: docID.toString(),
         score: score,
-        debug: [pathLengthsToSeeds: it.value],
         components: [[
           docID: docID.toString(),
           'c(e, S)': coverage.doubleValue(),
@@ -172,10 +174,31 @@ graph_of_entity_query: {
         ]]
       ]
     }
-    // TODO merge type-only results from entityTermFrequency
+    .plus(entityTermFrequency.collect {
+      docID = "http://en.wikipedia.org/wiki/${it.key.value("name").replace(" ", "_")}"
+
+      score = 0.1 * it.value
+
+      [
+        docID: docID.toString(),
+        score: score.doubleValue(),
+        components: [[
+          docID: docID.toString(),
+          'c(e, S)': 0d,
+          'w(e)': 0d,
+          'wNorm(e, E)': 0d,
+          'ew(e, E, b)': 0d,
+          'etf(t, e)': it.value.doubleValue()
+        ]]
+      ]
+    })
+    .unique { a, b -> a.docID <=> b.docID }
     .sort { -it.score }
+
+  numDocs = ewIlf.size()
+  ewIlf = ewIlf
     .drop(offset)
     .take(limit)
 
-  [[results: ewIlf, numDocs: distancesToSeedsPerEntity.clone().count().next()]]
+  [[results: ewIlf, numDocs: numDocs]]
 }
