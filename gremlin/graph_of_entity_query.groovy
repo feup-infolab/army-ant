@@ -58,15 +58,15 @@ graph_of_entity_query: {
   avgEntityRelationCount = entityRelationCountPipe.clone()[0].values().sum() / entityRelationCountPipe.clone()[0].values().size()
 
   // Number of entities that have facts about them (we can later use a minimum number of facts).
-  entityCount = g.V()
-    .where(
-      has("type", "entity")
-      .and()
-      .outE().where(__.not(hasLabel("contained_in")))
-    )
-    .dedup()
-    .count()
-    .next()
+  //entityCount = g.V()
+    //.where(
+      //has("type", "entity")
+      //.and()
+      //.outE().where(__.not(hasLabel("contained_in")))
+    //)
+    //.dedup()
+    //.count()
+    //.next()
 
   seedScoresPipe = query.clone()
     .union(
@@ -123,25 +123,25 @@ graph_of_entity_query: {
 
   //return distancesToSeedsPerEntity
 
-  avgReachableEntitiesFromSeedsPipe = seedScoresPipe.clone()
-    .select(keys)
-    .group()
-      .by()
-      .by(
-        repeat(both().simplePath())
-        .until(
-          or(
-            has("type", "entity"),
-            loops().is(eq(2))
-          )
-        )
-        .dedup()
-        .count()
-      )
-    .unfold()
+  //avgReachableEntitiesFromSeedsPipe = seedScoresPipe.clone()
+    //.select(keys)
+    //.group()
+      //.by()
+      //.by(
+        //repeat(both().simplePath())
+        //.until(
+          //or(
+            //has("type", "entity"),
+            //loops().is(eq(2))
+          //)
+        //)
+        //.dedup()
+        //.count()
+      //)
+    //.unfold()
 
-  avgReachableEntitiesFromSeeds = avgReachableEntitiesFromSeedsPipe.clone().select(values).sum().next() /
-    avgReachableEntitiesFromSeedsPipe.clone().select(values).count().next()
+  //avgReachableEntitiesFromSeeds = avgReachableEntitiesFromSeedsPipe.clone().select(values).sum().next() /
+    //avgReachableEntitiesFromSeedsPipe.clone().select(values).count().next()
 
   ewIlf = distancesToSeedsPerEntity.clone().collect {
       docID = "http://en.wikipedia.org/wiki/${it.key.value("name").replace(" ", "_")}"
