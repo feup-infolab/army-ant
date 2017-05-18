@@ -167,7 +167,8 @@ graph_of_entity_query: {
           'w(e)': avgWeightedInversePathLength,
           'wNorm(e, E)': (1 - b + b * entityRelationCount.get(it.key, 0) / avgEntityRelationCount).doubleValue(),
           'ew(e, E, b)': (entityWeight / (1 - b + b * entityRelationCount.get(it.key, 0) / avgEntityRelationCount)).doubleValue(),
-          'tef(t, e)': termEntityFrequency.get(it.key, 0)
+          'tef(t, e)': termEntityFrequency.get(it.key, 0),
+          'ew-tef(q, e)': score
           //'|E|': entityCount,
           //'avgle': avgReachableEntitiesFromSeeds.doubleValue(),
           //'ilf(E)': Math.log((entityCount + 1) / avgReachableEntitiesFromSeeds).doubleValue(),
@@ -190,7 +191,8 @@ graph_of_entity_query: {
           'w(e)': 0d,
           'wNorm(e, E)': 0d,
           'ew(e, E, b)': 0d,
-          'tef(t, e)': it.value.doubleValue()
+          'tef(t, e)': it.value.doubleValue(),
+          'ew-tef(q, e)': score
         ]]
       ]
     })
