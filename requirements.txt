@@ -6,7 +6,7 @@ html5lib
 aiogremlin
 aiocache
 flask
-aiohttp
+aiohttp==1.1.6
 aiohttp_jinja2
 jinja2
 pymongo

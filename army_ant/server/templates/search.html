@@ -358,30 +358,41 @@
 
 {% elif error %}
 
-<div class="empty">
-  <div class="empty-icon">
-    <i class="icon icon-stop"></i>
+<div class="container">
+  <div class="empty">
+    <div class="empty-icon">
+      <i class="icon icon-stop"></i>
+    </div>
+    <h4 class="empty-title">Error</h4>
+    <p class="empty-subtitle">{{ error }}</p>
   </div>
-  <h4 class="empty-title">Error</h4>
-  <p class="empty-subtitle">{{ error }}</p>
 </div>
 
 {% else %}
 
-{% if query %}
-<div class="empty">
-  <div class="empty-icon">
-    <i class="icon icon-search"></i>
+<div class="container">
+  {% if query %}
+  <div class="empty">
+    <div class="empty-icon">
+      <i class="icon icon-search"></i>
+    </div>
+    <h4 class="empty-title">No results found</h4>
+    <p class="empty-subtitle">Try to search for something else.</p>
   </div>
-  <h4 class="empty-title">No results found</h4>
-  <p class="empty-subtitle">Try to search for something else.</p>
+  {% else %}
+  <div class="empty">
+    <div class="empty-icon">
+      <i class="icon icon-search"></i>
+    </div>
+    <h4 class="empty-title">Please insert a query in order to search for documents/entities.</h4>
+    <p class="empty-subtitle">
+      <b>You can also select a different engine or enable/disable learn mode.</b> If
+      there are no engines available in the drop down, please implement your own
+      first and index your document collection.
+    </p>
+  </div>
+  {% endif %}
 </div>
-{% else %}
-<h3 class="message">
-  Please insert a query in order to search for documents/entities.
-  <small>You can also select a different engine or enable/disable learn mode.</small>
-</h3>
-{% endif %}
 
 {% endif %}
 

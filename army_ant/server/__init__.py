@@ -17,7 +17,7 @@ async def page_link(request):
 
 @aiohttp_jinja2.template('home.html')
 async def home(request):
-    return
+    pass
 
 @aiohttp_jinja2.template('search.html')
 async def search(request):
@@ -95,6 +95,39 @@ async def search(request):
     else:
         return response
 
+@aiohttp_jinja2.template('evaluation.html')
+async def evaluation(request):
+    pass
+
+@aiohttp_jinja2.template('evaluation.html')
+async def evaluation_launch(request):
+    reader = await request.multipart()
+    print(reader.next())
+
+    # /!\ Don't forget to validate your inputs /!\
+
+    #mp3 = await reader.next()
+
+    ##filename = mp3.filename
+
+    ### You cannot rely on Content-Length if transfer is chunked.
+    ##size = 0
+    ##with open(os.path.join('/spool/yarrr-media/mp3/', filename), 'wb') as f:
+        ##while True:
+            ##chunk = await mp3.read_chunk()  # 8192 bytes by default.
+            ##if not chunk:
+                ##break
+            ##size += len(chunk)
+            ##f.write(chunk)
+
+    #return web.Response(text='{} sized of {} successfully stored'
+                        #''.format(filename, size))
+    
+
+@aiohttp_jinja2.template('about.html')
+async def about(request):
+    pass
+
 def run_app(loop):
     config = configparser.ConfigParser()
     config.read('server.cfg')
@@ -114,10 +147,8 @@ def run_app(loop):
     app.router.add_get('/', home, name='home')
     app.router.add_get('/search', search, name='search')
     app.router.add_get('/evaluation', evaluation, name='evaluation')
+    app.router.add_post('/evaluation', evaluation_launch)
+    app.router.add_get('/about', about, name='about')
 
     app.router.add_static('/static', 'army_ant/server/static', name='static', follow_symlinks=True)
     web.run_app(app)
-
-async def evaluation(request):
-    raise aiohttp.web.HTTPFound('/search')
-

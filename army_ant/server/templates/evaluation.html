@@ -1,0 +1,63 @@
+{% extends "home.html" %}
+{% block title %}
+<title>Evaluation - Army ANT</title>
+{% endblock %}
+
+{% block content %}
+<div class="columns">
+  <div class="column">
+    <header>
+      <h3>TREC-style qrels evaluation</h3>
+    </header>
+
+    <form method="post" accept-charset="utf-8" enctype="multipart/form-data">
+      <div class="columns">
+        <div class="column">
+          <div class="form-group">
+            <label class="form-label" for="topics">Topics</label>
+            <input class="form-input" type="file" id="topics" name="topics" value="">
+          </div>
+        </div>
+        <div class="column">
+          <div class="form-group">
+            <label class="form-label" for="topics-format">Topics Format</label>
+            <select class="form-select select-lg" id="topics-format" name="topics-format">
+              <option value="inex">INEX</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="columns">
+        <div class="column">
+          <div class="form-group">
+            <label class="form-label" for="assessments">Assessments</label>
+            <input class="form-input" type="file" id="topics" value="">
+          </div>
+        </div>
+        <div class="column">
+          <div class="form-group">
+            <label class="form-label" for="assessments-format">Assessments Format</label>
+            <select class="form-select select-lg" id="assessments-format" name="assessments-format">
+              <option value="inex">INEX</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="topics">Engine</label>
+        <select class="form-select select-lg" id="engine" name="engine">
+          {% for app_engine in app.engines %}
+          <option value="{{app_engine}}" {% if engine == app_engine %} selected="selected" {% endif %}>{{ app.engines[app_engine].name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <br>
+
+      <div class="form-group">
+        <button class="btn btn-primary btn-lg" type="submit">Launch assessment</button>
+        <button class="btn btn-lg" type="reset">Clear form</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

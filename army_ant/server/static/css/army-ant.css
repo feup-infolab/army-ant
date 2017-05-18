@@ -12,6 +12,7 @@ code {
 
 .section-header {
   padding: 1rem .5rem;
+  margin-bottom: 1rem;
   width: 100%;
   z-index: 200;
 }
@@ -65,6 +66,7 @@ code {
   border-radius: 50%;
   width: 6.4rem;
   height: 6.4rem;
+  margin-left: 1ex;
 }
 
 #score-components-plot {
