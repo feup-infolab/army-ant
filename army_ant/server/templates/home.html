@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ app.router.static.url(filename='img/ant_army_logo_2.png') }}" />
+    <!--<meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />-->
+
+    <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/spectre.css/dist/spectre.min.css') }}" />
+    <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/spectre.css/dist/spectre-icons.min.css') }}" />
+    <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/font-awesome/css/font-awesome.min.css') }}" />
+    <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/d3.parcoords.js/d3.parcoords.css') }}" />
+    <link rel="stylesheet" href="{{ app.router.static.url(filename='css/army-ant.css') }}" />
+
+    <script type="text/javascript" src="{{ app.router.static.url(filename='node_modules/d3.parcoords.js/node_modules/d3/d3.min.js')}}"></script>
+    <script type="text/javascript" src="{{ app.router.static.url(filename='node_modules/d3.parcoords.js/examples/lib/sylvester.js')}}"></script>
+    <script type="text/javascript" src="{{ app.router.static.url(filename='node_modules/d3.parcoords.js/d3.parcoords.js')}}"></script>
+    <script type="text/javascript" src="{{ app.router.static.url(filename='node_modules/zepto/dist/zepto.min.js')}}"></script>
+    <script type="text/javascript" src="{{ app.router.static.url(filename='js/util.js')}}"></script>
+    <script type="text/javascript" src="{{ app.router.static.url(filename='js/visualization/score_components.js')}}"></script>
+    
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({
+        tex2jax: {
+          inlineMath: [['$','$'], ['\\(','\\)']]
+        }
+      });
+    </script>
+
+    <script type="text/javascript" async
+      src="{{ app.router.static.url(filename='node_modules/mathjax/MathJax.js') }}?config=TeX-MML-AM_CHTML">
+    </script>
+
+    {% block title %}
+    <title>{{ query if query }} {% if query %} - {% endif %} Army ANT</title>
+    {% endblock %}
+  </head>
+  <body>
+    <section class="section section-header bg-gray">
+      <section class="grid-header container grid-960">
+        <header class="navbar">
+          <section class="navbar-section">
+            <a class="logo" href="{{ app.router['home'].url() }}"></a>
+            <a href="{{ app.router['home'].url() }}" class="navbar-brand mr-10">
+              Army ANT
+              <small>
+                The altruistic ant
+                <a class="tooltip tooltip-right" href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4320217/" target="_blank" data-tooltip="Why Army ANT?">
+                  <i class="icon icon-link"></i>
+                </a>
+              </small>
+            </a>
+          </section>
+          <section class="navbar-section">
+            <a href="{{ app.router['search'].url() }}" class="btn btn-link">Search</a>
+            <a href="{{ app.router['evaluation'].url() }}" class="btn btn-link">Evaluation</a>
+          </section>
+        </header>
+      </section>
+    </section>
+
+    <section class="section container grid-960">
+      {% block content %}
+      <section class="columns">
+        <div class="column">
+          <div class="empty">
+            <div class="empty-icon">
+              <i class="icon icon-emoji"></i>
+            </div>
+            <h4 class="empty-title">Welcome to Army ANT!</h4>
+            <p class="empty-subtitle">Army ANT is a framework for <b>Information Retrieval Research</b>, that will provide you with a framework to test your search engines on various datasets, while enabling you to share information about your ranking functions and document collections.</p>
+            <div class="empty-action">
+              <a href="{{ app.router['search'].url() }}" class="btn btn-primary">Start here</a>
+            </div>
+          </div>
+        </div>
+      </section>
+      {% endblock %}
+    </section>
+  </body>
+</html>

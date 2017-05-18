@@ -1,4 +1,4 @@
-import aiohttp_jinja2, jinja2, asyncio, configparser, math, time
+import aiohttp, aiohttp_jinja2, jinja2, asyncio, configparser, math, time
 from collections import OrderedDict
 from aiohttp import web
 from aiohttp.errors import ClientOSError
@@ -14,6 +14,10 @@ async def page_link(request):
         query['offset'] = offset
         return request.url.with_query(query)
     return { 'page_link': _page_link}
+
+@aiohttp_jinja2.template('home.html')
+async def home(request):
+    return
 
 @aiohttp_jinja2.template('search.html')
 async def search(request):
@@ -107,6 +111,13 @@ def run_app(loop):
         loader=jinja2.FileSystemLoader('army_ant/server/templates'),
         context_processors=[page_link, aiohttp_jinja2.request_processor])
 
-    app.router.add_get('/', search)
+    app.router.add_get('/', home, name='home')
+    app.router.add_get('/search', search, name='search')
+    app.router.add_get('/evaluation', evaluation, name='evaluation')
+
     app.router.add_static('/static', 'army_ant/server/static', name='static', follow_symlinks=True)
     web.run_app(app)
+
+async def evaluation(request):
+    raise aiohttp.web.HTTPFound('/search')
+

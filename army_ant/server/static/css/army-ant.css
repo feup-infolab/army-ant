@@ -1,20 +1,40 @@
-.header {
-  margin-top: 1ex;
+code {
+  font-size: 0.9em;
+  line-height: 1.5;
+  white-space: pre-line;
 }
 
-.header-title {
-  line-height: 1.5em;
-  margin-bottom: 0;
+.bg-gray {
+  background: #f8f9fa;
+  color: #667189;
+  padding: 1rem;
 }
 
-.header-logo {
+.section-header {
+  padding: 1rem .5rem;
+  width: 100%;
+  z-index: 200;
+}
+
+.empty .icon {
+  font-size: 4rem;
+}
+
+.logo {
   margin-left: 1ex;
-  width: 60px;
-  height: 60px;
+  margin-right: 1ex;
+  width: 30px;
+  height: 30px;
   display: block;
   background-image: url('../img/ant_army_logo_2.svg');
   background-repeat: no-repeat;
   background-size: contain;
+}
+
+.logo-lg {
+  margin: auto;
+  width: 300px;
+  height: 300px;
 }
 
 .message {
@@ -49,14 +69,4 @@
 
 #score-components-plot {
   margin: 1em 0 2em 0;
-}
-
-.table-transposed th {
-  border-bottom: .1rem solid #efefef;
-}
-
-code {
-  font-size: 0.9em;
-  line-height: 1.5;
-  white-space: pre-line;
 }
