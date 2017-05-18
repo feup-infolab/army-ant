@@ -9,7 +9,11 @@ ScoreComponents.resultsToComponents = function(results) {
     return result.components.map(function(c) {
       let components = {};
       for (var k in c) {
-        components[k] = round(c[k], 4);
+        if (k == "docID") {
+          components[k] = '\u200b' + c[k];
+        } else {
+          components[k] = round(c[k], 4);
+        }
       }
       return components;
     });
@@ -28,7 +32,6 @@ ScoreComponents.countUniqueDocIDs = function(components) {
 ScoreComponents.prototype.render = function() {
   var colors = d3.scale.category10();
 
-  console.log(this.components);
   $(this.selector).css('height', (this.numDocs * 1.5) + 'em');
 
   // interact with this variable from a javascript console

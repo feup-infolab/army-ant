@@ -62,7 +62,7 @@ graph_of_entity_query: {
     //.where(
       //has("type", "entity")
       //.and()
-      //.outE().where(__.not(hasLabel("contained_in")))
+      //.outE().where(__.not(hasLabel("contained_in"))) // retrieval unit
     //)
     //.dedup()
     //.count()
@@ -102,14 +102,16 @@ graph_of_entity_query: {
     .until(
       has("type", "entity")
       .and()
-      .outE().where(__.not(hasLabel("contained_in"))) // same argument as entityCount
+      //.outE().where(__.not(hasLabel("contained_in"))) // retrieval unit
+      .has("doc_id")
       .or()
       .loops().is(eq(maxDistance))
     )
     .where(
       __.has("type", "entity")
       .and()
-      .outE().where(__.not(hasLabel("contained_in"))) // same argument as entityCount
+      //.outE().where(__.not(hasLabel("contained_in"))) // retrieval unit
+      .has("doc_id")
     )
     .path().as("path")
     .project("entity", "seed", "distance")
