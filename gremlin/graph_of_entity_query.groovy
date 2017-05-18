@@ -144,7 +144,8 @@ graph_of_entity_query: {
     //avgReachableEntitiesFromSeedsPipe.clone().select(values).count().next()
 
   ewIlf = distancesToSeedsPerEntity.clone().collect {
-      docID = "http://en.wikipedia.org/wiki/${it.key.value("name").replace(" ", "_")}"
+      //docID = "http://en.wikipedia.org/wiki/${it.key.value("name").replace(" ", "_")}"
+      docID = it.key.value("doc_id")
       coverage = it.value.size() / seedScores.size()
 
       // Iterate over each seed.
@@ -177,7 +178,8 @@ graph_of_entity_query: {
       ]
     }
     .plus(termEntityFrequency.collect {
-      docID = "http://en.wikipedia.org/wiki/${it.key.value("name").replace(" ", "_")}"
+      //docID = "http://en.wikipedia.org/wiki/${it.key.value("name").replace(" ", "_")}"
+      docID = it.key.value("doc_id")
 
       //score = 0.3 * it.value
       score = 0

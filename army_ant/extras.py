@@ -27,3 +27,7 @@ async def fetch_wikipedia_images(db_location, db_name, db_type, loop):
             img_url = tree.xpath('(//table[contains(@class, "infobox")]//img)[1]/@src')
             if len(img_url) > 0:
                 await db.set_metadata(record['doc_id'], 'img_url', img_url[0])
+
+#async def filter_inex_qrels_per_sample()
+
+#async def filter_inex_topics_per_sample()

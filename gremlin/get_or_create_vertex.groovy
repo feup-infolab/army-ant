@@ -8,7 +8,11 @@ get_or_create_vertex: {
   }
 
   if (it.hasNext()) {
-    it.next()
+    def vertex = it.next();
+    if (data != null && data.containsKey("doc_id") && vertex.property("doc_id") == null) {
+      vertex.property("doc_id", data["doc_id"])
+    }
+    vertex
   } else {
     vertex = g.addV().property("name", vertexName)
     if (data != null) {

@@ -65,6 +65,7 @@ class Index(object):
         results = await result_set.all()
         return results[0] if len (results) > 0 else None
 
+    """Indexes the documents and yields documents to store in the database."""
     async def index(self):
         raise ArmyAntException("Index not implemented for %s" % self.__class__.__name__)
 
@@ -138,11 +139,11 @@ class GraphOfEntity(ServiceIndex):
             # Load entities and relations (knowledge base)
             for (e1, rel, e2) in doc.triples:
                 logger.debug("%s -[%s]-> %s" % (e1.label, rel, e2.label))
-                source_vertex = await self.get_or_create_vertex(e1.label, data={'url': e1.url, 'type': 'entity'})
+                source_vertex = await self.get_or_create_vertex(e1.label, data={'doc_id': doc.doc_id, 'url': e1.url, 'type': 'entity'})
                 target_vertex = await self.get_or_create_vertex(e2.label, data={'url': e2.url, 'type': 'entity'})
                 edge = await self.get_or_create_edge(source_vertex, target_vertex, edge_type=rel)
-                yield Document(doc_id = e1.url, metadata = { 'url': e1.url, 'name': e1.label })
-                yield Document(doc_id = e2.url, metadata = { 'url': e2.url, 'name': e2.label })
+                yield Document(doc_id = doc.doc_id, metadata = { 'url': e1.url, 'name': e1.label })
+                #yield Document(doc_id = e2.url, metadata = { 'url': e2.url, 'name': e2.label }) # We're only indexing what has a doc_id
 
             tokens = self.analyze(doc.text)
 

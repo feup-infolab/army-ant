@@ -128,20 +128,28 @@ class INEXReader(Reader):
     def to_plain_text(self, bdy):
         return re.sub(r'\s+', ' ', ''.join(bdy.xpath('%s/text()' % self.doc_xpath)))
 
-    def to_wikipedia_entity(self, label):
-        return WikipediaEntity("http://en.wikipedia.org/wiki/%s" % label.replace(" ", "_"), label)
+    def to_wikipedia_entity(self, page_id, label):
+        return WikipediaEntity("http://en.wikipedia.org/?curid=%s" % page_id, label)
 
-    def to_triples(self, title, bdy):
+    def xlink_to_page_id(self, xlink):
+        _, filename = os.path.split(xlink)
+        return os.path.splitext(filename)[0]
+
+    def to_triples(self, page_id, title, bdy):
         triples = []
         for link in bdy.xpath('//link'):
-            related = self.get_first(link.xpath('text()'))
-            if related is None: continue
-            related = related.strip()
+            related_id = self.get_first(link.xpath('@xlink:href', namespaces = { 'xlink': 'http://www.w3.org/1999/xlink' }))
+            related_title = self.get_first(link.xpath('text()'))
+            
+            if related_id is None or related_title is None: continue
+
+            related_id = self.xlink_to_page_id(related_id)
+            related_title = related_title.strip()
 
             triples.append((
-                self.to_wikipedia_entity(title),
+                self.to_wikipedia_entity(page_id, title),
                 'related_to',
-                self.to_wikipedia_entity(related)))
+                self.to_wikipedia_entity(related_id, related_title)))
 
         return triples
 
@@ -165,6 +173,7 @@ class INEXReader(Reader):
             self.counter += 1
 
             article = etree.parse(self.tar.extractfile(member), self.parser)
+            page_id = self.xlink_to_page_id(self.get_first(article.xpath('//header/id/text()')))
             title = self.get_first(article.xpath('//header/title/text()'))
 
             bdy = self.get_first(article.xpath('//bdy'))
@@ -172,12 +181,12 @@ class INEXReader(Reader):
 
             template = bdy.xpath('//template')
 
-            url = self.to_wikipedia_entity(title).url
+            url = self.to_wikipedia_entity(page_id, title).url
 
             return Document(
-                doc_id = member.name,
+                doc_id = page_id,
                 text = self.to_plain_text(bdy),
-                triples = self.to_triples(title, bdy),
+                triples = self.to_triples(page_id, title, bdy),
                 metadata = { 'url': url, 'name': title })
 
         raise StopIteration
