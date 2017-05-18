@@ -30,3 +30,6 @@ g.V().outE("contained_in").count()
 g.V().outE("before").count()
 # Relation
 g.V().outE().where(__.not(hasLabel("contained_in").or().hasLabel("synonym").or().hasLabel("before"))).count()
+
+# Update a property
+g.V().outE().has("doc_id").property("doc_id", values("doc_id").map { it.get().tokenize("/")[-1].tokenize(".")[0] })
