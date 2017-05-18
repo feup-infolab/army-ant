@@ -16,11 +16,11 @@ logger = logging.getLogger(__name__)
 
 class Reader(object):
     @staticmethod
-    def factory(source_path, source_reader):
+    def factory(source_path, source_reader, limit=None):
         if source_reader == 'wikipedia_data':
             return WikipediaDataReader(source_path)
         elif source_reader == 'inex':
-            return INEXReader(source_path)
+            return INEXReader(source_path, limit)
         else:
             raise ArmyAntException("Unsupported source reader %s" % source_reader)
 

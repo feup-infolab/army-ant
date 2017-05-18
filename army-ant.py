@@ -21,9 +21,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class CommandLineInterface(object):
-    def index(self, source_path, source_reader, index_location='localhost', index_type='gow', db_location='localhost', db_name='graph_of_entity', db_type='mongo'):
+    def index(self, source_path, source_reader, index_location='localhost', index_type='gow', db_location='localhost', db_name='graph_of_entity', db_type='mongo', limit=None):
         try:
-            reader = Reader.factory(source_path, source_reader)
+            reader = Reader.factory(source_path, source_reader, limit)
 
             loop = asyncio.get_event_loop()
             try:
