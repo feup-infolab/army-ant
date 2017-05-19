@@ -5,9 +5,9 @@
 
 {% block content %}
 <div class="columns">
-  <div class="column">
+  <div class="column col-12">
     <header>
-      <h3>TREC-style qrels evaluation</h3>
+      <h3>Evaluation</h3>
     </header>
 
     <form method="post" accept-charset="utf-8" enctype="multipart/form-data">
@@ -22,7 +22,7 @@
           <div class="form-group">
             <label class="form-label" for="topics-format">Topics Format</label>
             <select class="form-select select-lg" id="topics-format" name="topics-format">
-              <option value="inex">INEX</option>
+              <option value="inex">INEX Topics</option>
             </select>
           </div>
         </div>
@@ -31,14 +31,14 @@
         <div class="column">
           <div class="form-group">
             <label class="form-label" for="assessments">Assessments</label>
-            <input class="form-input" type="file" id="topics" value="">
+            <input class="form-input" type="file" id="assessments" name="assessments" value="">
           </div>
         </div>
         <div class="column">
           <div class="form-group">
             <label class="form-label" for="assessments-format">Assessments Format</label>
             <select class="form-select select-lg" id="assessments-format" name="assessments-format">
-              <option value="inex">INEX</option>
+              <option value="inex">INEX QRELs</option>
             </select>
           </div>
         </div>
@@ -47,10 +47,12 @@
         <label class="form-label" for="topics">Engine</label>
         <select class="form-select select-lg" id="engine" name="engine">
           {% for app_engine in app.engines %}
-          <option value="{{app_engine}}" {% if engine == app_engine %} selected="selected" {% endif %}>{{ app.engines[app_engine].name }}</option>
+          <option value="{{app_engine}}">{{ app.engines[app_engine].name }}</option>
           {% endfor %}
+          <option value="__all__">All Engines</option>
         </select>
       </div>
+
       <br>
 
       <div class="form-group">
@@ -60,4 +62,59 @@
     </form>
   </div>
 </div>
+
+<div class="divider"></div>
+
+<div class="columns">
+  <div class="column">
+    <header>
+      <h3>Tasks</h3>
+    </header>
+
+    {% if tasks|length > 0 %}
+    
+    <table class="table">
+      <thead>
+        <th>Queued</th>
+        <th>Topics</th>
+        <th>Assessments</th>
+        <th>Engine</th>
+        <th>Status</th>
+      </thead>
+
+      <tbody>
+        {% for task in tasks %}
+        <tr {% if task._id %} data-id="{{ task._id }}" {% endif %}>
+          <td>{{ task.time|timestamp_to_date }}</td>
+          <td>{{ task.topics_filename}}</td>
+          <td>{{ task.assessments_filename }}</td>
+          <td>{{ app.engines[task.engine].name }}</td>
+          <td>{{ task.status.name }}</td>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% else %}
+
+    <div class="empty">
+      <div class="empty-icon">
+        <i class="icon icon-menu"></i>
+      </div>
+      <h4 class="empty-title">No evaluation tasks found</h4>
+      <p class="empty-subtitle">Try to launch your own using the formulary above.</p>
+    </div>
+
+    {% endif %}
+  </div>
+</div>
+
+{% if error %}
+<script type="text/javascript">
+  (function() {
+    $('#error .message').text('{{ error }}');
+    $('#error').removeClass('hide');
+  })();
+</script>
+{% endif %}
+
 {% endblock %}

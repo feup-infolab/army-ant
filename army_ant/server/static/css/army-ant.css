@@ -10,6 +10,16 @@ code {
   padding: 1rem;
 }
 
+.global-message {
+  position: absolute;
+  width: 960px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: auto;
+  z-index: 100000;
+}
+
 .section-header {
   padding: 1rem .5rem;
   margin-bottom: 1rem;

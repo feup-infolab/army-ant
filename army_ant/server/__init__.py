@@ -1,9 +1,11 @@
-import aiohttp, aiohttp_jinja2, jinja2, asyncio, configparser, math, time
+import aiohttp, aiohttp_jinja2, jinja2, asyncio, configparser, math, time, tempfile
+from datetime import datetime
 from collections import OrderedDict
 from aiohttp import web
 from aiohttp.errors import ClientOSError
 from army_ant.index import Index
 from army_ant.database import Database
+from army_ant.evaluation import EvaluationTask, EvaluationTaskManager
 from army_ant.exception import ArmyAntException
 
 async def page_link(request):
@@ -13,7 +15,10 @@ async def page_link(request):
         if offset < 0: offset = 0
         query['offset'] = offset
         return request.url.with_query(query)
-    return { 'page_link': _page_link}
+    return { 'page_link': _page_link }
+
+def timestamp_to_date(timestamp):
+    return datetime.fromtimestamp(int(round(timestamp / 1000)))
 
 @aiohttp_jinja2.template('home.html')
 async def home(request):
@@ -95,34 +100,60 @@ async def search(request):
     else:
         return response
 
+async def evaluation_get(request):
+    manager = EvaluationTaskManager(request.app['db_location'])
+    return manager.get_tasks()
+
+async def evaluation_post(request):
+    data = await request.post()
+
+    with tempfile.NamedTemporaryFile(delete=False) as fp:
+        fp.write(data['topics'].file.read())
+        topics_path = fp.name
+
+    with tempfile.NamedTemporaryFile(delete=False) as fp:
+        fp.write(data['assessments'].file.read())
+        assessments_path = fp.name
+
+    manager = EvaluationTaskManager(request.app['db_location'])
+
+    if data['engine'] == '__all__':
+        for engine in request.app['engines']:
+            manager.add_task(EvaluationTask(
+                data['topics'].filename,
+                topics_path,
+                data['topics-format'],
+                data['assessments'].filename,
+                assessments_path,
+                data['assessments-format'],
+                engine))
+    else:
+        manager.add_task(EvaluationTask(
+            data['topics'].filename,
+            topics_path,
+            data['topics-format'],
+            data['assessments'].filename,
+            assessments_path,
+            data['assessments-format'],
+            data['engine']))
+
+    error = None
+    try:
+        manager.queue()
+    except ArmyAntException as e:
+        error = str(e)
+
+    response = await evaluation_get(request)
+    if error: response['error'] = error
+
+    return response
+ 
 @aiohttp_jinja2.template('evaluation.html')
 async def evaluation(request):
-    pass
-
-@aiohttp_jinja2.template('evaluation.html')
-async def evaluation_launch(request):
-    reader = await request.multipart()
-    print(reader.next())
-
-    # /!\ Don't forget to validate your inputs /!\
-
-    #mp3 = await reader.next()
-
-    ##filename = mp3.filename
-
-    ### You cannot rely on Content-Length if transfer is chunked.
-    ##size = 0
-    ##with open(os.path.join('/spool/yarrr-media/mp3/', filename), 'wb') as f:
-        ##while True:
-            ##chunk = await mp3.read_chunk()  # 8192 bytes by default.
-            ##if not chunk:
-                ##break
-            ##size += len(chunk)
-            ##f.write(chunk)
-
-    #return web.Response(text='{} sized of {} successfully stored'
-                        #''.format(filename, size))
-    
+    if request.method == 'GET':
+        return await evaluation_get(request)
+    elif request.method == 'POST':
+        return await evaluation_post(request)
 
 @aiohttp_jinja2.template('about.html')
 async def about(request):
@@ -136,18 +167,19 @@ def run_app(loop):
 
     app['engines'] = OrderedDict()
     for section in config.sections():
-        if section != 'DEFAULT':
-            app['engines'][section] = dict(config[section])
+        app['engines'][section] = dict(config[section])
+    app['db_location'] = config['DEFAULT'].get('db_location', 'localhost')
 
     aiohttp_jinja2.setup(
         app,
         loader=jinja2.FileSystemLoader('army_ant/server/templates'),
+        filters = { 'timestamp_to_date': timestamp_to_date },
         context_processors=[page_link, aiohttp_jinja2.request_processor])
 
     app.router.add_get('/', home, name='home')
     app.router.add_get('/search', search, name='search')
     app.router.add_get('/evaluation', evaluation, name='evaluation')
-    app.router.add_post('/evaluation', evaluation_launch)
+    app.router.add_post('/evaluation', evaluation)
     app.router.add_get('/about', about, name='about')
 
     app.router.add_static('/static', 'army_ant/server/static', name='static', follow_symlinks=True)

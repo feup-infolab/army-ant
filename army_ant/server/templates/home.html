@@ -6,7 +6,6 @@
 
     <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/spectre.css/dist/spectre.min.css') }}" />
     <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/spectre.css/dist/spectre-icons.min.css') }}" />
-    <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/font-awesome/css/font-awesome.min.css') }}" />
     <link rel="stylesheet" href="{{ app.router.static.url(filename='node_modules/d3.parcoords.js/d3.parcoords.css') }}" />
     <link rel="stylesheet" href="{{ app.router.static.url(filename='css/army-ant.css') }}" />
 
@@ -34,6 +33,16 @@
     {% endblock %}
   </head>
   <body>
+    <div id="error" class="global-message toast toast-error hide">
+      <button class="btn btn-clear float-right"></button>
+      <span class="message"></span>
+    </div>
+
+    <div id="warning" class="global-message toast toast-warning hide">
+      <button class="btn btn-clear float-right"></button>
+      <span class="message"></span>
+    </div>
+
     <section class="section section-header bg-gray">
       <section class="grid-header container grid-960">
         <header class="navbar">
@@ -76,5 +85,13 @@
       </section>
       {% endblock %}
     </section>
+
+    <script type="text/javascript">
+      (function() {
+        $(document).on('click', '.global-message .btn-clear', function(e) {
+          $(this).parent('.global-message').addClass('hide');
+        });
+      })();
+    </script>
   </body>
 </html>

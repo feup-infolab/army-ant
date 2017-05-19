@@ -5,7 +5,7 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import os, logging
+import os, logging, hashlib
 from bs4 import BeautifulSoup
 
 def html_to_text(html):
@@ -25,3 +25,11 @@ def html_to_text(html):
 def load_gremlin_script(script_name):
     with open(os.path.join('gremlin', script_name + '.groovy'), 'r') as f:
         return f.read()
+
+def md5(filename):
+    hash_md5 = hashlib.md5()
+    with open(filename, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
