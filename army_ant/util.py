@@ -33,3 +33,6 @@ def md5(filename):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
 
+def get_first(lst, default=None):
+    return next(iter(lst or []), default)
+

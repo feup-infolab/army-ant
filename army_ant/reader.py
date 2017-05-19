@@ -8,7 +8,7 @@
 import tarfile, re, logging, os
 from lxml import etree
 from bs4 import BeautifulSoup, SoupStrainer
-from army_ant.util import html_to_text
+from army_ant.util import html_to_text, get_first
 from army_ant.exception import ArmyAntException
 from io import StringIO
 
@@ -138,8 +138,8 @@ class INEXReader(Reader):
     def to_triples(self, page_id, title, bdy):
         triples = []
         for link in bdy.xpath('//link'):
-            related_id = self.get_first(link.xpath('@xlink:href', namespaces = { 'xlink': 'http://www.w3.org/1999/xlink' }))
-            related_title = self.get_first(link.xpath('text()'))
+            related_id = get_first(link.xpath('@xlink:href', namespaces = { 'xlink': 'http://www.w3.org/1999/xlink' }))
+            related_title = get_first(link.xpath('text()'))
             
             if related_id is None or related_title is None: continue
 
@@ -158,9 +158,6 @@ class INEXReader(Reader):
             if os.path.splitext(member.name)[1] == '.xml':
                 yield member
 
-    def get_first(self, lst, default=None):
-        return next(iter(lst or []), default)
-
     def __next__(self):
         url = None
         entity = None
@@ -173,10 +170,10 @@ class INEXReader(Reader):
             self.counter += 1
 
             article = etree.parse(self.tar.extractfile(member), self.parser)
-            page_id = self.xlink_to_page_id(self.get_first(article.xpath('//header/id/text()')))
-            title = self.get_first(article.xpath('//header/title/text()'))
+            page_id = self.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
+            title = get_first(article.xpath('//header/title/text()'))
 
-            bdy = self.get_first(article.xpath('//bdy'))
+            bdy = get_first(article.xpath('//bdy'))
             if bdy is None: continue
 
             template = bdy.xpath('//template')

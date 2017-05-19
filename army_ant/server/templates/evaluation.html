@@ -108,6 +108,30 @@
   </div>
 </div>
 
+<div class="divider"></div>
+
+<div class="columns">
+  <div class="column">
+    <header>
+      <h3>Results</h3>
+    </header>
+
+    {% if results|length > 0 %}
+
+    {% else %}
+
+    <div class="empty">
+      <div class="empty-icon">
+        <i class="icon icon-menu"></i>
+      </div>
+      <h4 class="empty-title">No evaluation results found</h4>
+      <p class="empty-subtitle">Results will be displayed here after evaluation tasks are finished.</p>
+    </div>
+
+    {% endif %}
+  </div>
+</div>
+
 {% if error %}
 <script type="text/javascript">
   (function() {

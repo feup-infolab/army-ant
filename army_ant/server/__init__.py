@@ -1,4 +1,4 @@
-import aiohttp, aiohttp_jinja2, jinja2, asyncio, configparser, math, time, tempfile
+import aiohttp, aiohttp_jinja2, jinja2, asyncio, configparser, math, time, tempfile, os
 from datetime import datetime
 from collections import OrderedDict
 from aiohttp import web
@@ -102,16 +102,16 @@ async def search(request):
 
 async def evaluation_get(request):
     manager = EvaluationTaskManager(request.app['db_location'])
-    return manager.get_tasks()
+    return { 'tasks': manager.get_tasks() }
 
 async def evaluation_post(request):
     data = await request.post()
 
-    with tempfile.NamedTemporaryFile(delete=False) as fp:
+    with tempfile.NamedTemporaryFile(dir=os.path.join(request.app['eval_location'], 'spool'), prefix='eval_topics_', delete=False) as fp:
         fp.write(data['topics'].file.read())
         topics_path = fp.name
 
-    with tempfile.NamedTemporaryFile(delete=False) as fp:
+    with tempfile.NamedTemporaryFile(dir=os.path.join(request.app['eval_location'], 'spool'), prefix='eval_assessments_', delete=False) as fp:
         fp.write(data['assessments'].file.read())
         assessments_path = fp.name
 
@@ -159,6 +159,14 @@ async def evaluation(request):
 async def about(request):
     pass
 
+async def start_background_tasks(app):
+    manager = EvaluationTaskManager(app['db_location'])
+    app['evaluation_queue_listener'] = app.loop.create_task(manager.process())
+
+async def cleanup_background_tasks(app):
+    app['evaluation_queue_listener'].cancel()
+    await app['evaluation_queue_listener']
+
 def run_app(loop):
     config = configparser.ConfigParser()
     config.read('server.cfg')
@@ -169,6 +177,7 @@ def run_app(loop):
     for section in config.sections():
         app['engines'][section] = dict(config[section])
     app['db_location'] = config['DEFAULT'].get('db_location', 'localhost')
+    app['eval_location'] = config['DEFAULT'].get('eval_location', tempfile.gettempdir())
 
     aiohttp_jinja2.setup(
         app,
@@ -183,4 +192,8 @@ def run_app(loop):
     app.router.add_get('/about', about, name='about')
 
     app.router.add_static('/static', 'army_ant/server/static', name='static', follow_symlinks=True)
+
+    app.on_startup.append(start_background_tasks)
+    app.on_cleanup.append(cleanup_background_tasks)    
+
     web.run_app(app)
