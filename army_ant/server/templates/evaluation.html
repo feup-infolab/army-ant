@@ -86,7 +86,7 @@
           <td>{{ task.assessments_filename }}</td>
           <td>{{ task.index_location }} ({{ task.index_type }})</td>
           {% if task.status == 3 %}
-          <td><a href="{{ app.router['evaluation_results'].url() + '?task_id=' + task._id }}">{{ task.status.name }}</a></td>
+          <td><a href="{{ app.router['evaluation_results'].url_for().with_query(task_id=task._id) }}">{{ task.status.name }}</a></td>
           {% else %}
           <td>{{ task.status.name }}</td>
           {% endif %}
