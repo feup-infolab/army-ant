@@ -2,6 +2,8 @@ code {
   font-size: 0.9em;
   line-height: 1.5;
   white-space: pre-line;
+  max-height: 30vh;
+  overflow-y: auto;
 }
 
 .bg-gray {

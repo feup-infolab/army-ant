@@ -113,7 +113,7 @@ class INEXEvaluator(Evaluator):
             for f in os.listdir(self.o_results_path)
             if os.path.isfile(os.path.join(self.o_results_path, f))]
 
-        o_eval_details_file = os.path.join(self.o_assessments_path, 'map_average_precision_per_topic')
+        o_eval_details_file = os.path.join(self.o_assessments_path, 'map_average_precision_per_topic.csv')
 
         with open(o_eval_details_file, 'w') as ef:
             writer = csv.writer(ef)
@@ -177,7 +177,9 @@ class EvaluationTaskManager(object):
         self.running = None
 
         self.eval_location = eval_location
-        self.archives_dir = os.path.join(eval_location, 'archives')
+        self.results_dirname = os.path.join(eval_location, 'results')
+        self.assessments_dirname = os.path.join(eval_location, 'assessments')
+        self.spool_dirname = os.path.join(eval_location, 'spool')
 
         db_location_parts = db_location.split(':')
         
@@ -193,7 +195,8 @@ class EvaluationTaskManager(object):
         self.db['evaluation_tasks'].create_index([
             ('topics_md5', pymongo.ASCENDING),
             ('assessments_md5', pymongo.ASCENDING),
-            ('engine', pymongo.ASCENDING)
+            ('index_location', pymongo.ASCENDING),
+            ('index_type', pymongo.ASCENDING)
         ], unique=True)
 
     def add_task(self, task):
@@ -243,14 +246,10 @@ class EvaluationTaskManager(object):
         if task is None: return
 
         task = EvaluationTask(**task)
-        archive_filename = os.path.join(self.archives_dir, task_id)
-        if os.path.exists(archive_filename): return archive_filename
-
         with tempfile.TemporaryDirectory() as tmp_dir:
             out_dir = os.path.join(tmp_dir, task_id)
-            print(out_dir)
             shutil.copytree(os.path.join(self.eval_location, 'assessments', task_id), out_dir)
-            with open(os.path.join(out_dir, "eval_metrics"), 'w') as f:
+            with open(os.path.join(out_dir, "eval_metrics.csv"), 'w') as f:
                 writer = csv.writer(f)
                 writer.writerow(['metrics', 'value'])
                 for metric, value in task.results.items():
@@ -260,8 +259,40 @@ class EvaluationTaskManager(object):
                 zipdir(out_dir, zipf)
             yield archive_filename
 
+    def clean_spool(self):
+        valid_spool_filenames = set([])
+        for task in self.db['evaluation_tasks'].find():
+            valid_spool_filenames.add(os.path.basename(task['topics_path']))
+            valid_spool_filenames.add(os.path.basename(task['assessments_path']))
+        
+        for filename in os.listdir(self.spool_dirname):
+            path = os.path.join(self.spool_dirname, filename)
+            if os.path.isfile(path) and not filename in valid_spool_filenames and (
+                filename.startswith('eval_assessments_') or filename.startswith('eval_topics_')):
+                logger.warning("Removing unreferenced spool file '%s'" % path)
+                os.remove(path)
+
+    def clean_results_and_assessments(self):
+        valid_output_dirnames = set([])
+        for task in self.db['evaluation_tasks'].find():
+            valid_output_dirnames.add(os.path.basename(str(task['_id'])))
+        
+        for filename in os.listdir(self.results_dirname):
+            path = os.path.join(self.results_dirname, filename)
+            if not filename in valid_output_dirnames and len(filename) == 24: # 24 is the MongoDB ObjectId default length
+                logger.warning("Removing unreferenced result directory '%s'" % path)
+                shutil.rmtree(path)
+
+        for filename in os.listdir(self.assessments_dirname):
+            path = os.path.join(self.assessments_dirname, filename)
+            if not filename in valid_output_dirnames and len(filename) == 24: # 24 is the MongoDB ObjectId default length
+                logger.warning("Removing unreferenced assessments directory '%s'" % path)
+                shutil.rmtree(path)
+
     async def process(self):
         try:
+            self.clean_spool()
+            self.clean_results_and_assessments()
             while True:
                 task = self.get_waiting_task()
                 if task:

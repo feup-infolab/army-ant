@@ -160,12 +160,14 @@ async def evaluation_results(request):
 
     manager = EvaluationTaskManager(request.app['db_location'], request.app['eval_location'])
     with manager.get_results_archive(task_id) as archive_filename:
-        response = web.StreamResponse()
-        response.headers['Content-Disposition'] = 'attachment; filename="%s.zip"' % task_id
+        response = web.StreamResponse(headers={ 'Content-Disposition': 'attachment; filename="%s.zip"' % task_id })
+        await response.prepare(request)
+
         with open(archive_filename, 'rb') as f:
-            await response.prepare(request)
             response.write(f.read())
-            await response.drain()
+        response.write_eof()
+        await response.drain()
+
         return response
  
 @aiohttp_jinja2.template('evaluation.html')
