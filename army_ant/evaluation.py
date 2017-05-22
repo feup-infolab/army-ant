@@ -5,7 +5,7 @@
 # José Devezas <joseluisdevezas@gmail.com>
 # 2017-05-19
 
-import json, time, pymongo, asyncio, logging, csv, os, shutil, tempfile, zipfile
+import json, time, pymongo, asyncio, logging, csv, os, shutil, tempfile, zipfile, math
 from enum import IntEnum
 from lxml import etree
 from datetime import datetime
@@ -131,7 +131,7 @@ class INEXEvaluator(Evaluator):
                         results.append(row['relevant'] == 'True')
 
                     for i in range(1, len(results)+1):
-                        rel = results[0:1]
+                        rel = results[0:i]
                         p = sum(rel) / len(rel)
                         precisions.append(p)
 
@@ -141,10 +141,44 @@ class INEXEvaluator(Evaluator):
 
             self.results['MAP'] = sum(avg_precisions) / len(avg_precisions)
 
+    def calculate_normalized_discounted_cumulative_gain_at_p(self, p=10):
+        result_files = [
+            os.path.join(self.o_results_path, f)
+            for f in os.listdir(self.o_results_path)
+            if os.path.isfile(os.path.join(self.o_results_path, f))]
+
+        ndcgs = []
+        for result_file in result_files:
+            topic_id = os.path.basename(result_file)
+
+            dcg_parcels = []
+            idcg_parcels = []
+            with open(result_file, 'r') as rf:
+                reader = csv.DictReader(rf)
+                results = []
+                for row in reader:
+                    results.append(row['relevant'] == 'True')
+
+                for i in range(1, min(len(results), p) + 1):
+                    rel = results[i-1]
+                    dcg_p = rel / math.log2(i + 1)
+                    dcg_parcels.append(dcg_p)
+
+                for i in range(1, len(results)+1):
+                    rel = results[i-1]
+                    idcg_p = (2**rel - 1) / math.log2(i + 1)
+                    idcg_parcels.append(idcg_p)
+
+                ndcg = 0.0 if len(dcg_parcels) == 0 else sum(dcg_parcels) / len(idcg_parcels)
+                ndcgs.append(ndcg)
+
+        self.results['NDCG@%d' % p] = 0.0 if len(ndcgs) == 0 else sum(ndcgs) / len(ndcgs)
+
     async def run(self):
         assessed_topic_ids = self.get_assessed_topic_ids()
         await self.get_topic_results(assessed_topic_ids)
         self.calculate_mean_average_precision()
+        self.calculate_normalized_discounted_cumulative_gain_at_p()
 
 class EvaluationTaskStatus(IntEnum):
     WAITING = 1
