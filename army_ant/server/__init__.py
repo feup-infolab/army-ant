@@ -101,7 +101,7 @@ async def search(request):
         return response
 
 async def evaluation_get(request):
-    manager = EvaluationTaskManager(request.app['db_location'])
+    manager = EvaluationTaskManager(request.app['db_location'], request.app['eval_location'])
     return { 'tasks': manager.get_tasks() }
 
 async def evaluation_post(request):
@@ -115,27 +115,33 @@ async def evaluation_post(request):
         fp.write(data['assessments'].file.read())
         assessments_path = fp.name
 
-    manager = EvaluationTaskManager(request.app['db_location'])
+    manager = EvaluationTaskManager(request.app['db_location'], request.app['eval_location'])
 
     if data['engine'] == '__all__':
         for engine in request.app['engines']:
+            index_location = request.app['engines'][engine]['index_location']
+            index_type = request.app['engines'][engine]['index_type']
+
             manager.add_task(EvaluationTask(
                 data['topics'].filename,
                 topics_path,
-                data['topics-format'],
                 data['assessments'].filename,
                 assessments_path,
-                data['assessments-format'],
-                engine))
+                index_location,
+                index_type,
+                data['eval-format']))
     else:
+        index_location = request.app['engines'][data['engine']]['index_location']
+        index_type = request.app['engines'][data['engine']]['index_type']
+
         manager.add_task(EvaluationTask(
             data['topics'].filename,
             topics_path,
-            data['topics-format'],
             data['assessments'].filename,
             assessments_path,
-            data['assessments-format'],
-            data['engine']))
+            index_location,
+            index_type,
+            data['eval-format']))
 
     error = None
     try:
@@ -147,6 +153,20 @@ async def evaluation_post(request):
     if error: response['error'] = error
 
     return response
+
+async def evaluation_results(request):
+    task_id = request.GET.get('task_id')
+    if task_id is None: return web.HTTPNotFound()
+
+    manager = EvaluationTaskManager(request.app['db_location'], request.app['eval_location'])
+    with manager.get_results_archive(task_id) as archive_filename:
+        response = web.StreamResponse()
+        response.headers['Content-Disposition'] = 'attachment; filename="%s.zip"' % task_id
+        with open(archive_filename, 'rb') as f:
+            await response.prepare(request)
+            response.write(f.read())
+            await response.drain()
+        return response
  
 @aiohttp_jinja2.template('evaluation.html')
 async def evaluation(request):
@@ -160,7 +180,7 @@ async def about(request):
     pass
 
 async def start_background_tasks(app):
-    manager = EvaluationTaskManager(app['db_location'])
+    manager = EvaluationTaskManager(app['db_location'], app['eval_location'])
     app['evaluation_queue_listener'] = app.loop.create_task(manager.process())
 
 async def cleanup_background_tasks(app):
@@ -189,6 +209,7 @@ def run_app(loop):
     app.router.add_get('/search', search, name='search')
     app.router.add_get('/evaluation', evaluation, name='evaluation')
     app.router.add_post('/evaluation', evaluation)
+    app.router.add_get('/evaluation/results', evaluation_results, name='evaluation_results')
     app.router.add_get('/about', about, name='about')
 
     app.router.add_static('/static', 'army_ant/server/static', name='static', follow_symlinks=True)

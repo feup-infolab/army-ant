@@ -8,7 +8,7 @@
 import logging, asyncio
 
 from army_ant.reader import INEXReader
-from army_ant.evaluation import INEXEvaluator
+from army_ant.evaluation import Evaluator
 
 logging.basicConfig(
     format='%(asctime)s army-ant: [%(name)s] %(levelname)s: %(message)s',
@@ -20,11 +20,13 @@ def test_inexreader():
         print(item)
 
 def test_inexevaluator():
-    e = INEXEvaluator(
-        "/opt/army-ant/eval/spool/eval_topics_aunz268r",
-        "/opt/army-ant/eval/spool/eval_assessments_cat9tvk6", 
-        "gow-inex",
-        "/opt/army-ant/eval")
+    e = Evaluator.factory(
+        "/opt/army-ant/eval/spool/eval_topics_wjrfrryw",
+        "/opt/army-ant/eval/spool/eval_assessments_9n0llhsf", 
+        "localhost:8184",
+        "gow",
+        "/opt/army-ant/eval",
+        "inex")
     loop = asyncio.get_event_loop()
     loop.run_until_complete(e.run())
 

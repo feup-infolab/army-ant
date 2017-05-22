@@ -20,37 +20,33 @@
         </div>
         <div class="column">
           <div class="form-group">
-            <label class="form-label" for="topics-format">Topics Format</label>
-            <select class="form-select select-lg" id="topics-format" name="topics-format">
-              <option value="inex">INEX Topics</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      <div class="columns">
-        <div class="column">
-          <div class="form-group">
             <label class="form-label" for="assessments">Assessments</label>
             <input class="form-input" type="file" id="assessments" name="assessments" value="">
           </div>
         </div>
+      </div>
+
+      <div class="columns">
         <div class="column">
           <div class="form-group">
-            <label class="form-label" for="assessments-format">Assessments Format</label>
-            <select class="form-select select-lg" id="assessments-format" name="assessments-format">
-              <option value="inex">INEX QRELs</option>
+            <label class="form-label" for="eval-format">Evaluator Format</label>
+            <select class="form-select select-lg" id="eval-format" name="eval-format">
+              <option value="inex">INEX</option>
             </select>
           </div>
         </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="topics">Engine</label>
-        <select class="form-select select-lg" id="engine" name="engine">
-          {% for app_engine in app.engines %}
-          <option value="{{app_engine}}">{{ app.engines[app_engine].name }}</option>
-          {% endfor %}
-          <option value="__all__">All Engines</option>
-        </select>
+
+        <div class="column">
+          <div class="form-group">
+            <label class="form-label" for="topics">Search Engine</label>
+            <select class="form-select select-lg" id="engine" name="engine">
+              {% for app_engine in app.engines %}
+              <option value="{{app_engine}}">{{ app.engines[app_engine].name }}</option>
+              {% endfor %}
+              <option value="__all__">All Engines</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <br>
@@ -78,7 +74,7 @@
         <th>Queued</th>
         <th>Topics</th>
         <th>Assessments</th>
-        <th>Engine</th>
+        <th>Index</th>
         <th>Status</th>
       </thead>
 
@@ -88,8 +84,12 @@
           <td>{{ task.time|timestamp_to_date }}</td>
           <td>{{ task.topics_filename}}</td>
           <td>{{ task.assessments_filename }}</td>
-          <td>{{ app.engines[task.engine].name }}</td>
+          <td>{{ task.index_location }} ({{ task.index_type }})</td>
+          {% if task.status == 3 %}
+          <td><a href="{{ app.router['evaluation_results'].url() + '?task_id=' + task._id }}">{{ task.status.name }}</a></td>
+          {% else %}
           <td>{{ task.status.name }}</td>
+          {% endif %}
         {% endfor %}
       </tbody>
     </table>

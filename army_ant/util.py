@@ -5,7 +5,7 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import os, logging, hashlib
+import os, logging, hashlib, zipfile
 from bs4 import BeautifulSoup
 
 def html_to_text(html):
@@ -36,3 +36,8 @@ def md5(filename):
 def get_first(lst, default=None):
     return next(iter(lst or []), default)
 
+def zipdir(path, ziph):
+    os.chdir(os.path.dirname(path))
+    for root, dirs, files in os.walk(os.path.basename(path)):
+        for file in files:
+            ziph.write(os.path.join(root, file))

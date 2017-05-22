@@ -5,37 +5,64 @@
 # José Devezas <joseluisdevezas@gmail.com>
 # 2017-05-19
 
-import json, time, pymongo, asyncio, logging, configparser, csv, os
+import json, time, pymongo, asyncio, logging, csv, os, shutil, tempfile, zipfile
 from enum import IntEnum
 from lxml import etree
+from datetime import datetime
+from contextlib import contextmanager
 from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError
+from bson.objectid import ObjectId
 from army_ant.index import Index
-from army_ant.util import md5, get_first
+from army_ant.util import md5, get_first, zipdir
 from army_ant.exception import ArmyAntException
 
 logger = logging.getLogger(__name__)
 
-class INEXEvaluator(object):
-    def __init__(self, topics_path, assessments_path, engine, eval_location):
-        self.topics_path = topics_path
-        self.assessments_path = assessments_path
-        self.engine = engine
-        self.o_results_path = os.path.join(eval_location, 'results')
-        self.o_assessments_path = os.path.join(eval_location, 'assessments')
+class Evaluator(object):
+    @staticmethod
+    def factory(task, eval_location):
+        if task.eval_format == 'inex':
+            return INEXEvaluator(task, eval_location)
+        else:
+            raise ArmyAntException("Unsupported evaluator format")
 
-        config = configparser.ConfigParser()
-        config.read('server.cfg')
+    def __init__(self, task, eval_location):
+        self.task = task
+        self.results = {}
+
+        self.start_date = datetime.now()
+        
+        self.o_results_path = os.path.join(eval_location, 'results', task._id)
+        self.o_assessments_path = os.path.join(eval_location, 'assessments', task._id)
+        
+        try:
+            os.makedirs(self.o_results_path)
+        except FileExistsError:
+            raise ArmyAntException("Results directory '%s' already exists" % self.o_results_path)
+
+        try:
+            os.makedirs(self.o_assessments_path)
+        except FileExistsError:
+            raise ArmyAntException("Assessments directory '%s' already exists" % self.o_assessments_path)
+
+    def remove_output(self):
+        shutil.rmtree(self.o_results_path)
+        shutil.rmtree(self.o_assessments_path)
+
+    async def run(self):
+        raise ArmyAntException("Unsupported evaluator format %s" % eval_format)
+
+class INEXEvaluator(Evaluator):
+    def __init__(self, task, eval_location):
+        super().__init__(task, eval_location)
 
         self.loop = asyncio.get_event_loop()
-        self.index = Index.open(
-            config[engine].get('index_location'),
-            config[engine].get('index_type'),
-            self.loop)
+        self.index = Index.open(self.task.index_location, self.task.index_type, self.loop)
 
     def get_assessed_topic_ids(self):
         topic_ids = set([])
-        with open(self.assessments_path, 'r') as f:
+        with open(self.task.assessments_path, 'r') as f:
             for line in f:
                 topic_id, _ = line.split(' ', 1)
                 topic_ids.add(topic_id)
@@ -46,7 +73,7 @@ class INEXEvaluator(object):
 
         topic_doc_judgements = {}
 
-        with open(self.assessments_path, 'r') as f:
+        with open(self.task.assessments_path, 'r') as f:
             for line in f:
                 topic_id, _, doc_id, judgement, _ = line.split(' ', 4)
                 if not topic_id in topic_doc_judgements:
@@ -58,7 +85,7 @@ class INEXEvaluator(object):
     async def get_topic_results(self, filter=None):
         topic_doc_judgements = self.get_topic_assessments()
 
-        topics = etree.parse(self.topics_path)
+        topics = etree.parse(self.task.topics_path)
         
         for topic in topics.xpath('//topic'):
             topic_id = get_first(topic.xpath('@id'))
@@ -69,7 +96,7 @@ class INEXEvaluator(object):
             
             query = get_first(topic.xpath('title/text()'))
             
-            logger.info("Obtaining results for query '%s' of topic '%s' using '%s' engine" % (query, topic_id, self.engine))
+            logger.info("Obtaining results for query '%s' of topic '%s' using '%s' index at '%s'" % (query, topic_id, self.task.index_type, self.task.index_location))
             engine_response = await self.index.search(query, 0, 10000)
 
             with open(os.path.join(self.o_results_path, topic_id), 'w', newline='') as f:
@@ -86,28 +113,37 @@ class INEXEvaluator(object):
             for f in os.listdir(self.o_results_path)
             if os.path.isfile(os.path.join(self.o_results_path, f))]
 
-        avg_precisions = []
-        for result_file in result_files:
-            precisions = []
-            with open(result_file, 'r') as f:
-                reader = csv.DictReader(f)
-                results = []
-                for row in reader:
-                    results.append(row['relevant'] == 'True')
+        o_eval_details_file = os.path.join(self.o_assessments_path, 'map_average_precision_per_topic')
 
-                for i in range(1, len(results)+1):
-                    rel = results[0:1]
-                    p = sum(rel) / len(rel)
-                    precisions.append(p)
+        with open(o_eval_details_file, 'w') as ef:
+            writer = csv.writer(ef)
+            writer.writerow(['topic_id', 'avg_precision'])
 
-                avg_precision = 0.0 if len(precisions) == 0 else sum(precisions) / len(precisions)
-                avg_precisions.append(avg_precision)
-        print("MAP:", sum(avg_precisions)/len(avg_precisions))
+            avg_precisions = []
+            for result_file in result_files:
+                topic_id = os.path.basename(result_file)
 
-        
+                precisions = []
+                with open(result_file, 'r') as rf:
+                    reader = csv.DictReader(rf)
+                    results = []
+                    for row in reader:
+                        results.append(row['relevant'] == 'True')
+
+                    for i in range(1, len(results)+1):
+                        rel = results[0:1]
+                        p = sum(rel) / len(rel)
+                        precisions.append(p)
+
+                    avg_precision = 0.0 if len(precisions) == 0 else sum(precisions) / len(precisions)
+                    avg_precisions.append(avg_precision)
+                    writer.writerow([topic_id, avg_precision])
+
+            self.results['MAP'] = sum(avg_precisions) / len(avg_precisions)
+
     async def run(self):
-        #assessed_topic_ids = self.get_assessed_topic_ids()
-        #await self.get_topic_results(assessed_topic_ids)
+        assessed_topic_ids = self.get_assessed_topic_ids()
+        await self.get_topic_results(assessed_topic_ids)
         self.calculate_mean_average_precision()
 
 class EvaluationTaskStatus(IntEnum):
@@ -116,29 +152,32 @@ class EvaluationTaskStatus(IntEnum):
     DONE = 3
 
 class EvaluationTask(object):
-    def __init__(self, topics_filename, topics_path, topics_format,
-                 assessments_filename, assessments_path, assessments_format,
-                 engine, status=EvaluationTaskStatus.WAITING,
-                 topics_md5=None, assessments_md5=None, time=None, _id=None):
+    def __init__(self, topics_filename, topics_path, assessments_filename, assessments_path, index_location, index_type, eval_format,
+                 status=EvaluationTaskStatus.WAITING, topics_md5=None, assessments_md5=None, time=None, _id=None, results=None):
         self.topics_filename = topics_filename
         self.topics_path = topics_path
-        self.topics_format = topics_format
         self.topics_md5 = topics_md5 or md5(topics_path)
         self.assessments_filename = assessments_filename
         self.assessments_path = assessments_path
-        self.assessments_format = assessments_format
         self.assessments_md5 = assessments_md5 or md5(assessments_path)
-        self.engine = engine
+        self.index_location = index_location
+        self.index_type = index_type
+        self.eval_format = eval_format
         self.status = EvaluationTaskStatus(status)
         self.time = time
+        if results: self.results = results
         if _id: self._id = str(_id)
 
     def __repr__(self):
         return json.dumps(self.__dict__)
 
 class EvaluationTaskManager(object):
-    def __init__(self, db_location):
+    def __init__(self, db_location, eval_location):
         self.tasks = []
+        self.running = None
+
+        self.eval_location = eval_location
+        self.archives_dir = os.path.join(eval_location, 'archives')
 
         db_location_parts = db_location.split(':')
         
@@ -167,16 +206,18 @@ class EvaluationTaskManager(object):
         return tasks
 
     def get_waiting_task(self):
-        return self.db['evaluation_tasks'].find_one_and_update(
+        task = self.db['evaluation_tasks'].find_one_and_update(
             { 'status': 1 },
             { '$set': { 'status': 2 } },
             sort=[('time', pymongo.ASCENDING)])
+        if task: return EvaluationTask(**task)
 
     def reset_running_tasks(self):
         logger.warning("Resetting running tasks to the WAITING status")
         self.db['evaluation_tasks'].update_many(
             { 'status': 2 },
             { '$set': { 'status': 1 } })
+        if self.running: self.running.remove_output()
 
     def queue(self):
         duplicate_error = False
@@ -191,10 +232,48 @@ class EvaluationTaskManager(object):
         if duplicate_error:
             raise ArmyAntException("You can only launch one task per topics + assessments + engine.")
 
+    def save_results(self, task, results):
+        self.db['evaluation_tasks'].update_one(
+            { '_id': ObjectId(task._id) },
+            { '$set': { 'status': EvaluationTaskStatus.DONE, 'results': results } })
+
+    @contextmanager
+    def get_results_archive(self, task_id):
+        task = self.db['evaluation_tasks'].find_one({ '_id': ObjectId(task_id) })
+        if task is None: return
+
+        task = EvaluationTask(**task)
+        archive_filename = os.path.join(self.archives_dir, task_id)
+        if os.path.exists(archive_filename): return archive_filename
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            out_dir = os.path.join(tmp_dir, task_id)
+            print(out_dir)
+            shutil.copytree(os.path.join(self.eval_location, 'assessments', task_id), out_dir)
+            with open(os.path.join(out_dir, "eval_metrics"), 'w') as f:
+                writer = csv.writer(f)
+                writer.writerow(['metrics', 'value'])
+                for metric, value in task.results.items():
+                    writer.writerow([metric, value])
+            archive_filename = os.path.join(tmp_dir, '%s.zip' % task_id)
+            with zipfile.ZipFile(archive_filename, 'w') as zipf:
+                zipdir(out_dir, zipf)
+            yield archive_filename
+
     async def process(self):
         try:
             while True:
-                print(self.get_waiting_task())
-                await asyncio.sleep(30)
+                task = self.get_waiting_task()
+                if task:
+                    try:
+                        logger.info("Running evaluation task %s" % task._id)
+                        e = Evaluator.factory(task, self.eval_location)
+                        self.running = e
+                        await e.run()
+                        self.save_results(task, e.results)
+                        self.running = None
+                    except ArmyAntException as e:
+                        logger.error("Could not run evaluation task %s: %s" % (task._id, str(e)))
+                await asyncio.sleep(5)
         except asyncio.CancelledError:
             self.reset_running_tasks()
