@@ -154,36 +154,30 @@ class GraphOfEntity(ServiceIndex):
                 target_vertex = await self.get_or_create_vertex(tokens[i+1], data={'type': 'term'})
                 edge = await self.get_or_create_edge(source_vertex, target_vertex, data={'doc_id': doc.doc_id})
 
+            doc_entity_labels = set([])
+            for e1, _, e2 in doc.triples:
+                doc_entity_labels.add(e1.label.lower())
+                doc_entity_labels.add(e2.label.lower())
+
+            # Order does not matter / a second loop over unique tokens and entities should help
+            for token in set(tokens):
                 # Load word synonyms, linking to original term
 
-                #source_syns = set([ss.name().split('.')[0].replace('_', ' ') for ss in wn.synsets(tokens[i])])
-                #source_syns = source_syns.difference(tokens[i])
+                #syns = set([ss.name().split('.')[0].replace('_', ' ') for ss in wn.synsets(token)])
+                #syns = syns.difference(token)
 
-                #target_syns = set([ss.name().split('.')[0].replace('_', ' ') for ss in wn.synsets(tokens[i+1])])
-                #target_syns = target_syns.difference(tokens[i+1])
-
-                #for syn in source_syns:
-                    #logger.debug("%s -[synonym]-> %s" % (tokens[i], syn))
+                #for syn in syns:
+                    #logger.debug("%s -[synonym]-> %s" % (token, syn))
                     #syn_vertex = await self.get_or_create_vertex(syn, data={'type': 'term'})
                     #edge = await self.get_or_create_edge(source_vertex, syn_vertex, edge_type='synonym')
 
-                #for syn in target_syns:
-                    #logger.debug("%s -[synonym]-> %s" % (tokens[i+1], syn))
-                    #syn_vertex = await self.get_or_create_vertex(syn, data={'type': 'term'})
-                    #edge = await self.get_or_create_edge(target_vertex, syn_vertex, edge_type='synonym')
-
                 # Load word-entity occurrence
 
-                for (e1, _, e2) in doc.triples:
-                    if len(re.findall(r'\b' + tokens[i] + r'\b', e1.label.lower())) > 0:
-                        logger.debug("%s -[contained_in]-> %s" % (tokens[i], e1.label))
-                        e1_vertex = await self.get_or_create_vertex(e1.label, data={'type': 'entity'})
-                        edge = await self.get_or_create_edge(source_vertex, e1_vertex, edge_type='contained_in')
-
-                    if len(re.findall(r'\b' + tokens[i+1] + r'\b', e2.label.lower())) > 0:
-                        logger.debug("%s -[contained_in]-> %s" % (tokens[i+1], e2.label))
-                        e2_vertex = await self.get_or_create_vertex(e2.label, data={'type': 'entity'})
-                        edge = await self.get_or_create_edge(target_vertex, e2_vertex, edge_type='contained_in')
+                for entity_label in doc_entity_labels:
+                    if re.search(r'\b%s\b' % token, entity_label):
+                        logger.debug("%s -[contained_in]-> %s" % (token, entity_label))
+                        entity_vertex = await self.get_or_create_vertex(entity_label, data={'type': 'entity'})
+                        edge = await self.get_or_create_edge(source_vertex, entity_vertex, edge_type='contained_in')
 
             #yield doc
 
