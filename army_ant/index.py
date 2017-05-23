@@ -174,7 +174,7 @@ class GraphOfEntity(ServiceIndex):
                 # Load word-entity occurrence
 
                 for entity_label in doc_entity_labels:
-                    if re.search(r'\b%s\b' % token, entity_label):
+                    if re.search(r'\b%s\b' % re.escape(token), entity_label):
                         logger.debug("%s -[contained_in]-> %s" % (token, entity_label))
                         entity_vertex = await self.get_or_create_vertex(entity_label, data={'type': 'entity'})
                         edge = await self.get_or_create_edge(source_vertex, entity_vertex, edge_type='contained_in')
