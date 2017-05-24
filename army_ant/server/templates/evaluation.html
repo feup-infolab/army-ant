@@ -76,6 +76,7 @@
         <th>Assessments</th>
         <th>Index</th>
         <th>Status</th>
+        <th>Detail</th>
       </thead>
 
       <tbody>
@@ -86,9 +87,27 @@
           <td>{{ task.assessments_filename }}</td>
           <td>{{ task.index_location }} ({{ task.index_type }})</td>
           {% if task.status == 3 %}
-          <td><a href="{{ app.router['evaluation_results'].url_for().with_query(task_id=task._id) }}">{{ task.status.name }} <i class="icon icon-download"></i></a></td>
+          <td>
+            <a href="{{ app.router['evaluation_results'].url_for().with_query(task_id=task._id) }}">
+              {{ task.status.name }} <i class="icon icon-download"></i>
+            </a>
+          </td>
+          <td>
+            <button class="expand-btn btn btn-sm"><i class="icon icon-plus"></i></button>
+          </td>
           {% else %}
           <td>{{ task.status.name }}</td>
+          <td>N/A</td>
+          {% endif %}
+
+          {% if task.status == 3 %}
+          <tr class="hide">
+            <td colspan="5" class="text-center">
+              {% for metric in task.results %}
+              <b>{{ metric }}: </b> {{ task.results[metric]|round(4) }} &nbsp;
+              {% endfor %}
+            </td>
+          </tr>
           {% endif %}
         {% endfor %}
       </tbody>
@@ -108,29 +127,22 @@
   </div>
 </div>
 
-<div class="divider"></div>
+<script type="text/javascript">
+  (function() {
+    $(document).on('click', '.expand-btn', function(e) {
+      var taskID = $(this).parents('[data-id]').data('id');
+      var $detail = $('tr[data-id="' + taskID + '"]').next();
 
-<div class="columns">
-  <div class="column">
-    <header>
-      <h3>Results</h3>
-    </header>
-
-    {% if results|length > 0 %}
-
-    {% else %}
-
-    <div class="empty">
-      <div class="empty-icon">
-        <i class="icon icon-menu"></i>
-      </div>
-      <h4 class="empty-title">No evaluation results found</h4>
-      <p class="empty-subtitle">Results will be displayed here after evaluation tasks are finished.</p>
-    </div>
-
-    {% endif %}
-  </div>
-</div>
+      if ($detail.hasClass('hide')) {
+        $(this).find('i.icon').removeClass('icon-plus').addClass('icon-minus');
+        $detail.removeClass('hide');
+      } else {
+        $(this).find('i.icon').removeClass('icon-minus').addClass('icon-plus');
+        $detail.addClass('hide');
+      }      
+    });
+  })();
+</script>
 
 {% if error %}
 <script type="text/javascript">
