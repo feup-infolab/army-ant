@@ -27,7 +27,7 @@
 
 host: localhost
 port: 8185
-scriptEvaluationTimeout: 300000
+scriptEvaluationTimeout: 1800000
 channelizer: org.apache.tinkerpop.gremlin.server.channel.WebSocketChannelizer
 graphs: {
   graph: conf/neo4j-graph-of-entity-inex.properties}
