@@ -7,6 +7,7 @@
 
 import logging, string, asyncio, pymongo, re
 from aiogremlin import Cluster
+from aiogremlin.gremlin_python.structure.graph import Vertex
 from threading import RLock
 from concurrent.futures import ThreadPoolExecutor
 from nltk import word_tokenize
@@ -22,6 +23,8 @@ class Index(object):
     def factory(reader, index_location, index_type, loop):
         if index_type == 'gow':
             return GraphOfWord(reader, index_location, loop)
+        elif index_type == 'gow-batch':
+            return GraphOfWordBatch(reader, index_location, loop)
         elif index_type == 'goe':
             return GraphOfEntity(reader, index_location, loop)
         else:
@@ -46,7 +49,6 @@ class Index(object):
         tokens = [token for token in tokens if token not in stopwords.words('english') and not token[0] in string.punctuation]
         return tokens
 
-    # TODO cache results without aiocache (has logging issue; cannot disable)
     async def get_or_create_vertex(self, vertex_name, data=None):
         result_set = await self.client.submit(
             load_gremlin_script('get_or_create_vertex'),
@@ -126,6 +128,59 @@ class GraphOfWord(ServiceIndex):
         await self.cluster.close()
 
         return results
+
+class GraphOfWordBatch(GraphOfWord):
+    async def create_vertex(self, vertex_name, data=None):
+        result_set = await self.client.submit(
+            load_gremlin_script('create_vertex'),
+            {'vertexName': vertex_name, 'data': data})
+        results = await result_set.all()
+        return results[0] if len(results) > 0 else None
+
+    async def create_edge(self, source_vertex, target_vertex, edge_type='before', data=None):
+        result_set = await self.client.submit(
+            load_gremlin_script('create_edge'), {
+                'sourceID': source_vertex.id,
+                'targetID': target_vertex.id,
+                'edgeType': edge_type,
+                'data': data
+            })
+        results = await result_set.all()
+        return results[0] if len (results) > 0 else None
+
+    async def index(self):
+        self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
+        self.client = await self.cluster.connect()
+
+        self.next_vertex_id = 1
+        self.vertex_cache = {}
+
+        for doc in self.reader:
+            logger.info("Building GraphSON block for %s" % doc.doc_id)
+            logger.debug(doc.text)
+
+            tokens = self.analyze(doc.text)
+
+            for i in range(len(tokens)-self.window_size):
+                for j in range(1, self.window_size + 1):
+                    logger.debug("%s -> %s" % (tokens[i], tokens[i+j]))
+
+                    if tokens[i] in self.vertex_cache:
+                        source_vertex = self.vertex_cache[tokens[i]]
+                    else:
+                        source_vertex = await self.create_vertex(tokens[i])
+
+                    if tokens[i+j] in self.vertex_cache:
+                        target_vertex = self.vertex_cache[tokens[i+j]]
+                    else:
+                        target_vertex = await self.create_vertex(tokens[i+j])
+
+                    edge = await self.get_or_create_edge(
+                        source_vertex, target_vertex, data={'doc_id': doc.doc_id})
+
+            yield doc
+
+        await self.cluster.close()
 
 class GraphOfEntity(ServiceIndex):
     async def index(self):
