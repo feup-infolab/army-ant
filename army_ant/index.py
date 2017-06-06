@@ -5,7 +5,7 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import logging, string, asyncio, pymongo, re
+import logging, string, asyncio, pymongo, re, json, psycopg2
 from aiogremlin import Cluster
 from aiogremlin.gremlin_python.structure.graph import Vertex
 from threading import RLock
@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 from nltk import word_tokenize
 from nltk.corpus import stopwords, wordnet as wn
 from army_ant.reader import Document
-from army_ant.util import load_gremlin_script
+from army_ant.util import load_gremlin_script, load_sql_script
 from army_ant.exception import ArmyAntException
 
 logger = logging.getLogger(__name__)
@@ -130,57 +130,102 @@ class GraphOfWord(ServiceIndex):
         return results
 
 class GraphOfWordBatch(GraphOfWord):
-    async def create_vertex(self, vertex_name, data=None):
-        result_set = await self.client.submit(
-            load_gremlin_script('create_vertex'),
-            {'vertexName': vertex_name, 'data': data})
-        results = await result_set.all()
-        return results[0] if len(results) > 0 else None
+    def create_postgres_schema(self, conn):
+        c = conn.cursor()
+        c.execute("DROP TABLE IF EXISTS nodes")
+        c.execute("DROP TABLE IF EXISTS edges")
+        c.execute("CREATE TABLE nodes (node_id BIGINT, label TEXT, attributes JSON)")
+        c.execute("CREATE TABLE edges (edge_id BIGINT, label TEXT, attributes JSON, source_node_id BIGINT, target_node_id BIGINT)")
+        conn.commit()
 
-    async def create_edge(self, source_vertex, target_vertex, edge_type='before', data=None):
-        result_set = await self.client.submit(
-            load_gremlin_script('create_edge'), {
-                'sourceID': source_vertex.id,
-                'targetID': target_vertex.id,
-                'edgeType': edge_type,
-                'data': data
-            })
-        results = await result_set.all()
-        return results[0] if len (results) > 0 else None
+    def create_vertex_postgres(self, conn, vertex_id, label, attributes):
+        c = conn.cursor()
+        properties = {}
+        for k, v in attributes.items():
+            properties[k] = [{ 'id': self.next_property_id, 'value': v }]
+            self.next_property_id += 1
+        c.execute("INSERT INTO nodes VALUES (%s, %s, %s)", (vertex_id, label, json.dumps(properties)))
 
-    async def index(self):
+    def create_edge_postgres(self, conn, edge_id, label, attributes, source_vertex_id, target_vertex_id):
+        c = conn.cursor()
+        c.execute("INSERT INTO edges VALUES (%s, %s, %s, %s, %s)", (edge_id, label, json.dumps(attributes), source_vertex_id, target_vertex_id))
+
+    def load_to_postgres(self, conn, doc_id, tokens):
+        for i in range(len(tokens)-self.window_size):
+            for j in range(1, self.window_size + 1):
+                if tokens[i] in self.vertex_cache:
+                    source_vertex_id = self.vertex_cache[tokens[i]]
+                else:
+                    source_vertex_id = self.next_vertex_id
+                    self.vertex_cache[tokens[i]] = source_vertex_id
+                    self.next_vertex_id += 1
+                    self.create_vertex_postgres(conn, source_vertex_id, 'term', { 'name': tokens[i] })
+
+                if tokens[i+j] in self.vertex_cache:
+                    target_vertex_id = self.vertex_cache[tokens[i+j]]
+                else:
+                    target_vertex_id = self.next_vertex_id
+                    self.vertex_cache[tokens[i+j]] = target_vertex_id
+                    self.next_vertex_id += 1
+                    self.create_vertex_postgres(conn, target_vertex_id, 'term', { 'name': tokens[i+j] })
+
+                logger.debug("%s (%d) -> %s (%s)" % (tokens[i], source_vertex_id, tokens[i+j], target_vertex_id))
+
+                self.create_edge_postgres(conn, self.next_edge_id, 'in_window_of', { 'doc_id': doc_id }, source_vertex_id, target_vertex_id)
+                self.next_edge_id += 1
+
+        conn.commit()
+
+    def postgres_to_graphson(self, conn, filename):
+        logger.info("Converting PostgreSQL nodes and edges into the GraphSON format")
+
+        with open(filename, 'w') as f:
+            c = conn.cursor()
+            c.execute(load_sql_script('to_graphson'))
+
+            for row in c:
+                node = { 'id': row[0], 'label': row[1] }
+                if row[2]: node['properties'] = row[2]
+                if row[3]: node['outE'] = row[3]
+                if row[4]: node['inE'] = row[4]
+                f.write(json.dumps(node) + '\n')
+
+    async def load_to_gremlin_server(self, graphson_path):
         self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
         self.client = await self.cluster.connect()
 
-        self.next_vertex_id = 1
-        self.vertex_cache = {}
-
-        for doc in self.reader:
-            logger.info("Building GraphSON block for %s" % doc.doc_id)
-            logger.debug(doc.text)
-
-            tokens = self.analyze(doc.text)
-
-            for i in range(len(tokens)-self.window_size):
-                for j in range(1, self.window_size + 1):
-                    logger.debug("%s -> %s" % (tokens[i], tokens[i+j]))
-
-                    if tokens[i] in self.vertex_cache:
-                        source_vertex = self.vertex_cache[tokens[i]]
-                    else:
-                        source_vertex = await self.create_vertex(tokens[i])
-
-                    if tokens[i+j] in self.vertex_cache:
-                        target_vertex = self.vertex_cache[tokens[i+j]]
-                    else:
-                        target_vertex = await self.create_vertex(tokens[i+j])
-
-                    edge = await self.get_or_create_edge(
-                        source_vertex, target_vertex, data={'doc_id': doc.doc_id})
-
-            yield doc
+        result_set = await self.client.submit(
+            load_gremlin_script('load_graphson'),
+            {'path': graphson_path})
+        results = await result_set.all()
+        return results[0] if len(results) > 0 else None
 
         await self.cluster.close()
+
+    async def index(self):
+        self.next_vertex_id = 1
+        self.next_edge_id = 1
+        self.next_property_id = 1
+        self.vertex_cache = {}
+
+        #conn = psycopg2.connect("dbname='army_ant' user='army_ant' host='localhost'")
+        #self.create_postgres_schema(conn)
+
+        for doc in self.reader:
+            #logger.info("Building vertex and edge records for %s" % doc.doc_id)
+            #logger.debug(doc.text)
+
+            #tokens = self.analyze(doc.text)
+            #self.load_to_postgres(conn, doc.doc_id, tokens)
+
+            yield doc
+            break
+
+        #conn.commit()
+        #self.postgres_to_graphson(conn, '/tmp/gow.json')
+        #conn.close()
+
+        await self.load_to_gremlin_server('/tmp/gow.json')
 
 class GraphOfEntity(ServiceIndex):
     async def index(self):

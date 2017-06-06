@@ -26,6 +26,10 @@ def load_gremlin_script(script_name):
     with open(os.path.join('gremlin', script_name + '.groovy'), 'r') as f:
         return f.read()
 
+def load_sql_script(script_name):
+    with open(os.path.join('sql', script_name + '.sql'), 'r') as f:
+        return f.read()
+
 def md5(filename):
     hash_md5 = hashlib.md5()
     with open(filename, "rb") as f:

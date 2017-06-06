@@ -1,0 +1,3 @@
+CREATE DATABASE army_ant;
+CREATE USER army_ant WITH PASSWORD 'army_ant';
+GRANT ALL PRIVILEGES ON DATABASE army_ant TO army_ant;
