@@ -34,6 +34,8 @@ class Index(object):
     def open(index_location, index_type, loop):
         if index_type == 'gow':
             return GraphOfWord(None, index_location, loop)
+        elif index_type == 'gow-batch':
+            return GraphOfWordBatch(None, index_location, loop)
         elif index_type == 'goe':
             return GraphOfEntity(None, index_location, loop)
         else:
@@ -200,6 +202,7 @@ class GraphOfWordBatch(GraphOfWord):
                 f.write(json.dumps(node) + '\n')
 
     async def load_to_gremlin_server(self, graphson_path):
+        logger.info("Bulk loading to JanusGraph...")
         self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
         self.client = await self.cluster.connect()
 
@@ -207,7 +210,6 @@ class GraphOfWordBatch(GraphOfWord):
             load_gremlin_script('load_graphson'),
             {'graphsonPath': graphson_path, 'indexPath': self.index_path})
         results = await result_set.all()
-        return results[0] if len(results) > 0 else None
 
         await self.cluster.close()
 
@@ -217,22 +219,26 @@ class GraphOfWordBatch(GraphOfWord):
         self.next_property_id = 1
         self.vertex_cache = {}
 
-        #conn = psycopg2.connect("dbname='army_ant' user='army_ant' host='localhost'")
-        #self.create_postgres_schema(conn)
+        conn = psycopg2.connect("dbname='army_ant' user='army_ant' host='localhost'")
+        self.create_postgres_schema(conn)
 
+        count = 0
         for doc in self.reader:
-            #logger.info("Building vertex and edge records for %s" % doc.doc_id)
-            #logger.debug(doc.text)
+            count += 1
+            if count > 5: break
 
-            #tokens = self.analyze(doc.text)
-            #self.load_to_postgres(conn, doc.doc_id, tokens)
+            logger.info("Building vertex and edge records for %s" % doc.doc_id)
+            logger.debug(doc.text)
+
+            tokens = self.analyze(doc.text)
+            self.load_to_postgres(conn, doc.doc_id, tokens)
 
             yield doc
-            break
+            #break
 
-        #conn.commit()
-        #self.postgres_to_graphson(conn, '/tmp/gow.json')
-        #conn.close()
+        conn.commit()
+        self.postgres_to_graphson(conn, '/tmp/gow.json')
+        conn.close()
 
         await self.load_to_gremlin_server('/tmp/gow.json')
 
