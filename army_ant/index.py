@@ -77,12 +77,18 @@ class Index(object):
 class ServiceIndex(Index):
     def __init__(self, reader, index_location, loop):
         super().__init__(reader, index_location, loop)
-        index_location_parts = self.index_location.split(":")
+        index_location_parts = self.index_location.split('/')
+        if len(index_location_parts) > 1:
+            self.index_path = index_location_parts[1]
+        else:
+            self.index_path = None
+
+        index_location_parts = index_location_parts[0].split(':')
         if len(index_location_parts) > 1:
             self.index_host = index_location_parts[0]
             self.index_port = index_location_parts[1]
         else:
-            self.index_host = self.index_location
+            self.index_host = index_location_parts[0]
             self.index_port = 8182
 
 class GraphOfWord(ServiceIndex):
@@ -118,8 +124,11 @@ class GraphOfWord(ServiceIndex):
 
         query_tokens = self.analyze(query)
 
+        graph = self.index_path if self.index_path else 'graph'
+
         result_set = await self.client.submit(
-            load_gremlin_script('graph_of_word_query'), {
+            ('g = %s.traversal()\n' % graph)
+            + load_gremlin_script('graph_of_word_query'), {
                 'queryTokens': query_tokens,
                 'offset': offset,
                 'limit': limit
@@ -196,7 +205,7 @@ class GraphOfWordBatch(GraphOfWord):
 
         result_set = await self.client.submit(
             load_gremlin_script('load_graphson'),
-            {'path': graphson_path})
+            {'graphsonPath': graphson_path, 'indexPath': self.index_path})
         results = await result_set.all()
         return results[0] if len(results) > 0 else None
 
@@ -289,8 +298,11 @@ class GraphOfEntity(ServiceIndex):
 
         query_tokens = self.analyze(query)
 
+        graph = self.index_path if self.index_path else 'graph'
+
         result_set = await self.client.submit(
-            load_gremlin_script('graph_of_entity_query'), {
+            ('g = %s.traversal()\n' % graph)
+            + load_gremlin_script('graph_of_entity_query'), {
                 'queryTokens': query_tokens,
                 'offset': offset,
                 'limit': limit
