@@ -171,7 +171,7 @@ class INEXReader(Reader):
 
             try:
                 article = etree.parse(self.tar.extractfile(member), self.parser)
-            except XMLSyntaxError:
+            except etree.XMLSyntaxError:
                 logger.warn("Error parsing XML, skipping %s" % member.name)
                 continue
 
