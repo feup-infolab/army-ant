@@ -164,12 +164,17 @@ class INEXReader(Reader):
         html = ''
 
         for member in self.members:
-            logger.debug("Reading %s" % (member.name))
+            logger.debug("Reading %s" % member.name)
 
             if self.limit is not None and self.counter >= self.limit: break
             self.counter += 1
 
-            article = etree.parse(self.tar.extractfile(member), self.parser)
+            try:
+                article = etree.parse(self.tar.extractfile(member), self.parser)
+            except XMLSyntaxError:
+                logger.warn("Error parsing XML, skipping %s" % member.name)
+                continue
+
             page_id = self.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
             title = get_first(article.xpath('//header/title/text()'))
 

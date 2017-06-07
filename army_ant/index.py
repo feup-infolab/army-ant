@@ -222,10 +222,10 @@ class GraphOfWordBatch(GraphOfWord):
         conn = psycopg2.connect("dbname='army_ant' user='army_ant' host='localhost'")
         self.create_postgres_schema(conn)
 
-        count = 0
+        #count = 0
         for doc in self.reader:
-            count += 1
-            if count > 5: break
+            #count += 1
+            #if count > 5: break
 
             logger.info("Building vertex and edge records for %s" % doc.doc_id)
             logger.debug(doc.text)
