@@ -5,9 +5,9 @@
 # José Devezas <joseluisdevezas@gmail.com>
 # 2017-05-15
 
-import logging, asyncio
+import logging, asyncio, sys
 
-from army_ant.reader import INEXReader
+from army_ant.reader import INEXReader, LivingLabsReader
 from army_ant.evaluation import Evaluator
 
 logging.basicConfig(
@@ -30,7 +30,21 @@ def test_inexevaluator():
     loop = asyncio.get_event_loop()
     loop.run_until_complete(e.run())
 
+def test_livinglabsreader(*argv):
+    if len(argv) < 2:
+        print("Must provide api_key argument")
+        return
+
+    api_key = argv[1]
+
+    c = 0
+    for item in LivingLabsReader("http://api.trec-open-search.org::%s" % api_key):
+        print(item)
+        c += 1
+    logging.info("%d items read" % c)
+
 if __name__ == '__main__':
     # This is used during development to test individual methods.
     #test_inexreader()
-    test_inexevaluator()
+    #test_inexevaluator()
+    test_livinglabsreader(*sys.argv)

@@ -51,24 +51,6 @@ class Index(object):
         tokens = [token for token in tokens if token not in stopwords.words('english') and not token[0] in string.punctuation]
         return tokens
 
-    async def get_or_create_vertex(self, vertex_name, data=None):
-        result_set = await self.client.submit(
-            load_gremlin_script('get_or_create_vertex'),
-            {'vertexName': vertex_name, 'data': data})
-        results = await result_set.all()
-        return results[0] if len(results) > 0 else None
-
-    async def get_or_create_edge(self, source_vertex, target_vertex, edge_type='before', data=None):
-        result_set = await self.client.submit(
-            load_gremlin_script('get_or_create_edge'), {
-                'sourceID': source_vertex.id,
-                'targetID': target_vertex.id,
-                'edgeType': edge_type,
-                'data': data
-            })
-        results = await result_set.all()
-        return results[0] if len (results) > 0 else None
-
     """Indexes the documents and yields documents to store in the database."""
     async def index(self):
         raise ArmyAntException("Index not implemented for %s" % self.__class__.__name__)
@@ -93,7 +75,32 @@ class ServiceIndex(Index):
             self.index_host = index_location_parts[0]
             self.index_port = 8182
 
-class GraphOfWord(ServiceIndex):
+class GremlinServerIndex(ServiceIndex):
+    def __init__(self, reader, index_location, loop):
+        super().__init__(reader, index_location, loop)
+        self.graph = self.index_path if self.index_path else 'graph'
+
+    async def get_or_create_vertex(self, vertex_name, data=None):
+        result_set = await self.client.submit(
+            ('g = %s.traversal()\n' % self.graph)
+            + load_gremlin_script('get_or_create_vertex'),
+            {'vertexName': vertex_name, 'data': data})
+        results = await result_set.all()
+        return results[0] if len(results) > 0 else None
+
+    async def get_or_create_edge(self, source_vertex, target_vertex, edge_type='before', data=None):
+        result_set = await self.client.submit(
+            ('g = %s.traversal()\n' % self.graph)
+            + load_gremlin_script('get_or_create_edge'), {
+                'sourceID': source_vertex.id,
+                'targetID': target_vertex.id,
+                'edgeType': edge_type,
+                'data': data
+            })
+        results = await result_set.all()
+        return results[0] if len (results) > 0 else None
+
+class GraphOfWord(GremlinServerIndex):
     def __init__(self, reader, index_location, loop, window_size=3):
         super().__init__(reader, index_location, loop)
         self.window_size = 3
@@ -126,10 +133,8 @@ class GraphOfWord(ServiceIndex):
 
         query_tokens = self.analyze(query)
 
-        graph = self.index_path if self.index_path else 'graph'
-
         result_set = await self.client.submit(
-            ('g = %s.traversal()\n' % graph)
+            ('g = %s.traversal()\n' % self.graph)
             + load_gremlin_script('graph_of_word_query'), {
                 'queryTokens': query_tokens,
                 'offset': offset,
@@ -242,7 +247,7 @@ class GraphOfWordBatch(GraphOfWord):
 
         await self.load_to_gremlin_server('/tmp/gow.json')
 
-class GraphOfEntity(ServiceIndex):
+class GraphOfEntity(GremlinServerIndex):
     async def index(self):
         self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
         self.client = await self.cluster.connect()
@@ -304,10 +309,8 @@ class GraphOfEntity(ServiceIndex):
 
         query_tokens = self.analyze(query)
 
-        graph = self.index_path if self.index_path else 'graph'
-
         result_set = await self.client.submit(
-            ('g = %s.traversal()\n' % graph)
+            ('g = %s.traversal()\n' % self.graph)
             + load_gremlin_script('graph_of_entity_query'), {
                 'queryTokens': query_tokens,
                 'offset': offset,
