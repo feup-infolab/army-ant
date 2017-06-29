@@ -340,7 +340,7 @@ class GraphOfEntityBatch(PostgreSQLGraph,GraphOfEntity):
 
         if cache_key in self.vertex_cache:
             vertex_id = self.vertex_cache[cache_key]
-            if doc_id is not None and not vertex_id in self.vertices_with_doc_id:
+            if doc_id and not vertex_id in self.vertices_with_doc_id:
                 self.update_vertex_attribute(conn, vertex_id, 'doc_id', doc_id)
                 self.vertices_with_doc_id.add(vertex_id)
         else:
