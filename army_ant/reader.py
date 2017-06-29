@@ -24,7 +24,7 @@ class Reader(object):
         elif source_reader == 'inex':
             return INEXReader(source_path, limit)
         elif source_reader == 'living_labs':
-            return LivingLabsReader(source_path)
+            return LivingLabsReader(source_path, limit)
         else:
             raise ArmyAntException("Unsupported source reader %s" % source_reader)
 
@@ -198,8 +198,9 @@ class INEXReader(Reader):
         raise StopIteration
 
 class LivingLabsReader(Reader):
-    def __init__(self, source_path):
+    def __init__(self, source_path, limit=None):
         super(LivingLabsReader, self).__init__(source_path)
+        self.limit = limit
 
         base_url, api_key = source_path.split('::')
         
@@ -212,6 +213,8 @@ class LivingLabsReader(Reader):
 
         self.docs = self.get_docs()
         self.idx = 0
+
+        if self.limit: self.docs = self.docs[0:self.limit]
 
     def get_docs(self):
         logging.info("Retrieving Living Labs documents")

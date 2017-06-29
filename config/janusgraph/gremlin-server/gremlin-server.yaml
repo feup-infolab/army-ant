@@ -6,7 +6,9 @@ graphs: {
   gow_wikipedia: conf/army-ant-cassandra-es-gow_wikipedia.properties,
   goe_wikipedia: conf/army-ant-cassandra-es-goe_wikipedia.properties,
   gow_inex: conf/army-ant-cassandra-es-gow_inex.properties,
-  goe_inex: conf/army-ant-cassandra-es-goe_inex.properties}
+  goe_inex: conf/army-ant-cassandra-es-goe_inex.properties,
+  gow_trec2017: conf/army-ant-cassandra-es-gow_trec2017.properties,
+  goe_trec2017: conf/army-ant-cassandra-es-goe_trec2017.properties}
 plugins:
   - janusgraph.imports
 scriptEngines: {

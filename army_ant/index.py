@@ -145,7 +145,8 @@ class GraphOfWord(GremlinServerIndex):
 
         return results
 
-class GraphOfWordBatch(GraphOfWord):
+# Used for composition within *Batch graphs
+class PostgreSQLGraph(object):
     def create_postgres_schema(self, conn):
         c = conn.cursor()
         c.execute("DROP TABLE IF EXISTS nodes")
@@ -167,30 +168,7 @@ class GraphOfWordBatch(GraphOfWord):
         c.execute("INSERT INTO edges VALUES (%s, %s, %s, %s, %s)", (edge_id, label, json.dumps(attributes), source_vertex_id, target_vertex_id))
 
     def load_to_postgres(self, conn, doc_id, tokens):
-        for i in range(len(tokens)-self.window_size):
-            for j in range(1, self.window_size + 1):
-                if tokens[i] in self.vertex_cache:
-                    source_vertex_id = self.vertex_cache[tokens[i]]
-                else:
-                    source_vertex_id = self.next_vertex_id
-                    self.vertex_cache[tokens[i]] = source_vertex_id
-                    self.next_vertex_id += 1
-                    self.create_vertex_postgres(conn, source_vertex_id, 'term', { 'name': tokens[i] })
-
-                if tokens[i+j] in self.vertex_cache:
-                    target_vertex_id = self.vertex_cache[tokens[i+j]]
-                else:
-                    target_vertex_id = self.next_vertex_id
-                    self.vertex_cache[tokens[i+j]] = target_vertex_id
-                    self.next_vertex_id += 1
-                    self.create_vertex_postgres(conn, target_vertex_id, 'term', { 'name': tokens[i+j] })
-
-                logger.debug("%s (%d) -> %s (%s)" % (tokens[i], source_vertex_id, tokens[i+j], target_vertex_id))
-
-                self.create_edge_postgres(conn, self.next_edge_id, 'in_window_of', { 'doc_id': doc_id }, source_vertex_id, target_vertex_id)
-                self.next_edge_id += 1
-
-        conn.commit()
+        raise ArmyAntException("Load function not implemented for %s" % self.__class__.__name__)
 
     def postgres_to_graphson(self, conn, filename):
         logger.info("Converting PostgreSQL nodes and edges into the GraphSON format")
@@ -246,6 +224,41 @@ class GraphOfWordBatch(GraphOfWord):
         conn.close()
 
         await self.load_to_gremlin_server('/tmp/gow.json')
+
+
+class GraphOfWordBatch(GraphOfWord):
+    def __init__(self, reader, index_location, loop):
+        super().__init__(reader, index_location, loop)
+        self.pg = PostgreSQLGraph()
+
+    def load_to_postgres(self, conn, doc_id, tokens):
+        for i in range(len(tokens)-self.window_size):
+            for j in range(1, self.window_size + 1):
+                if tokens[i] in self.pg.vertex_cache:
+                    source_vertex_id = self.pg.vertex_cache[tokens[i]]
+                else:
+                    source_vertex_id = self.pg.next_vertex_id
+                    self.pg.vertex_cache[tokens[i]] = source_vertex_id
+                    self.pg.next_vertex_id += 1
+                    self.pg.create_vertex_postgres(conn, source_vertex_id, 'term', { 'name': tokens[i] })
+
+                if tokens[i+j] in self.pg.vertex_cache:
+                    target_vertex_id = self.pg.vertex_cache[tokens[i+j]]
+                else:
+                    target_vertex_id = self.pg.next_vertex_id
+                    self.pg.vertex_cache[tokens[i+j]] = target_vertex_id
+                    self.pg.next_vertex_id += 1
+                    self.pg.create_vertex_postgres(conn, target_vertex_id, 'term', { 'name': tokens[i+j] })
+
+                logger.debug("%s (%d) -> %s (%s)" % (tokens[i], source_vertex_id, tokens[i+j], target_vertex_id))
+
+                self.pg.create_edge_postgres(conn, self.pg.next_edge_id, 'in_window_of', { 'doc_id': doc_id }, source_vertex_id, target_vertex_id)
+                self.pg.next_edge_id += 1
+
+        conn.commit()
+
+    async def index(self):
+        self.pg.index()
 
 class GraphOfEntity(GremlinServerIndex):
     async def index(self):
