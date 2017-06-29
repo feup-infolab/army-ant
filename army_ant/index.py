@@ -297,10 +297,10 @@ class PostgreSQLGraph(object):
                 yield index_doc
 
         conn.commit()
-        self.postgres_to_graphson(conn, '/tmp/gow.json')
+        self.postgres_to_graphson(conn, '/tmp/graph.json')
         conn.close()
 
-        await self.load_to_gremlin_server('/tmp/gow.json')
+        await self.load_to_gremlin_server('/tmp/graph.json')
 
 class GraphOfWordBatch(PostgreSQLGraph,GraphOfWord):
     def get_or_create_term_vertex(self, conn, token):
