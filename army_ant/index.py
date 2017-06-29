@@ -245,11 +245,11 @@ class PostgreSQLGraph(object):
         c = conn.cursor()
         c.execute("INSERT INTO edges VALUES (%s, %s, %s, %s, %s)", (edge_id, label, json.dumps(attributes), source_vertex_id, target_vertex_id))
     
-    def update_vertex_attribute(self, vertex_id, attr_name, attr_value):
+    def update_vertex_attribute(self, conn, vertex_id, attr_name, attr_value):
         c = conn.cursor()
         c.execute(
-            "UPDATE nodes SET attributes = jsonb_set(attributes, '{%s}', '[{\"id\": %s, \"value\": \"%s\"}]', true) WHERE node_id = %s",
-            (attr_name, self.next_property_id, attr_value, vertex_id))
+            "UPDATE nodes SET attributes = jsonb_set(attributes, '{%s}', '[{\"id\": %s, \"value\": \"%s\"}]', true) WHERE node_id = %%s" % (
+                attr_name, self.next_property_id, attr_value), vertex_id)
         self.next_property_id += 1
 
     def load_to_postgres(self, conn, doc):
@@ -328,6 +328,8 @@ class GraphOfWordBatch(PostgreSQLGraph,GraphOfWord):
 
         conn.commit()
 
+        yield doc
+
 class GraphOfEntityBatch(PostgreSQLGraph,GraphOfEntity):
     def __init__(self, reader, index_location, loop):
         super().__init__(reader, index_location, loop)
@@ -338,8 +340,8 @@ class GraphOfEntityBatch(PostgreSQLGraph,GraphOfEntity):
 
         if cache_key in self.vertex_cache:
             vertex_id = self.vertex_cache[cache_key]
-            if not vertex_id in self.vertices_with_doc_id:
-                self.update_vertex_attribute(vertex_id, 'doc_id', doc_id)
+            if doc_id is not None and not vertex_id in self.vertices_with_doc_id:
+                self.update_vertex_attribute(conn, vertex_id, 'doc_id', doc_id)
                 self.vertices_with_doc_id.add(vertex_id)
         else:
             vertex_id = self.next_vertex_id
