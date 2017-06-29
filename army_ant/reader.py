@@ -58,13 +58,13 @@ class Document(object):
         return '-----------------\nDOC ID:\n%s\n\nTEXT:\n%s\n\nTRIPLES:\n%s\n\nMETADATA:\n%s\n-----------------\n' % (
             self.doc_id, self.text, triples, metadata)
 
-class WikipediaEntity(object):
-    def __init__(self, url, label):
-        self.url = url
+class Entity(object):
+    def __init__(self, label, url=None):
         self.label = label
+        self.url = url
 
     def __repr__(self):
-        return "(%s, %s)" % (self.url, self.label)
+        return "(%s, %s)" % (self.label, self.url)
 
 class WikipediaDataReader(Reader):
     def __init__(self, source_path):
@@ -76,7 +76,7 @@ class WikipediaDataReader(Reader):
         return html_to_text(html)
 
     def to_wikipedia_entity(self, label):
-        return WikipediaEntity("http://en.wikipedia.org/wiki/%s" % label.replace(" ", "_"), label)
+        return Entity(label, "http://en.wikipedia.org/wiki/%s" % label.replace(" ", "_"))
 
     def to_triples(self, entity, html):
         soup = BeautifulSoup(html, 'html.parser', parse_only=SoupStrainer('a'))
@@ -133,7 +133,7 @@ class INEXReader(Reader):
         return re.sub(r'\s+', ' ', ''.join(bdy.xpath('%s/text()' % self.doc_xpath)))
 
     def to_wikipedia_entity(self, page_id, label):
-        return WikipediaEntity("http://en.wikipedia.org/?curid=%s" % page_id, label)
+        return Entity(label, "http://en.wikipedia.org/?curid=%s" % page_id)
 
     def xlink_to_page_id(self, xlink):
         _, filename = os.path.split(xlink)
@@ -241,7 +241,7 @@ class LivingLabsReader(Reader):
         for field in content_fields:
             if field in doc['content'] and doc['content'][field]:
                 if field == 'author': doc['content'][field] = self.format_author_name(doc['content'][field])
-                triples.append((doc['docid'], field, doc['content'][field]))
+                triples.append((Entity(doc['docid']), field, Entity(doc['content'][field])))
         return triples
 
     def __next__(self):

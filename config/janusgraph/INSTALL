@@ -1,2 +1,4 @@
 Do not forget to change the heap size in bin/gremlin-server.sh:
 JAVA_OPTIONS="-Xms1g -Xmx4g -javaagent:$LIB/jamm-0.3.0.jar"
+
+Ensure that you create the graph database schemas, before doing a batch index. Check instructions in header of army-ant-gow-schema.groovy or army-ant-goe-schema.groovy.

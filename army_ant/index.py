@@ -12,7 +12,7 @@ from threading import RLock
 from concurrent.futures import ThreadPoolExecutor
 from nltk import word_tokenize
 from nltk.corpus import stopwords, wordnet as wn
-from army_ant.reader import Document
+from army_ant.reader import Document, Entity
 from army_ant.util import load_gremlin_script, load_sql_script
 from army_ant.exception import ArmyAntException
 
@@ -23,10 +23,12 @@ class Index(object):
     def factory(reader, index_location, index_type, loop):
         if index_type == 'gow':
             return GraphOfWord(reader, index_location, loop)
-        elif index_type == 'gow-batch':
-            return GraphOfWordBatch(reader, index_location, loop)
         elif index_type == 'goe':
             return GraphOfEntity(reader, index_location, loop)
+        elif index_type == 'gow_batch':
+            return GraphOfWordBatch(reader, index_location, loop)
+        elif index_type == 'goe_batch':
+            return GraphOfEntityBatch(reader, index_location, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 
@@ -145,121 +147,6 @@ class GraphOfWord(GremlinServerIndex):
 
         return results
 
-# Used for composition within *Batch graphs
-class PostgreSQLGraph(object):
-    def create_postgres_schema(self, conn):
-        c = conn.cursor()
-        c.execute("DROP TABLE IF EXISTS nodes")
-        c.execute("DROP TABLE IF EXISTS edges")
-        c.execute("CREATE TABLE nodes (node_id BIGINT, label TEXT, attributes JSON)")
-        c.execute("CREATE TABLE edges (edge_id BIGINT, label TEXT, attributes JSON, source_node_id BIGINT, target_node_id BIGINT)")
-        conn.commit()
-
-    def create_vertex_postgres(self, conn, vertex_id, label, attributes):
-        c = conn.cursor()
-        properties = {}
-        for k, v in attributes.items():
-            properties[k] = [{ 'id': self.next_property_id, 'value': v }]
-            self.next_property_id += 1
-        c.execute("INSERT INTO nodes VALUES (%s, %s, %s)", (vertex_id, label, json.dumps(properties)))
-
-    def create_edge_postgres(self, conn, edge_id, label, attributes, source_vertex_id, target_vertex_id):
-        c = conn.cursor()
-        c.execute("INSERT INTO edges VALUES (%s, %s, %s, %s, %s)", (edge_id, label, json.dumps(attributes), source_vertex_id, target_vertex_id))
-
-    def load_to_postgres(self, conn, doc_id, tokens):
-        raise ArmyAntException("Load function not implemented for %s" % self.__class__.__name__)
-
-    def postgres_to_graphson(self, conn, filename):
-        logger.info("Converting PostgreSQL nodes and edges into the GraphSON format")
-
-        with open(filename, 'w') as f:
-            c = conn.cursor()
-            c.execute(load_sql_script('to_graphson'))
-
-            for row in c:
-                node = { 'id': row[0], 'label': row[1] }
-                if row[2]: node['properties'] = row[2]
-                if row[3]: node['outE'] = row[3]
-                if row[4]: node['inE'] = row[4]
-                f.write(json.dumps(node) + '\n')
-
-    async def load_to_gremlin_server(self, graphson_path):
-        logger.info("Bulk loading to JanusGraph...")
-        self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
-        self.client = await self.cluster.connect()
-
-        result_set = await self.client.submit(
-            load_gremlin_script('load_graphson'),
-            {'graphsonPath': graphson_path, 'indexPath': self.index_path})
-        results = await result_set.all()
-
-        await self.cluster.close()
-
-    async def index(self):
-        self.next_vertex_id = 1
-        self.next_edge_id = 1
-        self.next_property_id = 1
-        self.vertex_cache = {}
-
-        conn = psycopg2.connect("dbname='army_ant' user='army_ant' host='localhost'")
-        self.create_postgres_schema(conn)
-
-        #count = 0
-        for doc in self.reader:
-            #count += 1
-            #if count > 5: break
-
-            logger.info("Building vertex and edge records for %s" % doc.doc_id)
-            logger.debug(doc.text)
-
-            tokens = self.analyze(doc.text)
-            self.load_to_postgres(conn, doc.doc_id, tokens)
-
-            yield doc
-            #break
-
-        conn.commit()
-        self.postgres_to_graphson(conn, '/tmp/gow.json')
-        conn.close()
-
-        await self.load_to_gremlin_server('/tmp/gow.json')
-
-
-class GraphOfWordBatch(GraphOfWord):
-    def __init__(self, reader, index_location, loop):
-        super().__init__(reader, index_location, loop)
-        self.pg = PostgreSQLGraph()
-
-    def load_to_postgres(self, conn, doc_id, tokens):
-        for i in range(len(tokens)-self.window_size):
-            for j in range(1, self.window_size + 1):
-                if tokens[i] in self.pg.vertex_cache:
-                    source_vertex_id = self.pg.vertex_cache[tokens[i]]
-                else:
-                    source_vertex_id = self.pg.next_vertex_id
-                    self.pg.vertex_cache[tokens[i]] = source_vertex_id
-                    self.pg.next_vertex_id += 1
-                    self.pg.create_vertex_postgres(conn, source_vertex_id, 'term', { 'name': tokens[i] })
-
-                if tokens[i+j] in self.pg.vertex_cache:
-                    target_vertex_id = self.pg.vertex_cache[tokens[i+j]]
-                else:
-                    target_vertex_id = self.pg.next_vertex_id
-                    self.pg.vertex_cache[tokens[i+j]] = target_vertex_id
-                    self.pg.next_vertex_id += 1
-                    self.pg.create_vertex_postgres(conn, target_vertex_id, 'term', { 'name': tokens[i+j] })
-
-                logger.debug("%s (%d) -> %s (%s)" % (tokens[i], source_vertex_id, tokens[i+j], target_vertex_id))
-
-                self.pg.create_edge_postgres(conn, self.pg.next_edge_id, 'in_window_of', { 'doc_id': doc_id }, source_vertex_id, target_vertex_id)
-                self.pg.next_edge_id += 1
-
-        conn.commit()
-
-    async def index(self):
-        self.pg.index()
-
 class GraphOfEntity(GremlinServerIndex):
     async def index(self):
         self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
@@ -306,6 +193,8 @@ class GraphOfEntity(GremlinServerIndex):
 
                 # Load word-entity occurrence
 
+                source_vertex = await self.get_or_create_vertex(token, data={'type': 'term'})
+
                 for entity_label in doc_entity_labels:
                     if re.search(r'\b%s\b' % re.escape(token), entity_label):
                         logger.debug("%s -[contained_in]-> %s" % (token, entity_label))
@@ -333,3 +222,191 @@ class GraphOfEntity(GremlinServerIndex):
         await self.cluster.close()
 
         return results
+
+# Used for composition within *Batch graphs
+class PostgreSQLGraph(object):
+    def create_postgres_schema(self, conn):
+        c = conn.cursor()
+        c.execute("DROP TABLE IF EXISTS nodes")
+        c.execute("DROP TABLE IF EXISTS edges")
+        c.execute("CREATE TABLE nodes (node_id BIGINT, label TEXT, attributes JSONB)")
+        c.execute("CREATE TABLE edges (edge_id BIGINT, label TEXT, attributes JSONB, source_node_id BIGINT, target_node_id BIGINT)")
+        conn.commit()
+
+    def create_vertex_postgres(self, conn, vertex_id, label, attributes):
+        c = conn.cursor()
+        properties = {}
+        for k, v in attributes.items():
+            properties[k] = [{ 'id': self.next_property_id, 'value': v }]
+            self.next_property_id += 1
+        c.execute("INSERT INTO nodes VALUES (%s, %s, %s)", (vertex_id, label, json.dumps(properties)))
+
+    def create_edge_postgres(self, conn, edge_id, label, source_vertex_id, target_vertex_id, attributes={}):
+        c = conn.cursor()
+        c.execute("INSERT INTO edges VALUES (%s, %s, %s, %s, %s)", (edge_id, label, json.dumps(attributes), source_vertex_id, target_vertex_id))
+    
+    def update_vertex_attribute(self, vertex_id, attr_name, attr_value):
+        c = conn.cursor()
+        c.execute(
+            "UPDATE nodes SET attributes = jsonb_set(attributes, '{%s}', '[{\"id\": %s, \"value\": \"%s\"}]', true) WHERE node_id = %s",
+            (attr_name, self.next_property_id, attr_value, vertex_id))
+        self.next_property_id += 1
+
+    def load_to_postgres(self, conn, doc):
+        raise ArmyAntException("Load function not implemented for %s" % self.__class__.__name__)
+
+    def postgres_to_graphson(self, conn, filename):
+        logger.info("Converting PostgreSQL nodes and edges into the GraphSON format")
+
+        with open(filename, 'w') as f:
+            c = conn.cursor()
+            c.execute(load_sql_script('to_graphson'))
+
+            for row in c:
+                node = { 'id': row[0], 'label': row[1] }
+                if row[2]: node['properties'] = row[2]
+                if row[3]: node['outE'] = row[3]
+                if row[4]: node['inE'] = row[4]
+                f.write(json.dumps(node) + '\n')
+
+    async def load_to_gremlin_server(self, graphson_path):
+        logger.info("Bulk loading to JanusGraph...")
+        self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
+        self.client = await self.cluster.connect()
+
+        result_set = await self.client.submit(
+            load_gremlin_script('load_graphson'),
+            {'graphsonPath': graphson_path, 'indexPath': self.index_path})
+        results = await result_set.all()
+
+        await self.cluster.close()
+
+    async def index(self):
+        self.next_vertex_id = 1
+        self.next_edge_id = 1
+        self.next_property_id = 1
+        self.vertex_cache = {}
+
+        conn = psycopg2.connect("dbname='army_ant' user='army_ant' host='localhost'")
+        self.create_postgres_schema(conn)
+
+        for doc in self.reader:
+            logger.info("Building vertex and edge records for %s" % doc.doc_id)
+            logger.debug(doc.text)
+            for index_doc in self.load_to_postgres(conn, doc):
+                yield index_doc
+
+        conn.commit()
+        self.postgres_to_graphson(conn, '/tmp/gow.json')
+        conn.close()
+
+        await self.load_to_gremlin_server('/tmp/gow.json')
+
+class GraphOfWordBatch(PostgreSQLGraph,GraphOfWord):
+    def get_or_create_term_vertex(self, conn, token):
+        if token in self.vertex_cache:
+            vertex_id = self.vertex_cache[token]
+        else:
+            vertex_id = self.next_vertex_id
+            self.vertex_cache[token] = vertex_id
+            self.next_vertex_id += 1
+            self.create_vertex_postgres(conn, vertex_id, 'term', { 'name': token })
+
+        return vertex_id
+
+    def load_to_postgres(self, conn, doc):
+        tokens = self.analyze(doc.text)
+
+        for i in range(len(tokens)-self.window_size):
+            for j in range(1, self.window_size + 1):
+                source_vertex_id = self.get_or_create_term_vertex(conn, tokens[i])
+                target_vertex_id = self.get_or_create_term_vertex(conn, tokens[i+j])
+
+                logger.debug("%s (%d) -> %s (%s)" % (tokens[i], source_vertex_id, tokens[i+j], target_vertex_id))
+                self.create_edge_postgres(conn, self.next_edge_id, 'in_window_of', source_vertex_id, target_vertex_id, { 'doc_id': doc.doc_id })
+                self.next_edge_id += 1
+
+        conn.commit()
+
+class GraphOfEntityBatch(PostgreSQLGraph,GraphOfEntity):
+    def __init__(self, reader, index_location, loop):
+        super().__init__(reader, index_location, loop)
+        self.vertices_with_doc_id = set([])
+    
+    def get_or_create_entity_vertex(self, conn, entity, doc_id=None):
+        cache_key = 'entity::%s' % entity.label
+
+        if cache_key in self.vertex_cache:
+            vertex_id = self.vertex_cache[cache_key]
+            if not vertex_id in self.vertices_with_doc_id:
+                self.update_vertex_attribute(vertex_id, 'doc_id', doc_id)
+                self.vertices_with_doc_id.add(vertex_id)
+        else:
+            vertex_id = self.next_vertex_id
+            self.vertex_cache[cache_key] = vertex_id
+            self.next_vertex_id += 1
+
+            data = { 'type': 'entity', 'name': entity.label }
+
+            if entity.url:
+                data['url'] = entity.url
+            
+            if doc_id:
+                data['doc_id'] = doc_id
+                self.vertices_with_doc_id.add(vertex_id)
+            
+            self.create_vertex_postgres(conn, vertex_id, 'entity', data)
+
+        return vertex_id
+
+    def get_or_create_term_vertex(self, conn, term):
+        cache_key = 'term::%s' % term
+
+        if cache_key in self.vertex_cache:
+            vertex_id = self.vertex_cache[cache_key]
+        else:
+            vertex_id = self.next_vertex_id
+            self.vertex_cache[cache_key] = vertex_id
+            self.next_vertex_id += 1
+            self.create_vertex_postgres(conn, vertex_id, 'entity', { 'type': 'term', 'name': term })
+
+        return vertex_id
+
+    def load_to_postgres(self, conn, doc):
+        # Load entities and relations (knowledge base)
+        for (e1, _, e2) in doc.triples:
+            logger.debug("%s -[related_to]-> %s" % (e1.label, e2.label))
+            source_vertex_id = self.get_or_create_entity_vertex(conn, e1, doc_id=doc.doc_id)
+            target_vertex_id = self.get_or_create_entity_vertex(conn, e2)
+            self.create_edge_postgres(conn, self.next_edge_id, 'related_to', source_vertex_id, target_vertex_id)
+            self.next_edge_id += 1
+            metadata = { 'name': e1.label }
+            if e1.url: metadata['url'] = e1.url
+            yield Document(doc_id = doc.doc_id, metadata = metadata) # We're only indexing what has a doc_id
+
+        tokens = self.analyze(doc.text)
+
+        for i in range(len(tokens)-1):
+            # Load words, linking by sequential co-occurrence
+            logger.debug("%s -[before]-> %s" % (tokens[i], tokens[i+1]))
+            source_vertex_id = self.get_or_create_term_vertex(conn, tokens[i])
+            target_vertex_id = self.get_or_create_term_vertex(conn, tokens[i+1])
+            self.create_edge_postgres(conn, self.next_edge_id, 'before', source_vertex_id, target_vertex_id, {'doc_id': doc.doc_id})
+            self.next_edge_id += 1
+
+        doc_entity_labels = set([])
+        for e1, _, e2 in doc.triples:
+            doc_entity_labels.add(e1.label.lower())
+            doc_entity_labels.add(e2.label.lower())
+
+        # Order does not matter / a second loop over unique tokens and entities should help
+        for token in set(tokens):
+            # Load word-entity occurrence
+            source_vertex_id = self.get_or_create_term_vertex(conn, token)
+            for entity_label in doc_entity_labels:
+                if re.search(r'\b%s\b' % re.escape(token), entity_label):
+                    logger.debug("%s -[contained_in]-> %s" % (token, entity_label))
+                    entity_vertex_id = self.get_or_create_entity_vertex(conn, Entity(entity_label))
+                    self.create_edge_postgres(conn, self.next_edge_id, 'contained_in', source_vertex_id, entity_vertex_id)
+
+        conn.commit()
