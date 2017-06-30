@@ -209,7 +209,7 @@ class LivingLabsReader(Reader):
         self.headers = { 'Content-Type': 'application/json' }
         self.auth = HTTPBasicAuth(api_key, '')
 
-        requests_cache.install_cache('living_labs_cache', expire_after=1800)
+        requests_cache.install_cache('living_labs_cache', expire_after=10800)
 
         self.docs = self.get_docs()
         self.idx = 0
