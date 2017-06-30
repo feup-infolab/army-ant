@@ -220,7 +220,6 @@ class LivingLabsReader(Reader):
         logging.info("Retrieving Living Labs documents")
         r = requests.get(urljoin(self.base_url, 'docs'), headers=self.headers, auth=self.auth)
         if r.status_code != requests.codes.ok:
-            print(r.text)
             r.raise_for_status()
         return r.json()['docs']
 
