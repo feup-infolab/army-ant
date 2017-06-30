@@ -1,4 +1,5 @@
 import org.apache.tinkerpop.gremlin.spark.process.computer.SparkGraphComputer
+import org.apache.tinkerpop.gremlin.giraph.process.computer.GiraphGraphComputer
 
 load_graphson: {
   readGraphConf = new PropertiesConfiguration()
@@ -11,5 +12,6 @@ load_graphson: {
     .writeGraph("conf/army-ant-cassandra-es-${indexPath}.properties")
     .create(graph)
   
-  graph.compute(SparkGraphComputer).program(blvp).submit().get()
+  //graph.compute(SparkGraphComputer).program(blvp).submit().get()
+  graph.compute(GiraphGraphComputer).program(blvp).submit().get()
 }
