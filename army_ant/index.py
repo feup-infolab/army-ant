@@ -301,6 +301,7 @@ class PostgreSQLGraph(object):
         conn.close()
 
         await self.load_to_gremlin_server('/tmp/graph.json')
+        #yield None
 
 class GraphOfWordBatch(PostgreSQLGraph,GraphOfWord):
     def get_or_create_term_vertex(self, conn, token):
