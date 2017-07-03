@@ -40,10 +40,16 @@ class Index(object):
     def open(index_location, index_type, loop):
         if index_type == 'gow':
             return GraphOfWord(None, index_location, loop)
-        elif index_type == 'gow-batch':
-            return GraphOfWordBatch(None, index_location, loop)
         elif index_type == 'goe':
             return GraphOfEntity(None, index_location, loop)
+        elif index_type == 'gow_batch':
+            return GraphOfWordBatch(None, index_location, loop)
+        elif index_type == 'goe_batch':
+            return GraphOfEntityBatch(None, index_location, loop)
+        elif index_type == 'gow_csv':
+            return GraphOfWordCSV(None, index_location, loop)
+        elif index_type == 'goe_csv':
+            return GraphOfEntityCSV(None, index_location, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 
