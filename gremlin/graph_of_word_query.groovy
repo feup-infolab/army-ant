@@ -13,6 +13,7 @@ def twIdf(indegree, docFreq, docLength, avgDocLength, corpusSize, b=0.003) {
 }
 
 //queryTokens = ['born', 'new', 'york']
+//queryTokens = ['soziale', 'herkunft']
 //offset = 0
 //limit = 10
 
@@ -22,9 +23,10 @@ graph_of_word_query: {
   if (query.clone().count().next() < 1) return [[results: [:], numDocs: 0]]
 
   indegreePerTokenPerDoc = query.clone()
-    .project("v", "indegree")
+    .group()
       .by()
       .by(inE().values("doc_id").groupCount())
+    .next()
   
   docFrequencyPerToken = query.clone()
     .group()
@@ -32,21 +34,21 @@ graph_of_word_query: {
       .by(bothE().values("doc_id").dedup().count())
     .next()
 
-  docLengthsPipe = g.E().group().by("doc_id").by(inV().count())
-
-  docLengths = []
-
-  docLengthsPipe.clone().fill(docLengths)
+  docLengths = g.E()
+    .group()
+      .by("doc_id")
+      .by(inV().count())
+    .next()
 
   if (docLengths.isEmpty()) return [[results: [:], numDocs: 0]]
 
-  avgDocLength = docLengthsPipe.clone()[0].values().sum() / docLengthsPipe.clone()[0].values().size()
+  avgDocLength = docLengths.values().sum() / docLengths.size()
   
   corpusSize = g.E().values("doc_id").dedup().count().next()
 
-  twIdf = indegreePerTokenPerDoc.clone().collect { token ->
-      token['indegree'].collect { docID, indegree ->
-        score = twIdf(indegree, docFrequencyPerToken[token['v']], docLengths[docID][0], avgDocLength, corpusSize)
+  twIdf = indegreePerTokenPerDoc.collect { token, indegreePerDoc ->
+      indegreePerDoc.collect { docID, indegree ->
+        score = twIdf(indegree, docFrequencyPerToken[token], docLengths[docID], avgDocLength, corpusSize)
 
         [
           docID: docID,
@@ -55,10 +57,10 @@ graph_of_word_query: {
             docID: docID,
             'tw(t, d)': indegree,
             b: 0.003d,
-            '|d|': docLengths[docID][0],
+            '|d|': docLengths[docID],
             avdl: avgDocLength.doubleValue(),
             N: corpusSize,
-            'df(t)': docFrequencyPerToken[token['v']],
+            'df(t)': docFrequencyPerToken[token],
             'tw-idf(t, d)': score
           ]
         ]
