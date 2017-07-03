@@ -15,6 +15,7 @@ from pymongo.errors import DuplicateKeyError
 from bson.objectid import ObjectId
 from urllib.parse import urljoin
 from requests.auth import HTTPBasicAuth
+from requests.exceptions import HTTPError
 from army_ant.index import Index
 from army_ant.util import md5, get_first, zipdir
 from army_ant.exception import ArmyAntException
@@ -55,7 +56,9 @@ class LivingLabsEvaluator(object):
         #print(json.dumps(data))
 
         r = requests.put(urljoin(self.base_url, 'run/%s' % qid), data=json.dumps(data), headers=self.headers, auth=self.auth)
-        if r.status_code != requests.codes.ok:
+        if r.status_code == requests.codes.conflict:
+            logger.warn("Run for qid=%s and runid=%s already exists, ignoring" % (qid, runid))
+        else:
             r.raise_for_status()
 
     async def run(self):
