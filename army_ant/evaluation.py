@@ -5,7 +5,7 @@
 # José Devezas <joseluisdevezas@gmail.com>
 # 2017-05-19
 
-import json, time, pymongo, asyncio, logging, csv, os, shutil, tempfile, zipfile, math
+import json, time, pymongo, asyncio, logging, csv, os, shutil, tempfile, zipfile, math, requests, requests_cache
 from enum import IntEnum
 from lxml import etree
 from datetime import datetime
@@ -13,11 +13,59 @@ from contextlib import contextmanager
 from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError
 from bson.objectid import ObjectId
+from urllib.parse import urljoin
+from requests.auth import HTTPBasicAuth
 from army_ant.index import Index
 from army_ant.util import md5, get_first, zipdir
 from army_ant.exception import ArmyAntException
 
 logger = logging.getLogger(__name__)
+
+# TODO merge with Evaluator workflow
+class LivingLabsEvaluator(object):
+    def __init__(self, index_location, index_type, base_url, api_key):
+        self.base_url = urljoin(base_url, 'api/v2/participant/')
+        self.auth = HTTPBasicAuth(api_key, '')
+        self.headers = { 'Content-Type': 'application/json' }
+
+        requests_cache.install_cache('living_labs_cache', expire_after=10800)
+
+        self.loop = asyncio.get_event_loop()
+        self.index = Index.open(index_location, index_type, self.loop)
+
+    def get_queries(self, type=None):
+        logging.info("Retrieving Living Labs queries")
+
+        r = requests.get(urljoin(self.base_url, 'query'), headers=self.headers, auth=self.auth)
+        if r.status_code != requests.codes.ok:
+            r.raise_for_status()
+        queries = r.json()['queries']
+        if type: return list(filter(lambda q: q['type'] == type, queries))
+        return queries
+
+    def put_run(self, qid, runid, results):
+        logging.info("Submitting Living Labs run for qid=%s and runid=%s" % (qid, runid))
+        
+        #data = {
+            #'qid': qid,
+            #'runid': runid,
+            #'doclist': [{'docid': result['docID']} for result in results]
+        #}
+        data = json.loads(open('/home/jldevezas/ssoar-q501-results.formatted.json', 'r').read())
+
+        r = requests.put(urljoin(self.base_url, 'run/%s' % qid), data=data, headers=self.headers, auth=self.auth)
+        if r.status_code != requests.codes.ok:
+            r.raise_for_status()
+
+    async def run(self):
+        queries = self.get_queries(type='train')
+        for query in queries:
+            logging.info("Searching for %s (qid=%s)" % (query['qstr'], query['qid']))
+            #engine_response = await self.index.search(query['qstr'], 0, 10000)
+            #results = engine_response['results']
+            results = []
+            self.put_run(query['qid'], 'gow_trec2017' % query['qid'], results)
+            break
 
 class Evaluator(object):
     @staticmethod

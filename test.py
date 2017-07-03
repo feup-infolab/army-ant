@@ -8,7 +8,7 @@
 import logging, asyncio, sys
 
 from army_ant.reader import INEXReader, LivingLabsReader
-from army_ant.evaluation import Evaluator
+from army_ant.evaluation import Evaluator, LivingLabsEvaluator
 
 logging.basicConfig(
     format='%(asctime)s army-ant: [%(name)s] %(levelname)s: %(message)s',
@@ -43,8 +43,20 @@ def test_livinglabsreader(*argv):
         c += 1
     logging.info("%d items read" % c)
 
+def test_livinglabsevaluator(*argv):
+    if len(argv) < 2:
+        print("Must provide api_key argument")
+        return
+
+    api_key = argv[1]
+    
+    e = LivingLabsEvaluator('localhost:8182/gow_trec2017', 'gow_csv', 'http://api.trec-open-search.org', api_key)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(e.run())
+
 if __name__ == '__main__':
     # This is used during development to test individual methods.
     #test_inexreader()
     #test_inexevaluator()
-    test_livinglabsreader(*sys.argv)
+    #test_livinglabsreader(*sys.argv)
+    test_livinglabsevaluator(*sys.argv)

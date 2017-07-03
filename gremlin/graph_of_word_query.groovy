@@ -22,13 +22,15 @@ graph_of_word_query: {
   if (query.clone().count().next() < 1) return [[results: [:], numDocs: 0]]
 
   indegreePerTokenPerDoc = query.clone()
-    .project("v", "indegree").by()
-    .by(inE().values("doc_id").groupCount())
+    .project("v", "indegree")
+      .by()
+      .by(inE().values("doc_id").groupCount())
   
   docFrequencyPerToken = query.clone()
-    .project("v", "docFreq").by()
-    .by(bothE().groupCount().by("doc_id"))
-    .collectEntries { e -> [(e["v"]): e["docFreq"].size()] }
+    .group()
+      .by()
+      .by(bothE().values("doc_id").dedup().count())
+    .next()
 
   docLengthsPipe = g.E().group().by("doc_id").by(inV().count())
 
@@ -40,7 +42,7 @@ graph_of_word_query: {
 
   avgDocLength = docLengthsPipe.clone()[0].values().sum() / docLengthsPipe.clone()[0].values().size()
   
-  corpusSize = g.E().values("doc_id").unique().size()
+  corpusSize = g.E().values("doc_id").dedup().count().next()
 
   twIdf = indegreePerTokenPerDoc.clone().collect { token ->
       token['indegree'].collect { docID, indegree ->
