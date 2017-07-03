@@ -46,14 +46,15 @@ class LivingLabsEvaluator(object):
     def put_run(self, qid, runid, results):
         logging.info("Submitting Living Labs run for qid=%s and runid=%s" % (qid, runid))
         
-        #data = {
-            #'qid': qid,
-            #'runid': runid,
-            #'doclist': [{'docid': result['docID']} for result in results]
-        #}
-        data = json.loads(open('/home/jldevezas/ssoar-q501-results.formatted.json', 'r').read())
+        data = {
+            'qid': qid,
+            'runid': runid,
+            'doclist': [{'docid': result['docID']} for result in results]
+        }
+        #data = json.loads(open('/home/jldevezas/ssoar-q501-results.formatted.json', 'r').read())
+        #print(json.dumps(data))
 
-        r = requests.put(urljoin(self.base_url, 'run/%s' % qid), data=data, headers=self.headers, auth=self.auth)
+        r = requests.put(urljoin(self.base_url, 'run/%s' % qid), data=json.dumps(data), headers=self.headers, auth=self.auth)
         if r.status_code != requests.codes.ok:
             r.raise_for_status()
 
@@ -61,11 +62,10 @@ class LivingLabsEvaluator(object):
         queries = self.get_queries(type='train')
         for query in queries:
             logging.info("Searching for %s (qid=%s)" % (query['qstr'], query['qid']))
-            #engine_response = await self.index.search(query['qstr'], 0, 10000)
-            #results = engine_response['results']
-            results = []
-            self.put_run(query['qid'], 'gow_trec2017' % query['qid'], results)
-            break
+            engine_response = await self.index.search(query['qstr'], 0, 10000)
+            results = engine_response['results']
+            logger.info("%d results found for %s (qid=%s)" % (len(results), query['qstr'], query['qid']))
+            self.put_run(query['qid'], 'gow_trec2017', results)
 
 class Evaluator(object):
     @staticmethod
