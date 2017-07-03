@@ -5,7 +5,7 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import logging, string, asyncio, pymongo, re, json, psycopg2
+import logging, string, asyncio, pymongo, re, json, psycopg2, os
 from aiogremlin import Cluster
 from aiogremlin.gremlin_python.structure.graph import Vertex
 from threading import RLock
@@ -29,6 +29,10 @@ class Index(object):
             return GraphOfWordBatch(reader, index_location, loop)
         elif index_type == 'goe_batch':
             return GraphOfEntityBatch(reader, index_location, loop)
+        elif index_type == 'gow_csv':
+            return GraphOfWordCSV(reader, index_location, loop)
+        elif index_type == 'goe_csv':
+            return GraphOfEntityCSV(reader, index_location, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 
@@ -281,7 +285,7 @@ class PostgreSQLGraph(object):
 
         await self.cluster.close()
 
-    async def index(self):
+    async def index(self, pgonly=False):
         self.next_vertex_id = 1
         self.next_edge_id = 1
         self.next_property_id = 1
@@ -297,10 +301,12 @@ class PostgreSQLGraph(object):
                 yield index_doc
 
         conn.commit()
-        self.postgres_to_graphson(conn, '/tmp/graph.json')
+
+        if not pgonly: self.postgres_to_graphson(conn, '/tmp/graph.json')
+        
         conn.close()
 
-        await self.load_to_gremlin_server('/tmp/graph.json')
+        if not pgonly: await self.load_to_gremlin_server('/tmp/graph.json')
         #yield None
 
 class GraphOfWordBatch(PostgreSQLGraph,GraphOfWord):
@@ -371,7 +377,7 @@ class GraphOfEntityBatch(PostgreSQLGraph,GraphOfEntity):
             vertex_id = self.next_vertex_id
             self.vertex_cache[cache_key] = vertex_id
             self.next_vertex_id += 1
-            self.create_vertex_postgres(conn, vertex_id, 'entity', { 'type': 'term', 'name': term })
+            self.create_vertex_postgres(conn, vertex_id, 'term', { 'type': 'term', 'name': term })
 
         return vertex_id
 
@@ -413,3 +419,117 @@ class GraphOfEntityBatch(PostgreSQLGraph,GraphOfEntity):
                     self.create_edge_postgres(conn, self.next_edge_id, 'contained_in', source_vertex_id, entity_vertex_id)
 
         conn.commit()
+
+class GraphOfWordCSV(GraphOfWordBatch):
+    async def index(self):
+        if os.path.exists(self.index_location):
+            raise ArmyAntException("%s already exists" % self.index_location)
+
+        os.mkdir(self.index_location)
+
+        async for item in super().index(pgonly=True):
+            yield item
+
+        conn = psycopg2.connect("dbname='army_ant' user='army_ant' host='localhost'")
+        c = conn.cursor()
+        
+        logging.info("Creating term nodes CSV file")
+        with open(os.path.join(self.index_location, 'term-nodes.csv'), 'w') as f:
+            c.copy_expert("""
+            COPY (SELECT node_id AS "node_id:ID", attributes->'name'->0->>'value' AS name, label AS ":LABEL" FROM nodes)
+            TO STDOUT WITH CSV HEADER
+            """, f)
+
+        logging.info("Creating in_window_of edges CSV file")
+        with open(os.path.join(self.index_location, 'in_window_of-edges.csv'), 'w') as f:
+            c.copy_expert("""
+            COPY (SELECT source_node_id AS ":START_ID", attributes->>'doc_id' AS doc_id, target_node_id AS ":END_ID", label AS ":TYPE" FROM edges)
+            TO STDOUT WITH CSV HEADER
+            """, f)
+
+class GraphOfEntityCSV(GraphOfEntityBatch):
+    async def index(self):
+        if os.path.exists(self.index_location):
+            raise ArmyAntException("%s already exists" % self.index_location)
+
+        os.mkdir(self.index_location)
+
+        async for item in super().index(pgonly=True):
+            yield item
+
+        conn = psycopg2.connect("dbname='army_ant' user='army_ant' host='localhost'")
+        c = conn.cursor()
+        
+        logging.info("Creating term nodes CSV file")
+        with open(os.path.join(self.index_location, 'term-nodes.csv'), 'w') as f:
+            c.copy_expert("""
+            COPY (
+                SELECT
+                    node_id AS "node_id:ID",
+                    attributes->'name'->0->>'value' AS name,
+                    attributes->'type'->0->>'value' AS type,
+                    label AS ":LABEL"
+                FROM nodes
+                WHERE label = 'term'
+            )
+            TO STDOUT WITH CSV HEADER
+            """, f)
+
+        logging.info("Creating entity nodes CSV file")
+        with open(os.path.join(self.index_location, 'entity-nodes.csv'), 'w') as f:
+            c.copy_expert("""
+            COPY (
+                SELECT
+                    node_id AS "node_id:ID",
+                    regexp_replace(attributes->'name'->0->>'value', E'[\\n\\r]', ' ', 'g') AS name,
+                    attributes->'type'->0->>'value' AS type,
+                    attributes->'doc_id'->0->>'value' AS doc_id,
+                    label AS ":LABEL"
+                FROM nodes
+                WHERE label = 'entity'
+            )
+            TO STDOUT WITH CSV HEADER
+            """, f)
+
+        logging.info("Creating before edges CSV file")
+        with open(os.path.join(self.index_location, 'before-edges.csv'), 'w') as f:
+            c.copy_expert("""
+            COPY (
+                SELECT
+                    source_node_id AS ":START_ID",
+                    attributes->>'doc_id' AS doc_id,
+                    target_node_id AS ":END_ID",
+                    label AS ":TYPE"
+                FROM edges
+                WHERE label = 'before'
+            )
+            TO STDOUT WITH CSV HEADER
+            """, f)
+
+        logging.info("Creating related_to edges CSV file")
+        with open(os.path.join(self.index_location, 'related_to-edges.csv'), 'w') as f:
+            c.copy_expert("""
+            COPY (
+                SELECT
+                    source_node_id AS ":START_ID",
+                    target_node_id AS ":END_ID",
+                    label AS ":TYPE"
+                FROM edges
+                WHERE label = 'related_to'
+            )
+            TO STDOUT WITH CSV HEADER
+            """, f)
+
+        logging.info("Creating contained_in edges CSV file")
+        with open(os.path.join(self.index_location, 'contained_in-edges.csv'), 'w') as f:
+            c.copy_expert("""
+            COPY (
+                SELECT
+                    source_node_id AS ":START_ID",
+                    target_node_id AS ":END_ID",
+                    label AS ":TYPE"
+                FROM edges
+                WHERE label = 'contained_in'
+            )
+            TO STDOUT WITH CSV HEADER
+            """, f)
