@@ -53,9 +53,9 @@ def test_livinglabsevaluator(*argv):
     api_key = argv[3]
     run_id = argv[4]
     
-    e = LivingLabsEvaluator(index_location, index_type, 'http://api.trec-open-search.org', api_key)
+    e = LivingLabsEvaluator(index_location, index_type, 'http://api.trec-open-search.org', api_key, run_id)
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(e.run(run_id))
+    loop.run_until_complete(e.run())
 
 if __name__ == '__main__':
     # This is used during development to test individual methods.

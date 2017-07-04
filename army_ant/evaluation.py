@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 # TODO merge with Evaluator workflow
 class LivingLabsEvaluator(object):
-    def __init__(self, index_location, index_type, base_url, api_key):
+    def __init__(self, index_location, index_type, base_url, api_key, run_id):
         self.base_url = urljoin(base_url, 'api/v2/participant/')
         self.auth = HTTPBasicAuth(api_key, '')
         self.headers = { 'Content-Type': 'application/json' }
@@ -35,7 +35,8 @@ class LivingLabsEvaluator(object):
         self.loop = asyncio.get_event_loop()
         self.index = Index.open(index_location, index_type, self.loop)
 
-        self.pickle_dir = '/opt/army-ant/cache/gow_trec2017'
+        self.run_id = run_id
+        self.pickle_dir = '/opt/army-ant/cache/%s' % run_id
 
     def get_queries(self, qtype=None, qfilter=None):
         logging.info("Retrieving Living Labs queries")
@@ -70,7 +71,7 @@ class LivingLabsEvaluator(object):
         else:
             r.raise_for_status()
 
-    async def run(self, runid):
+    async def run(self):
         queries = self.get_queries()
         for query in queries:
             logging.info("Searching for %s (qid=%s)" % (query['qstr'], query['qid']))
@@ -86,7 +87,7 @@ class LivingLabsEvaluator(object):
                     pickle.dump(results, f)
 
             logger.info("%d results found for %s (qid=%s)" % (len(results), query['qstr'], query['qid']))
-            self.put_run(query['qid'], runid, results)
+            self.put_run(query['qid'], self.run_id, results)
 
 class Evaluator(object):
     @staticmethod
