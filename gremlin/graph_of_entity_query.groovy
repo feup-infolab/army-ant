@@ -18,8 +18,9 @@ def ewIlf(entityWeight, avgReachableEntitiesFromSeeds, entityRelationCount, avgE
 //queryTokens = ['born', 'new', 'york']
 //queryTokens = ['born']
 //queryTokens = ['musician', 'architect']
-//offset = 0
-//limit = 5
+queryTokens = ['soziale', 'herkunft']
+offset = 0
+limit = 5
 
 graph_of_entity_query: {
   query = g.withSack(0f).V().has("name", within(queryTokens))
@@ -27,17 +28,19 @@ graph_of_entity_query: {
   if (query.clone().count().next() < 1) return [[results: [:], numDocs: 0]]
 
   // Number of relations as an analogy to document lengths.
-  entityRelationCountPipe = g.V()
+  start = new Date()
+  entityRelationCount = g.V()
     .has("type", "entity")
     .outE()
     .where(__.not(hasLabel("contained_in")))
     .inV()
     .groupCount()
+    .next()
+  println("entityRelationCount (${(new Date().getTime() - start.getTime()) / 1000})")
 
-  entityRelationCount = []
-  entityRelationCountPipe.clone().fill(entityRelationCount)
-  entityRelationCount = entityRelationCount[0]
-
+  // TODO check ~/test.groovy
+  start = new Date()
+  // Used "doc_id" instead of "url" --- must correct this for previous implementations, which are now broken
   termEntityFrequency = g.V().outE("before")
     .dedup()
     .where(inV().has("name", within(queryTokens)))
@@ -50,12 +53,11 @@ graph_of_entity_query: {
       .by(count())
     .unfold()
     .collectEntries { [(it.key): (1 + Math.log(it.value))] }
-
-  //return termEntityFrequency
+  println("termEntityFrequency (${(new Date().getTime() - start.getTime()) / 1000})")
 
   if (entityRelationCount.isEmpty()) return []
 
-  avgEntityRelationCount = entityRelationCountPipe.clone()[0].values().sum() / entityRelationCountPipe.clone()[0].values().size()
+  avgEntityRelationCount = entityRelationCount.values().sum() / entityRelationCount.size()
 
   // Number of entities that have facts about them (we can later use a minimum number of facts).
   //entityCount = g.V()
@@ -90,12 +92,15 @@ graph_of_entity_query: {
     .order()
     .by(values, decr)
 
+  start = new Date()
   seedScores = seedScoresPipe.clone()
     .collectEntries { [(it.key): (it.value)] }
+  println("seedScores (${(new Date().getTime() - start.getTime()) / 1000})")
 
   maxDistance = 1
 
   // shortest path
+  start = new Date()
   distancesToSeedsPerEntity = seedScoresPipe.clone()
     .select(keys).as("seed")
     .repeat(both().simplePath().where(neq("seed")))
@@ -122,6 +127,7 @@ graph_of_entity_query: {
       .by(select("entity"))
       .by(group().by(select("seed")).by(select("distance").min()))
     .unfold()
+  println("distancesToSeedsPerEntity (${(new Date().getTime() - start.getTime()) / 1000})")
 
   //return distancesToSeedsPerEntity
 

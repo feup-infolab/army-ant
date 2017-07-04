@@ -13,7 +13,7 @@ from army_ant.evaluation import Evaluator, LivingLabsEvaluator
 logging.basicConfig(
     format='%(asctime)s army-ant: [%(name)s] %(levelname)s: %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
-    level=logging.DEBUG)
+    level=logging.INFO)
 
 def test_inexreader():
     for item in INEXReader("/media/backups/Datasets/INEX 2009/dataset/sample.tar.bz2"):
