@@ -70,7 +70,7 @@ class LivingLabsEvaluator(object):
         else:
             r.raise_for_status()
 
-    async def run(self):
+    async def run(self, runid):
         queries = self.get_queries()
         for query in queries:
             logging.info("Searching for %s (qid=%s)" % (query['qstr'], query['qid']))
@@ -86,7 +86,7 @@ class LivingLabsEvaluator(object):
                     pickle.dump(results, f)
 
             logger.info("%d results found for %s (qid=%s)" % (len(results), query['qstr'], query['qid']))
-            #self.put_run(query['qid'], 'gow_trec2017', results)
+            self.put_run(query['qid'], runid, results)
 
 class Evaluator(object):
     @staticmethod

@@ -18,7 +18,7 @@ def ewIlf(entityWeight, avgReachableEntitiesFromSeeds, entityRelationCount, avgE
 //queryTokens = ['born', 'new', 'york']
 //queryTokens = ['born']
 //queryTokens = ['musician', 'architect']
-queryTokens = ['soziale', 'herkunft']
+//queryTokens = ['soziale', 'herkunft']
 offset = 0
 limit = 5
 
@@ -38,22 +38,22 @@ graph_of_entity_query: {
     .next()
   println("entityRelationCount (${(new Date().getTime() - start.getTime()) / 1000})")
 
-  // TODO check ~/test.groovy
-  start = new Date()
+  // TODO check ~/test.groovy / replace by Entity Term Frequency?
+  //start = new Date()
   // Used "doc_id" instead of "url" --- must correct this for previous implementations, which are now broken
-  termEntityFrequency = g.V().outE("before")
-    .dedup()
-    .where(inV().has("name", within(queryTokens)))
-    .project("entity", "term")
-      .by { p = g.V().has("url", it.value("doc_id")); if (p.hasNext()) return p.next() else return none }
-      .by(inV())
-    .where(__.not(select("entity").is(none)))
-    .group()
-      .by(select("entity"))
-      .by(count())
-    .unfold()
-    .collectEntries { [(it.key): (1 + Math.log(it.value))] }
-  println("termEntityFrequency (${(new Date().getTime() - start.getTime()) / 1000})")
+  //termEntityFrequency = g.V().outE("before")
+    //.dedup()
+    //.where(inV().has("name", within(queryTokens)))
+    //.project("entity", "term")
+      //.by { p = g.V().has("url", it.value("doc_id")); if (p.hasNext()) return p.next() else return none }
+      //.by(inV())
+    //.where(__.not(select("entity").is(none)))
+    //.group()
+      //.by(select("entity"))
+      //.by(count())
+    //.unfold()
+    //.collectEntries { [(it.key): (1 + Math.log(it.value))] }
+  //println("termEntityFrequency (${(new Date().getTime() - start.getTime()) / 1000})")
 
   if (entityRelationCount.isEmpty()) return []
 
@@ -176,7 +176,7 @@ graph_of_entity_query: {
           'w(e)': avgWeightedInversePathLength,
           'wNorm(e, E)': (1 - b + b * entityRelationCount.get(it.key, 0) / avgEntityRelationCount).doubleValue(),
           'ew(e, E, b)': (entityWeight / (1 - b + b * entityRelationCount.get(it.key, 0) / avgEntityRelationCount)).doubleValue(),
-          'tef(t, e)': termEntityFrequency.get(it.key, 0),
+          //'tef(t, e)': termEntityFrequency.get(it.key, 0),
           'ew-tef(q, e)': score
           //'|E|': entityCount,
           //'avgle': avgReachableEntitiesFromSeeds.doubleValue(),
@@ -185,27 +185,27 @@ graph_of_entity_query: {
         ]]
       ]
     }
-    .plus(termEntityFrequency.collect {
-      //docID = "http://en.wikipedia.org/wiki/${it.key.value("name").replace(" ", "_")}"
-      docID = it.key.value("doc_id")
+    //.plus(termEntityFrequency.collect {
+      ////docID = "http://en.wikipedia.org/wiki/${it.key.value("name").replace(" ", "_")}"
+      //docID = it.key.value("doc_id")
 
-      //score = 0.3 * it.value
-      score = 0
+      ////score = 0.3 * it.value
+      //score = 0
 
-      [
-        docID: docID.toString(),
-        score: score.doubleValue(),
-        components: [[
-          docID: docID.toString(),
-          'c(e, S)': 0d,
-          'w(e)': 0d,
-          'wNorm(e, E)': 0d,
-          'ew(e, E, b)': 0d,
-          'tef(t, e)': it.value.doubleValue(),
-          'ew-tef(q, e)': score
-        ]]
-      ]
-    })
+      //[
+        //docID: docID.toString(),
+        //score: score.doubleValue(),
+        //components: [[
+          //docID: docID.toString(),
+          //'c(e, S)': 0d,
+          //'w(e)': 0d,
+          //'wNorm(e, E)': 0d,
+          //'ew(e, E, b)': 0d,
+          //'tef(t, e)': it.value.doubleValue(),
+          //'ew-tef(q, e)': score
+        //]]
+      //]
+    //})
     .unique { a, b -> a.docID <=> b.docID }
     .sort { -it.score }
 

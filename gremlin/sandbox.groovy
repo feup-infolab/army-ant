@@ -33,3 +33,25 @@ g.V().outE().where(__.not(hasLabel("contained_in").or().hasLabel("synonym").or()
 
 # Update a property
 g.V().outE().has("doc_id").property("doc_id", values("doc_id").map { it.get().tokenize("/")[-1].tokenize(".")[0] })
+
+# Alternative to termEntityFrequency (work in progress)
+
+tefAlternative: {
+  query = g.withSack(0f).V().has("name", within(queryTokens))
+
+  queryTermMentionDocIDs = query.clone()
+    .inE("before")
+    .values("doc_id")
+    .dedup()
+    .toList()
+
+  entityTermFrequency = g.V()
+    .has("type", "entity")
+    .has("doc_id", within(queryTermMentionDocIDs))
+    .project("entity", "term", "doc_id")
+      .by()
+      //.by(__.in("contained_in").both("before").has("name", within(queryTokens)))
+      .by(optional(__.in("contained_in").both("before").where(has("name", within(queryTokens)))))
+      .by(values("doc_id"))
+    //.next()
+}

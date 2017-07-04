@@ -44,15 +44,18 @@ def test_livinglabsreader(*argv):
     logging.info("%d items read" % c)
 
 def test_livinglabsevaluator(*argv):
-    if len(argv) < 2:
-        print("Must provide api_key argument")
+    if len(argv) < 5:
+        print("Must provide arguments: index_location, index_type, api_key, run_id")
         return
 
-    api_key = argv[1]
+    index_location = argv[1]
+    index_type = argv[2]
+    api_key = argv[3]
+    run_id = argv[4]
     
-    e = LivingLabsEvaluator('localhost:8182/gow_trec2017', 'gow_csv', 'http://api.trec-open-search.org', api_key)
+    e = LivingLabsEvaluator(index_location, index_type, 'http://api.trec-open-search.org', api_key)
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(e.run())
+    loop.run_until_complete(e.run(run_id))
 
 if __name__ == '__main__':
     # This is used during development to test individual methods.
