@@ -5,7 +5,7 @@
 # José Devezas <joseluisdevezas@gmail.com>
 # 2017-05-19
 
-import json, time, pymongo, asyncio, logging, csv, os, shutil
+import json, time, pymongo, asyncio, logging, csv, os, shutil, gzip
 import tempfile, zipfile, math, requests, requests_cache, pickle
 from enum import IntEnum
 from lxml import etree
@@ -38,6 +38,16 @@ class LivingLabsEvaluator(object):
         self.run_id = run_id
         self.pickle_dir = '/opt/army-ant/cache/%s' % run_id
 
+        self.doc_ids = set([doc['docid'] for doc in self.get_docs()])
+
+    # TODO same method used in LivingLabsReader / consider building a common library
+    def get_docs(self):
+        logging.info("Retrieving Living Labs documents")
+        r = requests.get(urljoin(self.base_url, 'docs'), headers=self.headers, auth=self.auth)
+        if r.status_code != requests.codes.ok:
+            r.raise_for_status()
+        return r.json()['docs']
+
     def get_queries(self, qtype=None, qfilter=None):
         logging.info("Retrieving Living Labs queries")
 
@@ -54,16 +64,22 @@ class LivingLabsEvaluator(object):
     def put_run(self, qid, runid, results):
         logging.info("Submitting Living Labs run for qid=%s and runid=%s" % (qid, runid))
         
+        # this first verification is required because an empty results variable is returned as a dictionary instead of a list
         if len(results) < 1:
-            logging.warn("No results found, added ssoar-d1 as a placeholder")
-            results = [{ 'docID': 'ssoar-d1' }]
+            logging.warn("No results found, adding %d missing results with zero score" % len(self.doc_ids))
+            results = [{'docID': doc_id} for doc_id in self.doc_ids]
+        else:
+            doc_ids = [result['docID'] for result in results]
+            missing_doc_ids = self.doc_ids.difference(doc_ids)
+            if len(missing_doc_ids) > 0:
+                logging.warn("Adding %d missing results with zero score" % len(missing_doc_ids))
+                results.extend([{'docID': doc_id} for doc_id in missing_doc_ids])
         
         data = {
             'qid': qid,
             'runid': runid,
             'doclist': [{'docid': result['docID']} for result in results]
         }
-        print(json.dumps(data))
 
         r = requests.put(urljoin(self.base_url, 'run/%s' % qid), data=json.dumps(data), headers=self.headers, auth=self.auth)
         if r.status_code == requests.codes.conflict:

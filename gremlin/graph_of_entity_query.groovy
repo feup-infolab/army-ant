@@ -19,8 +19,8 @@ def ewIlf(entityWeight, avgReachableEntitiesFromSeeds, entityRelationCount, avgE
 //queryTokens = ['born']
 //queryTokens = ['musician', 'architect']
 //queryTokens = ['soziale', 'herkunft']
-offset = 0
-limit = 5
+//offset = 0
+//limit = 5
 
 graph_of_entity_query: {
   query = g.withSack(0f).V().has("name", within(queryTokens))
@@ -36,7 +36,7 @@ graph_of_entity_query: {
     .inV()
     .groupCount()
     .next()
-  println("entityRelationCount (${(new Date().getTime() - start.getTime()) / 1000})")
+  println("[${queryTokens.join(", ")}] entityRelationCount (${(new Date().getTime() - start.getTime()) / 1000})")
 
   // TODO check ~/test.groovy / replace by Entity Term Frequency?
   //start = new Date()
@@ -95,7 +95,7 @@ graph_of_entity_query: {
   start = new Date()
   seedScores = seedScoresPipe.clone()
     .collectEntries { [(it.key): (it.value)] }
-  println("seedScores (${(new Date().getTime() - start.getTime()) / 1000})")
+  println("[${queryTokens.join(", ")}] seedScores (${(new Date().getTime() - start.getTime()) / 1000})")
 
   maxDistance = 1
 
@@ -127,7 +127,7 @@ graph_of_entity_query: {
       .by(select("entity"))
       .by(group().by(select("seed")).by(select("distance").min()))
     .unfold()
-  println("distancesToSeedsPerEntity (${(new Date().getTime() - start.getTime()) / 1000})")
+  println("[${queryTokens.join(", ")}] distancesToSeedsPerEntity (${(new Date().getTime() - start.getTime()) / 1000})")
 
   //return distancesToSeedsPerEntity
 
