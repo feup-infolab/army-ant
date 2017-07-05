@@ -37,6 +37,8 @@ class LivingLabsEvaluator(object):
 
         self.run_id = run_id
         self.pickle_dir = '/opt/army-ant/cache/%s' % run_id
+        if not os.path.exists(self.pickle_dir):
+            os.mkdir(self.pickle_dir)
 
         self.doc_ids = set([doc['docid'] for doc in self.get_docs()])
 
@@ -74,7 +76,7 @@ class LivingLabsEvaluator(object):
             if len(missing_doc_ids) > 0:
                 logging.warn("Adding %d missing results with zero score" % len(missing_doc_ids))
                 results.extend([{'docID': doc_id} for doc_id in missing_doc_ids])
-        
+
         data = {
             'qid': qid,
             'runid': runid,
