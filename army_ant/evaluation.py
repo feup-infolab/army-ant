@@ -40,16 +40,6 @@ class LivingLabsEvaluator(object):
         if not os.path.exists(self.pickle_dir):
             os.mkdir(self.pickle_dir)
 
-        self.doc_ids = set([doc['docid'] for doc in self.get_docs()])
-
-    # TODO same method used in LivingLabsReader / consider building a common library
-    def get_docs(self):
-        logging.info("Retrieving Living Labs documents")
-        r = requests.get(urljoin(self.base_url, 'docs'), headers=self.headers, auth=self.auth)
-        if r.status_code != requests.codes.ok:
-            r.raise_for_status()
-        return r.json()['docs']
-
     def get_queries(self, qtype=None, qfilter=None):
         logging.info("Retrieving Living Labs queries")
 
@@ -63,18 +53,30 @@ class LivingLabsEvaluator(object):
 
         return queries
 
+    def get_doclist_doc_ids(self, qid):
+        logging.info("Retrieving Living Labs doclist for qid=%s" % qid)
+
+        r = requests.get(urljoin(self.base_url, 'doclist/%s' % qid), headers=self.headers, auth=self.auth)
+        if r.status_code != requests.codes.ok:
+            r.raise_for_status()
+        doc_ids = [doc['docid'] for doc in r.json()['doclist']]
+        
+        return set(doc_ids)
+
     def put_run(self, qid, runid, results):
         logging.info("Submitting Living Labs run for qid=%s and runid=%s" % (qid, runid))
         
+        must_have_doc_ids = self.get_doclist_doc_ids(qid)
+
         # this first verification is required because an empty results variable is returned as a dictionary instead of a list
         if len(results) < 1:
-            logging.warn("No results found, adding %d missing results with zero score" % len(self.doc_ids))
-            results = [{'docID': doc_id} for doc_id in self.doc_ids]
+            logging.warn("No results found, adding %d missing results with zero score" % len(must_have_doc_ids))
+            results = [{'docID': doc_id} for doc_id in must_have_doc_ids]
         else:
             doc_ids = [result['docID'] for result in results]
-            missing_doc_ids = self.doc_ids.difference(doc_ids)
+            missing_doc_ids = must_have_doc_ids.difference(doc_ids)
             if len(missing_doc_ids) > 0:
-                logging.warn("Adding %d missing results with zero score" % len(missing_doc_ids))
+                logging.warn("Adding %d missing results with zero score out of %d must have results" % (len(missing_doc_ids), len(must_have_doc_ids)))
                 results.extend([{'docID': doc_id} for doc_id in missing_doc_ids])
 
         data = {
