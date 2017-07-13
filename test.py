@@ -57,6 +57,9 @@ def test_livinglabsevaluator(*argv):
     loop = asyncio.get_event_loop()
     loop.run_until_complete(e.run())
 
+def test(*argv):
+    print(argv)
+
 if __name__ == '__main__':
     # This is used during development to test individual methods.
     #test_inexreader()

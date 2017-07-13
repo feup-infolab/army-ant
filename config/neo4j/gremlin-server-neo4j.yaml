@@ -30,12 +30,12 @@ port: 8182
 scriptEvaluationTimeout: 1800000
 channelizer: org.apache.tinkerpop.gremlin.server.channel.WebSocketChannelizer
 graphs: {
-  gow_wikipedia: conf/neo4j-graph-of-word-wikipedia.properties,
-  goe_wikipedia: conf/neo4j-graph-of-entity-wikipedia.properties}
+  #gow_wikipedia: conf/neo4j-graph-of-word-wikipedia.properties,
+  #goe_wikipedia: conf/neo4j-graph-of-entity-wikipedia.properties,
   #gow_inex: conf/neo4j-graph-of-word-inex.properties,
   #goe_inex: conf/neo4j-graph-of-entity-inex.properties,
-  #gow_trec2017: conf/neo4j-graph-of-word-trec2017.properties,
-  #goe_trec2017: conf/neo4j-graph-of-entity-trec2017.properties}
+  gow_trec2017: conf/neo4j-graph-of-word-trec2017.properties,
+  goe_trec2017: conf/neo4j-graph-of-entity-trec2017.properties}
 plugins:
   - tinkerpop.neo4j
 scriptEngines: {
