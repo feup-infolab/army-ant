@@ -5,7 +5,7 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import tarfile, re, logging, os, requests, requests_cache
+import tarfile, re, logging, os, requests, requests_cache, csv
 from lxml import etree
 from io import StringIO
 from bs4 import BeautifulSoup, SoupStrainer
@@ -25,6 +25,8 @@ class Reader(object):
             return INEXReader(source_path, limit)
         elif source_reader == 'living_labs':
             return LivingLabsReader(source_path, limit)
+        elif source_reader == 'csv':
+            return CSVReader(source_path)
         else:
             raise ArmyAntException("Unsupported source reader %s" % source_reader)
 
@@ -253,3 +255,27 @@ class LivingLabsReader(Reader):
                 doc_id = doc['docid'],
                 text = self.to_text(doc),
                 triples = self.to_triples(doc))
+
+class CSVReader(Reader):
+    def __init__(self, source_path, doc_id_suffix=':doc_id', text_suffix=':text'):
+        super(CSVReader, self).__init__(source_path)
+        self.reader = csv.DictReader(open(source_path, newline=''))
+        self.doc_id_suffix = doc_id_suffix
+        self.text_suffix = text_suffix
+
+    def __next__(self):
+        for row in self.reader:
+            doc_id = None
+            text = []
+
+            for k in row.keys():
+                if k.endswith(self.text_suffix):
+                    text.append(row[k])
+                elif k.endswith(self.doc_id_suffix):
+                    doc_id = row[k]
+
+            text = '\n'.join(text)
+
+            return Document(doc_id = doc_id, text = text)
+
+        raise StopIteration

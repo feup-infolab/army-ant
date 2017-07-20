@@ -13,6 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 from nltk import word_tokenize
 from nltk.corpus import stopwords, wordnet as wn
 from army_ant.reader import Document, Entity
+from army_ant.text import analyze
 from army_ant.util import load_gremlin_script, load_sql_script
 from army_ant.exception import ArmyAntException
 
@@ -59,9 +60,7 @@ class Index(object):
         self.loop = loop
 
     def analyze(self, text):
-        tokens = word_tokenize(text.lower())
-        tokens = [token for token in tokens if token not in stopwords.words('english') and not token[0] in string.punctuation]
-        return tokens
+        return analyze(text)
 
     """Indexes the documents and yields documents to store in the database."""
     async def index(self):

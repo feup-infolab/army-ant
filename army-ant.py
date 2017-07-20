@@ -11,6 +11,7 @@ from army_ant.reader import Reader
 from army_ant.database import Database
 from army_ant.index import Index
 from army_ant.server import run_app
+from army_ant.features import FeatureExtractor
 from army_ant.extras import fetch_wikipedia_images
 
 logging.basicConfig(
@@ -62,6 +63,11 @@ class CommandLineInterface(object):
                 loop.close()
         except ArmyAntException as e:
             logger.error(e)
+
+    def features(self, method, source_path, source_reader, output_location, output_type='csv'):
+        reader = Reader.factory(source_path, source_reader)
+        fe = FeatureExtractor.factory(method, reader, output_location, output_type)
+        fe.extract()
 
     def server(self):
         loop = asyncio.get_event_loop()
