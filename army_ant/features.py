@@ -44,7 +44,6 @@ class Word2VecSimilarityNetwork(FeatureExtractor):
         logging.info("Extracting sentences from documents")
         self.sentences = []
         pos_taggers = {}
-        #filter_tags = { 'pt': ['v-inf', 'v-fin', 'v-pcp', 'prp', 'adv', 'art', 'conj-s', 'conj-c'], 'en': ['VB', 'VBP'] }
         filter_tags = { 'pt': ['V', 'PCP', 'VAUX', 'PREP', 'CUR', 'NUM', 'PREP|+', 'NPROP', 'PROPESS', 'ART', 'KS', 'ADV'], 'en': ['VB', 'VBP'] }
         for doc in self.reader:
             lang = langdetect.detect(doc.text)
