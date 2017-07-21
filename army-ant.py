@@ -6,13 +6,14 @@
 # 2017-03-09
 
 import fire, logging, asyncio
+import networkx as nx
 from army_ant.exception import ArmyAntException
 from army_ant.reader import Reader
 from army_ant.database import Database
 from army_ant.index import Index
 from army_ant.server import run_app
 from army_ant.features import FeatureExtractor
-from army_ant.extras import fetch_wikipedia_images
+from army_ant.extras import fetch_wikipedia_images, word2vec_knn, word2vec_sim
 
 logging.basicConfig(
     format='%(asctime)s army-ant: [%(name)s] %(levelname)s: %(message)s',
@@ -64,9 +65,9 @@ class CommandLineInterface(object):
         except ArmyAntException as e:
             logger.error(e)
 
-    def features(self, method, source_path, source_reader, output_location, output_type='csv'):
+    def features(self, method, source_path, source_reader, output_location):
         reader = Reader.factory(source_path, source_reader)
-        fe = FeatureExtractor.factory(method, reader, output_location, output_type)
+        fe = FeatureExtractor.factory(method, reader, output_location)
         fe.extract()
 
     def server(self):
@@ -80,6 +81,25 @@ class CommandLineInterface(object):
         finally:
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()
+
+    def word2vec_knn(self, model_path, word, k=5):
+        knn = word2vec_knn(model_path, word, k)
+        if knn is None:
+            print("No results found")
+            return
+
+        rank = 1
+        for word, score in knn:
+            print(rank, '\t', score, '\t', word)
+            rank += 1
+
+    def word2vec_sim(self, model_path, word1, word2):
+        sim = word2vec_sim(model_path, word1, word2)
+        if sim is None:
+            print("Could not calculate similarity: one of the words was not found")
+            return
+
+        print(word1, '~', word2, '=', sim)
 
 if __name__ == '__main__':
     fire.Fire(CommandLineInterface)

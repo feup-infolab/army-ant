@@ -11,4 +11,6 @@ pymongo==2.9.4
 lxml==3.7.3
 psycopg2==2.7.1
 requests-cache==0.4.13
-tensorflow==1.0.1
+gensim==2.2.0
+langdetect==1.0.7
+networkx==1.11

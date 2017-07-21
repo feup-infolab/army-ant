@@ -259,9 +259,15 @@ class LivingLabsReader(Reader):
 class CSVReader(Reader):
     def __init__(self, source_path, doc_id_suffix=':doc_id', text_suffix=':text'):
         super(CSVReader, self).__init__(source_path)
+        
         self.reader = csv.DictReader(open(source_path, newline=''))
         self.doc_id_suffix = doc_id_suffix
         self.text_suffix = text_suffix
+
+        if not any([fieldname.endswith(self.text_suffix) for fieldname in self.reader.fieldnames]):
+            raise ArmyAntException(
+                "CSV must have at least one column name with a %s suffix (other supported suffixes include %s)" % (
+                    self.text_suffix, self.doc_id_suffix))
 
     def __next__(self):
         for row in self.reader:
