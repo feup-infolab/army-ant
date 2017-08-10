@@ -43,6 +43,7 @@ def test_livinglabsreader(*argv):
         c += 1
     logging.info("%d items read" % c)
 
+# FIXME broken after integration with default API
 def test_livinglabsevaluator(*argv):
     if len(argv) < 5:
         print("Must provide arguments: index_location, index_type, api_key, run_id")
@@ -65,4 +66,4 @@ if __name__ == '__main__':
     #test_inexreader()
     #test_inexevaluator()
     #test_livinglabsreader(*sys.argv)
-    test_livinglabsevaluator(*sys.argv)
+    #test_livinglabsevaluator(*sys.argv)

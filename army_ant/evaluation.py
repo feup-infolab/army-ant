@@ -23,106 +23,28 @@ from army_ant.exception import ArmyAntException
 
 logger = logging.getLogger(__name__)
 
-# TODO merge with Evaluator workflow
-class LivingLabsEvaluator(object):
-    def __init__(self, index_location, index_type, base_url, api_key, run_id):
-        self.base_url = urljoin(base_url, 'api/v2/participant/')
-        self.auth = HTTPBasicAuth(api_key, '')
-        self.headers = { 'Content-Type': 'application/json' }
-
-        requests_cache.install_cache('living_labs_cache', expire_after=10800)
-
-        self.loop = asyncio.get_event_loop()
-        self.index = Index.open(index_location, index_type, self.loop)
-
-        self.run_id = run_id
-        self.pickle_dir = '/opt/army-ant/cache/%s' % run_id
-        if not os.path.exists(self.pickle_dir):
-            os.mkdir(self.pickle_dir)
-
-    def get_queries(self, qtype=None, qfilter=None):
-        logging.info("Retrieving Living Labs queries")
-
-        r = requests.get(urljoin(self.base_url, 'query'), headers=self.headers, auth=self.auth)
-        if r.status_code != requests.codes.ok:
-            r.raise_for_status()
-        queries = r.json()['queries']
-        
-        if qtype: queries = list(filter(lambda q: q['type'] == qtype, queries))
-        if qfilter: queries = list(filter(lambda q: q['qid'] in qfilter, queries))
-
-        return queries
-
-    def get_doclist_doc_ids(self, qid):
-        logging.info("Retrieving Living Labs doclist for qid=%s" % qid)
-
-        r = requests.get(urljoin(self.base_url, 'doclist/%s' % qid), headers=self.headers, auth=self.auth)
-        if r.status_code != requests.codes.ok:
-            r.raise_for_status()
-        doc_ids = [doc['docid'] for doc in r.json()['doclist']]
-        
-        return set(doc_ids)
-
-    def put_run(self, qid, runid, results):
-        logging.info("Submitting Living Labs run for qid=%s and runid=%s" % (qid, runid))
-        
-        must_have_doc_ids = self.get_doclist_doc_ids(qid)
-
-        # this first verification is required because an empty results variable is returned as a dictionary instead of a list
-        if len(results) < 1:
-            logging.warn("No results found, adding %d missing results with zero score" % len(must_have_doc_ids))
-            results = [{'docID': doc_id} for doc_id in must_have_doc_ids]
-        else:
-            doc_ids = [result['docID'] for result in results]
-            missing_doc_ids = must_have_doc_ids.difference(doc_ids)
-            if len(missing_doc_ids) > 0:
-                logging.warn("Adding %d missing results with zero score out of %d must have results" % (len(missing_doc_ids), len(must_have_doc_ids)))
-                results.extend([{'docID': doc_id} for doc_id in missing_doc_ids])
-
-        data = {
-            'qid': qid,
-            'runid': runid,
-            'doclist': [{'docid': result['docID']} for result in results]
-        }
-
-        r = requests.put(urljoin(self.base_url, 'run/%s' % qid), data=json.dumps(data), headers=self.headers, auth=self.auth)
-        if r.status_code == requests.codes.conflict:
-            logger.warn("Run for qid=%s and runid=%s already exists, ignoring" % (qid, runid))
-        else:
-            r.raise_for_status()
-
-    async def run(self):
-        queries = self.get_queries()
-        for query in queries:
-            logging.info("Searching for %s (qid=%s)" % (query['qstr'], query['qid']))
-
-            pickle_path = os.path.join(self.pickle_dir, '%s.pickle' % query['qid'])
-            if os.path.exists(pickle_path):
-                with open(pickle_path, 'rb') as f:
-                    results = pickle.load(f)
-            else:
-                engine_response = await self.index.search(query['qstr'], 0, 10000)
-                results = engine_response['results']
-                with open(pickle_path, 'wb') as f:
-                    pickle.dump(results, f)
-
-            logger.info("%d results found for %s (qid=%s)" % (len(results), query['qstr'], query['qid']))
-            self.put_run(query['qid'], self.run_id, results)
-
 class Evaluator(object):
     @staticmethod
     def factory(task, eval_location):
         if task.eval_format == 'inex':
             return INEXEvaluator(task, eval_location)
+        elif task.eval_format == 'll-api':
+            return LivingLabsEvaluator(task, eval_location)
         else:
             raise ArmyAntException("Unsupported evaluator format")
 
     def __init__(self, task, eval_location):
         self.task = task
         self.results = {}
-
         self.start_date = datetime.now()
-        
+
+    async def run(self):
+        raise ArmyAntException("Unsupported evaluator format %s" % eval_format)
+
+class FilesystemEvaluator(Evaluator):
+    def __init__(self, task, eval_location):
+        super().__init__(task, eval_location)
+
         self.o_results_path = os.path.join(eval_location, 'results', task._id)
         self.o_assessments_path = os.path.join(eval_location, 'assessments', task._id)
         
@@ -140,10 +62,7 @@ class Evaluator(object):
         shutil.rmtree(self.o_results_path)
         shutil.rmtree(self.o_assessments_path)
 
-    async def run(self):
-        raise ArmyAntException("Unsupported evaluator format %s" % eval_format)
-
-class INEXEvaluator(Evaluator):
+class INEXEvaluator(FilesystemEvaluator):
     def __init__(self, task, eval_location):
         super().__init__(task, eval_location)
 
@@ -270,23 +189,126 @@ class INEXEvaluator(Evaluator):
         self.calculate_mean_average_precision()
         self.calculate_normalized_discounted_cumulative_gain_at_p()
 
+class LivingLabsEvaluator(Evaluator):
+    def __init__(self, task, eval_location):
+        super().__init__(task, eval_location)
+        try:
+            base_url, api_key, run_id = eval_location.split('::')
+        except ValueError:
+            raise ArmyAntException("Must provide the base_url, api_key and run_id, separated by '::'")
+
+        self.base_url = urljoin(base_url, 'api/v2/participant/')
+        self.auth = HTTPBasicAuth(api_key, '')
+        self.headers = { 'Content-Type': 'application/json' }
+
+        requests_cache.install_cache('living_labs_cache', expire_after=10800)
+
+        self.loop = asyncio.get_event_loop()
+        self.index = Index.open(task.index_location, task.index_type, self.loop)
+
+        self.run_id = run_id
+        self.pickle_dir = '/opt/army-ant/cache/%s' % run_id
+        if not os.path.exists(self.pickle_dir):
+            os.mkdir(self.pickle_dir)
+
+    def get_queries(self, qtype=None, qfilter=None):
+        logging.info("Retrieving Living Labs queries")
+
+        r = requests.get(urljoin(self.base_url, 'query'), headers=self.headers, auth=self.auth)
+        if r.status_code != requests.codes.ok:
+            r.raise_for_status()
+        queries = r.json()['queries']
+        
+        if qtype: queries = list(filter(lambda q: q['type'] == qtype, queries))
+        if qfilter: queries = list(filter(lambda q: q['qid'] in qfilter, queries))
+
+        return queries
+
+    def get_doclist_doc_ids(self, qid):
+        logging.info("Retrieving Living Labs doclist for qid=%s" % qid)
+
+        r = requests.get(urljoin(self.base_url, 'doclist/%s' % qid), headers=self.headers, auth=self.auth)
+        if r.status_code != requests.codes.ok:
+            r.raise_for_status()
+        doc_ids = [doc['docid'] for doc in r.json()['doclist']]
+        
+        return set(doc_ids)
+
+    def put_run(self, qid, runid, results):
+        logging.info("Submitting Living Labs run for qid=%s and runid=%s" % (qid, runid))
+        
+        must_have_doc_ids = self.get_doclist_doc_ids(qid)
+
+        # this first verification is required because an empty results variable is returned as a dictionary instead of a list
+        if len(results) < 1:
+            logging.warn("No results found, adding %d missing results with zero score" % len(must_have_doc_ids))
+            results = [{'docID': doc_id} for doc_id in must_have_doc_ids]
+        else:
+            doc_ids = [result['docID'] for result in results]
+            missing_doc_ids = must_have_doc_ids.difference(doc_ids)
+            if len(missing_doc_ids) > 0:
+                logging.warn("Adding %d missing results with zero score out of %d must have results" % (len(missing_doc_ids), len(must_have_doc_ids)))
+                results.extend([{'docID': doc_id} for doc_id in missing_doc_ids])
+
+        data = {
+            'qid': qid,
+            'runid': runid,
+            'doclist': [{'docid': result['docID']} for result in results]
+        }
+
+        r = requests.put(urljoin(self.base_url, 'run/%s' % qid), data=json.dumps(data), headers=self.headers, auth=self.auth)
+        if r.status_code == requests.codes.conflict:
+            logger.warn("Run for qid=%s and runid=%s already exists, ignoring" % (qid, runid))
+        else:
+            r.raise_for_status()
+
+    async def run(self):
+        queries = self.get_queries()
+        try:
+            for query in queries:
+                logging.info("Searching for %s (qid=%s)" % (query['qstr'], query['qid']))
+
+                pickle_path = os.path.join(self.pickle_dir, '%s.pickle' % query['qid'])
+                if os.path.exists(pickle_path):
+                    with open(pickle_path, 'rb') as f:
+                        results = pickle.load(f)
+                else:
+                    engine_response = await self.index.search(query['qstr'], 0, 10000)
+                    results = engine_response['results']
+                    with open(pickle_path, 'wb') as f:
+                        pickle.dump(results, f)
+
+                logger.info("%d results found for %s (qid=%s)" % (len(results), query['qstr'], query['qid']))
+                self.put_run(query['qid'], self.run_id, results)
+
+            return EvaluationTaskStatus.SUBMITTED
+        except HTTPError:
+            return EvaluationTaskStatus.ERROR
+
 class EvaluationTaskStatus(IntEnum):
     WAITING = 1
     RUNNING = 2
     DONE = 3
+    SUBMITTED = 4
+    ERROR = 5
 
 class EvaluationTask(object):
-    def __init__(self, topics_filename, topics_path, assessments_filename, assessments_path, index_location, index_type, eval_format,
-                 status=EvaluationTaskStatus.WAITING, topics_md5=None, assessments_md5=None, time=None, _id=None, results=None):
-        self.topics_filename = topics_filename
-        self.topics_path = topics_path
-        self.topics_md5 = topics_md5 or md5(topics_path)
-        self.assessments_filename = assessments_filename
-        self.assessments_path = assessments_path
-        self.assessments_md5 = assessments_md5 or md5(assessments_path)
+    def __init__(self, index_location, index_type, eval_format, topics_filename=None, topics_path=None,
+                 assessments_filename=None, assessments_path=None, base_url=None, api_key=None, run_id=None,
+                 status=EvaluationTaskStatus.WAITING, topics_md5=None, assessments_md5=None, time=None,
+                 _id=None, results=None):
         self.index_location = index_location
         self.index_type = index_type
         self.eval_format = eval_format
+        self.topics_filename = topics_filename
+        self.topics_path = topics_path
+        self.topics_md5 = topics_md5 or (md5(topics_path) if topics_path else None)
+        self.assessments_filename = assessments_filename
+        self.assessments_path = assessments_path
+        self.assessments_md5 = assessments_md5 or (md5(assessments_path) if assessments_path else None)
+        self.base_url = base_url
+        self.api_key = api_key
+        self.run_id = run_id
         self.status = EvaluationTaskStatus(status)
         self.time = time
         if results: self.results = results
@@ -296,14 +318,14 @@ class EvaluationTask(object):
         return json.dumps(self.__dict__)
 
 class EvaluationTaskManager(object):
-    def __init__(self, db_location, eval_location):
+    def __init__(self, db_location, default_eval_location):
         self.tasks = []
         self.running = None
 
-        self.eval_location = eval_location
-        self.results_dirname = os.path.join(eval_location, 'results')
-        self.assessments_dirname = os.path.join(eval_location, 'assessments')
-        self.spool_dirname = os.path.join(eval_location, 'spool')
+        self.default_eval_location = default_eval_location
+        self.results_dirname = os.path.join(default_eval_location, 'results')
+        self.assessments_dirname = os.path.join(default_eval_location, 'assessments')
+        self.spool_dirname = os.path.join(default_eval_location, 'spool')
 
         db_location_parts = db_location.split(':')
         
@@ -344,7 +366,8 @@ class EvaluationTaskManager(object):
         self.db['evaluation_tasks'].update_many(
             { 'status': 2 },
             { '$set': { 'status': 1 } })
-        if self.running: self.running.remove_output()
+        if type(self.running) != LivingLabsEvaluator and self.running:
+            self.running.remove_output()
 
     def queue(self):
         duplicate_error = False
@@ -364,6 +387,11 @@ class EvaluationTaskManager(object):
             { '_id': ObjectId(task._id) },
             { '$set': { 'status': EvaluationTaskStatus.DONE, 'results': results } })
 
+    def set_status(self, task, status):
+        self.db['evaluation_tasks'].update_one(
+            { '_id': ObjectId(task._id) },
+            { '$set': { 'status': status } })
+
     @contextmanager
     def get_results_archive(self, task_id):
         task = self.db['evaluation_tasks'].find_one({ '_id': ObjectId(task_id) })
@@ -372,7 +400,7 @@ class EvaluationTaskManager(object):
         task = EvaluationTask(**task)
         with tempfile.TemporaryDirectory() as tmp_dir:
             out_dir = os.path.join(tmp_dir, task_id)
-            shutil.copytree(os.path.join(self.eval_location, 'assessments', task_id), out_dir)
+            shutil.copytree(os.path.join(self.default_eval_location, 'assessments', task_id), out_dir)
             with open(os.path.join(out_dir, "eval_metrics.csv"), 'w') as f:
                 writer = csv.writer(f)
                 writer.writerow(['metrics', 'value'])
@@ -386,8 +414,9 @@ class EvaluationTaskManager(object):
     def clean_spool(self):
         valid_spool_filenames = set([])
         for task in self.db['evaluation_tasks'].find():
-            valid_spool_filenames.add(os.path.basename(task['topics_path']))
-            valid_spool_filenames.add(os.path.basename(task['assessments_path']))
+            if task['eval_format'] == 'inex':
+                valid_spool_filenames.add(os.path.basename(task['topics_path']))
+                valid_spool_filenames.add(os.path.basename(task['assessments_path']))
         
         for filename in os.listdir(self.spool_dirname):
             path = os.path.join(self.spool_dirname, filename)
@@ -422,11 +451,20 @@ class EvaluationTaskManager(object):
                 if task:
                     try:
                         logger.info("Running evaluation task %s" % task._id)
-                        e = Evaluator.factory(task, self.eval_location)
+                        if task.eval_format == 'll-api':
+                            e = Evaluator.factory(task, '%s::%s::%s' % (task.base_url, task.api_key, task.run_id))
+                        else:
+                            e = Evaluator.factory(task, self.default_eval_location)
+
                         self.running = e
-                        await e.run()
-                        self.save_results(task, e.results)
-                        self.running = None
+                        status = await e.run()
+
+                        if task.eval_format == 'inex':
+                            self.save_results(task, e.results)
+                            self.running = None
+                        elif task.eval_format == 'll-api':
+                            self.set_status(task, status)
+
                     except ArmyAntException as e:
                         logger.error("Could not run evaluation task %s: %s" % (task._id, str(e)))
                 await asyncio.sleep(5)

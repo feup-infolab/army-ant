@@ -14,6 +14,30 @@
       <div class="columns">
         <div class="column">
           <div class="form-group">
+            <label class="form-label" for="eval-format">Evaluator Format</label>
+            <select class="form-select select-lg" id="eval-format" name="eval-format">
+              <option value="inex">INEX</option>
+              <option value="ll-api">Living Labs API</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="form-group">
+            <label class="form-label" for="engine">Search Engine</label>
+            <select class="form-select select-lg" id="engine" name="engine">
+              {% for app_engine in app.engines %}
+              <option value="{{app_engine}}">{{ app.engines[app_engine].name }}</option>
+              {% endfor %}
+              <option value="__all__">All Engines</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div id="inex-block" class="columns dynamic-block">
+        <div class="column">
+          <div class="form-group">
             <label class="form-label" for="topics">Topics</label>
             <input class="form-input" type="file" id="topics" name="topics" value="">
           </div>
@@ -26,25 +50,23 @@
         </div>
       </div>
 
-      <div class="columns">
+      <div id="ll-api-block" class="columns dynamic-block hide">
         <div class="column">
           <div class="form-group">
-            <label class="form-label" for="eval-format">Evaluator Format</label>
-            <select class="form-select select-lg" id="eval-format" name="eval-format">
-              <option value="inex">INEX</option>
-            </select>
+            <label class="form-label" for="base-url">Base URL</label>
+            <input class="form-input input-lg" type="text" id="base-url" name="base-url" value="" placeholder="http://api.trec-open-search.org">
           </div>
         </div>
-
         <div class="column">
           <div class="form-group">
-            <label class="form-label" for="topics">Search Engine</label>
-            <select class="form-select select-lg" id="engine" name="engine">
-              {% for app_engine in app.engines %}
-              <option value="{{app_engine}}">{{ app.engines[app_engine].name }}</option>
-              {% endfor %}
-              <option value="__all__">All Engines</option>
-            </select>
+            <label class="form-label" for="api-key">API Key</label>
+            <input class="form-input input-lg" type="text" id="api-key" name="api-key" value="" placeholder="2C2BB98ABEE4CD40-F0RDVC4KZ6SNFZGY">
+          </div>
+        </div>
+        <div class="column">
+          <div class="form-group">
+            <label class="form-label" for="run-id">Run ID</label>
+            <input class="form-input input-lg" type="text" id="run-id" name="run-id" value="" placeholder="retrieval_model-run_1">
           </div>
         </div>
       </div>
@@ -72,8 +94,7 @@
     <table class="table">
       <thead>
         <th>Queued</th>
-        <th>Topics</th>
-        <th>Assessments</th>
+        <th>Location</th>
         <th>Index</th>
         <th>Status</th>
         <th>Detail</th>
@@ -83,8 +104,13 @@
         {% for task in tasks %}
         <tr {% if task._id %} data-id="{{ task._id }}" {% endif %}>
           <td>{{ task.time|timestamp_to_date }}</td>
-          <td>{{ task.topics_filename}}</td>
-          <td>{{ task.assessments_filename }}</td>
+
+          {% if task.eval_format == "inex" %}
+          <td>{{ task.topics_filename}}; {{ task.assessments_filename }}</td>
+          {% elif task.eval_format == "ll-api" %}
+          <td>{{ task.base_url }}::{{ task.api_key }}::{{ task.run_id }}</td>
+          {% endif %}
+          
           <td>{{ task.index_location }} ({{ task.index_type }})</td>
           {% if task.status == 3 %}
           <td>
@@ -140,6 +166,12 @@
         $(this).find('i.icon').removeClass('icon-minus').addClass('icon-plus');
         $detail.addClass('hide');
       }      
+    });
+
+    $(document).on('change', '#eval-format', function(e) {
+      var evalFormat = $(this).val();
+      $('.dynamic-block').addClass('hide');
+      $('#' + evalFormat + '-block').removeClass('hide');
     });
   })();
 </script>

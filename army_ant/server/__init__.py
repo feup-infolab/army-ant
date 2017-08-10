@@ -101,21 +101,31 @@ async def search(request):
         return response
 
 async def evaluation_get(request):
-    manager = EvaluationTaskManager(request.app['db_location'], request.app['eval_location'])
+    manager = EvaluationTaskManager(request.app['db_location'], request.app['default_eval_location'])
     return { 'tasks': manager.get_tasks() }
 
 async def evaluation_post(request):
     data = await request.post()
 
-    with tempfile.NamedTemporaryFile(dir=os.path.join(request.app['eval_location'], 'spool'), prefix='eval_topics_', delete=False) as fp:
-        fp.write(data['topics'].file.read())
-        topics_path = fp.name
+    if len(data['topics']) > 0:
+        with tempfile.NamedTemporaryFile(dir=os.path.join(request.app['default_eval_location'], 'spool'), prefix='eval_topics_', delete=False) as fp:
+            fp.write(data['topics'].file.read())
+            topics_filename = data['topics'].filename
+            topics_path = fp.name
+    else:
+        topics_filename = None
+        topics_path = None
 
-    with tempfile.NamedTemporaryFile(dir=os.path.join(request.app['eval_location'], 'spool'), prefix='eval_assessments_', delete=False) as fp:
-        fp.write(data['assessments'].file.read())
-        assessments_path = fp.name
+    if len(data['assessments']) > 0:
+        with tempfile.NamedTemporaryFile(dir=os.path.join(request.app['default_eval_location'], 'spool'), prefix='eval_assessments_', delete=False) as fp:
+            fp.write(data['assessments'].file.read())
+            assessments_filename = data['assessments'].filename
+            assessments_path = fp.name
+    else:
+        assessments_filename = None
+        assessments_path = None
 
-    manager = EvaluationTaskManager(request.app['db_location'], request.app['eval_location'])
+    manager = EvaluationTaskManager(request.app['db_location'], request.app['default_eval_location'])
 
     if data['engine'] == '__all__':
         for engine in request.app['engines']:
@@ -123,25 +133,31 @@ async def evaluation_post(request):
             index_type = request.app['engines'][engine]['index_type']
 
             manager.add_task(EvaluationTask(
-                data['topics'].filename,
-                topics_path,
-                data['assessments'].filename,
-                assessments_path,
                 index_location,
                 index_type,
-                data['eval-format']))
+                data['eval-format'],
+                topics_filename,
+                topics_path,
+                assessments_filename,
+                assessments_path,
+                data['base-url'],
+                data['api-key'],
+                data['run-id']))
     else:
         index_location = request.app['engines'][data['engine']]['index_location']
         index_type = request.app['engines'][data['engine']]['index_type']
 
         manager.add_task(EvaluationTask(
-            data['topics'].filename,
-            topics_path,
-            data['assessments'].filename,
-            assessments_path,
             index_location,
             index_type,
-            data['eval-format']))
+            data['eval-format'],
+            topics_filename,
+            topics_path,
+            assessments_filename,
+            assessments_path,
+            data['base-url'],
+            data['api-key'],
+            data['run-id']))
 
     error = None
     try:
@@ -158,7 +174,7 @@ async def evaluation_results(request):
     task_id = request.GET.get('task_id')
     if task_id is None: return web.HTTPNotFound()
 
-    manager = EvaluationTaskManager(request.app['db_location'], request.app['eval_location'])
+    manager = EvaluationTaskManager(request.app['db_location'], request.app['default_eval_location'])
     with manager.get_results_archive(task_id) as archive_filename:
         response = web.StreamResponse(headers={ 'Content-Disposition': 'attachment; filename="%s.zip"' % task_id })
         await response.prepare(request)
@@ -182,7 +198,7 @@ async def about(request):
     pass
 
 async def start_background_tasks(app):
-    manager = EvaluationTaskManager(app['db_location'], app['eval_location'])
+    manager = EvaluationTaskManager(app['db_location'], app['default_eval_location'])
     app['evaluation_queue_listener'] = app.loop.create_task(manager.process())
 
 async def cleanup_background_tasks(app):
@@ -199,7 +215,7 @@ def run_app(loop):
     for section in config.sections():
         app['engines'][section] = dict(config[section])
     app['db_location'] = config['DEFAULT'].get('db_location', 'localhost')
-    app['eval_location'] = config['DEFAULT'].get('eval_location', tempfile.gettempdir())
+    app['default_eval_location'] = config['DEFAULT'].get('eval_location', tempfile.gettempdir())
 
     aiohttp_jinja2.setup(
         app,
