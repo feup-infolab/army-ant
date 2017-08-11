@@ -51,6 +51,8 @@ class Index(object):
             return GraphOfWordCSV(None, index_location, loop)
         elif index_type == 'goe_csv':
             return GraphOfEntityCSV(None, index_location, loop)
+        elif index_type == 'gremlin':
+            return GremlinServerIndex(None, index_location, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 
@@ -110,6 +112,15 @@ class GremlinServerIndex(ServiceIndex):
             })
         results = await result_set.all()
         return results[0] if len (results) > 0 else None
+
+    async def to_edge_list(use_names=False):
+        result_set = await self.client.submit(
+            ('g = %s.traversal()\n' % self.graph)
+            + load_gremlin_script('convert_to_edge_list'), {
+                'useNames': use_names
+            })
+        async for edge in result_set:
+            yield edge
 
 class GraphOfWord(GremlinServerIndex):
     def __init__(self, reader, index_location, loop, window_size=3):

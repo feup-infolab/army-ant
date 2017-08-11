@@ -11,6 +11,7 @@ from io import StringIO
 from bs4 import BeautifulSoup, SoupStrainer
 from urllib.parse import urljoin
 from requests.auth import HTTPBasicAuth
+from army_ant.index import Index
 from army_ant.util import html_to_text, get_first
 from army_ant.exception import ArmyAntException
 
@@ -27,6 +28,8 @@ class Reader(object):
             return LivingLabsReader(source_path, limit)
         elif source_reader == 'csv':
             return CSVReader(source_path)
+        elif source_reader == 'gremlin':
+            return GremlinReader(source_path)
         else:
             raise ArmyAntException("Unsupported source reader %s" % source_reader)
 
@@ -285,3 +288,29 @@ class CSVReader(Reader):
             return Document(doc_id = doc_id, text = text)
 
         raise StopIteration
+
+# TODO should this be here? should we use a NullReader read the graph some other way?
+#class GremlinReader(Reader):
+    #def __init__(self, source_path):
+        #super(GremlinReader, self).__init__(source_path)
+        
+        #loop = asyncio.get_event_loop()
+        #self.index = Index.open(source_path, 'gremlin', loop)
+        #self.edge_list = self.index.to_edge_list(use_names=True)
+
+    #def __next__(self):
+        #for edge in self.edge_list:
+            #doc_id = None
+            #text = []
+
+            #for k in row.keys():
+                #if k.endswith(self.text_suffix):
+                    #text.append(row[k])
+                #elif k.endswith(self.doc_id_suffix):
+                    #doc_id = row[k]
+
+            #text = '\n'.join(text)
+
+            #return Document(doc_id = doc_id, text = text)
+
+        #raise StopIteration
