@@ -249,7 +249,6 @@ class LivingLabsEvaluator(Evaluator):
             if len(missing_doc_ids) > 0:
                 logging.warn("Adding %d missing results with zero score out of %d must have results" % (len(missing_doc_ids), len(must_have_doc_ids)))
                 results.extend([{'docID': doc_id} for doc_id in missing_doc_ids])
-
         data = {
             'qid': qid,
             'runid': runid,
@@ -355,10 +354,12 @@ class EvaluationTaskManager(object):
             tasks.append(EvaluationTask(**task))
         return tasks
 
-    def get_waiting_task(self):
+    def get_waiting_task(self, task_id=None):
+        query = { 'status': 1 }
+        if task_id: query['_id'] = task_id
+
         task = self.db['evaluation_tasks'].find_one_and_update(
-            { 'status': 1 },
-            { '$set': { 'status': 2 } },
+            query, { '$set': { 'status': 2 } },
             sort=[('time', pymongo.ASCENDING)])
         if task: return EvaluationTask(**task)
 
@@ -373,15 +374,19 @@ class EvaluationTaskManager(object):
     def queue(self):
         duplicate_error = False
 
+        inserted_ids = []
         for task in self.tasks:
             try:
                 task.time = int(round(time.time() * 1000))
-                self.db['evaluation_tasks'].insert_one(task.__dict__)
+                result = self.db['evaluation_tasks'].insert_one(task.__dict__)
+                inserted_ids.append(result.inserted_id)
             except DuplicateKeyError as e:
                 duplicate_error = True
 
         if duplicate_error:
             raise ArmyAntException("You can only launch one task per topics + assessments + engine.")
+        
+        return inserted_ids
 
     def save_results(self, task, results):
         self.db['evaluation_tasks'].update_one(
@@ -491,12 +496,12 @@ class EvaluationTaskManager(object):
                 logger.warning("Removing unreferenced assessments directory '%s'" % path)
                 shutil.rmtree(path)
 
-    async def process(self):
+    async def process(self, task_id=None):
         try:
             self.clean_spool()
             self.clean_results_and_assessments()
             while True:
-                task = self.get_waiting_task()
+                task = self.get_waiting_task(task_id=task_id)
                 if task:
                     try:
                         logger.info("Running evaluation task %s" % task._id)
@@ -516,6 +521,8 @@ class EvaluationTaskManager(object):
 
                     except ArmyAntException as e:
                         logger.error("Could not run evaluation task %s: %s" % (task._id, str(e)))
+
+                if task_id: break
                 await asyncio.sleep(5)
         except asyncio.CancelledError:
             self.reset_running_tasks()

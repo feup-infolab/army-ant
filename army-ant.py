@@ -5,13 +5,14 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import fire, logging, asyncio
+import fire, logging, asyncio, shutil, configparser, os, tempfile
 import networkx as nx
 from army_ant.exception import ArmyAntException
 from army_ant.reader import Reader
 from army_ant.database import Database
 from army_ant.index import Index
 from army_ant.server import run_app
+from army_ant.evaluation import EvaluationTask, EvaluationTaskManager
 from army_ant.features import FeatureExtractor
 from army_ant.extras import fetch_wikipedia_images, word2vec_knn, word2vec_sim
 
@@ -23,7 +24,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class CommandLineInterface(object):
-    def index(self, source_path, source_reader, index_location='localhost', index_type='gow', db_location='localhost', db_name='graph_of_entity', db_type='mongo', limit=None):
+    def index(self, source_path, source_reader, index_location='localhost', index_type='gow',
+              db_location='localhost', db_name='graph_of_entity', db_type='mongo', limit=None):
         try:
             reader = Reader.factory(source_path, source_reader, limit)
 
@@ -41,7 +43,8 @@ class CommandLineInterface(object):
         except ArmyAntException as e:
             logger.error(e)
 
-    def search(self, query, offset=0, limit=10, index_location='localhost', index_type='gow', db_location='localhost', db_name='graph_of_entity', db_type='mongo'):
+    def search(self, query, offset=0, limit=10, index_location='localhost', index_type='gow',
+               db_location='localhost', db_name='graph_of_entity', db_type='mongo'):
         try:
             loop = asyncio.get_event_loop()
             try:
@@ -64,6 +67,59 @@ class CommandLineInterface(object):
                 loop.close()
         except ArmyAntException as e:
             logger.error(e)
+
+    def evaluation(self, index_location, index_type, eval_format, topics_filename=None, assessments_filename=None,
+                   base_url=None, api_key=None, run_id=None, output_dir='/opt/army-ant/eval'):
+        if eval_format == 'inex' and (topics_filename is None or assessments_filename is None):
+            raise ArmyAntException("Must include the arguments --topics-filename and --assessments-filename")
+
+        if eval_format == 'll-api' and (base_url is None or api_key is None or run_id is None):
+                raise ArmyAntException("Must include the arguments --base-url, --api-key and --run-id")
+
+        if eval_format == 'inex':
+            spool_dir = os.path.join(output_dir, 'spool')
+
+            with open(topics_filename, 'rb') as fsrc, tempfile.NamedTemporaryFile(dir=spool_dir, prefix='eval_topics_', delete=False) as fdst:
+                shutil.copyfileobj(fsrc, fdst)
+                topics_path = fdst.name
+
+            with open(assessments_filename, 'rb') as fsrc, tempfile.NamedTemporaryFile(dir=spool_dir, prefix='eval_assessments_', delete=False) as fdst:
+                shutil.copyfileobj(fsrc, fdst)
+                assessments_path = fdst.name
+        else:
+            topics_path = None
+            assessments_path = None
+
+        task = EvaluationTask(
+            index_location,
+            index_type,
+            eval_format,
+            topics_filename,
+            topics_path,
+            assessments_filename,
+            assessments_path,
+            base_url,
+            api_key,
+            run_id)
+
+        config = configparser.ConfigParser()
+        config.read('server.cfg')
+        manager = EvaluationTaskManager(config['DEFAULT'].get('db_location', 'localhost'), output_dir)
+
+        manager.add_task(task)
+        inserted_ids = manager.queue()
+        if len(inserted_ids) < 1:
+            raise ArmyAntException("Could not queue task")
+
+        loop = asyncio.get_event_loop()
+        try:
+            loop.run_until_complete(manager.process(task_id=inserted_ids[0]))
+        except KeyboardInterrupt:
+            for task in asyncio.Task.all_tasks():
+                task.cancel()
+        finally:
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.close()
 
     def features(self, method, source_path, source_reader, output_location):
         reader = Reader.factory(source_path, source_reader)
