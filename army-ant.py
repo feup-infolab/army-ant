@@ -23,7 +23,44 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+class CommandLineInterfaceExtras(object):
+    def fetch_wikipedia_images(self, db_name, db_location='localhost', db_type='mongo'):
+        loop = asyncio.get_event_loop()
+        try:
+            loop.run_until_complete(fetch_wikipedia_images(db_location, db_name, db_type, loop))
+        finally:
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.close()
+
+    def word2vec_knn(self, model_path, word, k=5):
+        knn = word2vec_knn(model_path, word, k)
+        if knn is None:
+            print("No results found")
+            return
+
+        rank = 1
+        for word, score in knn:
+            print(rank, '\t', score, '\t', word)
+            rank += 1
+
+    def word2vec_sim(self, model_path, word1, word2):
+        sim = word2vec_sim(model_path, word1, word2)
+        if sim is None:
+            print("Could not calculate similarity: one of the words was not found")
+            return
+
+        print(word1, '~', word2, '=', sim)
+
+    fire.Fire({
+        'extras fetch_wikipedia_images': fetch_wikipedia_images,
+        'extras word2vec_knn': word2vec_knn,
+        'extras word2vec_sim': word2vec_sim
+    })
+
 class CommandLineInterface(object):
+    def __init__(self):
+        self.extras = CommandLineInterfaceExtras()
+
     def index(self, source_path, source_reader, index_location='localhost', index_type='gow',
               db_location='localhost', db_name='graph_of_entity', db_type='mongo', limit=None):
         try:
@@ -129,33 +166,6 @@ class CommandLineInterface(object):
     def server(self):
         loop = asyncio.get_event_loop()
         run_app(loop)
-
-    def fetch_wikipedia_images(self, db_name, db_location='localhost', db_type='mongo'):
-        loop = asyncio.get_event_loop()
-        try:
-            loop.run_until_complete(fetch_wikipedia_images(db_location, db_name, db_type, loop))
-        finally:
-            loop.run_until_complete(loop.shutdown_asyncgens())
-            loop.close()
-
-    def word2vec_knn(self, model_path, word, k=5):
-        knn = word2vec_knn(model_path, word, k)
-        if knn is None:
-            print("No results found")
-            return
-
-        rank = 1
-        for word, score in knn:
-            print(rank, '\t', score, '\t', word)
-            rank += 1
-
-    def word2vec_sim(self, model_path, word1, word2):
-        sim = word2vec_sim(model_path, word1, word2)
-        if sim is None:
-            print("Could not calculate similarity: one of the words was not found")
-            return
-
-        print(word1, '~', word2, '=', sim)
 
 if __name__ == '__main__':
     fire.Fire(CommandLineInterface)
