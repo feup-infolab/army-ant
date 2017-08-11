@@ -51,12 +51,6 @@ class CommandLineInterfaceExtras(object):
 
         print(word1, '~', word2, '=', sim)
 
-    fire.Fire({
-        'extras fetch_wikipedia_images': fetch_wikipedia_images,
-        'extras word2vec_knn': word2vec_knn,
-        'extras word2vec_sim': word2vec_sim
-    })
-
 class CommandLineInterface(object):
     def __init__(self):
         self.extras = CommandLineInterfaceExtras()
