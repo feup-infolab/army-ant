@@ -1,0 +1,34 @@
+{% if outcomes|length > 0 %}
+<table class="table table-two">
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Test Name</th>
+      <th>Test Start</th>
+      <th>Test End</th>
+      <th>Impression</th>
+      <th>Wins</th>
+      <th>Losses</th>
+      <th>Ties</th>
+      <th>Outcome</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for outcome in outcomes %}
+    <tr>
+      <td>{{ outcome.type }}</td>
+      <td>{{ outcome.test_period.name }}</td>
+      <td>{{ outcome.test_period.start }}</td>
+      <td>{{ outcome.test_period.end }}</td>
+      <td>{{ outcome.impressions }}</td>
+      <td>{{ outcome.wins }}</td>
+      <td>{{ outcome.losses }}</td>
+      <td>{{ outcome.ties }}</td>
+      <td>{{ outcome.outcome }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+No outcomes yet.
+{% endif %}

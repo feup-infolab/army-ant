@@ -282,7 +282,8 @@ class LivingLabsEvaluator(Evaluator):
                 self.put_run(query['qid'], self.run_id, results)
 
             return EvaluationTaskStatus.SUBMITTED
-        except HTTPError:
+        except HTTPError as e:
+            logger.error(e)
             return EvaluationTaskStatus.ERROR
 
 class EvaluationTaskStatus(IntEnum):
@@ -410,6 +411,54 @@ class EvaluationTaskManager(object):
             with zipfile.ZipFile(archive_filename, 'w') as zipf:
                 zipdir(out_dir, zipf)
             yield archive_filename
+
+    def get_results_json(self, task_id):
+        task = self.db['evaluation_tasks'].find_one({ '_id': ObjectId(task_id) })
+        if task is None: return
+
+        task = EvaluationTask(**task)
+
+        if task.eval_format == 'll-api':
+            url = urljoin(task.base_url, 'api/v2/participant/outcome')
+            auth = HTTPBasicAuth(task.api_key, '')
+            headers = { 'Content-Type': 'application/json' }
+            r = requests.get(url, headers=headers, auth=auth)
+            return r.json()
+            #return {
+                #"outcomes": [
+                    #{
+                        #"impressions": 181, 
+                        #"losses": 1, 
+                        #"outcome": 0.5, 
+                        #"qid": "all", 
+                        #"site_id": "ssoar", 
+                        #"test_period": {
+                            #"end": "Sat, 15 Jul 2017 00:00:00 -0000", 
+                            #"name": "TREC OpenSearch 2017 trial round", 
+                            #"start": "Sat, 01 Jul 2017 00:00:00 -0000"
+                        #}, 
+                        #"ties": 179, 
+                        #"type": "test", 
+                        #"wins": 1
+                    #}, 
+                    #{
+                        #"impressions": 59, 
+                        #"losses": 13, 
+                        #"outcome": 0.23529411764705882, 
+                        #"qid": "all", 
+                        #"site_id": "ssoar", 
+                        #"test_period": None, 
+                        #"ties": 42, 
+                        #"type": "train", 
+                        #"wins": 4
+                    #}
+                #]
+            #}
+        
+        return {}
+
+        HTTPBasicAuth
+        return { 'base_url': task.base_url, 'api_key': task.api_key }
 
     def clean_spool(self):
         valid_spool_filenames = set([])

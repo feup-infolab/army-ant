@@ -170,21 +170,36 @@ async def evaluation_post(request):
 
     return response
 
-async def evaluation_results(request):
+async def evaluation_results_archive(request):
     task_id = request.GET.get('task_id')
     if task_id is None: return web.HTTPNotFound()
 
     manager = EvaluationTaskManager(request.app['db_location'], request.app['default_eval_location'])
-    with manager.get_results_archive(task_id) as archive_filename:
-        response = web.StreamResponse(headers={ 'Content-Disposition': 'attachment; filename="%s.zip"' % task_id })
-        await response.prepare(request)
+    try:
+        with manager.get_results_archive(task_id) as archive_filename:
+            response = web.StreamResponse(headers={ 'Content-Disposition': 'attachment; filename="%s.zip"' % task_id })
+            await response.prepare(request)
 
-        with open(archive_filename, 'rb') as f:
-            response.write(f.read())
-        response.write_eof()
-        await response.drain()
+            with open(archive_filename, 'rb') as f:
+                response.write(f.read())
+            response.write_eof()
+            await response.drain()
 
-        return response
+            return response
+    except FileNotFoundError:
+        return web.HTTPNotFound()
+ 
+@aiohttp_jinja2.template('ll_api_outcome.html')
+async def evaluation_results_ll_api(request):
+    task_id = request.GET.get('task_id')
+    if task_id is None: return web.HTTPNotFound()
+
+    manager = EvaluationTaskManager(request.app['db_location'], request.app['default_eval_location'])
+    data = manager.get_results_json(task_id)
+
+    fmt = request.GET.get('fmt', 'json')
+    if fmt == 'html': return data
+    return web.json_response(data)
  
 @aiohttp_jinja2.template('evaluation.html')
 async def evaluation(request):
@@ -227,7 +242,8 @@ def run_app(loop):
     app.router.add_get('/search', search, name='search')
     app.router.add_get('/evaluation', evaluation, name='evaluation')
     app.router.add_post('/evaluation', evaluation)
-    app.router.add_get('/evaluation/results', evaluation_results, name='evaluation_results')
+    app.router.add_get('/evaluation/results/archive', evaluation_results_archive, name='evaluation_results_archive')
+    app.router.add_get('/evaluation/results/ll-api', evaluation_results_ll_api, name='evaluation_results_ll_api')
     app.router.add_get('/about', about, name='about')
 
     app.router.add_static('/static', 'army_ant/server/static', name='static', follow_symlinks=True)

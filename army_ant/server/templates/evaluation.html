@@ -102,7 +102,13 @@
 
       <tbody>
         {% for task in tasks %}
-        <tr {% if task._id %} data-id="{{ task._id }}" {% endif %}>
+
+        {% if task.eval_format == 'll-api' %}
+        {% set outcome_url = app.router['evaluation_results_ll_api'].url_for().with_query(task_id=task._id, fmt='html') %}
+        {% endif %}
+        
+        <tr {% if task._id %} data-id="{{ task._id }}" {% endif %}
+            {% if task.eval_format == 'll-api' %} data-outcome-url="{{ outcome_url }}" {% endif %}>
           <td>{{ task.time|timestamp_to_date }}</td>
 
           {% if task.eval_format == "inex" %}
@@ -112,18 +118,30 @@
           {% endif %}
           
           <td>{{ task.index_location }} ({{ task.index_type }})</td>
+
           {% if task.status == 3 %}
+
           <td>
-            <a href="{{ app.router['evaluation_results'].url_for().with_query(task_id=task._id) }}">
+            <a href="{{ app.router['evaluation_results_archive'].url_for().with_query(task_id=task._id) }}">
               {{ task.status.name }} <i class="icon icon-download"></i>
             </a>
           </td>
           <td>
-            <button class="expand-btn btn btn-sm"><i class="icon icon-plus"></i></button>
+            <button class="inex-expand-btn btn btn-sm"><i class="icon icon-plus"></i></button>
           </td>
+          
+          {% elif task.status == 4 %}
+          
+          <td>{{ task.status.name }}</td>
+          <td>
+            <button class="ll-api-expand-btn btn btn-sm"><i class="icon icon-plus"></i></button>
+          </td>
+          
           {% else %}
+
           <td>{{ task.status.name }}</td>
           <td>N/A</td>
+          
           {% endif %}
 
           {% if task.status == 3 %}
@@ -132,6 +150,15 @@
               {% for metric in task.results %}
               <b>{{ metric }}: </b> {{ task.results[metric]|round(4) }} &nbsp;
               {% endfor %}
+            </td>
+          </tr>
+          {% elif task.status == 4 and task.eval_format == 'll-api' %}
+          <tr class="hide">
+            <td colspan="5" class="text-center">
+              <div class="ll-api-results">
+                <i class="loading"></i>
+                <div class="outcome"></div>
+              </div>
             </td>
           </tr>
           {% endif %}
@@ -155,7 +182,7 @@
 
 <script type="text/javascript">
   (function() {
-    $(document).on('click', '.expand-btn', function(e) {
+    $(document).on('click', '.inex-expand-btn', function(e) {
       var taskID = $(this).parents('[data-id]').data('id');
       var $detail = $('tr[data-id="' + taskID + '"]').next();
 
@@ -165,6 +192,27 @@
       } else {
         $(this).find('i.icon').removeClass('icon-minus').addClass('icon-plus');
         $detail.addClass('hide');
+      }      
+    });
+
+    $(document).on('click', '.ll-api-expand-btn', function(e) {
+      var taskID = $(this).parents('[data-id]').data('id');
+      var $task = $('tr[data-id="' + taskID + '"]');
+      var $detail = $task.next();
+      var outcomeURL = $task.data('outcome-url');
+
+      if ($detail.hasClass('hide')) {
+        $(this).find('i.icon').removeClass('icon-plus').addClass('icon-minus');
+        $detail.removeClass('hide');
+        $.ajax({ url: outcomeURL }).done(function(html) {
+          $detail.find('.loading').addClass('hide');
+          $detail.find('.outcome').html(html);
+        });
+      } else {
+        $(this).find('i.icon').removeClass('icon-minus').addClass('icon-plus');
+        $detail.addClass('hide');
+        $detail.find('.loading').removeClass('hide');
+        $detail.find('.outcome').html('');
       }      
     });
 

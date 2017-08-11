@@ -71,6 +71,11 @@ code {
   top: .8rem;
 }
 
+.table.table-two {
+  background-color: #f7f7f7;
+  font-size: 0.82em;
+}
+
 .image {
   background-repeat: no-repeat;
   background-position: 50% 10%;
