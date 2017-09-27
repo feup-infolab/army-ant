@@ -11,7 +11,7 @@ from io import StringIO
 from bs4 import BeautifulSoup, SoupStrainer
 from urllib.parse import urljoin
 from requests.auth import HTTPBasicAuth
-from army_ant.index import Index
+#from army_ant.index import Index
 from army_ant.util import html_to_text, get_first
 from army_ant.exception import ArmyAntException
 
