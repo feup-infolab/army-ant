@@ -5,7 +5,7 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import tarfile, re, logging, os, requests, requests_cache, csv
+import tarfile, re, logging, os, requests, requests_cache, csv, glob, itertools
 from lxml import etree
 from io import StringIO
 from bs4 import BeautifulSoup, SoupStrainer
@@ -24,6 +24,8 @@ class Reader(object):
             return WikipediaDataReader(source_path)
         elif source_reader == 'inex':
             return INEXReader(source_path, limit)
+        elif source_reader == 'inex_dir':
+            return INEXDirectoryReader(source_path)
         elif source_reader == 'living_labs':
             return LivingLabsReader(source_path, limit)
         elif source_reader == 'csv':
@@ -172,6 +174,8 @@ class INEXReader(Reader):
         entity = None
         html = ''
 
+        # Note that this for is only required in case the firs element cannot be parsed.
+        # If that happens, it skips to the next parsable item.
         for member in self.members:
             logger.debug("Reading %s" % member.name)
 
@@ -201,6 +205,16 @@ class INEXReader(Reader):
                 metadata = { 'url': url, 'name': title })
 
         raise StopIteration
+
+class INEXDirectoryReader(Reader):
+    def __init__(self, source_path):
+        super(INEXDirectoryReader, self).__init__(source_path)
+        file_paths = glob.glob(os.path.join(source_path, 'pages*.tar.bz2'))
+        inex_iterators = [iter(INEXReader(file_path)) for file_path in file_paths]
+        self.it = itertools.chain(*inex_iterators)
+
+    def __next__(self):
+        return next(self.it)
 
 class LivingLabsReader(Reader):
     def __init__(self, source_path, limit=None):

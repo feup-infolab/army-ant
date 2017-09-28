@@ -21,7 +21,11 @@ def detect_language(text):
 
 def analyze(text, remove_stopwords=True, remove_punctuation=True):
     tokens = word_tokenize(text.lower())
-    lang = langdetect.detect(text)
+    try:
+        lang = langdetect.detect(text)
+    except:
+        logger.warn("Could not detect language, using 'en' by default")
+        lang = 'en'
     tokens = filter_tokens(tokens, lang=lang, remove_stopwords=remove_stopwords, remove_punctuation=remove_punctuation)
     return tokens
 
