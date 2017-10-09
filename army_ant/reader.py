@@ -133,8 +133,19 @@ class INEXReader(Reader):
 
         logger.info("Loading members from tar file")
         self.tar = tarfile.open(source_path)
-        self.members = self.filter_xml_files(self.tar.getmembers())
-        logger.info("Members from tar file loaded")
+        it = itertools.tee(self.filter_xml_files(self.tar.getmembers()), 2)
+        self.members = it[0]
+
+        logger.info("Indexing by title")
+        self.title_index = {}
+        for member in it[1]:
+            try:
+                article = etree.parse(self.tar.extractfile(member), self.parser)
+                page_id = self.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
+                title = get_first(article.xpath('//header/title/text()'))
+                self.title_index[page_id] = title
+            except etree.XMLSyntaxError:
+                logger.warn("Error parsing XML, skipping title indexing for %s" % member.name)
 
     def to_plain_text(self, bdy):
         return re.sub(r'\s+', ' ', ''.join(bdy.xpath('%s/text()' % self.doc_xpath)))
@@ -150,12 +161,13 @@ class INEXReader(Reader):
         triples = []
         for link in bdy.xpath('//link'):
             related_id = get_first(link.xpath('@xlink:href', namespaces = { 'xlink': 'http://www.w3.org/1999/xlink' }))
-            related_title = get_first(link.xpath('text()'))
-            
-            if related_id is None or related_title is None: continue
-
+            if related_id is None: continue
             related_id = self.xlink_to_page_id(related_id)
-            related_title = related_title.strip()
+
+            related_title = self.title_index.get(related_id, get_first(link.xpath('text()')))
+            #related_title = get_first(link.xpath('text()'))
+            if related_title is None: continue
+            related_title = related_title.replace('\n', ' ').strip()
 
             triples.append((
                 self.to_wikipedia_entity(page_id, title),
@@ -174,7 +186,7 @@ class INEXReader(Reader):
         entity = None
         html = ''
 
-        # Note that this for is only required in case the firs element cannot be parsed.
+        # Note that this for is only required in case the first element cannot be parsed.
         # If that happens, it skips to the next parsable item.
         for member in self.members:
             logger.debug("Reading %s" % member.name)

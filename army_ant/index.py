@@ -269,7 +269,7 @@ class PostgreSQLGraph(object):
         c = conn.cursor()
         c.execute(
             "UPDATE nodes SET attributes = jsonb_set(attributes, '{%s}', '[{\"id\": %s, \"value\": \"%s\"}]', true) WHERE node_id = %%s" % (
-                attr_name, self.next_property_id, attr_value), vertex_id)
+                attr_name, self.next_property_id, attr_value), (vertex_id, ))
         self.next_property_id += 1
 
     def load_to_postgres(self, conn, doc):
@@ -407,7 +407,7 @@ class GraphOfEntityBatch(PostgreSQLGraph,GraphOfEntity):
             self.next_edge_id += 1
             metadata = { 'name': e1.label }
             if e1.url: metadata['url'] = e1.url
-            yield Document(doc_id = doc.doc_id, metadata = metadata) # We're only indexing what has a doc_id
+            #yield Document(doc_id = doc.doc_id, metadata = metadata) # We're only indexing what has a doc_id / XXX this was wrong, because entities never have a doc_id, unless they come from a doc, so just return doc, right?
 
         tokens = self.analyze(doc.text)
 
@@ -435,6 +435,8 @@ class GraphOfEntityBatch(PostgreSQLGraph,GraphOfEntity):
                     self.create_edge_postgres(conn, self.next_edge_id, 'contained_in', source_vertex_id, entity_vertex_id)
 
         conn.commit()
+
+        yield doc
 
 class GraphOfWordCSV(GraphOfWordBatch):
     async def index(self):

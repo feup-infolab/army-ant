@@ -21,15 +21,9 @@ g.V().has("name", "William Rockefeller").repeat(outE().inV()).until(or(filter { 
 
 ## Subgraph selection
 # INEX 2009 combined ego networks
-g.V().has("name", within("North Lincolnshire", "West Yorkshire", "Boston"))
-  .union(
-    bothE(),
-    both().as("n")
-    .bothE()
-      .where(otherV().where(eq("n"))))
-  .subgraph("sg")
-  .cap("sg")
-  .next()
+g.V().has("name", within("North Lincolnshire", "West Yorkshire", "Boston")).union(bothE(),both().as("n").bothE().where(otherV().where(eq("n")))).subgraph("sg").cap("sg").next()
+# INEX 2009 combined extended ego networks (includes all edges from neighbors)
+g.V().has("name", within("2004 Houston Texans season", "Symphonic black metal")).union(bothE(),both().bothE().subgraph("sg").cap("sg").next()
 
 ## Count edges of different types for graph-of-entity
 # All
