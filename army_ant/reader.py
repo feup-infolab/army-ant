@@ -218,6 +218,7 @@ class INEXReader(Reader):
 
         raise StopIteration
 
+# TODO fix issue with cross-archive entity name resolution, i.e., create a global title_index
 class INEXDirectoryReader(Reader):
     def __init__(self, source_path):
         super(INEXDirectoryReader, self).__init__(source_path)
