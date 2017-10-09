@@ -19,6 +19,18 @@ g.V().has("type", "entity").where(__.outE().where(__.not(hasLabel("contained_in"
 # Path between two nodes based on name matching, with a maximum distance of 2.
 g.V().has("name", "William Rockefeller").repeat(outE().inV()).until(or(filter { it.get().value("name").contains("New York") }, loops().is(eq(2)))).path().by("name").by(label)
 
+## Subgraph selection
+# INEX 2009 combined ego networks
+g.V().has("name", within("North Lincolnshire", "West Yorkshire", "Boston"))
+  .union(
+    bothE(),
+    both().as("n")
+    .bothE()
+      .where(otherV().where(eq("n"))))
+  .subgraph("sg")
+  .cap("sg")
+  .next()
+
 ## Count edges of different types for graph-of-entity
 # All
 g.V().outE().count()
