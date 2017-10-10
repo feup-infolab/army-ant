@@ -75,7 +75,7 @@ class INEXSampler(object):
                         article = etree.parse(f_member, parser)
                         page_id = inex.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
                         if page_id in doc_ids_sample:
-                            out_tar.addfile(in_tar.tarinfo, f_member)
+                            out_tar.addfile(member, in_tar.extractfile(member))
                     except etree.XMLSyntaxError:
                         logger.warn("Error parsing XML, skipping title indexing for %s" % member.name)
 
