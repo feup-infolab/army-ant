@@ -7,7 +7,7 @@
 
 import logging, os, random, glob, tarfile
 from lxml import etree
-from army_ant.util import inex
+from army_ant.util import inex, get_first
 from army_ant.exception import ArmyAntException
 
 logger = logging.getLogger(__name__)
@@ -71,11 +71,11 @@ class INEXSampler(object):
                 members = inex.filter_xml_files(in_tar.getmembers())
                 for member in members:
                     try:
-                        f_member = tar.extractfile(member)
+                        f_member = in_tar.extractfile(member)
                         article = etree.parse(f_member, parser)
                         page_id = inex.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
                         if page_id in doc_ids_sample:
-                            out_tar.addfile(tarinfo.fromtarfile(f_member), f_member)
+                            out_tar.addfile(in_tar.tarinfo, f_member)
                     except etree.XMLSyntaxError:
                         logger.warn("Error parsing XML, skipping title indexing for %s" % member.name)
 
