@@ -14,6 +14,7 @@ from army_ant.index import Index
 from army_ant.server import run_app
 from army_ant.evaluation import EvaluationTask, EvaluationTaskManager
 from army_ant.features import FeatureExtractor
+from army_ant.sampling import INEXSampler
 from army_ant.extras import fetch_wikipedia_images, word2vec_knn, word2vec_sim
 
 logging.basicConfig(
@@ -22,6 +23,11 @@ logging.basicConfig(
     level=logging.INFO)
 
 logger = logging.getLogger(__name__)
+
+class CommandLineInterfaceSampling(object):
+    def inex(self, qrels_input_path, qrels_output_path, corpus_input_path, corpus_output_path, query_sample_size=None):
+        s = INEXSampler(qrels_input_path, qrels_output_path, corpus_input_path, corpus_output_path, query_sample_size)
+        s.sample()
 
 class CommandLineInterfaceExtras(object):
     def fetch_wikipedia_images(self, db_name, db_location='localhost', db_type='mongo'):
@@ -54,6 +60,7 @@ class CommandLineInterfaceExtras(object):
 class CommandLineInterface(object):
     def __init__(self):
         self.extras = CommandLineInterfaceExtras()
+        self.sampling = CommandLineInterfaceSampling()
 
     def index(self, source_path, source_reader, index_location='localhost', index_type='gow',
               db_location='localhost', db_name='graph_of_word', db_type='mongo', limit=None):
@@ -156,6 +163,11 @@ class CommandLineInterface(object):
         reader = Reader.factory(source_path, source_reader)
         fe = FeatureExtractor.factory(method, reader, output_location)
         fe.extract()
+
+    def sampling(self, method, source_path, source_reader, output_location, size):
+        reader = Reader.factory(source_path, source_reader)
+        s = Sampler.factory(method, reader, output_location, size)
+        s.sample()
 
     def server(self):
         loop = asyncio.get_event_loop()

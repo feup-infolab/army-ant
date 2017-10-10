@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup, SoupStrainer
 from urllib.parse import urljoin
 from requests.auth import HTTPBasicAuth
 #from army_ant.index import Index
-from army_ant.util import html_to_text, get_first
+from army_ant.util import inex, html_to_text, get_first
 from army_ant.exception import ArmyAntException
 
 logger = logging.getLogger(__name__)
@@ -121,9 +121,9 @@ class WikipediaDataReader(Reader):
                 html = html + line
 
         raise StopIteration
-
+ 
 class INEXReader(Reader):
-    def __init__(self, source_path, limit=None):
+    def __init__(self, source_path, limit=None, title_index=None):
         super(INEXReader, self).__init__(source_path)
         self.limit = limit
 
@@ -133,19 +133,23 @@ class INEXReader(Reader):
 
         logger.info("Loading members from tar file")
         self.tar = tarfile.open(source_path)
-        it = itertools.tee(self.filter_xml_files(self.tar.getmembers()), 2)
+        it = itertools.tee(inex.filter_xml_files(self.tar.getmembers()), 2)
         self.members = it[0]
 
-        logger.info("Indexing by title")
-        self.title_index = {}
-        for member in it[1]:
-            try:
-                article = etree.parse(self.tar.extractfile(member), self.parser)
-                page_id = self.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
-                title = get_first(article.xpath('//header/title/text()'))
-                self.title_index[page_id] = title
-            except etree.XMLSyntaxError:
-                logger.warn("Error parsing XML, skipping title indexing for %s" % member.name)
+        if title_index:
+            logger.info("Using provided title index")
+            self.title_index = title_index
+        else:
+            logger.info("Indexing titles by doc_id")
+            self.title_index = {}
+            for member in it[1]:
+                try:
+                    article = etree.parse(self.tar.extractfile(member), self.parser)
+                    page_id = inex.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
+                    title = get_first(article.xpath('//header/title/text()'))
+                    self.title_index[page_id] = title
+                except etree.XMLSyntaxError:
+                    logger.warn("Error parsing XML, skipping title indexing for %s" % member.name)
 
     def to_plain_text(self, bdy):
         return re.sub(r'\s+', ' ', ''.join(bdy.xpath('%s/text()' % self.doc_xpath)))
@@ -153,19 +157,14 @@ class INEXReader(Reader):
     def to_wikipedia_entity(self, page_id, label):
         return Entity(label, "http://en.wikipedia.org/?curid=%s" % page_id)
 
-    def xlink_to_page_id(self, xlink):
-        _, filename = os.path.split(xlink)
-        return os.path.splitext(filename)[0]
-
     def to_triples(self, page_id, title, bdy):
         triples = []
         for link in bdy.xpath('//link'):
             related_id = get_first(link.xpath('@xlink:href', namespaces = { 'xlink': 'http://www.w3.org/1999/xlink' }))
             if related_id is None: continue
-            related_id = self.xlink_to_page_id(related_id)
+            related_id = inex.xlink_to_page_id(related_id)
 
             related_title = self.title_index.get(related_id, get_first(link.xpath('text()')))
-            #related_title = get_first(link.xpath('text()'))
             if related_title is None: continue
             related_title = related_title.replace('\n', ' ').strip()
 
@@ -175,11 +174,6 @@ class INEXReader(Reader):
                 self.to_wikipedia_entity(related_id, related_title)))
 
         return triples
-
-    def filter_xml_files(self, members):
-        for member in members:
-            if os.path.splitext(member.name)[1] == '.xml':
-                yield member
 
     def __next__(self):
         url = None
@@ -200,7 +194,7 @@ class INEXReader(Reader):
                 logger.warn("Error parsing XML, skipping %s" % member.name)
                 continue
 
-            page_id = self.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
+            page_id = inex.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
             title = get_first(article.xpath('//header/title/text()'))
 
             bdy = get_first(article.xpath('//bdy'))
@@ -218,12 +212,29 @@ class INEXReader(Reader):
 
         raise StopIteration
 
-# TODO fix issue with cross-archive entity name resolution, i.e., create a global title_index
 class INEXDirectoryReader(Reader):
     def __init__(self, source_path):
         super(INEXDirectoryReader, self).__init__(source_path)
-        file_paths = glob.glob(os.path.join(source_path, 'pages*.tar.bz2'))
-        inex_iterators = [iter(INEXReader(file_path)) for file_path in file_paths]
+        
+        file_paths = glob.glob(os.path.join(source_path, '*.tar.bz2'))
+
+        parser = etree.XMLParser(remove_blank_text=True, resolve_entities=False)
+
+        logger.info("Indexing titles by doc_id for all archives")
+        title_index = {}
+        for file_path in file_paths:
+            tar = tarfile.open(file_path)
+            members = inex.filter_xml_files(tar.getmembers())
+            for member in members:
+                try:
+                    article = etree.parse(tar.extractfile(member), parser)
+                    page_id = inex.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
+                    title = get_first(article.xpath('//header/title/text()'))
+                    title_index[page_id] = title
+                except etree.XMLSyntaxError:
+                    logger.warn("Error parsing XML, skipping title indexing for %s" % member.name)
+
+        inex_iterators = [iter(INEXReader(file_path, title_index=title_index)) for file_path in file_paths]
         self.it = itertools.chain(*inex_iterators)
 
     def __next__(self):
