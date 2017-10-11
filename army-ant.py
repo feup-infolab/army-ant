@@ -25,8 +25,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class CommandLineInterfaceSampling(object):
-    def inex(self, qrels_input_path, qrels_output_path, corpus_input_path, corpus_output_path, query_sample_size=None):
-        s = INEXSampler(qrels_input_path, qrels_output_path, corpus_input_path, corpus_output_path, query_sample_size)
+    def inex(self, qrels_input_path, qrels_output_path, topics_input_path, topics_output_path,
+             corpus_input_path, corpus_output_path, query_sample_size=None):
+        s = INEXSampler(
+            qrels_input_path, qrels_output_path, topics_input_path, topics_output_path,
+            corpus_input_path, corpus_output_path, query_sample_size)
         s.sample()
 
 class CommandLineInterfaceExtras(object):
