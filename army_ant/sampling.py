@@ -67,17 +67,12 @@ class INEXSampler(object):
         for file_path in file_paths:
             out_file_path = os.path.join(self.corpus_output_path, os.path.basename(file_path))
             logger.info("Writing %s" % out_file_path)
-            with tarfile.open(file_path) as in_tar, tarfile.open(out_file_path, 'w') as out_tar:
-                members = inex.filter_xml_files(in_tar.getmembers())
-                for member in members:
-                    try:
-                        f_member = in_tar.extractfile(member)
-                        article = etree.parse(f_member, parser)
-                        page_id = inex.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
+            with tarfile.open(file_path, 'r|bz2') as in_tar, tarfile.open(out_file_path, 'w') as out_tar:
+                for member in in_tar:
+                    if member.name.endswith('.xml'):
+                        page_id = inex.xlink_to_page_id(member.name)
                         if page_id in doc_ids_sample:
                             out_tar.addfile(member, in_tar.extractfile(member))
-                    except etree.XMLSyntaxError:
-                        logger.warn("Error parsing XML, skipping title indexing for %s" % member.name)
 
     def sample(self):
         qids_sample = self.qids_sample()
