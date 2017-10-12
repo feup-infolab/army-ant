@@ -23,6 +23,9 @@ class INEXSampler(object):
         self.corpus_output_path = corpus_output_path
         self.query_sample_size = query_sample_size
 
+        if not os.path.exists(self.corpus_output_path):
+            os.mkdir(self.corpus_output_path)
+
     def qids_sample(self):
         with open(self.qrels_input_path, 'r') as f_qrels:
             qids = set([line.split(' ')[0] for line in f_qrels])
@@ -109,6 +112,7 @@ class INEXSampler(object):
                     if member.name.endswith('.xml'):
                         article = etree.parse(in_tar.extractfile(member), parser)
                         bdy = get_first(article.xpath('//bdy'))
+                        if bdy is None: continue
                         for link in bdy.xpath('//link'):
                             target_doc_id = get_first(link.xpath('@xlink:href', namespaces = { 'xlink': 'http://www.w3.org/1999/xlink' }))
                             if target_doc_id is None: continue
