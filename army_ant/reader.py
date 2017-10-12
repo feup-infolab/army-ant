@@ -5,7 +5,7 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import tarfile, re, logging, os, requests, requests_cache, csv, glob, itertools, dbm, tempfile
+import tarfile, re, logging, os, requests, requests_cache, csv, glob, itertools, shelve, tempfile, shutil
 from lxml import etree
 from io import StringIO
 from bs4 import BeautifulSoup, SoupStrainer
@@ -137,8 +137,12 @@ class INEXReader(Reader):
         self.members = it[0]
 
         if title_index:
-            logger.info("Using provided title index")
-            self.title_index = title_index
+            if type(title_index) is str:
+                logger.info("Using provided title index %s" % title_index)
+                self.title_index = shelve.open(title_index)
+            else:
+                logger.info("Using provided title index dictionary")
+                self.title_index = title_index
         else:
             logger.info("Indexing titles by doc_id")
             self.title_index = {}
@@ -211,6 +215,7 @@ class INEXReader(Reader):
                 metadata = { 'url': url, 'name': title })
 
         self.tar.close()
+        if type(self.title_index) is shelve.DbfilenameShelf: self.title_index.close()
         raise StopIteration
 
 class INEXDirectoryReader(Reader):
@@ -222,8 +227,12 @@ class INEXDirectoryReader(Reader):
         parser = etree.XMLParser(remove_blank_text=True, resolve_entities=False)
 
         logger.info("Indexing titles by doc_id for all archives")
-        with tempfile.TemporaryDirectory() as tmp_dir, dbm.open(os.path.join(tmp_dir, 'title_index'), 'c') as title_index:
-            logger.info("Using temporary directory %s" % tmp_dir)
+
+        self.tmp_dir = tempfile.mkdtemp()
+        logger.info("Using temporary directory %s" % self.tmp_dir)
+
+        title_index_path = os.path.join(self.tmp_dir, 'title_index')
+        with shelve.open(title_index_path) as title_index:
             for file_path in file_paths:
                 with tarfile.open(file_path, 'r|bz2') as tar:
                     for member in tar:
@@ -236,11 +245,16 @@ class INEXDirectoryReader(Reader):
                         except etree.XMLSyntaxError:
                             logger.warn("Error parsing XML, skipping title indexing for %s" % member.name)
 
-            inex_iterators = [iter(INEXReader(file_path, title_index=title_index)) for file_path in file_paths]
-            self.it = itertools.chain(*inex_iterators)
+        inex_iterators = [iter(INEXReader(file_path, title_index=title_index_path)) for file_path in file_paths]
+        self.it = itertools.chain(*inex_iterators)
 
     def __next__(self):
-        return next(self.it)
+        try:
+            return next(self.it)
+        except StopIteration:
+            logger.info("Removing temporary directory %s" % self.tmp_dir)
+            shutil.rmtree(self.tmp_dir)
+            raise
 
 class LivingLabsReader(Reader):
     def __init__(self, source_path, limit=None):
