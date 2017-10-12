@@ -5,7 +5,7 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import tarfile, re, logging, os, requests, requests_cache, csv, glob, itertools
+import tarfile, re, logging, os, requests, requests_cache, csv, glob, itertools, dbm, tempfile
 from lxml import etree
 from io import StringIO
 from bs4 import BeautifulSoup, SoupStrainer
@@ -210,6 +210,7 @@ class INEXReader(Reader):
                 triples = self.to_triples(page_id, title, bdy),
                 metadata = { 'url': url, 'name': title })
 
+        self.tar.close()
         raise StopIteration
 
 class INEXDirectoryReader(Reader):
@@ -221,21 +222,22 @@ class INEXDirectoryReader(Reader):
         parser = etree.XMLParser(remove_blank_text=True, resolve_entities=False)
 
         logger.info("Indexing titles by doc_id for all archives")
-        title_index = {}
-        for file_path in file_paths:
-            tar = tarfile.open(file_path)
-            members = inex.filter_xml_files(tar.getmembers())
-            for member in members:
-                try:
-                    article = etree.parse(tar.extractfile(member), parser)
-                    page_id = inex.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
-                    title = get_first(article.xpath('//header/title/text()'))
-                    title_index[page_id] = title
-                except etree.XMLSyntaxError:
-                    logger.warn("Error parsing XML, skipping title indexing for %s" % member.name)
+        with tempfile.TemporaryDirectory() as tmp_dir, dbm.open(os.path.join(tmp_dir, 'title_index'), 'c') as title_index:
+            logger.info("Using temporary directory %s" % tmp_dir)
+            for file_path in file_paths:
+                with tarfile.open(file_path, 'r|bz2') as tar:
+                    for member in tar:
+                        if not member.name.endswith('.xml'): continue
+                        try:
+                            article = etree.parse(tar.extractfile(member), parser)
+                            page_id = inex.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
+                            title = get_first(article.xpath('//header/title/text()'))
+                            title_index[page_id] = title
+                        except etree.XMLSyntaxError:
+                            logger.warn("Error parsing XML, skipping title indexing for %s" % member.name)
 
-        inex_iterators = [iter(INEXReader(file_path, title_index=title_index)) for file_path in file_paths]
-        self.it = itertools.chain(*inex_iterators)
+            inex_iterators = [iter(INEXReader(file_path, title_index=title_index)) for file_path in file_paths]
+            self.it = itertools.chain(*inex_iterators)
 
     def __next__(self):
         return next(self.it)
