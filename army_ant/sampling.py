@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class INEXSampler(object):
     def __init__(self, qrels_input_path, qrels_output_path, topics_input_path, topics_output_path,
-                 corpus_input_path, corpus_output_path, query_sample_size=None):
+                 corpus_input_path, corpus_output_path, include_linked=False, query_sample_size=None):
         self.qrels_input_path = qrels_input_path
         self.qrels_output_path = qrels_output_path
         self.topics_input_path = topics_input_path
@@ -23,8 +23,20 @@ class INEXSampler(object):
         self.corpus_output_path = corpus_output_path
         self.query_sample_size = query_sample_size
 
-        if not os.path.exists(self.corpus_output_path):
-            os.mkdir(self.corpus_output_path)
+        if os.path.exists(self.corpus_output_path):
+            raise ArmyAntException("%s already exists" % self.corpus_output_path)
+
+        qrels_dir = os.path.dirname(self.qrels_output_path)
+        if os.path.exists(qrels_dir):
+            raise ArmyAntException("%s already exists" % qrels_dir)
+
+        topics_dir = os.path.dirname(self.topics_output_path)
+        if os.path.exists(topics_dir):
+            raise ArmyAntException("%s already exists" % topics_dir)
+
+        os.makedirs(self.corpus_output_path)
+        os.makedirs(qrels_dir)
+        os.makedirs(topics_dir)
 
     def qids_sample(self):
         with open(self.qrels_input_path, 'r') as f_qrels:

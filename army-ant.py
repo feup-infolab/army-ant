@@ -26,11 +26,14 @@ logger = logging.getLogger(__name__)
 
 class CommandLineInterfaceSampling(object):
     def inex(self, qrels_input_path, qrels_output_path, topics_input_path, topics_output_path,
-             corpus_input_path, corpus_output_path, query_sample_size=None):
-        s = INEXSampler(
-            qrels_input_path, qrels_output_path, topics_input_path, topics_output_path,
-            corpus_input_path, corpus_output_path, query_sample_size)
-        s.sample()
+             corpus_input_path, corpus_output_path, include_linked=False, query_sample_size=None):
+        try:
+            s = INEXSampler(
+                qrels_input_path, qrels_output_path, topics_input_path, topics_output_path,
+                corpus_input_path, corpus_output_path, include_linked, query_sample_size)
+            s.sample()
+        except ArmyAntException as e:
+            logger.error(e)
 
 class CommandLineInterfaceExtras(object):
     def fetch_wikipedia_images(self, db_name, db_location='localhost', db_type='mongo'):
