@@ -21,6 +21,7 @@ class INEXSampler(object):
         self.topics_output_path = topics_output_path
         self.corpus_input_path = corpus_input_path
         self.corpus_output_path = corpus_output_path
+        self.include_linked = include_linked
         self.query_sample_size = query_sample_size
 
         if os.path.exists(self.corpus_output_path):
@@ -140,8 +141,9 @@ class INEXSampler(object):
         logger.info("Creating sample based on %d documents" % len(doc_ids_sample))
         self.create_qrels(qids_sample)
         self.create_topics(qids_sample)
-        sample_file_paths = self.create_subset(doc_ids_sample)
+        sample_file_paths = self.create_subset(doc_ids_sample, compress=not self.include_linked)
 
-        doc_ids_linked = self.get_linked_doc_ids(sample_file_paths, doc_ids_sample)
-        logger.info("Expanding sample with %d linked documents" % len(doc_ids_linked))
-        self.create_subset(doc_ids_linked, append=True, compress=True)
+        if self.include_linked:
+            doc_ids_linked = self.get_linked_doc_ids(sample_file_paths, doc_ids_sample)
+            logger.info("Expanding sample with %d linked documents" % len(doc_ids_linked))
+            self.create_subset(doc_ids_linked, append=True, compress=True)
