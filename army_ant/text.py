@@ -40,7 +40,13 @@ def filter_tokens(tokens, lang, remove_stopwords=True, remove_punctuation=True):
 
             if token in sw: continue
 
-        if remove_punctuation and token[0] in string.punctuation: continue
+        if remove_punctuation:
+            for ch in string.punctuation:
+                token = token.replace(ch, '')
+
+        token = token.strip()
+
+        if token == '': continue
 
         filtered_tokens.append(token)
 
