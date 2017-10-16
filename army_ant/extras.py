@@ -6,6 +6,7 @@
 # 2017-03-17
 
 import logging, pymongo, re, requests
+from requests.exceptions import RequestException
 from lxml import html
 from gensim.models import Word2Vec
 from army_ant.exception import ArmyAntException
@@ -23,11 +24,14 @@ async def fetch_wikipedia_images(db_location, db_name, db_type, loop):
                 logger.warn("%s is not a Wikipedia URL, skipping" % url)
                 next
 
-            page = requests.get(url)
-            tree = html.fromstring(page.content)
-            img_url = tree.xpath('(//table[contains(@class, "infobox")]//img)[1]/@src')
-            if len(img_url) > 0:
-                await db.set_metadata(record['doc_id'], 'img_url', img_url[0])
+            try:
+                page = requests.get(url)
+                tree = html.fromstring(page.content)
+                img_url = tree.xpath('(//table[contains(@class, "infobox")]//img)[1]/@src')
+                if len(img_url) > 0:
+                    await db.set_metadata(record['doc_id'], 'img_url', img_url[0])
+            except RequestException:
+                logger.warn("Could not obtain image from %s, skipping" % url)
 
 def word2vec_knn(model_path, word, k):
     try:
