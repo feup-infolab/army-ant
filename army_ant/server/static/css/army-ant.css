@@ -30,7 +30,7 @@ code {
 }
 
 .empty .icon {
-  font-size: 4rem;
+  font-size: 2rem;
 }
 
 .logo {
@@ -64,12 +64,12 @@ code {
 }
 
 .switch-lg {
-  line-height: 3rem;
-  font-size: 1.6rem;
+  line-height: 0.9rem;
+  font-size: 1.0rem;
 }
-.switch-lg .form-icon {
-  top: .8rem;
-}
+/*.switch-lg .form-icon {*/
+  /*top: .8rem;*/
+/*}*/
 
 .table.table-two {
   background-color: #f7f7f7;

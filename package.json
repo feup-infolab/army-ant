@@ -6,7 +6,7 @@
   "dependencies": {
     "d3.parcoords.js": "^0.7.0",
     "mathjax": "^2.7.0",
-    "spectre.css": "^0.2.14",
+    "spectre.css": "^0.4.4",
     "zepto": "^1.2.0"
   }
 }

@@ -50,7 +50,7 @@
         </div>
       </div>
 
-      <div id="ll-api-block" class="columns dynamic-block hide">
+      <div id="ll-api-block" class="columns dynamic-block d-hide">
         <div class="column">
           <div class="form-group">
             <label class="form-label" for="base-url">Base URL</label>
@@ -145,7 +145,7 @@
           {% endif %}
 
           {% if task.status == 3 %}
-          <tr class="hide">
+          <tr class="d-hide">
             <td colspan="5" class="text-center">
               {% for metric in task.results %}
               <b>{{ metric }}: </b> {{ task.results[metric]|round(4) }} &nbsp;
@@ -153,7 +153,7 @@
             </td>
           </tr>
           {% elif task.status == 4 and task.eval_format == 'll-api' %}
-          <tr class="hide">
+          <tr class="d-hide">
             <td colspan="5" class="text-center">
               <div class="ll-api-results">
                 <i class="loading"></i>
@@ -186,12 +186,12 @@
       var taskID = $(this).parents('[data-id]').data('id');
       var $detail = $('tr[data-id="' + taskID + '"]').next();
 
-      if ($detail.hasClass('hide')) {
+      if ($detail.hasClass('d-hide')) {
         $(this).find('i.icon').removeClass('icon-plus').addClass('icon-minus');
-        $detail.removeClass('hide');
+        $detail.removeClass('d-hide');
       } else {
         $(this).find('i.icon').removeClass('icon-minus').addClass('icon-plus');
-        $detail.addClass('hide');
+        $detail.addClass('d-hide');
       }      
     });
 
@@ -201,25 +201,25 @@
       var $detail = $task.next();
       var outcomeURL = $task.data('outcome-url');
 
-      if ($detail.hasClass('hide')) {
+      if ($detail.hasClass('d-hide')) {
         $(this).find('i.icon').removeClass('icon-plus').addClass('icon-minus');
-        $detail.removeClass('hide');
+        $detail.removeClass('d-hide');
         $.ajax({ url: outcomeURL }).done(function(html) {
-          $detail.find('.loading').addClass('hide');
+          $detail.find('.loading').addClass('d-hide');
           $detail.find('.outcome').html(html);
         });
       } else {
         $(this).find('i.icon').removeClass('icon-minus').addClass('icon-plus');
-        $detail.addClass('hide');
-        $detail.find('.loading').removeClass('hide');
+        $detail.addClass('d-hide');
+        $detail.find('.loading').removeClass('d-hide');
         $detail.find('.outcome').html('');
       }      
     });
 
     $(document).on('change', '#eval-format', function(e) {
       var evalFormat = $(this).val();
-      $('.dynamic-block').addClass('hide');
-      $('#' + evalFormat + '-block').removeClass('hide');
+      $('.dynamic-block').addClass('d-hide');
+      $('#' + evalFormat + '-block').removeClass('d-hide');
     });
   })();
 </script>
@@ -228,7 +228,7 @@
 <script type="text/javascript">
   (function() {
     $('#error .message').text('{{ error }}');
-    $('#error').removeClass('hide');
+    $('#error').removeClass('d-hide');
   })();
 </script>
 {% endif %}

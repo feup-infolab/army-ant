@@ -35,25 +35,25 @@
     {% endblock %}
   </head>
   <body>
-    <div id="error" class="global-message toast toast-error hide">
+    <div id="error" class="global-message toast toast-error d-hide">
       <button class="btn btn-clear float-right"></button>
       <span class="message"></span>
     </div>
 
-    <div id="warning" class="global-message toast toast-warning hide">
+    <div id="warning" class="global-message toast toast-warning d-hide">
       <button class="btn btn-clear float-right"></button>
       <span class="message"></span>
     </div>
 
     <section class="section section-header bg-gray">
-      <section class="grid-header container grid-960">
+      <section class="grid-header container grid-lg">
         <header class="navbar">
           <section class="navbar-section">
             <a class="logo" href="{{ app.router['home'].url() }}"></a>
             <a href="{{ app.router['home'].url() }}" class="navbar-brand mr-10">
               Army ANT
               <small>
-                The altruistic ant
+                The altruistic ant &nbsp;
                 <a class="tooltip tooltip-right" href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4320217/" target="_blank" data-tooltip="Why Army ANT?">
                   <i class="icon icon-link"></i>
                 </a>
@@ -69,7 +69,7 @@
       </section>
     </section>
 
-    <section class="section container grid-960">
+    <section class="section container grid-lg">
       {% block content %}
       <section class="columns">
         <div class="column">
@@ -91,7 +91,7 @@
     <script type="text/javascript">
       (function() {
         $(document).on('click', '.global-message .btn-clear', function(e) {
-          $(this).parent('.global-message').addClass('hide');
+          $(this).parent('.global-message').addClass('d-hide');
         });
       })();
     </script>
