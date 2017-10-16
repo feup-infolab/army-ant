@@ -29,9 +29,9 @@ code {
   z-index: 200;
 }
 
-.empty .icon {
-  font-size: 2rem;
-}
+/*.empty .icon {*/
+  /*font-size: 2rem;*/
+/*}*/
 
 .logo {
   margin-left: 1ex;
@@ -62,14 +62,6 @@ code {
 .form-select {
   width: 100% !important;
 }
-
-.switch-lg {
-  line-height: 0.9rem;
-  font-size: 1.0rem;
-}
-/*.switch-lg .form-icon {*/
-  /*top: .8rem;*/
-/*}*/
 
 .table.table-two {
   background-color: #f7f7f7;
