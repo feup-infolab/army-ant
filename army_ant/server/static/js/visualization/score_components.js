@@ -4,6 +4,8 @@ function ScoreComponents(results, selector) {
   this.selector = selector;
 }
 
+ScoreComponents.displayMinDocs = 5;
+
 ScoreComponents.resultsToComponents = function(results) {
   let components = results.map(function(result) {
     return result.components.map(function(c) {
@@ -32,7 +34,7 @@ ScoreComponents.countUniqueDocIDs = function(components) {
 ScoreComponents.prototype.render = function() {
   var colors = d3.scale.category10();
 
-  $(this.selector).css('height', (this.numDocs * 1.5) + 'em');
+  $(this.selector).css('height', (Math.max(this.numDocs, ScoreComponents.displayMinDocs) * 1.5) + 'em');
 
   // interact with this variable from a javascript console
   var plot = d3.parcoords()(this.selector)
