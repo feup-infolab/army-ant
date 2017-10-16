@@ -69,7 +69,7 @@ class CommandLineInterface(object):
         self.sampling = CommandLineInterfaceSampling()
 
     def index(self, source_path, source_reader, index_location='localhost', index_type='gow',
-              db_location='localhost', db_name='graph_of_word', db_type='mongo', limit=None):
+              db_location='localhost', db_name='army_ant', db_type='mongo', limit=None):
         try:
             reader = Reader.factory(source_path, source_reader, limit)
 
@@ -88,7 +88,7 @@ class CommandLineInterface(object):
             logger.error(e)
 
     def search(self, query, offset=0, limit=10, index_location='localhost', index_type='gow',
-               db_location='localhost', db_name='graph_of_word', db_type='mongo'):
+               db_location='localhost', db_name='army_ant', db_type='mongo'):
         try:
             loop = asyncio.get_event_loop()
             try:
