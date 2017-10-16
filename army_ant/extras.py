@@ -18,7 +18,7 @@ async def fetch_wikipedia_images(db_location, db_name, db_type, loop):
     async for record in db.cursor():
         if 'metadata' in record and 'url' in record['metadata']:
             url = record['metadata']['url']
-            match = re.match(r'http[s]?://[^.]+\.wikipedia\.org/wiki/(.*)', url)
+            match = re.match(r'http[s]?://[^.]+\.wikipedia\.org/(wiki/(.*)|\?curid=\d+)', url)
             if not match:
                 logger.warn("%s is not a Wikipedia URL, skipping" % url)
                 next

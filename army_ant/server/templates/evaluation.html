@@ -15,7 +15,7 @@
         <div class="column">
           <div class="form-group">
             <label class="form-label" for="eval-format">Evaluator Format</label>
-            <select class="form-select select-lg" id="eval-format" name="eval-format">
+            <select class="form-select" id="eval-format" name="eval-format">
               <option value="inex">INEX</option>
               <option value="ll-api">Living Labs API</option>
             </select>
@@ -25,7 +25,7 @@
         <div class="column">
           <div class="form-group">
             <label class="form-label" for="engine">Search Engine</label>
-            <select class="form-select select-lg" id="engine" name="engine">
+            <select class="form-select" id="engine" name="engine">
               {% for app_engine in app.engines %}
               <option value="{{app_engine}}">{{ app.engines[app_engine].name }}</option>
               {% endfor %}
@@ -54,19 +54,19 @@
         <div class="column">
           <div class="form-group">
             <label class="form-label" for="base-url">Base URL</label>
-            <input class="form-input input-lg" type="text" id="base-url" name="base-url" value="" placeholder="http://api.trec-open-search.org">
+            <input class="form-input" type="text" id="base-url" name="base-url" value="" placeholder="http://api.trec-open-search.org">
           </div>
         </div>
         <div class="column">
           <div class="form-group">
             <label class="form-label" for="api-key">API Key</label>
-            <input class="form-input input-lg" type="text" id="api-key" name="api-key" value="" placeholder="2C2BB98ABEE4CD40-F0RDVC4KZ6SNFZGY">
+            <input class="form-input" type="text" id="api-key" name="api-key" value="" placeholder="2C2BB98ABEE4CD40-F0RDVC4KZ6SNFZGY">
           </div>
         </div>
         <div class="column">
           <div class="form-group">
             <label class="form-label" for="run-id">Run ID</label>
-            <input class="form-input input-lg" type="text" id="run-id" name="run-id" value="" placeholder="retrieval_model-run_1">
+            <input class="form-input" type="text" id="run-id" name="run-id" value="" placeholder="retrieval_model-run_1">
           </div>
         </div>
       </div>
@@ -74,8 +74,8 @@
       <br>
 
       <div class="form-group">
-        <button class="btn btn-primary btn-lg" type="submit">Launch assessment</button>
-        <button class="btn btn-lg" type="reset">Clear form</button>
+        <button class="btn btn-primary" type="submit">Launch assessment</button>
+        <button class="btn" type="reset">Clear form</button>
       </div>
     </form>
   </div>
