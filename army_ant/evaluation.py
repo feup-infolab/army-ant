@@ -6,7 +6,7 @@
 # 2017-05-19
 
 import json, time, pymongo, asyncio, logging, csv, os, shutil, gzip
-import tempfile, zipfile, math, requests, requests_cache, pickle
+import tempfile, zipfile, math, requests, requests_cache, pickle, itertools
 from enum import IntEnum
 from lxml import etree
 from datetime import datetime
@@ -48,15 +48,15 @@ class FilesystemEvaluator(Evaluator):
         self.o_results_path = os.path.join(eval_location, 'results', task._id)
         self.o_assessments_path = os.path.join(eval_location, 'assessments', task._id)
         
-        try:
-            os.makedirs(self.o_results_path)
-        except FileExistsError:
-            raise ArmyAntException("Results directory '%s' already exists" % self.o_results_path)
+        #try:
+            #os.makedirs(self.o_results_path)
+        #except FileExistsError:
+            #raise ArmyAntException("Results directory '%s' already exists" % self.o_results_path)
 
-        try:
-            os.makedirs(self.o_assessments_path)
-        except FileExistsError:
-            raise ArmyAntException("Assessments directory '%s' already exists" % self.o_assessments_path)
+        #try:
+            #os.makedirs(self.o_assessments_path)
+        #except FileExistsError:
+            #raise ArmyAntException("Assessments directory '%s' already exists" % self.o_assessments_path)
 
     def remove_output(self):
         shutil.rmtree(self.o_results_path)
@@ -108,14 +108,109 @@ class INEXEvaluator(FilesystemEvaluator):
             logger.info("Obtaining results for query '%s' of topic '%s' using '%s' index at '%s'" % (query, topic_id, self.task.index_type, self.task.index_location))
             engine_response = await self.index.search(query, 0, 10000)
 
-            with open(os.path.join(self.o_results_path, topic_id), 'w', newline='') as f:
+            with open(os.path.join(self.o_results_path, '%s.csv' % topic_id), 'w', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow(['rank', 'doc_id', 'relevant'])
                 for i, result in zip(range(1, len(engine_response['results'])+1), engine_response['results']):
                     doc_id = result['docID']
                     relevant = topic_doc_judgements[topic_id][doc_id] > 0 if doc_id in topic_doc_judgements[topic_id] else False
                     writer.writerow([i, doc_id, relevant])
+
+    def path_to_topic_id(self, path):
+        return os.path.basename(os.path.splitext(path)[0])
     
+    def calculate_precision_recall(self):
+        # topic_id -> doc_id -> num_relevant_chars
+        topic_doc_judgements = self.get_topic_assessments()
+
+        result_files = [
+            os.path.join(self.o_results_path, f)
+            for f in os.listdir(self.o_results_path)
+            if os.path.isfile(os.path.join(self.o_results_path, f))]
+
+        o_eval_details_file = os.path.join(self.o_assessments_path, 'precision_recall_per_topic.csv')
+
+        with open(o_eval_details_file, 'w') as ef:
+            writer = csv.writer(ef)
+            writer.writerow(['topic_id', 'tp', 'fp', 'tn', 'fn', 'precision', 'recall'])
+
+            precisions = []
+            recalls = []
+            tps = []
+            fps = []
+            tns = []
+            fns = []
+
+            for result_file in result_files:
+                topic_id = self.path_to_topic_id(result_file)
+
+                with open(result_file, 'r') as rf:
+                    reader = csv.DictReader(rf)
+                    result_doc_ids = set([row['doc_id'] for row in reader])
+
+                    tp = fp = tn = fn = 0
+
+                    for doc_id, judgment in topic_doc_judgements.get(topic_id, {}).items():
+                        relevant = judgment > 0
+                        if relevant:
+                            if doc_id in result_doc_ids:
+                                tp += 1
+                            else:
+                                fn += 1
+                        else:
+                            if doc_id in result_doc_ids:
+                                fp += 1
+                            else:
+                                tn += 1
+
+                    tps.append(tp)
+                    fps.append(fp)
+                    tns.append(tn)
+                    fns.append(fn)
+
+                    logger.debug("%s - TP(%d) + FP(%d) + TN(%d) + FN(%d) = %d" % (topic_id, tp, fp, tn, fn, tp+fp+tn+fn))
+
+                    precision = tp / (tp + fp)
+                    precisions.append(precision)
+
+                    recall = tp / (tp + fn)
+                    recalls.append(recall)
+
+                    writer.writerow([topic_id, tp, fp, tn, fn, precision, recall])
+
+            self.results['Micro Avg Prec'] = sum(tps) / (sum(tps) + sum(fps))
+            self.results['Micro Avg Rec'] = sum(tps) / (sum(tps) + sum(fns))
+            self.results['Macro Avg Prec'] = sum(precisions) / len(precisions)
+            self.results['Macro Avg Rec'] = sum(recalls) / len(recalls)
+
+    def calculate_precision_at_n(self, n=10):
+        result_files = [
+            os.path.join(self.o_results_path, f)
+            for f in os.listdir(self.o_results_path)
+            if os.path.isfile(os.path.join(self.o_results_path, f))]
+
+        o_eval_details_file = os.path.join(self.o_assessments_path, 'p_at_%d-precision_at_%d_per_topic.csv' % (n, n))
+
+        with open(o_eval_details_file, 'w') as ef:
+            writer = csv.writer(ef)
+            writer.writerow(['topic_id', 'p_at_%d' % n])
+
+            precisions_at_n = []
+            for result_file in result_files:
+                topic_id = self.path_to_topic_id(result_file)
+
+                with open(result_file, 'r') as rf:
+                    reader = csv.DictReader(rf)
+                    results = []
+                    for row in itertools.islice(reader, n):
+                        results.append(row['relevant'] == 'True')
+
+                    precision_at_n = results.count(True) / n
+                    precisions_at_n.append(precision_at_n)
+                    writer.writerow([topic_id, precision_at_n])
+
+            self.results['P@%d' % n] = sum(precisions_at_n) / len(precisions_at_n)
+
     def calculate_mean_average_precision(self):
         result_files = [
             os.path.join(self.o_results_path, f)
@@ -130,7 +225,7 @@ class INEXEvaluator(FilesystemEvaluator):
 
             avg_precisions = []
             for result_file in result_files:
-                topic_id = os.path.basename(result_file)
+                topic_id = self.path_to_topic_id(result_file)
 
                 precisions = []
                 with open(result_file, 'r') as rf:
@@ -158,7 +253,7 @@ class INEXEvaluator(FilesystemEvaluator):
 
         ndcgs = []
         for result_file in result_files:
-            topic_id = os.path.basename(result_file)
+            topic_id = self.path_to_topic_id(result_file)
 
             dcg_parcels = []
             idcg_parcels = []
@@ -184,10 +279,16 @@ class INEXEvaluator(FilesystemEvaluator):
         self.results['NDCG@%d' % p] = 0.0 if len(ndcgs) == 0 else sum(ndcgs) / len(ndcgs)
 
     async def run(self):
-        assessed_topic_ids = self.get_assessed_topic_ids()
-        await self.get_topic_results(assessed_topic_ids)
+        #assessed_topic_ids = self.get_assessed_topic_ids()
+        #await self.get_topic_results(assessed_topic_ids)
+        self.calculate_precision_recall()
+        self.calculate_precision_at_n(n=10)
+        self.calculate_precision_at_n(n=100)
+        self.calculate_precision_at_n(n=1000)
         self.calculate_mean_average_precision()
-        self.calculate_normalized_discounted_cumulative_gain_at_p()
+        self.calculate_normalized_discounted_cumulative_gain_at_p(p=10)
+        self.calculate_normalized_discounted_cumulative_gain_at_p(p=100)
+        self.calculate_normalized_discounted_cumulative_gain_at_p(p=1000)
 
 class LivingLabsEvaluator(Evaluator):
     def __init__(self, task, eval_location):
@@ -406,15 +507,20 @@ class EvaluationTaskManager(object):
         task = EvaluationTask(**task)
         with tempfile.TemporaryDirectory() as tmp_dir:
             out_dir = os.path.join(tmp_dir, task_id)
+
             shutil.copytree(os.path.join(self.default_eval_location, 'assessments', task_id), out_dir)
+            shutil.copytree(os.path.join(self.default_eval_location, 'results', task_id), os.path.join(out_dir, 'results'))
+
             with open(os.path.join(out_dir, "eval_metrics.csv"), 'w') as f:
                 writer = csv.writer(f)
                 writer.writerow(['metrics', 'value'])
                 for metric, value in task.results.items():
                     writer.writerow([metric, value])
+
             archive_filename = os.path.join(tmp_dir, '%s.zip' % task_id)
             with zipfile.ZipFile(archive_filename, 'w') as zipf:
                 zipdir(out_dir, zipf)
+
             yield archive_filename
 
     def get_results_json(self, task_id):

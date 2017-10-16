@@ -148,7 +148,7 @@
           <tr class="d-hide">
             <td colspan="5" class="text-center">
               {% for metric in task.results %}
-              <b>{{ metric }}: </b> {{ task.results[metric]|round(4) }} &nbsp;
+              <b>{{ metric }}: </b> {{ task.results[metric]|round(6) }} &nbsp;
               {% endfor %}
             </td>
           </tr>
