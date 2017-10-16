@@ -4,5 +4,8 @@
 # Vim
 *.swp
 
+# Node
+node_modules/
+
 # Army ANT
 *_cache.sqlite
