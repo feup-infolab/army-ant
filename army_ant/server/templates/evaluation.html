@@ -116,7 +116,7 @@
           {% elif task.eval_format == "ll-api" %}
           <td>{{ task.base_url }}::{{ task.api_key }}::{{ task.run_id }}</td>
           {% endif %}
-          
+
           <td>{{ task.index_location }} ({{ task.index_type }})</td>
 
           {% if task.status == 3 %}
@@ -129,27 +129,41 @@
           <td>
             <button class="inex-expand-btn btn btn-sm"><i class="icon icon-plus"></i></button>
           </td>
-          
+
           {% elif task.status == 4 %}
-          
+
           <td>{{ task.status.name }}</td>
           <td>
             <button class="ll-api-expand-btn btn btn-sm"><i class="icon icon-plus"></i></button>
           </td>
-          
+
           {% else %}
 
           <td>{{ task.status.name }}</td>
           <td>N/A</td>
-          
+
           {% endif %}
 
           {% if task.status == 3 %}
           <tr class="d-hide">
             <td colspan="5" class="text-center">
-              {% for metric in task.results %}
-              <b>{{ metric }}: </b> {{ task.results[metric]|round(6) }} &nbsp;
-              {% endfor %}
+              <!-- FIXME -->
+              <div style="position: relative; overflow-x: auto">
+                <table class="table table-two">
+                  <thead>
+                    {% for metric in task.results %}
+                    <th>{{ metric }}</th>
+                    {% endfor %}
+                  </thead>
+                  <tbody>
+                    <tr>
+                      {% for metric in task.results %}
+                      <td>{{ task.results[metric]|round(6) }}</td>
+                      {% endfor %}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </td>
           </tr>
           {% elif task.status == 4 and task.eval_format == 'll-api' %}

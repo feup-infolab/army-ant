@@ -118,6 +118,10 @@ class INEXEvaluator(FilesystemEvaluator):
 
     def path_to_topic_id(self, path):
         return os.path.basename(os.path.splitext(path)[0])
+
+    def f_score(self, precision, recall, beta=1):
+        if precision == 0 and recall == 0: return 0
+        return (1 + beta**2) * (precision * recall) / ((beta**2 * precision) + recall)
     
     def calculate_precision_recall(self):
         # topic_id -> doc_id -> num_relevant_chars
@@ -132,14 +136,17 @@ class INEXEvaluator(FilesystemEvaluator):
 
         with open(o_eval_details_file, 'w') as ef:
             writer = csv.writer(ef)
-            writer.writerow(['topic_id', 'tp', 'fp', 'tn', 'fn', 'precision', 'recall'])
+            writer.writerow(['topic_id', 'tp', 'fp', 'tn', 'fn', 'precision', 'recall', 'f0.5', 'f1', 'f2'])
 
-            precisions = []
-            recalls = []
             tps = []
             fps = []
             tns = []
             fns = []
+            precisions = []
+            recalls = []
+            f_0_5_scores = []
+            f_1_scores = []
+            f_2_scores = []
 
             for result_file in result_files:
                 topic_id = self.path_to_topic_id(result_file)
@@ -176,12 +183,29 @@ class INEXEvaluator(FilesystemEvaluator):
                     recall = tp / (tp + fn)
                     recalls.append(recall)
 
-                    writer.writerow([topic_id, tp, fp, tn, fn, precision, recall])
+                    f_0_5_score = self.f_score(precision, recall, beta=0.5)
+                    f_0_5_scores.append(f_0_5_score)
+
+                    f_1_score = self.f_score(precision, recall, beta=1)
+                    f_1_scores.append(f_1_score)
+
+                    f_2_score = self.f_score(precision, recall, beta=2)
+                    f_2_scores.append(f_2_score)
+
+                    writer.writerow([topic_id, tp, fp, tn, fn, precision, recall, f_0_5_score, f_1_score, f_2_score])
 
             self.results['Micro Avg Prec'] = sum(tps) / (sum(tps) + sum(fps))
             self.results['Micro Avg Rec'] = sum(tps) / (sum(tps) + sum(fns))
             self.results['Macro Avg Prec'] = sum(precisions) / len(precisions)
             self.results['Macro Avg Rec'] = sum(recalls) / len(recalls)
+
+            self.results['Micro Avg F0_5'] = self.f_score(self.results['Micro Avg Prec'], self.results['Micro Avg Rec'], beta=0.5)
+            self.results['Micro Avg F1'] = self.f_score(self.results['Micro Avg Prec'], self.results['Micro Avg Rec'], beta=1)
+            self.results['Micro Avg F2'] = self.f_score(self.results['Micro Avg Prec'], self.results['Micro Avg Rec'], beta=2)
+
+            self.results['Macro Avg F0_5'] = self.f_score(self.results['Macro Avg Prec'], self.results['Macro Avg Rec'], beta=0.5)
+            self.results['Macro Avg F1'] = self.f_score(self.results['Macro Avg Prec'], self.results['Macro Avg Rec'], beta=1)
+            self.results['Macro Avg F2'] = self.f_score(self.results['Macro Avg Prec'], self.results['Macro Avg Rec'], beta=2)
 
     def calculate_precision_at_n(self, n=10):
         result_files = [
