@@ -1,0 +1,86 @@
+<!DOCTYPE inex-topic-file [
+<!ENTITY lt "lessthan">
+<!ENTITY gt "greaterthan">
+<!ENTITY amp "ampersand">
+<!ELEMENT inex-topic-file (topic)+>
+<!ELEMENT topic (title , castitle , phrasetitle , description , narrative)>
+<!ATTLIST topic id CDATA #REQUIRED>
+<!ATTLIST topic ct_no CDATA #REQUIRED>
+<!ELEMENT title (#PCDATA)>
+<!ELEMENT castitle (#PCDATA)>
+<!ELEMENT phrasetitle (#PCDATA)>
+<!ELEMENT description (#PCDATA)>
+<!ELEMENT narrative (#PCDATA)>
+]>
+<inex-topic-file>
+<topic id="2010003" ct_no="316">
+  <title>Monuments of India</title>
+  <castitle>//article[about(., Monuments) and about(., India)]//sec[about(.,Monuments of India)]</castitle>
+  <phrasetitle>"Monuments" "India"</phrasetitle>
+  <description>Find information about the ancient monuments in India. Their history and background.</description>
+  <narrative>The sub-continent India is dotted with magnificent monuments showing the incredible artistic work and architecture. These monuments remain as the greatest legacy of the glory of the ancient Indians. These monuments were built under the reign of various emperors in India using the human labor rather than any technology. I am really fascinated by such breathtaking architecture and intricate work and would like to know more about these monuments.     For my own personal interest, I would like to learn more background about the monuments in India built in different architectural styles, in accordance to their beliefs and the history and stylistics of such great monuments.    To be relevant an element should discuss about the monuments in India and history behind it. Information on the country India alone without any information regarding the monuments is not relevant; nor is general information on Indian cultures and traditions.</narrative>
+</topic>
+<topic id="2010014" ct_no="329">
+  <title>composer museum</title>
+  <castitle>//*[about(., composer museum)]</castitle>
+  <phrasetitle/>
+  <description>Documents or parts of documents that describe or identify a museum dedicated or which has a significant section dedicated to a composer</description>
+  <narrative>I want to know the museum that are dedicated to or which have a significant section dedicated to a composer. Other music related museum  which are  not dedicated to a composer are not relevant (for instance a museum of musical  instruments)</narrative>
+</topic>
+<topic id="2010023" ct_no="339">
+  <title>retirement age</title>
+  <castitle>//*[about(., retirement age)]</castitle>
+  <phrasetitle>"retirement age"</phrasetitle>
+  <description>I'd like to know the retirement age all over the world</description>
+  <narrative>There will be soon a retirement reform in France, and the age of retirement will probably increase.  I'd like to know what is the retirement age in other countries. Is it the same for all people or does this age depend on the job ?  I'm also interested in the history of retirement. Since when is it possible in all countries ? How did the retirement age evolve in time ?    Information about how pensions are calculated is not relevant. Information about health and activities  of retired persons is also not relevant.</narrative>
+</topic>
+<topic id="2010032" ct_no="350">
+  <title>japanese ballerina</title>
+  <castitle>//*[about(., japanese ballerina)]</castitle>
+  <phrasetitle/>
+  <description>Return a list of ballerina of Japanese descent or nationality.</description>
+  <narrative>I'm compiling a list of Japanese ballet dancers. Any mention of Japanese ballet dancer, male or female, of (part) Japanese descent, or of Japanese nationality regardless of decent is relevant. Thus an article about a Japanese ballet dancer is relevant, a paragraph mentioning a Japanese ballet dancer in a totally unrelated article is relevant, and a list that only mentions the name with the occupation is also relevant.</narrative>
+</topic>
+<topic id="2010038" ct_no="358">
+  <title>dinosaur</title>
+  <castitle>//article[about(., dinosaur )]</castitle>
+  <phrasetitle>"dinosaur"</phrasetitle>
+  <description>information about dinosaurs, vertebrate animals who often have enormous size</description>
+  <narrative>Dinosaurs are vertebrate animals and often have enormous size. Like many others, I would like to know anything that can help scientific research on dinosaurs such as their categories, features, distinguishing behaviors, evolution, fossils, famous paleontologists who study dinosaurs, dinosaurs related museum, park, books, and geographical location. However, dinosaur fictions are not relevant, including comics, games, movie/film, and animation. Artists such as sculptors are irrelevant as well.</narrative>
+</topic>
+<topic id="2010040" ct_no="361">
+  <title>President of the United States</title>
+  <castitle>//article[about(., President of the United States )]</castitle>
+  <phrasetitle/>
+  <description>information of President of the United States</description>
+  <narrative>My nephew needs some information about the presidents of the United States for his history homework. Information, introduction of these presidents for example, is in demand.</narrative>
+</topic>
+<topic id="2010049" ct_no="372">
+  <title>European fruit trees</title>
+  <castitle>//article[about(.//category, edible nuts and seeds) AND about(., European fruit trees)]</castitle>
+  <phrasetitle>European "fruit trees"</phrasetitle>
+  <description>I want a list of European fruit tree sorts.</description>
+  <narrative>Each answer should be an article about the specific fruit tree.</narrative>
+</topic>
+<topic id="2010057" ct_no="380">
+  <title>Einstein Relativity theory</title>
+  <castitle>//article[about(., Einstein)]//sec[about(.,relativity theory)]</castitle>
+  <phrasetitle>Einstein "Relativity Theory"</phrasetitle>
+  <description>Find documents on Einstein in general containing a section on General or Special RelativityTheory</description>
+  <narrative>Documents about Einstein in general with a section on General or Special Theory of Relativity is sought here. Documents about other academic achievements of Einstein is also somewhat relevant. Documents about books and films on Einstein are not relevant. Documents about religious and political views of Einstein are irrelevant.</narrative>
+</topic>
+<topic id="2010079" ct_no="408">
+  <title>famous chess endgames</title>
+  <castitle>//article[about(.//category, chess)]//sec[about(., endgame) or about(.,famous)]</castitle>
+  <phrasetitle/>
+  <description>what are the famous chess endgames</description>
+  <narrative>The endgame in chess requires special skills from the player. Sometimes players are far better in this phase of the game than the phases before. It is important to know what makes a position winning in the ending phase of the game.  Examples of typical positions are useful to train the improvement of chess playing skills. A broad overview will learn the chess player to recognize the relevant characteristics of a winning endgame position.</narrative>
+</topic>
+<topic id="2010096" ct_no="426">
+  <title>predictive analysis +logistic +regression model program application</title>
+  <castitle>//article[about(.,predictive analysis) and about(.,regression) and about(.,logistic)]//*[about(.,model) or about(.,program) or about(.,application)]</castitle>
+  <phrasetitle>"predictive analysis" "logistic regression" "logistic regression model" "programming logistic regression" "logistic regression applications"</phrasetitle>
+  <description>Find information about implementations and applications of logistic regression and closely related methods .</description>
+  <narrative>I know logistic regression but I don't understand why is so widely used. I want to study the similarities among its numerous applications and why this type of predictive analysis is often favored. Detailed aspects about logistic regression technique are not useful, neither too narrow applications. Information relating logistic regression to other approaches of predictive analysis is welcomed.</narrative>
+</topic>
+</inex-topic-file>

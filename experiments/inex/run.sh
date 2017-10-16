@@ -1,1 +1,0 @@
-./army-ant.py evaluation --index-location localhost:8182/gow_inex --index-type gow --eval-format inex --topics-filename experiments/inex/2010-topics.xml --assessments-filename experiments/inex/inex2010.qrels
