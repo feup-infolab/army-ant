@@ -85,3 +85,9 @@ code {
 #score-components-plot {
   margin: 1em 0 2em 0;
 }
+
+.wide-table {
+  /* same width as grid-lg */
+  width: 976px !important;
+  overflow-x: auto;
+}
