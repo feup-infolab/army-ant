@@ -1,16 +1,18 @@
 package armyant.hypergraphofentity.edges;
 
+import armyant.hypergraphofentity.nodes.DocumentNode;
+
 /**
  * Created by jldevezas on 2017-10-24.
  */
-public class TermEdge extends Edge {
+public class DocumentEdge extends Edge {
     private String docID;
 
-    public TermEdge() {
-        this.docID = null;
+    public DocumentEdge() {
+
     }
 
-    public TermEdge(String docID) {
+    public DocumentEdge(String docID) {
         this.docID = docID;
     }
 
@@ -24,7 +26,7 @@ public class TermEdge extends Edge {
 
     @Override
     public String toString() {
-        return "TermEdge{" +
+        return "DocumentEdge{" +
                "docID='" + docID + '\'' +
                '}';
     }
@@ -34,7 +36,7 @@ public class TermEdge extends Edge {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        TermEdge that = (TermEdge) o;
+        DocumentEdge that = (DocumentEdge) o;
 
         return docID.equals(that.docID);
     }

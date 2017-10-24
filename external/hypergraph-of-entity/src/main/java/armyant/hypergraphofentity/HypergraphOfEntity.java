@@ -1,5 +1,6 @@
 package armyant.hypergraphofentity;
 
+import armyant.hypergraphofentity.edges.DocumentEdge;
 import armyant.hypergraphofentity.nodes.DocumentNode;
 import armyant.hypergraphofentity.nodes.EntityNode;
 import armyant.hypergraphofentity.nodes.Node;
@@ -8,10 +9,6 @@ import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.AttributeFactory;
 import org.hypergraphdb.*;
-import org.hypergraphdb.algorithms.HGDepthFirstTraversal;
-import org.hypergraphdb.algorithms.SimpleALGenerator;
-import org.hypergraphdb.handle.UUIDPersistentHandle;
-import org.hypergraphdb.util.Pair;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -62,7 +59,7 @@ public class HypergraphOfEntity {
         List<String> tokens = tokenize(document.getText());
 
         Set<HGHandle> nodeHandles = new HashSet<>();
-        Set<HGHandle> termNodeHandles = new HashSet<>();
+        Set<HGHandle> termHandles = new HashSet<>();
 
         DocumentNode documentNode = new DocumentNode(document.getDocID());
         nodeHandles.add(addUnique(graph, documentNode, eq(documentNode)));
@@ -71,13 +68,15 @@ public class HypergraphOfEntity {
 
         for (String term : tokens) {
             Node node = new TermNode(term);
-            nodeHandles.add(addUnique(graph, node, eq(node)));
+            HGHandle handle = addUnique(graph, node, eq(node));
+            nodeHandles.add(handle);
+            termHandles.add(handle);
         }
 
-        HGValueLink link = new HGValueLink("document", nodeHandles.toArray(new HGHandle[nodeHandles.size()]));
+        HGValueLink link = new HGValueLink(new DocumentEdge("document"), nodeHandles.toArray(new HGHandle[nodeHandles.size()]));
         graph.add(link);
 
-        return new HashSet<>(termNodeHandles);
+        return termHandles;
     }
 
     private Set<HGHandle> indexEntities(Document document) {
@@ -110,30 +109,37 @@ public class HypergraphOfEntity {
 
     private void linkTextAndKnowledge(Set<HGHandle> termHandles, Set<HGHandle> entityHandles) {
         for (HGHandle entityHandle : entityHandles) {
+            Set<HGHandle> handles = new HashSet<>();
+
             EntityNode entity = graph.get(entityHandle);
 
-            Set<HGHandle> linkedTerms = new HashSet<>();
             for (HGHandle termHandle : termHandles) {
                 TermNode term = graph.get(termHandle);
                 if (entity.getName().toLowerCase().matches(".*\\b" + term.getName().toLowerCase() + "\\b.*")) {
-                    linkedTerms.add(termHandle);
+                    handles.add(termHandle);
                 }
             }
-            HGValueLink link = new HGValueLink(entity.getName(), linkedTerms.toArray(new HGHandle[linkedTerms.size()]));
+
+            if (handles.isEmpty()) continue;
+
+            handles.add(entityHandle);
+
+            HGValueLink link = new HGValueLink("term_entity_substring", handles.toArray(new HGHandle[handles.size()]));
             graph.add(link);
         }
     }
 
     public void index(Document document) throws IOException {
         Set<HGHandle> entityHandles = indexEntities(document);
-        Set<HGHandle> terms = indexDocument(document, entityHandles);
-        linkTextAndKnowledge(terms, entityHandles);
+        Set<HGHandle> termHandles = indexDocument(document, entityHandles);
+        linkTextAndKnowledge(termHandles, entityHandles);
     }
 
     private List<Node> getSeedNodes(List<String> terms) {
         List<Node> nodes = new ArrayList<>();
 
         for (String term : terms) {
+            System.out.println(term);
             HGHandle queryTermNodeHandle = graph.findOne(
                     and(
                             type(TermNode.class),
@@ -144,16 +150,22 @@ public class HypergraphOfEntity {
             if (queryTermNodeHandle == null) continue;
 
             HGSearchResult<HGHandle> rs = graph.find(
-                    link(queryTermNodeHandle)
+                    and(
+                            type(String.class),
+                            eq("term_entity_substring"),
+                            link(queryTermNodeHandle)
+                    )
             );
 
             try {
                 while (rs.hasNext()) {
                     HGHandle current = rs.next();
                     HGValueLink link = graph.get(current);
-                    for (int i=0; i < link.getArity(); i++) {
+                    for (int i = 0; i < link.getArity(); i++) {
                         Node node = graph.get(link.getTargetAt(i));
-                        System.out.println(node);
+                        if (node.getType().equals("entity")) {
+                            System.out.println(node);
+                        }
                     }
                     //nodes.add(termNode);
                 }
@@ -166,8 +178,7 @@ public class HypergraphOfEntity {
 
         HGDepthFirstTraversal traversal = new HGDepthFirstTraversal(termNode, new SimpleALGenerator(graph));
 
-        while (traversal.hasNext())
-        {
+        while (traversal.hasNext()) {
             Pair<HGHandle, HGHandle> current = traversal.next();
             HGLink l = graph.get(current.getFirst());
             Object atom = graph.get(current.getSecond());
