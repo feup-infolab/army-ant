@@ -11,10 +11,6 @@ public class Document {
     private String text;
     private List<Triple> triples;
 
-    public static Document create(String docID, String text, List<Triple> triples) {
-        return new Document(docID, text, triples);
-    }
-
     public Document(String docID, String text, List<Triple> triples) {
         this.docID = docID;
         this.text = text;
@@ -51,5 +47,20 @@ public class Document {
         }
 
         this.triples.add(triple);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Document document = (Document) o;
+
+        return docID.equals(document.docID);
+    }
+
+    @Override
+    public int hashCode() {
+        return docID.hashCode();
     }
 }

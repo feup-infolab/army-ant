@@ -1,0 +1,18 @@
+package armyant.hypergraphofentity.nodes;
+
+/**
+ * Created by jldevezas on 2017-10-24.
+ */
+public class TermNode extends Node {
+    public TermNode() {
+    }
+
+    public TermNode(String name) {
+        super(name);
+    }
+
+    @Override
+    public String getType() {
+        return "term";
+    }
+}
