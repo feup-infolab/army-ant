@@ -145,7 +145,6 @@ public class HypergraphOfEntity {
     }
 
 
-
     private Map<String, HGHandle> getQueryTermNodes(List<String> terms) {
         Map<String, HGHandle> termNodeMap = new HashMap<>();
 
@@ -166,7 +165,7 @@ public class HypergraphOfEntity {
     private Set<HGHandle> getSeedNodes(Map<String, HGHandle> queryTermNodes) {
         Set<HGHandle> seedNodes = new HashSet<>();
 
-        for (HGHandle queryTermNode: queryTermNodes.values()) {
+        for (HGHandle queryTermNode : queryTermNodes.values()) {
             Set<HGHandle> localSeedNodes = new HashSet<>();
 
             HGSearchResult<HGHandle> rs = graph.find(
@@ -214,17 +213,18 @@ public class HypergraphOfEntity {
             }
         }
 
-        return (double)reachedSeedNodes.size() / seedNodes.size();
+        return (double) reachedSeedNodes.size() / seedNodes.size();
     }
 
     private double confidenceWeight(HGHandle seedNode, Set<HGHandle> queryTermNodes) {
         if (seedNode == null) return 0;
 
-        graph.count(
-                and(
 
-                )
-        );
+        HGRandomAccessResult<HGHandle> neighbors = graph.getIncidenceSet(seedNode).getSearchResult();
+        while (neighbors.hasNext()) {
+            HGHandle neighbor = neighbors.next();
+            System.out.println(graph.get(neighbor).toString());
+        }
 
         return 0d;
     }
@@ -235,8 +235,8 @@ public class HypergraphOfEntity {
 
         Map<String, HGHandle> queryTermNodes = getQueryTermNodes(tokens);
 
-        /*Set<HGHandle> seedNodes = getSeedNodes(queryTermNodes);
-        System.out.println(seedNodes.stream().map(graph::get).collect(Collectors.toList()));*/
+        Set<HGHandle> seedNodes = getSeedNodes(queryTermNodes);
+        //System.out.println(seedNodes.stream().map(graph::get).collect(Collectors.toList()));
 
         /*double coverage = coverage(
                 graph.findOne(
@@ -249,8 +249,8 @@ public class HypergraphOfEntity {
         );
         System.out.println(coverage);*/
 
-        /*double weight = confidenceWeight(seedNodes.iterator().next());
-        System.out.println(weight);*/
+        double weight = confidenceWeight(seedNodes.iterator().next(), new HashSet<>(queryTermNodes.values()));
+        System.out.println(weight);
     }
 
     public void printDepthFirst(String fromNodeName) {
