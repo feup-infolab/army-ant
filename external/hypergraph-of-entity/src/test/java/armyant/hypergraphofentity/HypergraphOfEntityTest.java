@@ -47,6 +47,7 @@ public class HypergraphOfEntityTest {
 
     public void testSearch() throws IOException {
         HypergraphOfEntity hgoe = new HypergraphOfEntity("/tmp/hgoe.db");
+        //hgoe.printDepthFirst("web");
         hgoe.search("web search system nomatchforme");
         hgoe.close();
     }

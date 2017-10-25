@@ -10,9 +10,4 @@ public class EntityNode extends Node {
     public EntityNode(String name) {
         super(name);
     }
-
-    @Override
-    public String getType() {
-        return "entity";
-    }
 }

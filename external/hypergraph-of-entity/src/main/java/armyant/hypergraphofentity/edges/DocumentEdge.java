@@ -13,6 +13,10 @@ public class DocumentEdge extends Edge {
 
     }
 
+    public DocumentEdge(HGHandle... outgoingSet) {
+        this(null, outgoingSet);
+    }
+
     public DocumentEdge(String docID, HGHandle... outgoingSet) {
         super(outgoingSet);
         this.docID = docID;

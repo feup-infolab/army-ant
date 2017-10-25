@@ -10,9 +10,4 @@ public class TermNode extends Node {
     public TermNode(String name) {
         super(name);
     }
-
-    @Override
-    public String getType() {
-        return "term";
-    }
 }

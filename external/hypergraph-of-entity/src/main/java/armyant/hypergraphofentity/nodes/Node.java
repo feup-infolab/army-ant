@@ -14,8 +14,6 @@ public abstract class Node {
         this.name = name;
     }
 
-    public abstract String getType();
-
     public String getName() {
         return name;
     }
@@ -26,8 +24,7 @@ public abstract class Node {
 
     @Override
     public String toString() {
-        return "Node{" +
-               "type='" + getType() + '\'' +
+        return this.getClass().getSimpleName() + "{" +
                "name='" + name + '\'' +
                '}';
     }

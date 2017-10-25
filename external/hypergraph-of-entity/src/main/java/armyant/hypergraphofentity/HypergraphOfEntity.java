@@ -11,6 +11,9 @@ import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.AttributeFactory;
 import org.hypergraphdb.*;
+import org.hypergraphdb.algorithms.HGDepthFirstTraversal;
+import org.hypergraphdb.algorithms.SimpleALGenerator;
+import org.hypergraphdb.util.Pair;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -137,11 +140,12 @@ public class HypergraphOfEntity {
         linkTextAndKnowledge(termHandles, entityHandles);
     }
 
-    private List<Node> getSeedNodes(List<String> terms) {
-        List<Node> nodes = new ArrayList<>();
+    private Set<Node> getSeedNodes(List<String> terms) {
+        Set<Node> seedNodes = new HashSet<>();
 
         for (String term : terms) {
-            System.out.println(term);
+            Set<Node> localSeedNodes = new HashSet<>();
+
             HGHandle queryTermNodeHandle = graph.findOne(
                     and(
                             type(TermNode.class),
@@ -164,18 +168,33 @@ public class HypergraphOfEntity {
                     ContainedInEdge link = graph.get(current);
                     for (int i = 0; i < link.getArity(); i++) {
                         Node node = graph.get(link.getTargetAt(i));
-                        if (node.getType().equals("entity")) {
-                            System.out.println(node);
+                        if (node instanceof EntityNode) {
+                            EntityNode entityNode = (EntityNode) node;
+                            localSeedNodes.add(entityNode);
                         }
                     }
-                    //nodes.add(termNode);
                 }
+
+                if (localSeedNodes.isEmpty()) {
+                    localSeedNodes.add(graph.get(queryTermNodeHandle));
+                }
+
+                seedNodes.addAll(localSeedNodes);
             } finally {
                 rs.close();
             }
         }
 
-        /*HGHandle termNode = graph.findOne(and(type(TermNode.class), eq("name", "semantic")));
+        return seedNodes;
+    }
+
+    public void search(String query) throws IOException {
+        List<String> tokens = tokenize(query);
+        System.out.println(getSeedNodes(tokens));
+    }
+
+    public void printDepthFirst(String fromNodeName) {
+        HGHandle termNode = graph.findOne(and(type(TermNode.class), eq("name", fromNodeName)));
 
         HGDepthFirstTraversal traversal = new HGDepthFirstTraversal(termNode, new SimpleALGenerator(graph));
 
@@ -183,16 +202,8 @@ public class HypergraphOfEntity {
             Pair<HGHandle, HGHandle> current = traversal.next();
             HGLink l = graph.get(current.getFirst());
             Object atom = graph.get(current.getSecond());
-            System.out.println("Visiting atom " + atom +
-                               " pointed to by " + l);
-        }*/
-
-        return nodes;
-    }
-
-    public void search(String query) throws IOException {
-        List<String> tokens = tokenize(query);
-        System.out.println(getSeedNodes(tokens));
+            System.out.println("Visiting atom " + atom + " pointed to by " + l);
+        }
     }
 
     public void printNodes() {
@@ -207,7 +218,7 @@ public class HypergraphOfEntity {
             while (rs.hasNext()) {
                 HGHandle current = rs.next();
                 Node node = graph.get(current);
-                System.out.println(node.getName() + " - " + node.getType());
+                System.out.println(node.getName() + " - " + node.getClass().getSimpleName());
             }
         } finally {
             rs.close();

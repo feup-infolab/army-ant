@@ -10,9 +10,4 @@ public class DocumentNode extends Node {
     public DocumentNode(String name) {
         super(name);
     }
-
-    @Override
-    public String getType() {
-        return "document";
-    }
 }
