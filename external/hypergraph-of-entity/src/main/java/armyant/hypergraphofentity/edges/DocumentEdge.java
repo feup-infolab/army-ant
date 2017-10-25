@@ -1,6 +1,7 @@
 package armyant.hypergraphofentity.edges;
 
 import armyant.hypergraphofentity.nodes.DocumentNode;
+import org.hypergraphdb.HGHandle;
 
 /**
  * Created by jldevezas on 2017-10-24.
@@ -12,7 +13,8 @@ public class DocumentEdge extends Edge {
 
     }
 
-    public DocumentEdge(String docID) {
+    public DocumentEdge(String docID, HGHandle... outgoingSet) {
+        super(outgoingSet);
         this.docID = docID;
     }
 

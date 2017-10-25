@@ -1,6 +1,8 @@
 package armyant.hypergraphofentity;
 
+import armyant.hypergraphofentity.edges.ContainedInEdge;
 import armyant.hypergraphofentity.edges.DocumentEdge;
+import armyant.hypergraphofentity.edges.RelatedToEdge;
 import armyant.hypergraphofentity.nodes.DocumentNode;
 import armyant.hypergraphofentity.nodes.EntityNode;
 import armyant.hypergraphofentity.nodes.Node;
@@ -73,7 +75,7 @@ public class HypergraphOfEntity {
             termHandles.add(handle);
         }
 
-        HGValueLink link = new HGValueLink(new DocumentEdge("document"), nodeHandles.toArray(new HGHandle[nodeHandles.size()]));
+        DocumentEdge link = new DocumentEdge(document.getDocID(), nodeHandles.toArray(new HGHandle[nodeHandles.size()]));
         graph.add(link);
 
         return termHandles;
@@ -98,7 +100,7 @@ public class HypergraphOfEntity {
                 handles.add(addUnique(graph, node, eq(node)));
             }
 
-            HGValueLink link = new HGValueLink("related_to", handles.toArray(new HGHandle[handles.size()]));
+            RelatedToEdge link = new RelatedToEdge(handles.toArray(new HGHandle[handles.size()]));
             graph.add(link);
 
             entities.addAll(handles);
@@ -124,7 +126,7 @@ public class HypergraphOfEntity {
 
             handles.add(entityHandle);
 
-            HGValueLink link = new HGValueLink("term_entity_substring", handles.toArray(new HGHandle[handles.size()]));
+            ContainedInEdge link = new ContainedInEdge(handles.toArray(new HGHandle[handles.size()]));
             graph.add(link);
         }
     }
@@ -151,8 +153,7 @@ public class HypergraphOfEntity {
 
             HGSearchResult<HGHandle> rs = graph.find(
                     and(
-                            type(String.class),
-                            eq("term_entity_substring"),
+                            type(ContainedInEdge.class),
                             link(queryTermNodeHandle)
                     )
             );
@@ -160,7 +161,7 @@ public class HypergraphOfEntity {
             try {
                 while (rs.hasNext()) {
                     HGHandle current = rs.next();
-                    HGValueLink link = graph.get(current);
+                    ContainedInEdge link = graph.get(current);
                     for (int i = 0; i < link.getArity(); i++) {
                         Node node = graph.get(link.getTargetAt(i));
                         if (node.getType().equals("entity")) {
