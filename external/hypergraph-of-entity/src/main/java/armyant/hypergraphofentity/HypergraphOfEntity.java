@@ -11,6 +11,8 @@ import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.AttributeFactory;
 import org.hypergraphdb.*;
+import org.hypergraphdb.algorithms.GraphClassics;
+import org.hypergraphdb.algorithms.HGALGenerator;
 import org.hypergraphdb.algorithms.HGDepthFirstTraversal;
 import org.hypergraphdb.algorithms.SimpleALGenerator;
 import org.hypergraphdb.util.Pair;
@@ -44,6 +46,7 @@ public class HypergraphOfEntity {
         this.graph.close();
     }
 
+
     private List<String> tokenize(String text) throws IOException {
         AttributeFactory factory = AttributeFactory.DEFAULT_ATTRIBUTE_FACTORY;
 
@@ -59,6 +62,7 @@ public class HypergraphOfEntity {
 
         return tokens;
     }
+
 
     private Set<HGHandle> indexDocument(Document document, Set<HGHandle> entityHandles) throws IOException {
         List<String> tokens = tokenize(document.getText());
@@ -140,25 +144,35 @@ public class HypergraphOfEntity {
         linkTextAndKnowledge(termHandles, entityHandles);
     }
 
-    private Set<Node> getSeedNodes(List<String> terms) {
-        Set<Node> seedNodes = new HashSet<>();
+
+
+    private Map<String, HGHandle> getQueryTermNodes(List<String> terms) {
+        Map<String, HGHandle> termNodeMap = new HashMap<>();
 
         for (String term : terms) {
-            Set<Node> localSeedNodes = new HashSet<>();
-
-            HGHandle queryTermNodeHandle = graph.findOne(
+            HGHandle termNode = graph.findOne(
                     and(
                             type(TermNode.class),
                             eq("name", term)
                     )
             );
 
-            if (queryTermNodeHandle == null) continue;
+            if (termNode != null) termNodeMap.put(term, termNode);
+        }
+
+        return termNodeMap;
+    }
+
+    private Set<HGHandle> getSeedNodes(Map<String, HGHandle> queryTermNodes) {
+        Set<HGHandle> seedNodes = new HashSet<>();
+
+        for (HGHandle queryTermNode: queryTermNodes.values()) {
+            Set<HGHandle> localSeedNodes = new HashSet<>();
 
             HGSearchResult<HGHandle> rs = graph.find(
                     and(
                             type(ContainedInEdge.class),
-                            link(queryTermNodeHandle)
+                            link(queryTermNode)
                     )
             );
 
@@ -169,14 +183,13 @@ public class HypergraphOfEntity {
                     for (int i = 0; i < link.getArity(); i++) {
                         Node node = graph.get(link.getTargetAt(i));
                         if (node instanceof EntityNode) {
-                            EntityNode entityNode = (EntityNode) node;
-                            localSeedNodes.add(entityNode);
+                            localSeedNodes.add(link.getTargetAt(i));
                         }
                     }
                 }
 
                 if (localSeedNodes.isEmpty()) {
-                    localSeedNodes.add(graph.get(queryTermNodeHandle));
+                    localSeedNodes.add(queryTermNode);
                 }
 
                 seedNodes.addAll(localSeedNodes);
@@ -188,9 +201,56 @@ public class HypergraphOfEntity {
         return seedNodes;
     }
 
+    private double coverage(HGHandle entity, Set<HGHandle> seedNodes) {
+        if (seedNodes.isEmpty()) return 0d;
+
+        HGALGenerator generator = new SimpleALGenerator(this.graph);
+        Set<HGHandle> reachedSeedNodes = new HashSet<>();
+
+        for (HGHandle seedNode : seedNodes) {
+            Double distance = GraphClassics.dijkstra(entity, seedNode, generator);
+            if (distance != null) {
+                reachedSeedNodes.add(seedNode);
+            }
+        }
+
+        return (double)reachedSeedNodes.size() / seedNodes.size();
+    }
+
+    private double confidenceWeight(HGHandle seedNode, Set<HGHandle> queryTermNodes) {
+        if (seedNode == null) return 0;
+
+        graph.count(
+                and(
+
+                )
+        );
+
+        return 0d;
+    }
+
+
     public void search(String query) throws IOException {
         List<String> tokens = tokenize(query);
-        System.out.println(getSeedNodes(tokens));
+
+        Map<String, HGHandle> queryTermNodes = getQueryTermNodes(tokens);
+
+        /*Set<HGHandle> seedNodes = getSeedNodes(queryTermNodes);
+        System.out.println(seedNodes.stream().map(graph::get).collect(Collectors.toList()));*/
+
+        /*double coverage = coverage(
+                graph.findOne(
+                        and(
+                                type(EntityNode.class),
+                                eq("name", "Semantic search")
+                        )
+                ),
+                seedNodes
+        );
+        System.out.println(coverage);*/
+
+        /*double weight = confidenceWeight(seedNodes.iterator().next());
+        System.out.println(weight);*/
     }
 
     public void printDepthFirst(String fromNodeName) {

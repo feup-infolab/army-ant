@@ -4,6 +4,7 @@ import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 
 /**
  * Created by jldevezas on 2017-10-23.
@@ -19,10 +20,10 @@ public class HypergraphOfEntityTest {
             "closed system, to generate more relevant results.",
 
             Arrays.asList(
-                    Triple.create("Semantic search", "related_to", "Search engine technology"),
-                    Triple.create("Semantic search", "related_to", "Intention"),
-                    Triple.create("Semantic search", "related_to", "Context (language use)"),
-                    Triple.create("Semantic search", "related_to", "World Wide Web")
+                    new Triple("Semantic search", "related_to", "Search engine technology"),
+                    new Triple("Semantic search", "related_to", "Intention"),
+                    new Triple("Semantic search", "related_to", "Context (language use)"),
+                    new Triple("Semantic search", "related_to", "World Wide Web")
             )
     );
 
@@ -33,14 +34,23 @@ public class HypergraphOfEntityTest {
             "stores information for retrieval and presentation in response to user queries.",
 
             Arrays.asList(
-                    Triple.create("Search engine technology", "related_to", "Search engine")
+                    new Triple("Search engine technology", "related_to", "Search engine")
             )
+    );
+
+    public static final Document document3 = new Document(
+            "D3",
+
+            "Unreachable people.",
+
+            Collections.singletonList(new Triple("Unreachable Me", "related_to", "Unreachable You"))
     );
 
     public void testIndex() throws IOException {
         HypergraphOfEntity hgoe = new HypergraphOfEntity("/tmp/hgoe.db");
         hgoe.index(document1);
         hgoe.index(document2);
+        hgoe.index(document3);
         hgoe.printNodes();
         hgoe.close();
     }
@@ -48,7 +58,7 @@ public class HypergraphOfEntityTest {
     public void testSearch() throws IOException {
         HypergraphOfEntity hgoe = new HypergraphOfEntity("/tmp/hgoe.db");
         //hgoe.printDepthFirst("web");
-        hgoe.search("web search system nomatchforme");
+        hgoe.search("unreachable web search system nomatchforme");
         hgoe.close();
     }
 

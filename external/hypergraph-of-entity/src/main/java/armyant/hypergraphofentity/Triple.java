@@ -8,10 +8,6 @@ public class Triple {
     private String predicate;
     private String object;
 
-    public static Triple create(String subject, String predicate, String object) {
-        return new Triple(subject, predicate, object);
-    }
-
     public Triple(String subject, String predicate, String object) {
         this.subject = subject;
         this.predicate = predicate;
