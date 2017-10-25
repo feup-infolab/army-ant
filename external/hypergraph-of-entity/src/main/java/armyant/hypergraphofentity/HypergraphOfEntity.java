@@ -2,6 +2,7 @@ package armyant.hypergraphofentity;
 
 import armyant.hypergraphofentity.edges.ContainedInEdge;
 import armyant.hypergraphofentity.edges.DocumentEdge;
+import armyant.hypergraphofentity.edges.Edge;
 import armyant.hypergraphofentity.edges.RelatedToEdge;
 import armyant.hypergraphofentity.nodes.DocumentNode;
 import armyant.hypergraphofentity.nodes.EntityNode;
@@ -15,6 +16,7 @@ import org.hypergraphdb.algorithms.GraphClassics;
 import org.hypergraphdb.algorithms.HGALGenerator;
 import org.hypergraphdb.algorithms.HGDepthFirstTraversal;
 import org.hypergraphdb.algorithms.SimpleALGenerator;
+import org.hypergraphdb.atom.HGAtomSet;
 import org.hypergraphdb.util.Pair;
 
 import java.io.IOException;
@@ -216,15 +218,44 @@ public class HypergraphOfEntity {
         return (double) reachedSeedNodes.size() / seedNodes.size();
     }
 
+    private List<HGHandle> collectNodesFromEdge(Edge edge) {
+        List<HGHandle> nodes = new ArrayList<>();
+
+        for (int i=0; i < edge.getArity(); i++) {
+            HGHandle handle = edge.getTargetAt(i);
+            Object atom = graph.get(handle);
+            if (atom instanceof Node) {
+                nodes.add(handle);
+            } else if (atom instanceof Edge){
+                nodes.addAll(collectNodesFromEdge((Edge) atom));
+            }
+        }
+
+        return nodes;
+    }
+
+    private List<HGHandle> collectNodesFromIncidenceSet(IncidenceSet incidenceSet) {
+        List<HGHandle> nodes = new ArrayList<>();
+
+        HGRandomAccessResult<HGHandle> handles = incidenceSet.getSearchResult();
+        while (handles.hasNext()) {
+            HGHandle handle = handles.next();
+            Object atom = graph.get(handle);
+            if (atom instanceof Node) {
+                nodes.add(handle);
+            } else if (atom instanceof Edge) {
+                nodes.addAll(collectNodesFromEdge((Edge) atom));
+            }
+        }
+
+        return nodes;
+    }
+
     private double confidenceWeight(HGHandle seedNode, Set<HGHandle> queryTermNodes) {
         if (seedNode == null) return 0;
 
-
-        HGRandomAccessResult<HGHandle> neighbors = graph.getIncidenceSet(seedNode).getSearchResult();
-        while (neighbors.hasNext()) {
-            HGHandle neighbor = neighbors.next();
-            System.out.println(graph.get(neighbor).toString());
-        }
+        List<HGHandle> incidentNodes = collectNodesFromIncidenceSet(graph.getIncidenceSet(seedNode));
+        System.out.println(incidentNodes.stream().map(graph::get).collect(Collectors.toList()));
 
         return 0d;
     }
@@ -249,12 +280,22 @@ public class HypergraphOfEntity {
         );
         System.out.println(coverage);*/
 
-        double weight = confidenceWeight(seedNodes.iterator().next(), new HashSet<>(queryTermNodes.values()));
+        HGHandle seedNode = seedNodes.iterator().next();
+        System.out.println(graph.get(seedNode).toString());
+        double weight = confidenceWeight(seedNode, new HashSet<>(queryTermNodes.values()));
         System.out.println(weight);
     }
 
+    public void printStatistics() {
+        long numNodes = graph.count(typePlus(Node.class));
+        long numEdges = graph.count(typePlus(Edge.class));
+
+        System.out.println("Nodes: " + numNodes);
+        System.out.println("Edges: " + numEdges);
+    }
+
     public void printDepthFirst(String fromNodeName) {
-        HGHandle termNode = graph.findOne(and(type(TermNode.class), eq("name", fromNodeName)));
+        HGHandle termNode = graph.findOne(and(typePlus(Node.class), eq("name", fromNodeName)));
 
         HGDepthFirstTraversal traversal = new HGDepthFirstTraversal(termNode, new SimpleALGenerator(graph));
 
@@ -279,6 +320,27 @@ public class HypergraphOfEntity {
                 HGHandle current = rs.next();
                 Node node = graph.get(current);
                 System.out.println(node.getName() + " - " + node.getClass().getSimpleName());
+            }
+        } finally {
+            rs.close();
+        }
+    }
+
+    public void printEdges() {
+        HGSearchResult<HGHandle> rs = graph.find(typePlus(Edge.class));
+
+        try {
+            while (rs.hasNext()) {
+                HGHandle current = rs.next();
+                Edge edge = graph.get(current);
+                List<Node> edgeNodes = new ArrayList<>();
+                for (int i=0; i < edge.getArity(); i++) {
+                    edgeNodes.add(graph.get(edge.getTargetAt(i)));
+                }
+                String members = String.join(" -- ", edgeNodes.stream()
+                        .map(Node::toString)
+                        .collect(Collectors.toList()));
+                System.out.println(members+ " - " + edge.getClass().getSimpleName());
             }
         } finally {
             rs.close();

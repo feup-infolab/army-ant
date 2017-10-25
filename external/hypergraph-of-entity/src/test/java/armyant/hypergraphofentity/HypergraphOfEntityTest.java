@@ -46,6 +46,26 @@ public class HypergraphOfEntityTest {
             Collections.singletonList(new Triple("Unreachable Me", "related_to", "Unreachable You"))
     );
 
+    public void testPrints() {
+        HypergraphOfEntity hgoe = new HypergraphOfEntity("/tmp/hgoe.db");
+
+        System.out.println("====> Statistics");
+        hgoe.printStatistics();
+        System.out.print("\n");
+
+        System.out.println("====> Nodes");
+        hgoe.printNodes();
+        System.out.print("\n");
+
+        System.out.println("====> Edges");
+        hgoe.printEdges();
+        System.out.print("\n");
+
+        System.out.println("====> Depth first traversal starting at 'Semantic search' entity");
+        hgoe.printDepthFirst("Semantic search");
+        System.out.print("\n");
+    }
+
     public void testIndex() throws IOException {
         HypergraphOfEntity hgoe = new HypergraphOfEntity("/tmp/hgoe.db");
         hgoe.index(document1);
