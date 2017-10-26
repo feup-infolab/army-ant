@@ -16,7 +16,6 @@ import org.hypergraphdb.algorithms.GraphClassics;
 import org.hypergraphdb.algorithms.HGALGenerator;
 import org.hypergraphdb.algorithms.HGDepthFirstTraversal;
 import org.hypergraphdb.algorithms.SimpleALGenerator;
-import org.hypergraphdb.atom.HGAtomSet;
 import org.hypergraphdb.util.Pair;
 
 import java.io.IOException;
@@ -221,25 +220,8 @@ public class HypergraphOfEntity {
     private List<HGHandle> collectNodesFromEdge(Edge edge) {
         List<HGHandle> nodes = new ArrayList<>();
 
-        for (int i=0; i < edge.getArity(); i++) {
+        for (int i = 0; i < edge.getArity(); i++) {
             HGHandle handle = edge.getTargetAt(i);
-            Object atom = graph.get(handle);
-            if (atom instanceof Node) {
-                nodes.add(handle);
-            } else if (atom instanceof Edge){
-                nodes.addAll(collectNodesFromEdge((Edge) atom));
-            }
-        }
-
-        return nodes;
-    }
-
-    private List<HGHandle> collectNodesFromIncidenceSet(IncidenceSet incidenceSet) {
-        List<HGHandle> nodes = new ArrayList<>();
-
-        HGRandomAccessResult<HGHandle> handles = incidenceSet.getSearchResult();
-        while (handles.hasNext()) {
-            HGHandle handle = handles.next();
             Object atom = graph.get(handle);
             if (atom instanceof Node) {
                 nodes.add(handle);
@@ -251,15 +233,55 @@ public class HypergraphOfEntity {
         return nodes;
     }
 
+    private Set<HGHandle> getNeighbors(HGHandle sourceNodeHandle, Class edgeType) {
+        Set<HGHandle> nodes = new HashSet<>();
+
+        HGRandomAccessResult<HGHandle> incidentEdges = graph.getIncidenceSet(sourceNodeHandle).getSearchResult();
+        while (incidentEdges.hasNext()) {
+            HGHandle edgeHandle = incidentEdges.next();
+            Edge edge = graph.get(edgeHandle);
+            if (edgeType.isInstance(edge)) {
+                nodes.addAll(collectNodesFromEdge(edge));
+            }
+        }
+
+        nodes.remove(sourceNodeHandle);
+
+        return nodes;
+    }
+
     private double confidenceWeight(HGHandle seedNode, Set<HGHandle> queryTermNodes) {
         if (seedNode == null) return 0;
 
-        List<HGHandle> incidentNodes = collectNodesFromIncidenceSet(graph.getIncidenceSet(seedNode));
-        System.out.println(incidentNodes.stream().map(graph::get).collect(Collectors.toList()));
+        if (graph.get(seedNode) instanceof TermNode) return 1;
 
-        return 0d;
+        Set<HGHandle> neighbors = getNeighbors(seedNode, ContainedInEdge.class);
+        //System.out.println("Neighbors: " + neighbors.stream().map(graph::get).collect(Collectors.toList()));
+
+        /*for (HGHandle incidentNode : neighbors) {
+            Object atom = graph.get(incidentNode);
+            if (atom instanceof TermNode) {
+                System.out.println(atom);
+            }
+        }*/
+
+        double degree = neighbors.size();
+
+        Set<HGHandle> linkedQueryTermNodes = new HashSet<>(neighbors);
+        linkedQueryTermNodes.retainAll(queryTermNodes);
+
+        /*System.out.println(linkedQueryTermNodes);
+        System.out.println(neighbors);*/
+
+        return (double) linkedQueryTermNodes.size() / neighbors.size();
     }
 
+    public double entityWeight(HGHandle entity, Set<HGHandle> seedNodes) {
+        //double score = confidenceWeight(entity, seedNodes) * 1d/seedNodes.size() *
+
+        // get all paths between the entity and a seed node (within a maximum distance)
+
+    }
 
     public void search(String query) throws IOException {
         List<String> tokens = tokenize(query);
@@ -281,9 +303,9 @@ public class HypergraphOfEntity {
         System.out.println(coverage);*/
 
         HGHandle seedNode = seedNodes.iterator().next();
-        System.out.println(graph.get(seedNode).toString());
+        //System.out.println("Source: " + graph.get(seedNode).toString());
         double weight = confidenceWeight(seedNode, new HashSet<>(queryTermNodes.values()));
-        System.out.println(weight);
+        System.out.println("Weight: " + weight);
     }
 
     public void printStatistics() {
@@ -334,13 +356,13 @@ public class HypergraphOfEntity {
                 HGHandle current = rs.next();
                 Edge edge = graph.get(current);
                 List<Node> edgeNodes = new ArrayList<>();
-                for (int i=0; i < edge.getArity(); i++) {
+                for (int i = 0; i < edge.getArity(); i++) {
                     edgeNodes.add(graph.get(edge.getTargetAt(i)));
                 }
                 String members = String.join(" -- ", edgeNodes.stream()
                         .map(Node::toString)
                         .collect(Collectors.toList()));
-                System.out.println(members+ " - " + edge.getClass().getSimpleName());
+                System.out.println(members + " - " + edge.getClass().getSimpleName());
             }
         } finally {
             rs.close();
