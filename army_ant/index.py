@@ -5,7 +5,8 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import logging, string, asyncio, pymongo, re, json, psycopg2, os
+import logging, string, asyncio, pymongo, re, json, psycopg2, os, jpype
+from jpype import *
 from aiogremlin import Cluster
 from aiogremlin.gremlin_python.structure.graph import Vertex
 from threading import RLock
@@ -34,6 +35,8 @@ class Index(object):
             return GraphOfWordCSV(reader, index_location, loop)
         elif index_type == 'goe_csv':
             return GraphOfEntityCSV(reader, index_location, loop)
+        elif index_type == 'hgoe':
+            return HypergraphOfEntity(reader, index_location, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 
@@ -53,6 +56,8 @@ class Index(object):
             return GraphOfEntityCSV(None, index_location, loop)
         elif index_type == 'gremlin':
             return GremlinServerIndex(None, index_location, loop)
+        elif index_type == 'hgoe':
+            return HypergraphOfEntity(None, index_location, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 
@@ -551,3 +556,24 @@ class GraphOfEntityCSV(GraphOfEntityBatch):
             )
             TO STDOUT WITH CSV HEADER
             """, f)
+
+class HypergraphOfEntity(Index):
+    async def index(self):
+        classpath = 'external/hypergraph-of-entity/target/hypergraph-of-entity-0.1-SNAPSHOT-jar-with-dependencies.jar'
+        startJVM(jpype.getDefaultJVMPath(), '-Djava.class.path=%s' % classpath)
+
+        package = JPackage('armyant.hypergraphofentity')
+        HypergraphOfEntity = package.HypergraphOfEntity
+        Document = package.Document
+        Triple = package.Triple
+
+        hgoe = HypergraphOfEntity(JString(self.index_location))
+        
+        for doc in self.reader:
+            triples = list(map(lambda t: Triple(JString(t[0].label), JString(t[1]), JString(t[2].label)), doc.triples))
+            jDoc = Document(JString(doc.doc_id), JString(doc.text), java.util.Arrays.asList(JArray(Triple, len(triples))(triples)))
+
+        hgoe.close()
+
+        for i in []: yield i
+        shutdownJVM()

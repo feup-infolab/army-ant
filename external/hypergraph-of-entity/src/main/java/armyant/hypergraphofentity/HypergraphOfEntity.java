@@ -33,6 +33,10 @@ public class HypergraphOfEntity {
     private String path;
     private HyperGraph graph;
 
+    public static HypergraphOfEntity getInstance(String path) {
+        return new HypergraphOfEntity(path);
+    }
+
     public HypergraphOfEntity(String path) {
         this.path = path;
 
@@ -276,11 +280,26 @@ public class HypergraphOfEntity {
         return (double) linkedQueryTermNodes.size() / neighbors.size();
     }
 
+    public void getAllPaths(HGHandle source, HGHandle target) {
+        HGDepthFirstTraversal traversal = new HGDepthFirstTraversal(source, new SimpleALGenerator(graph));
+
+        while (traversal.hasNext()) {
+            Pair<HGHandle, HGHandle> current = traversal.next();
+            HGLink link = graph.get(current.getFirst());
+            Object atom = graph.get(current.getSecond());
+            System.out.println("Visiting atom " + atom + " pointed to by " + link);
+        }
+    }
+
     public double entityWeight(HGHandle entity, Set<HGHandle> seedNodes) {
         //double score = confidenceWeight(entity, seedNodes) * 1d/seedNodes.size() *
 
         // get all paths between the entity and a seed node (within a maximum distance)
+        // constrained (by max distance) depth first search?
+        HGHandle seedNode = seedNodes.iterator().next();
+        getAllPaths(entity, seedNode);
 
+        return 0d;
     }
 
     public void search(String query) throws IOException {
@@ -302,10 +321,12 @@ public class HypergraphOfEntity {
         );
         System.out.println(coverage);*/
 
-        HGHandle seedNode = seedNodes.iterator().next();
+        //HGHandle seedNode = seedNodes.iterator().next();
         //System.out.println("Source: " + graph.get(seedNode).toString());
-        double weight = confidenceWeight(seedNode, new HashSet<>(queryTermNodes.values()));
-        System.out.println("Weight: " + weight);
+        //double weight = confidenceWeight(seedNode, new HashSet<>(queryTermNodes.values()));
+        //System.out.println("Weight: " + weight);
+
+        entityWeight(graph.findOne(and(type(EntityNode.class), eq("name", "Search engine technology"))), seedNodes);
     }
 
     public void printStatistics() {
