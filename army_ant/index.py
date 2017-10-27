@@ -560,20 +560,25 @@ class GraphOfEntityCSV(GraphOfEntityBatch):
 class HypergraphOfEntity(Index):
     async def index(self):
         classpath = 'external/hypergraph-of-entity/target/hypergraph-of-entity-0.1-SNAPSHOT-jar-with-dependencies.jar'
-        startJVM(jpype.getDefaultJVMPath(), '-Djava.class.path=%s' % classpath)
+        startJVM(jpype.getDefaultJVMPath(), '-Djava.class.path=%s' % classpath, '-Xms2g', '-Xmx2g')
 
         package = JPackage('armyant.hypergraphofentity')
         HypergraphOfEntity = package.HypergraphOfEntity
         Document = package.Document
         Triple = package.Triple
 
-        hgoe = HypergraphOfEntity(JString(self.index_location))
-        
-        for doc in self.reader:
-            triples = list(map(lambda t: Triple(JString(t[0].label), JString(t[1]), JString(t[2].label)), doc.triples))
-            jDoc = Document(JString(doc.doc_id), JString(doc.text), java.util.Arrays.asList(JArray(Triple, len(triples))(triples)))
+        try:
+            hgoe = HypergraphOfEntity(self.index_location, True)
+            
+            for doc in self.reader:
+                logger.info("Indexing document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
+                triples = list(map(lambda t: Triple(t[0].label, t[1], t[2].label), doc.triples))
+                jDoc = Document(JString(doc.doc_id), JString(doc.text), java.util.Arrays.asList(triples))
+                hgoe.index(jDoc)
 
-        hgoe.close()
+            hgoe.close()
+        except JavaException as e:
+            logger.error("Java Exception: %s" % e.stacktrace())
 
         for i in []: yield i
         shutdownJVM()
