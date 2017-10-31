@@ -65,9 +65,21 @@
         </dependency>
 
         <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.6</version>
+        </dependency>
+
+        <dependency>
             <groupId>joda-time</groupId>
             <artifactId>joda-time</artifactId>
             <version>2.9.9</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.youcruit.com.cybozu.labs</groupId>
+            <artifactId>langdetect</artifactId>
+            <version>1.1.2-20151117</version>
         </dependency>
     </dependencies>
 

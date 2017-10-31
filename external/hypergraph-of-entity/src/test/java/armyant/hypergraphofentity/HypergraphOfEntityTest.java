@@ -67,7 +67,7 @@ public class HypergraphOfEntityTest {
     }
 
     public void testIndex() throws IOException {
-        HypergraphOfEntity hgoe = new HypergraphOfEntity("/tmp/hgoe.db");
+        HypergraphOfEntity hgoe = new HypergraphOfEntity("/tmp/test-hgoe");
         hgoe.index(document1);
         hgoe.index(document2);
         hgoe.index(document3);
@@ -76,9 +76,9 @@ public class HypergraphOfEntityTest {
     }
 
     public void testSearch() throws IOException {
-        HypergraphOfEntity hgoe = new HypergraphOfEntity("/tmp/hgoe.db");
+        HypergraphOfEntity hgoe = new HypergraphOfEntity("/tmp/test-hgoe");
         //hgoe.printDepthFirst("web");
-        hgoe.search("unreachable web search system nomatchforme");
+        hgoe.search("Monuments of India");
         hgoe.close();
     }
 

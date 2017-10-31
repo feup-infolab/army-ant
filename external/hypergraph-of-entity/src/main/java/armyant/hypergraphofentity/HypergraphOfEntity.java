@@ -8,10 +8,20 @@ import armyant.hypergraphofentity.nodes.DocumentNode;
 import armyant.hypergraphofentity.nodes.EntityNode;
 import armyant.hypergraphofentity.nodes.Node;
 import armyant.hypergraphofentity.nodes.TermNode;
+import com.cybozu.labs.langdetect.Detector;
+import com.cybozu.labs.langdetect.LangDetectException;
 import org.apache.commons.collections4.map.LRUMap;
+import org.apache.commons.io.IOUtils;
+import org.apache.lucene.analysis.CharArraySet;
+import org.apache.lucene.analysis.LowerCaseFilter;
+import org.apache.lucene.analysis.StopFilter;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.core.StopAnalyzer;
+import org.apache.lucene.analysis.standard.StandardFilter;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.AttributeFactory;
+import org.apache.lucene.util.Version;
 import org.hypergraphdb.*;
 import org.hypergraphdb.algorithms.GraphClassics;
 import org.hypergraphdb.algorithms.HGALGenerator;
@@ -27,8 +37,10 @@ import org.joda.time.format.PeriodFormatterBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.StringReader;
+import com.cybozu.labs.langdetect.DetectorFactory;
+
+import java.io.*;
+import java.net.URISyntaxException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -50,7 +62,7 @@ public class HypergraphOfEntity {
     private float avgTimePerDocument;
 
     public HypergraphOfEntity(String path) {
-        nodeCache = new LRUMap<>(100000);
+        nodeCache = new LRUMap<>(1000000);
 
         avgTimePerDocument = 0f;
         counter = 0;
@@ -75,6 +87,12 @@ public class HypergraphOfEntity {
 
         HGHandle entityNodeType = graph.getTypeSystem().getTypeHandle(EntityNode.class);
         graph.getIndexManager().register(new ByPartIndexer(entityNodeType, "name"));
+
+        try {
+            DetectorFactory.loadProfileFromClassPath();
+        } catch (LangDetectException | URISyntaxException | IOException e) {
+            logger.error(e.getMessage(), e);
+        }
     }
 
     public String formatMillis(float millis) {
@@ -118,11 +136,11 @@ public class HypergraphOfEntity {
         for (Node node : atoms.subList(1, atoms.size())) {
             HGHandle handle = handleMap.get(node);
             if (handle == null) {
-                /*handle = nodeCache.get(node);
-                if (handle == null) {*/
+                handle = nodeCache.get(node);
+                if (handle == null) {
                     handle = assertAtom(graph, node, typeHandle);
-                    /*nodeCache.put(node, handle);
-                }*/
+                    nodeCache.put(node, handle);
+                }
                 handleMap.put(node, handle);
             }
         }
@@ -164,16 +182,49 @@ public class HypergraphOfEntity {
     }
 
 
-    private List<String> tokenize(String text) throws IOException {
+    private CharArraySet getStopwords(String language) {
+        StringWriter writer = new StringWriter();
+
+        try {
+            InputStream inputStream = getClass().getResourceAsStream(String.format("stopwords/%s.stopwords", language));
+            IOUtils.copy(inputStream, writer, "UTF-8");
+        } catch (IOException e) {
+            logger.warn("Could not load 'stopwords/{}.stopwords', using english as default", language, e);
+            InputStream inputStream = getClass().getResourceAsStream("stopwords/en.stopwords");
+            try {
+                IOUtils.copy(inputStream, writer, "UTF-8");
+            } catch (IOException e1) {
+                logger.warn("Could not load 'stopwords/en.stopwords'");
+            }
+        }
+
+        List<String> stopwords = Arrays.asList(writer.toString().split("\n"));
+        return new CharArraySet(stopwords, true);
+    }
+
+    private List<String> analyze(String text) throws IOException {
         AttributeFactory factory = AttributeFactory.DEFAULT_ATTRIBUTE_FACTORY;
 
         StandardTokenizer tokenizer = new StandardTokenizer(factory);
-        tokenizer.setReader(new StringReader(text.toLowerCase()));
-        tokenizer.reset();
+        tokenizer.setReader(new StringReader(text));
+
+        String language = "en";
+        try {
+            Detector langDetector = DetectorFactory.create();
+            langDetector.append(text);
+            language = langDetector.detect();
+        } catch (LangDetectException e) {
+            logger.warn("Could not create language detector, using 'en' as default", e);
+        }
+
+        TokenStream filter = new StandardFilter(tokenizer);
+        filter = new LowerCaseFilter(filter);
+        filter = new StopFilter(filter, getStopwords(language));
+        filter.reset();
 
         List<String> tokens = new ArrayList<>();
         CharTermAttribute attr = tokenizer.addAttribute(CharTermAttribute.class);
-        while (tokenizer.incrementToken()) {
+        while (filter.incrementToken()) {
             tokens.add(attr.toString());
         }
 
@@ -182,7 +233,7 @@ public class HypergraphOfEntity {
 
 
     private Set<HGHandle> indexDocument(Document document, Set<HGHandle> entityHandles) throws IOException {
-        List<String> tokens = tokenize(document.getText());
+        List<String> tokens = analyze(document.getText());
         if (tokens.isEmpty()) return new HashSet<>();
 
         Set<HGHandle> nodeHandles = new HashSet<>(entityHandles);
@@ -428,12 +479,12 @@ public class HypergraphOfEntity {
     }
 
     public void search(String query) throws IOException {
-        List<String> tokens = tokenize(query);
+        List<String> tokens = analyze(query);
 
         Map<String, HGHandle> queryTermNodes = getQueryTermNodes(tokens);
 
         Set<HGHandle> seedNodes = getSeedNodes(queryTermNodes);
-        //System.out.println(seedNodes.stream().map(graph::get).collect(Collectors.toList()));
+        System.out.println(seedNodes.stream().map(graph::get).collect(Collectors.toList()));
 
         /*double coverage = coverage(
                 graph.findOne(
@@ -446,12 +497,12 @@ public class HypergraphOfEntity {
         );
         System.out.println(coverage);*/
 
-        //HGHandle seedNode = seedNodes.iterator().next();
-        //System.out.println("Source: " + graph.get(seedNode).toString());
-        //double weight = confidenceWeight(seedNode, new HashSet<>(queryTermNodes.values()));
-        //System.out.println("Weight: " + weight);
+        HGHandle seedNode = seedNodes.iterator().next();
+        System.out.println("Source: " + graph.get(seedNode).toString());
+        double weight = confidenceWeight(seedNode, new HashSet<>(queryTermNodes.values()));
+        System.out.println("Weight: " + weight);
 
-        entityWeight(graph.findOne(and(type(EntityNode.class), eq("name", "Search engine technology"))), seedNodes);
+        //entityWeight(graph.findOne(and(type(EntityNode.class), eq("name", "Search engine technology"))), seedNodes);
     }
 
 
