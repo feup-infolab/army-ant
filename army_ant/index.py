@@ -568,10 +568,10 @@ class HypergraphOfEntity(Index):
         Triple = package.Triple
 
         try:
-            hgoe = HypergraphOfEntity(self.index_location, True)
+            hgoe = HypergraphOfEntity(self.index_location)
             
             for doc in self.reader:
-                logger.info("Indexing document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
+                #logger.info("Indexing document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
                 triples = list(map(lambda t: Triple(t[0].label, t[1], t[2].label), doc.triples))
                 jDoc = Document(JString(doc.doc_id), JString(doc.text), java.util.Arrays.asList(triples))
                 hgoe.index(jDoc)

@@ -8,7 +8,6 @@ import armyant.hypergraphofentity.nodes.DocumentNode;
 import armyant.hypergraphofentity.nodes.EntityNode;
 import armyant.hypergraphofentity.nodes.Node;
 import armyant.hypergraphofentity.nodes.TermNode;
-import org.apache.commons.collections4.map.LRUMap;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.AttributeFactory;
@@ -17,10 +16,10 @@ import org.hypergraphdb.algorithms.GraphClassics;
 import org.hypergraphdb.algorithms.HGALGenerator;
 import org.hypergraphdb.algorithms.HGDepthFirstTraversal;
 import org.hypergraphdb.algorithms.SimpleALGenerator;
-import org.hypergraphdb.handle.SequentialUUIDHandleFactory;
-import org.hypergraphdb.indexing.ByPartIndexer;
-import org.hypergraphdb.storage.bje.BJEConfig;
 import org.hypergraphdb.util.Pair;
+import org.joda.time.Duration;
+import org.joda.time.format.PeriodFormatter;
+import org.joda.time.format.PeriodFormatterBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,66 +34,95 @@ import static org.hypergraphdb.HGQuery.hg.*;
  * Created by jldevezas on 2017-10-23.
  */
 public class HypergraphOfEntity {
-    public static final int TRANSACTION_SIZE = 100;
     private static final Logger logger = LoggerFactory.getLogger(HypergraphOfEntity.class);
 
-    private String path;
     private HGConfiguration config;
     private HyperGraph graph;
-    private long indexedCounter;
-    private Long batchStartTime;
-    private boolean batch;
-
-    private LRUMap<Node, HGHandle> nodeCache;
-    //private LRUMap<Edge, HGHandle> edgeCache;
+    private long counter;
+    private long totalTime;
+    private float avgTimePerDocument;
 
     public HypergraphOfEntity(String path) {
-        this(path, false);
-    }
-
-    public HypergraphOfEntity(String path, boolean batch) {
-        this.path = path;
-        this.batch = batch;
-        this.nodeCache = new LRUMap<>(100000);
-        //this.edgeCache = new LRUMap<>(10000);
-
-        indexedCounter = 0;
+        avgTimePerDocument = 0f;
+        counter = 0;
 
         config = new HGConfiguration();
-        config.setTransactional(true);
-        //config.setSkipOpenedEvent(true);
-        config.setUseSystemAtomAttributes(false);
-        //config.setSkipMaintenance(true);
-        //config.setMaxCachedIncidenceSetSize(10000000);
+        config.setSkipMaintenance(true);
 
-        SequentialUUIDHandleFactory handleFactory = new SequentialUUIDHandleFactory(System.currentTimeMillis(), 0);
-        config.setHandleFactory(handleFactory);
+        /*SequentialUUIDHandleFactory handleFactory = new SequentialUUIDHandleFactory(System.currentTimeMillis(), 0);
+        config.setHandleFactory(handleFactory);*/
 
-        BJEConfig bjeConfig = (BJEConfig) config.getStoreImplementation().getConfiguration();
-        bjeConfig.getEnvironmentConfig().setCacheSize(1024 * 1024 * 1024);
+        /*BJEConfig bjeConfig = (BJEConfig) config.getStoreImplementation().getConfiguration();
+        bjeConfig.getEnvironmentConfig().setCacheSize(1024 * 1024 * 1024);*/
 
-        this.graph = HGEnvironment.get(this.path, config);
+        this.graph = HGEnvironment.get(path, config);
 
-        HGHandle nodeType = graph.getTypeSystem().getTypeHandle(Node.class);
+        /*HGHandle nodeType = graph.getTypeSystem().getTypeHandle(Node.class);
         graph.getIndexManager().register(new ByPartIndexer(nodeType, "name"));
 
         HGHandle termNodeType = graph.getTypeSystem().getTypeHandle(TermNode.class);
         graph.getIndexManager().register(new ByPartIndexer(termNodeType, "name"));
 
         HGHandle entityNodeType = graph.getTypeSystem().getTypeHandle(EntityNode.class);
-        graph.getIndexManager().register(new ByPartIndexer(entityNodeType, "name"));
+        graph.getIndexManager().register(new ByPartIndexer(entityNodeType, "name"));*/
+    }
 
-        if (batch) {
-            logger.info("Using batch commit with transaction size = {}", TRANSACTION_SIZE);
-            this.graph.getTransactionManager().beginTransaction();
-        }
+    public String formatMillis(float millis) {
+        if (millis >= 1000) return formatMillis((long) millis);
+        return String.format("%.2fms", millis);
+    }
+
+    public String formatMillis(long millis) {
+        Duration duration = new Duration(millis); // in milliseconds
+        PeriodFormatter formatter = new PeriodFormatterBuilder()
+                .appendDays()
+                .appendSuffix("d")
+                .appendHours()
+                .appendSuffix("h")
+                .appendMinutes()
+                .appendSuffix("m")
+                .appendSeconds()
+                .appendSuffix("s")
+                .appendMillis()
+                .appendSuffix("ms")
+                .toFormatter();
+        return formatter.print(duration.toPeriod());
     }
 
     public void close() {
-        if (batch) {
-            this.graph.getTransactionManager().commit();
+        graph.close();
+        logger.info(
+                "{} indexed documents in {} (avg./doc: {})",
+                counter, formatMillis(totalTime), formatMillis(avgTimePerDocument));
+    }
+
+
+    public <T> Map<T, HGHandle> bulkImport(final Collection<T> atoms) {
+        if (atoms.isEmpty()) return new HashMap<>();
+
+        final Map<T, HGHandle> handleMap = new HashMap<>(atoms.size());
+        final T first = atoms.iterator().next();
+        HGHandle firstH = graph.add(first);
+        handleMap.put(first, firstH);
+        final HGHandle typeHandle = graph.getType(firstH);
+
+        if (config.isTransactional())
+            graph.getTransactionManager().ensureTransaction(() -> assertAtomLight(atoms, typeHandle, handleMap));
+        else
+            assertAtomLight(atoms, typeHandle, handleMap);
+
+        return handleMap;
+    }
+
+    public <T> Boolean assertAtomLight(Collection<T> atoms, HGHandle typeHandle, Map<T, HGHandle> handleMap) {
+        for (T o : atoms) {
+            HGHandle result = handleMap.get(o);
+            if (result == null) {
+                result = graph.add(o, typeHandle);
+                handleMap.put(o, result);
+            }
         }
-        this.graph.close();
+        return true;
     }
 
 
@@ -116,72 +144,41 @@ public class HypergraphOfEntity {
 
 
     private Set<HGHandle> indexDocument(Document document, Set<HGHandle> entityHandles) throws IOException {
-        logger.debug("Entering indexDocument() for document {}", document.getDocID());
-
         List<String> tokens = tokenize(document.getText());
+        if (tokens.isEmpty()) return new HashSet<>();
 
-        Set<HGHandle> nodeHandles = new HashSet<>();
-        Set<HGHandle> termHandles = new HashSet<>();
-
-        if (tokens.isEmpty()) return termHandles;
+        Set<HGHandle> nodeHandles = new HashSet<>(entityHandles);
 
         DocumentNode documentNode = new DocumentNode(document.getDocID());
         nodeHandles.add(assertAtom(graph, documentNode));
 
-        nodeHandles.addAll(entityHandles);
+        List<TermNode> termNodes = tokens.stream().map(TermNode::new).collect(Collectors.toList());
 
-        Node firstNode = new TermNode(tokens.get(0));
-        HGHandle termTypeHandle = graph.getType(assertAtom(graph, firstNode));
-        for (String term : tokens.subList(1, tokens.size())) {
-            Node node = new TermNode(term);
-
-            HGHandle handle = nodeCache.get(node);
-            if (handle == null) {
-                handle = assertAtom(graph, node, termTypeHandle);
-                nodeCache.put(node, handle);
-            }
-
-            nodeHandles.add(handle);
-            termHandles.add(handle);
-        }
+        Map<TermNode, HGHandle> termHandleMap = bulkImport(termNodes);
+        nodeHandles.addAll(termHandleMap.values());
 
         DocumentEdge link = new DocumentEdge(document.getDocID(), nodeHandles.toArray(new HGHandle[nodeHandles.size()]));
         graph.add(link);
 
-        logger.debug("Exiting indexDocument() for document {}", document.getDocID());
-        return termHandles;
+        return new HashSet<>(termHandleMap.values());
     }
 
     private Set<HGHandle> indexEntities(Document document) {
-        logger.debug("Entering indexEntities() for document {}", document.getDocID());
-
         Set<HGHandle> entities = new HashSet<>();
 
-        Map<String, Set<String>> edges = document.getTriples().stream()
+        Map<EntityNode, Set<EntityNode>> edges = document.getTriples().stream()
                 .collect(Collectors.groupingBy(
-                        Triple::getObject,
-                        Collectors.mapping(Triple::getSubject, Collectors.toSet())));
+                        t -> new EntityNode(t.getSubject()),
+                        Collectors.mapping(t -> new EntityNode(t.getObject()), Collectors.toSet())));
 
-        for (Map.Entry<String, Set<String>> entry : edges.entrySet()) {
-            List<HGHandle> handles = new ArrayList<>();
+        Set<EntityNode> entityNodes = new HashSet<>(edges.keySet());
+        entityNodes.addAll(edges.values().stream().flatMap(Set::stream).collect(Collectors.toSet()));
+        Map<EntityNode, HGHandle> entityHandleMap = bulkImport(entityNodes);
 
-            Node node = new EntityNode(entry.getKey());
-            HGHandle handle = nodeCache.get(node);
-            if (handle == null) {
-                handle = assertAtom(graph, node);
-                handles.add(handle);
-                nodeCache.put(node, handle);
-            }
-
-            for (String target : entry.getValue()) {
-                node = new EntityNode(target);
-                handle = nodeCache.get(node);
-                if (handle == null) {
-                    handle = assertAtom(graph, node);
-                    handles.add(handle);
-                    nodeCache.put(node, handle);
-                }
-            }
+        for (Map.Entry<EntityNode, Set<EntityNode>> entry : edges.entrySet()) {
+            Set<HGHandle> handles = new HashSet<>();
+            handles.add(entityHandleMap.get(entry.getKey()));
+            handles.addAll(entry.getValue().stream().map(entityHandleMap::get).collect(Collectors.toSet()));
 
             RelatedToEdge link = new RelatedToEdge(handles.toArray(new HGHandle[handles.size()]));
             graph.add(link);
@@ -189,13 +186,10 @@ public class HypergraphOfEntity {
             entities.addAll(handles);
         }
 
-        logger.debug("Exiting indexEntities() for document {}", document.getDocID());
         return entities;
     }
 
     private void linkTextAndKnowledge(Set<HGHandle> termHandles, Set<HGHandle> entityHandles) {
-        logger.debug("Entering linkTextAndKnowledge()");
-
         for (HGHandle entityHandle : entityHandles) {
             Set<HGHandle> handles = new HashSet<>();
 
@@ -215,25 +209,25 @@ public class HypergraphOfEntity {
             ContainedInEdge link = new ContainedInEdge(handles.toArray(new HGHandle[handles.size()]));
             graph.add(link);
         }
-
-        logger.debug("Exiting linkTextAndKnowledge()");
     }
 
     public void index(Document document) throws IOException {
-        if (batchStartTime == null) batchStartTime = System.currentTimeMillis();
+        long startTime = System.currentTimeMillis();
 
         Set<HGHandle> entityHandles = indexEntities(document);
         Set<HGHandle> termHandles = indexDocument(document, entityHandles);
         linkTextAndKnowledge(termHandles, entityHandles);
 
-        if (batch && ++indexedCounter % TRANSACTION_SIZE == 0) {
+        long time = System.currentTimeMillis() - startTime;
+        totalTime += time;
+
+        counter++;
+        avgTimePerDocument = counter > 1 ? (avgTimePerDocument * (counter - 1) + time) / counter : time;
+
+        if (counter % 10 == 0) {
             logger.info(
-                    "{} indexed documents, committing batch of {} documents ({} ms)",
-                    indexedCounter, TRANSACTION_SIZE, System.currentTimeMillis() - batchStartTime);
-            graph.getTransactionManager().commit();
-            graph.runMaintenance();
-            batchStartTime = System.currentTimeMillis();
-            graph.getTransactionManager().beginTransaction();
+                    "{} indexed documents in {} (avg./doc: {})",
+                    counter, formatMillis(totalTime), formatMillis(avgTimePerDocument));
         }
     }
 
@@ -261,6 +255,7 @@ public class HypergraphOfEntity {
         for (HGHandle queryTermNode : queryTermNodes.values()) {
             Set<HGHandle> localSeedNodes = new HashSet<>();
 
+            graph.getTransactionManager().beginTransaction();
             HGSearchResult<HGHandle> rs = graph.find(
                     and(
                             type(ContainedInEdge.class),
@@ -280,11 +275,15 @@ public class HypergraphOfEntity {
                     }
                 }
 
+                graph.getTransactionManager().commit();
+
                 if (localSeedNodes.isEmpty()) {
                     localSeedNodes.add(queryTermNode);
                 }
 
                 seedNodes.addAll(localSeedNodes);
+            } catch (Throwable t) {
+                graph.getTransactionManager().abort();
             } finally {
                 rs.close();
             }
