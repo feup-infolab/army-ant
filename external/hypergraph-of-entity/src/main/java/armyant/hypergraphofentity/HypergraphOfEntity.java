@@ -8,6 +8,7 @@ import armyant.hypergraphofentity.nodes.DocumentNode;
 import armyant.hypergraphofentity.nodes.EntityNode;
 import armyant.hypergraphofentity.nodes.Node;
 import armyant.hypergraphofentity.nodes.TermNode;
+import org.apache.commons.collections4.map.LRUMap;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.AttributeFactory;
@@ -16,6 +17,9 @@ import org.hypergraphdb.algorithms.GraphClassics;
 import org.hypergraphdb.algorithms.HGALGenerator;
 import org.hypergraphdb.algorithms.HGDepthFirstTraversal;
 import org.hypergraphdb.algorithms.SimpleALGenerator;
+import org.hypergraphdb.handle.SequentialUUIDHandleFactory;
+import org.hypergraphdb.indexing.ByPartIndexer;
+import org.hypergraphdb.storage.bje.BJEConfig;
 import org.hypergraphdb.util.Pair;
 import org.joda.time.Duration;
 import org.joda.time.format.PeriodFormatter;
@@ -38,33 +42,39 @@ public class HypergraphOfEntity {
 
     private HGConfiguration config;
     private HyperGraph graph;
+
+    private LRUMap<Node, HGHandle> nodeCache;
+
     private long counter;
     private long totalTime;
     private float avgTimePerDocument;
 
     public HypergraphOfEntity(String path) {
+        nodeCache = new LRUMap<>(100000);
+
         avgTimePerDocument = 0f;
         counter = 0;
 
         config = new HGConfiguration();
         config.setSkipMaintenance(true);
+        config.setTransactional(false);
 
-        /*SequentialUUIDHandleFactory handleFactory = new SequentialUUIDHandleFactory(System.currentTimeMillis(), 0);
-        config.setHandleFactory(handleFactory);*/
+        SequentialUUIDHandleFactory handleFactory = new SequentialUUIDHandleFactory(System.currentTimeMillis(), 0);
+        config.setHandleFactory(handleFactory);
 
-        /*BJEConfig bjeConfig = (BJEConfig) config.getStoreImplementation().getConfiguration();
-        bjeConfig.getEnvironmentConfig().setCacheSize(1024 * 1024 * 1024);*/
+        BJEConfig bjeConfig = (BJEConfig) config.getStoreImplementation().getConfiguration();
+        bjeConfig.getEnvironmentConfig().setCacheSize(1024 * 1024 * 1024); // 1 GB
 
         this.graph = HGEnvironment.get(path, config);
 
-        /*HGHandle nodeType = graph.getTypeSystem().getTypeHandle(Node.class);
+        HGHandle nodeType = graph.getTypeSystem().getTypeHandle(Node.class);
         graph.getIndexManager().register(new ByPartIndexer(nodeType, "name"));
 
         HGHandle termNodeType = graph.getTypeSystem().getTypeHandle(TermNode.class);
         graph.getIndexManager().register(new ByPartIndexer(termNodeType, "name"));
 
         HGHandle entityNodeType = graph.getTypeSystem().getTypeHandle(EntityNode.class);
-        graph.getIndexManager().register(new ByPartIndexer(entityNodeType, "name"));*/
+        graph.getIndexManager().register(new ByPartIndexer(entityNodeType, "name"));
     }
 
     public String formatMillis(float millis) {
@@ -96,12 +106,36 @@ public class HypergraphOfEntity {
                 counter, formatMillis(totalTime), formatMillis(avgTimePerDocument));
     }
 
-
-    public <T> Map<T, HGHandle> bulkImport(final Collection<T> atoms) {
+    public Map<? extends Node, HGHandle> multipleImport(final List<? extends Node> atoms) {
         if (atoms.isEmpty()) return new HashMap<>();
 
-        final Map<T, HGHandle> handleMap = new HashMap<>(atoms.size());
-        final T first = atoms.iterator().next();
+        final Map<Node, HGHandle> handleMap = new HashMap<>(atoms.size());
+        final Node first = atoms.iterator().next();
+        HGHandle firstH = assertAtom(graph, first);
+        handleMap.put(first, firstH);
+        final HGHandle typeHandle = graph.getType(firstH);
+
+        for (Node node : atoms.subList(1, atoms.size())) {
+            HGHandle handle = handleMap.get(node);
+            if (handle == null) {
+                /*handle = nodeCache.get(node);
+                if (handle == null) {*/
+                    handle = assertAtom(graph, node, typeHandle);
+                    /*nodeCache.put(node, handle);
+                }*/
+                handleMap.put(node, handle);
+            }
+        }
+
+        return handleMap;
+    }
+
+    // I could only use this with the guarantee that all atoms are distinct!
+    public Map<? extends Node, HGHandle> bulkImport(final Collection<? extends Node> atoms) {
+        if (atoms.isEmpty()) return new HashMap<>();
+
+        final Map<Node, HGHandle> handleMap = new HashMap<>(atoms.size());
+        final Node first = atoms.iterator().next();
         HGHandle firstH = graph.add(first);
         handleMap.put(first, firstH);
         final HGHandle typeHandle = graph.getType(firstH);
@@ -114,12 +148,16 @@ public class HypergraphOfEntity {
         return handleMap;
     }
 
-    public <T> Boolean assertAtomLight(Collection<T> atoms, HGHandle typeHandle, Map<T, HGHandle> handleMap) {
-        for (T o : atoms) {
-            HGHandle result = handleMap.get(o);
-            if (result == null) {
-                result = graph.add(o, typeHandle);
-                handleMap.put(o, result);
+    public boolean assertAtomLight(Collection<? extends Node> atoms, HGHandle typeHandle, Map<Node, HGHandle> handleMap) {
+        for (Node atom : atoms) {
+            HGHandle handle = handleMap.get(atom);
+            if (handle == null) {
+                handle = nodeCache.get(atom);
+                if (handle == null) {
+                    handle = graph.add(atom, typeHandle);
+                    nodeCache.put(atom, handle);
+                }
+                handleMap.put(atom, handle);
             }
         }
         return true;
@@ -154,7 +192,7 @@ public class HypergraphOfEntity {
 
         List<TermNode> termNodes = tokens.stream().map(TermNode::new).collect(Collectors.toList());
 
-        Map<TermNode, HGHandle> termHandleMap = bulkImport(termNodes);
+        Map<? extends Node, HGHandle> termHandleMap = multipleImport(termNodes);
         nodeHandles.addAll(termHandleMap.values());
 
         DocumentEdge link = new DocumentEdge(document.getDocID(), nodeHandles.toArray(new HGHandle[nodeHandles.size()]));
@@ -171,9 +209,9 @@ public class HypergraphOfEntity {
                         t -> new EntityNode(t.getSubject()),
                         Collectors.mapping(t -> new EntityNode(t.getObject()), Collectors.toSet())));
 
-        Set<EntityNode> entityNodes = new HashSet<>(edges.keySet());
+        List<EntityNode> entityNodes = new ArrayList<>(edges.keySet());
         entityNodes.addAll(edges.values().stream().flatMap(Set::stream).collect(Collectors.toSet()));
-        Map<EntityNode, HGHandle> entityHandleMap = bulkImport(entityNodes);
+        Map<? extends Node, HGHandle> entityHandleMap = multipleImport(entityNodes);
 
         for (Map.Entry<EntityNode, Set<EntityNode>> entry : edges.entrySet()) {
             Set<HGHandle> handles = new HashSet<>();
