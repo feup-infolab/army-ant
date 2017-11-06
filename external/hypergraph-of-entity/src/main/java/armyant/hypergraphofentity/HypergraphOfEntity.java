@@ -185,21 +185,23 @@ public class HypergraphOfEntity {
     private CharArraySet getStopwords(String language) {
         StringWriter writer = new StringWriter();
 
-        try {
-            InputStream inputStream = getClass().getResourceAsStream(String.format("stopwords/%s.stopwords", language));
-            IOUtils.copy(inputStream, writer, "UTF-8");
-        } catch (IOException e) {
-            logger.warn("Could not load 'stopwords/{}.stopwords', using english as default", language, e);
-            InputStream inputStream = getClass().getResourceAsStream("stopwords/en.stopwords");
-            try {
-                IOUtils.copy(inputStream, writer, "UTF-8");
-            } catch (IOException e1) {
-                logger.warn("Could not load 'stopwords/en.stopwords'");
-            }
-        }
+        logger.debug("Fetching stopwords for {} language", language);
 
-        List<String> stopwords = Arrays.asList(writer.toString().split("\n"));
-        return new CharArraySet(stopwords, true);
+        String defaultFilename = "/stopwords/en.stopwords";
+        String filename = String.format("/stopwords/%s.stopwords", language);
+
+        try {
+            InputStream inputStream = getClass().getResourceAsStream(filename);
+            if (inputStream == null) {
+                logger.warn("Could not load '{}' stopwords, using 'en' as default", language);
+                inputStream = getClass().getResourceAsStream(defaultFilename);
+            }
+            IOUtils.copy(inputStream, writer, "UTF-8");
+            return new CharArraySet(Arrays.asList(writer.toString().split("\n")), true);
+        } catch (IOException e) {
+            logger.warn("Could not load 'en' stopwords, ignoring stopwords");
+            return CharArraySet.EMPTY_SET;
+        }
     }
 
     private List<String> analyze(String text) throws IOException {
@@ -214,7 +216,7 @@ public class HypergraphOfEntity {
             langDetector.append(text);
             language = langDetector.detect();
         } catch (LangDetectException e) {
-            logger.warn("Could not create language detector, using 'en' as default", e);
+            logger.warn("Could not create language detector, using 'en' as default");
         }
 
         TokenStream filter = new StandardFilter(tokenizer);
