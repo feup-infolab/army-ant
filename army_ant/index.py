@@ -582,3 +582,28 @@ class HypergraphOfEntity(Index):
 
         for i in []: yield i
         shutdownJVM()
+
+    
+    async def search(self, query, offset, limit):
+        classpath = 'external/hypergraph-of-entity/target/hypergraph-of-entity-0.1-SNAPSHOT-jar-with-dependencies.jar'
+        startJVM(jpype.getDefaultJVMPath(), '-Djava.class.path=%s' % classpath, '-Xms5g', '-Xmx5g')
+
+        package = JPackage('armyant.hypergraphofentity')
+        HypergraphOfEntity = package.HypergraphOfEntity
+        Document = package.Document
+        Triple = package.Triple
+
+        results = []
+        try:
+            hgoe = HypergraphOfEntity(self.index_location)
+            
+            results = hgoe.search(query)
+            results = [{ 'doc_id': result.getDocID(), score: -1, components: {} } for result in results]
+
+            hgoe.close()
+        except JavaException as e:
+            logger.error("Java Exception: %s" % e.stacktrace())
+
+        shutdownJVM()
+
+        return { 'results': results }

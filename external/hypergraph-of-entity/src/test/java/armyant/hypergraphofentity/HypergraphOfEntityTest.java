@@ -78,7 +78,8 @@ public class HypergraphOfEntityTest {
     public void testSearch() throws IOException {
         HypergraphOfEntity hgoe = new HypergraphOfEntity("/tmp/test-hgoe");
         //hgoe.printDepthFirst("web");
-        hgoe.search("Monuments of India");
+        //hgoe.search("Monuments of India");
+        hgoe.search("Poirot");
         hgoe.close();
     }
 

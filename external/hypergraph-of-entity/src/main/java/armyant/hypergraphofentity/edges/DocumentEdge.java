@@ -13,12 +13,18 @@ public class DocumentEdge extends Edge {
 
     }
 
-    public DocumentEdge(HGHandle... outgoingSet) {
-        this(null, outgoingSet);
-    }
-
     public DocumentEdge(String docID, HGHandle... outgoingSet) {
         super(outgoingSet);
+        this.docID = docID;
+    }
+
+    public DocumentEdge(String docID, int tailIndex, HGHandle... targets) {
+        super(tailIndex, targets);
+        this.docID = docID;
+    }
+
+    public DocumentEdge(String docID, HGHandle[] head, HGHandle[] tail) {
+        super(head, tail);
         this.docID = docID;
     }
 

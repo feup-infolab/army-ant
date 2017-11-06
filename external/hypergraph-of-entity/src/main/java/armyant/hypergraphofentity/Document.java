@@ -7,14 +7,28 @@ import java.util.List;
  * Created by jldevezas on 2017-10-23.
  */
 public class Document {
+    private Double score;
     private String docID;
     private String text;
     private List<Triple> triples;
 
     public Document(String docID, String text, List<Triple> triples) {
+        this(null, docID, text, triples);
+    }
+
+    public Document(Double score, String docID, String text, List<Triple> triples) {
+        this.score = score;
         this.docID = docID;
         this.text = text;
         this.triples = triples;
+    }
+
+    public Double getScore() {
+        return score;
+    }
+
+    public void setScore(Double score) {
+        this.score = score;
     }
 
     public String getDocID() {

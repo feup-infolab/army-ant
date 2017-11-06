@@ -9,6 +9,7 @@ import armyant.hypergraphofentity.nodes.EntityNode;
 import armyant.hypergraphofentity.nodes.Node;
 import armyant.hypergraphofentity.nodes.TermNode;
 import com.cybozu.labs.langdetect.Detector;
+import com.cybozu.labs.langdetect.DetectorFactory;
 import com.cybozu.labs.langdetect.LangDetectException;
 import org.apache.commons.collections4.map.LRUMap;
 import org.apache.commons.io.IOUtils;
@@ -16,12 +17,10 @@ import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.LowerCaseFilter;
 import org.apache.lucene.analysis.StopFilter;
 import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.core.StopAnalyzer;
 import org.apache.lucene.analysis.standard.StandardFilter;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.AttributeFactory;
-import org.apache.lucene.util.Version;
 import org.hypergraphdb.*;
 import org.hypergraphdb.algorithms.GraphClassics;
 import org.hypergraphdb.algorithms.HGALGenerator;
@@ -36,8 +35,6 @@ import org.joda.time.format.PeriodFormatter;
 import org.joda.time.format.PeriodFormatterBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.cybozu.labs.langdetect.DetectorFactory;
 
 import java.io.*;
 import java.net.URISyntaxException;
@@ -90,6 +87,7 @@ public class HypergraphOfEntity {
 
         try {
             DetectorFactory.loadProfileFromClassPath();
+            //DetectorFactory.loadProfile(new File(HypergraphOfEntity.class.getResource("profiles").toURI()));
         } catch (LangDetectException | URISyntaxException | IOException e) {
             logger.error(e.getMessage(), e);
         }
@@ -119,9 +117,6 @@ public class HypergraphOfEntity {
 
     public void close() {
         graph.close();
-        logger.info(
-                "{} indexed documents in {} (avg./doc: {})",
-                counter, formatMillis(totalTime), formatMillis(avgTimePerDocument));
     }
 
     public Map<? extends Node, HGHandle> multipleImport(final List<? extends Node> atoms) {
@@ -241,14 +236,17 @@ public class HypergraphOfEntity {
         Set<HGHandle> nodeHandles = new HashSet<>(entityHandles);
 
         DocumentNode documentNode = new DocumentNode(document.getDocID());
-        nodeHandles.add(assertAtom(graph, documentNode));
+        HGHandle documentNodeHandle = assertAtom(graph, documentNode);
 
         List<TermNode> termNodes = tokens.stream().map(TermNode::new).collect(Collectors.toList());
 
         Map<? extends Node, HGHandle> termHandleMap = multipleImport(termNodes);
         nodeHandles.addAll(termHandleMap.values());
 
-        DocumentEdge link = new DocumentEdge(document.getDocID(), nodeHandles.toArray(new HGHandle[nodeHandles.size()]));
+        DocumentEdge link = new DocumentEdge(
+                document.getDocID(),
+                new HGHandle[]{documentNodeHandle},
+                nodeHandles.toArray(new HGHandle[nodeHandles.size()]));
         graph.add(link);
 
         return new HashSet<>(termHandleMap.values());
@@ -268,10 +266,10 @@ public class HypergraphOfEntity {
 
         for (Map.Entry<EntityNode, Set<EntityNode>> entry : edges.entrySet()) {
             Set<HGHandle> handles = new HashSet<>();
-            handles.add(entityHandleMap.get(entry.getKey()));
-            handles.addAll(entry.getValue().stream().map(entityHandleMap::get).collect(Collectors.toSet()));
 
-            RelatedToEdge link = new RelatedToEdge(handles.toArray(new HGHandle[handles.size()]));
+            RelatedToEdge link = new RelatedToEdge(
+                    new HGHandle[]{entityHandleMap.get(entry.getKey())},
+                    entry.getValue().stream().map(entityHandleMap::get).toArray(HGHandle[]::new));
             graph.add(link);
 
             entities.addAll(handles);
@@ -295,9 +293,9 @@ public class HypergraphOfEntity {
 
             if (handles.isEmpty()) continue;
 
-            handles.add(entityHandle);
-
-            ContainedInEdge link = new ContainedInEdge(handles.toArray(new HGHandle[handles.size()]));
+            ContainedInEdge link = new ContainedInEdge(
+                    new HGHandle[]{entityHandle},
+                    handles.toArray(new HGHandle[handles.size()]));
             graph.add(link);
         }
     }
@@ -480,7 +478,7 @@ public class HypergraphOfEntity {
         return 0d;
     }
 
-    public void search(String query) throws IOException {
+    public List<Document> search(String query) throws IOException {
         List<String> tokens = analyze(query);
 
         Map<String, HGHandle> queryTermNodes = getQueryTermNodes(tokens);
@@ -505,6 +503,8 @@ public class HypergraphOfEntity {
         System.out.println("Weight: " + weight);
 
         //entityWeight(graph.findOne(and(type(EntityNode.class), eq("name", "Search engine technology"))), seedNodes);
+
+        return new ArrayList<>();
     }
 
 
