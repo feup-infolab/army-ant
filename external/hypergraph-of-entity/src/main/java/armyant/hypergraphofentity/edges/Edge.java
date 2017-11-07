@@ -1,7 +1,6 @@
 package armyant.hypergraphofentity.edges;
 
 import org.hypergraphdb.HGHandle;
-import org.hypergraphdb.HGPlainLink;
 import org.hypergraphdb.atom.HGBergeLink;
 
 import java.util.Arrays;

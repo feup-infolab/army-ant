@@ -46,8 +46,10 @@ public class HypergraphOfEntityTest {
             Collections.singletonList(new Triple("Unreachable Me", "related_to", "Unreachable You"))
     );
 
+    private String dbPath = "/tmp/test-hgoe";
+
     public void testPrints() {
-        HypergraphOfEntity hgoe = new HypergraphOfEntity("/tmp/hgoe.db");
+        HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
 
         System.out.println("====> Statistics");
         hgoe.printStatistics();
@@ -67,7 +69,7 @@ public class HypergraphOfEntityTest {
     }
 
     public void testIndex() throws IOException {
-        HypergraphOfEntity hgoe = new HypergraphOfEntity("/tmp/test-hgoe");
+        HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
         hgoe.index(document1);
         hgoe.index(document2);
         hgoe.index(document3);
@@ -76,9 +78,9 @@ public class HypergraphOfEntityTest {
     }
 
     public void testSearch() throws IOException {
-        HypergraphOfEntity hgoe = new HypergraphOfEntity("/tmp/test-hgoe");
+        HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
         //hgoe.printDepthFirst("web");
-        hgoe.search("web search engine");
+        hgoe.search("web search system");
         //hgoe.search("Monuments of India");
         //hgoe.search("Poirot");
         hgoe.close();

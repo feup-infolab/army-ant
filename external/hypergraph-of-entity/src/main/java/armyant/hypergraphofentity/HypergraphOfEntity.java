@@ -25,10 +25,7 @@ import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.AttributeFactory;
 import org.hypergraphdb.*;
-import org.hypergraphdb.algorithms.GraphClassics;
-import org.hypergraphdb.algorithms.HGALGenerator;
-import org.hypergraphdb.algorithms.HGDepthFirstTraversal;
-import org.hypergraphdb.algorithms.SimpleALGenerator;
+import org.hypergraphdb.algorithms.*;
 import org.hypergraphdb.handle.SequentialUUIDHandleFactory;
 import org.hypergraphdb.indexing.ByPartIndexer;
 import org.hypergraphdb.storage.bje.BJEConfig;
@@ -254,8 +251,6 @@ public class HypergraphOfEntity {
     }
 
     private Set<HGHandle> indexEntities(Document document) {
-        Set<HGHandle> entities = new HashSet<>();
-
         Map<EntityNode, Set<EntityNode>> edges = document.getTriples().stream()
                 .collect(Collectors.groupingBy(
                         t -> new EntityNode(t.getSubject()),
@@ -266,17 +261,13 @@ public class HypergraphOfEntity {
         Map<? extends Node, HGHandle> entityHandleMap = multipleImport(entityNodes);
 
         for (Map.Entry<EntityNode, Set<EntityNode>> entry : edges.entrySet()) {
-            Set<HGHandle> handles = new HashSet<>();
-
             RelatedToEdge link = new RelatedToEdge(
                     new HGHandle[]{entityHandleMap.get(entry.getKey())},
                     entry.getValue().stream().map(entityHandleMap::get).toArray(HGHandle[]::new));
             graph.add(link);
-
-            entities.addAll(handles);
         }
 
-        return entities;
+        return new HashSet<>(entityHandleMap.values());
     }
 
     private void linkTextAndKnowledge(Set<HGHandle> termHandles, Set<HGHandle> entityHandles) {
@@ -463,7 +454,9 @@ public class HypergraphOfEntity {
     }
 
     public void getAllPaths(HGHandle source, HGHandle target) {
-        HGDepthFirstTraversal traversal = new HGDepthFirstTraversal(source, new SimpleALGenerator(graph));
+        HGALGenerator generator = new SimpleALGenerator(graph);
+        //HGALGenerator generator = new DefaultALGenerator(graph, type());
+        HGDepthFirstTraversal traversal = new HGDepthFirstTraversal(source, generator);
 
         while (traversal.hasNext()) {
             Pair<HGHandle, HGHandle> current = traversal.next();
@@ -494,7 +487,10 @@ public class HypergraphOfEntity {
         Set<HGHandle> seedNodes = getSeedNodes(queryTermNodes);
         System.out.println("Seed Nodes: " + seedNodes.stream().map(graph::get).collect(Collectors.toList()));
 
-        double coverage = coverage(graph.findOne(and(type(EntityNode.class), eq("name", "Semantic search"))), seedNodes);
+        HGHandle e1 = graph.findOne(and(type(EntityNode.class), eq("name", "Semantic search")));
+        System.out.println(graph.getIncidenceSet(e1).stream().map(HGHandle::toString).collect(Collectors.toList()));
+
+        double coverage = coverage(graph.findOne(and(type(EntityNode.class), eq("name", "Hercule Poirot"))), seedNodes);
         System.out.println("Coverage: " + coverage);
 
         Map<HGHandle, Double> seedNodeWeights = seedNodeConfidenceWeights(seedNodes, new HashSet<>(queryTermNodes.values()));
@@ -556,15 +552,29 @@ public class HypergraphOfEntity {
         try {
             while (rs.hasNext()) {
                 HGHandle current = rs.next();
+
                 Edge edge = graph.get(current);
-                List<Node> edgeNodes = new ArrayList<>();
-                for (int i = 0; i < edge.getArity(); i++) {
-                    edgeNodes.add(graph.get(edge.getTargetAt(i)));
+
+                List<Node> headNodes = new ArrayList<>();
+                List<Node> tailNodes = new ArrayList<>();
+
+                for (HGHandle handle : edge.getHead()) {
+                    headNodes.add(graph.get(handle));
                 }
-                String members = String.join(" -- ", edgeNodes.stream()
+
+                for (HGHandle handle : edge.getTail()) {
+                    tailNodes.add(graph.get(handle));
+                }
+
+                String headMembers = String.join(", ", headNodes.stream()
                         .map(Node::toString)
                         .collect(Collectors.toList()));
-                System.out.println(members + " - " + edge.getClass().getSimpleName());
+
+                String tailMembers = String.join(", ", tailNodes.stream()
+                        .map(Node::toString)
+                        .collect(Collectors.toList()));
+
+                System.out.println(headMembers + " --> " + tailMembers + " : " + edge.getClass().getSimpleName());
             }
         } finally {
             rs.close();
