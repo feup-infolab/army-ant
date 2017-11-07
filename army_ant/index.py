@@ -76,6 +76,36 @@ class Index(object):
     async def search(self, query, offset, limit):
         raise ArmyAntException("Search not implemented for %s" % self.__class__.__name__)
 
+class Result(object):
+    def __init__(self, doc_id, score, components=None):
+        self.doc_id = doc_id
+        self.score = score
+        self.components = components
+
+    def set_component(self, key, value):
+        if self.components is None:
+            self.components = []
+        self.components[key] = value
+
+    def unset_component(self, key):
+        del self.components[key]
+        if len(self.components) == 0:
+            self.components = None
+
+class ResultSet(object):
+    def __init__(self, results, num_docs):
+        self.results = results
+        self.num_docs = num_docs
+
+    # For compatibility with external implementations depending on dictionaries
+    def __getitem__(self, key):
+        if key == 'results':
+            return self.results
+        elif key == 'num_docs':
+            return self.num_docs
+        else:
+            raise KeyError
+
 class ServiceIndex(Index):
     def __init__(self, reader, index_location, loop):
         super().__init__(reader, index_location, loop)
@@ -598,7 +628,7 @@ class HypergraphOfEntity(Index):
             hgoe = HypergraphOfEntity(self.index_location)
             
             results = hgoe.search(query)
-            results = [{ 'doc_id': result.getDocID(), score: -1, components: {} } for result in results]
+            results = [Result(result.getDocID(), -1) for result in results]
 
             hgoe.close()
         except JavaException as e:
@@ -606,4 +636,4 @@ class HypergraphOfEntity(Index):
 
         shutdownJVM()
 
-        return { 'results': results }
+        return ResultSet(results, len(results))

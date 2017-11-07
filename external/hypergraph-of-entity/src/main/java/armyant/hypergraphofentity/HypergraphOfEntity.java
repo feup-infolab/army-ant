@@ -8,9 +8,12 @@ import armyant.hypergraphofentity.nodes.DocumentNode;
 import armyant.hypergraphofentity.nodes.EntityNode;
 import armyant.hypergraphofentity.nodes.Node;
 import armyant.hypergraphofentity.nodes.TermNode;
-import com.cybozu.labs.langdetect.Detector;
-import com.cybozu.labs.langdetect.DetectorFactory;
-import com.cybozu.labs.langdetect.LangDetectException;
+import com.optimaize.langdetect.LanguageDetector;
+import com.optimaize.langdetect.LanguageDetectorBuilder;
+import com.optimaize.langdetect.i18n.LdLocale;
+import com.optimaize.langdetect.ngram.NgramExtractors;
+import com.optimaize.langdetect.profiles.LanguageProfile;
+import com.optimaize.langdetect.profiles.LanguageProfileReader;
 import org.apache.commons.collections4.map.LRUMap;
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.CharArraySet;
@@ -36,8 +39,10 @@ import org.joda.time.format.PeriodFormatterBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.net.URISyntaxException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -53,6 +58,7 @@ public class HypergraphOfEntity {
     private HyperGraph graph;
 
     private LRUMap<Node, HGHandle> nodeCache;
+    private LanguageDetector languageDetector;
 
     private long counter;
     private long totalTime;
@@ -86,9 +92,11 @@ public class HypergraphOfEntity {
         graph.getIndexManager().register(new ByPartIndexer(entityNodeType, "name"));
 
         try {
-            DetectorFactory.loadProfileFromClassPath();
-            //DetectorFactory.loadProfile(new File(HypergraphOfEntity.class.getResource("profiles").toURI()));
-        } catch (LangDetectException | URISyntaxException | IOException e) {
+            List<LanguageProfile> languageProfiles = new LanguageProfileReader().readAllBuiltIn();
+            languageDetector = LanguageDetectorBuilder.create(NgramExtractors.standard())
+                    .withProfiles(languageProfiles)
+                    .build();
+        } catch (IOException e) {
             logger.error(e.getMessage(), e);
         }
     }
@@ -205,14 +213,7 @@ public class HypergraphOfEntity {
         StandardTokenizer tokenizer = new StandardTokenizer(factory);
         tokenizer.setReader(new StringReader(text));
 
-        String language = "en";
-        try {
-            Detector langDetector = DetectorFactory.create();
-            langDetector.append(text);
-            language = langDetector.detect();
-        } catch (LangDetectException e) {
-            logger.warn("Could not create language detector, using 'en' as default");
-        }
+        String language = languageDetector.detect(text).or(LdLocale.fromString("en")).getLanguage();
 
         TokenStream filter = new StandardFilter(tokenizer);
         filter = new LowerCaseFilter(filter);
@@ -345,12 +346,7 @@ public class HypergraphOfEntity {
             Set<HGHandle> localSeedNodes = new HashSet<>();
 
             graph.getTransactionManager().beginTransaction();
-            HGSearchResult<HGHandle> rs = graph.find(
-                    and(
-                            type(ContainedInEdge.class),
-                            link(queryTermNode)
-                    )
-            );
+            HGSearchResult<HGHandle> rs = graph.find(and(type(ContainedInEdge.class), link(queryTermNode)));
 
             try {
                 while (rs.hasNext()) {
@@ -456,6 +452,16 @@ public class HypergraphOfEntity {
         return (double) linkedQueryTermNodes.size() / neighbors.size();
     }
 
+    public Map<HGHandle, Double> seedNodeConfidenceWeights(Set<HGHandle> seedNodes, Set<HGHandle> queryTermNodes) {
+        Map<HGHandle, Double> weights = new HashMap<>();
+
+        for (HGHandle seedNode : seedNodes) {
+            weights.put(seedNode, confidenceWeight(seedNode, queryTermNodes));
+        }
+
+        return weights;
+    }
+
     public void getAllPaths(HGHandle source, HGHandle target) {
         HGDepthFirstTraversal traversal = new HGDepthFirstTraversal(source, new SimpleALGenerator(graph));
 
@@ -468,7 +474,7 @@ public class HypergraphOfEntity {
     }
 
     public double entityWeight(HGHandle entity, Set<HGHandle> seedNodes) {
-        //double score = confidenceWeight(entity, seedNodes) * 1d/seedNodes.size() *
+        //double score = coverage(entity, seedNodes) * confidenceWeight(entity, seedNodes) * 1d/seedNodes.size() *
 
         // get all paths between the entity and a seed node (within a maximum distance)
         // constrained (by max distance) depth first search?
@@ -478,33 +484,29 @@ public class HypergraphOfEntity {
         return 0d;
     }
 
-    public List<Document> search(String query) throws IOException {
+    public ResultSet search(String query) throws IOException {
+        ResultSet resultSet = new ResultSet();
+
         List<String> tokens = analyze(query);
 
         Map<String, HGHandle> queryTermNodes = getQueryTermNodes(tokens);
 
         Set<HGHandle> seedNodes = getSeedNodes(queryTermNodes);
-        System.out.println(seedNodes.stream().map(graph::get).collect(Collectors.toList()));
+        System.out.println("Seed Nodes: " + seedNodes.stream().map(graph::get).collect(Collectors.toList()));
 
-        /*double coverage = coverage(
-                graph.findOne(
-                        and(
-                                type(EntityNode.class),
-                                eq("name", "Semantic search")
-                        )
-                ),
-                seedNodes
-        );
-        System.out.println(coverage);*/
+        double coverage = coverage(graph.findOne(and(type(EntityNode.class), eq("name", "Semantic search"))), seedNodes);
+        System.out.println("Coverage: " + coverage);
 
-        HGHandle seedNode = seedNodes.iterator().next();
-        System.out.println("Source: " + graph.get(seedNode).toString());
-        double weight = confidenceWeight(seedNode, new HashSet<>(queryTermNodes.values()));
-        System.out.println("Weight: " + weight);
+        Map<HGHandle, Double> seedNodeWeights = seedNodeConfidenceWeights(seedNodes, new HashSet<>(queryTermNodes.values()));
+        System.out.println("Seed Node Confidence Weights: " + seedNodeWeights);
 
-        //entityWeight(graph.findOne(and(type(EntityNode.class), eq("name", "Search engine technology"))), seedNodes);
+        HGSearchResult<HGHandle> entityNodeHandles = graph.find(type(EntityNode.class));
+        while (entityNodeHandles.hasNext()) {
+            HGHandle entityNodeHandle = entityNodeHandles.next();
+            entityWeight(entityNodeHandle, seedNodes);
+        }
 
-        return new ArrayList<>();
+        return resultSet;
     }
 
 
