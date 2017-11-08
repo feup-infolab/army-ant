@@ -8,6 +8,7 @@ import armyant.hypergraphofentity.nodes.DocumentNode;
 import armyant.hypergraphofentity.nodes.EntityNode;
 import armyant.hypergraphofentity.nodes.Node;
 import armyant.hypergraphofentity.nodes.TermNode;
+import armyant.hypergraphofentity.traversals.AllPaths;
 import com.optimaize.langdetect.LanguageDetector;
 import com.optimaize.langdetect.LanguageDetectorBuilder;
 import com.optimaize.langdetect.i18n.LdLocale;
@@ -50,6 +51,7 @@ import static org.hypergraphdb.HGQuery.hg.*;
  */
 public class HypergraphOfEntity {
     private static final Logger logger = LoggerFactory.getLogger(HypergraphOfEntity.class);
+    private static final int DEFAULT_MAX_DISTANCE = 3;
 
     private HGConfiguration config;
     private HyperGraph graph;
@@ -286,8 +288,8 @@ public class HypergraphOfEntity {
             if (handles.isEmpty()) continue;
 
             ContainedInEdge link = new ContainedInEdge(
-                    new HGHandle[]{entityHandle},
-                    handles.toArray(new HGHandle[handles.size()]));
+                    handles.toArray(new HGHandle[handles.size()]),
+                    new HGHandle[]{entityHandle});
             graph.add(link);
         }
     }
@@ -317,13 +319,7 @@ public class HypergraphOfEntity {
         Map<String, HGHandle> termNodeMap = new HashMap<>();
 
         for (String term : terms) {
-            HGHandle termNode = graph.findOne(
-                    and(
-                            type(TermNode.class),
-                            eq("name", term)
-                    )
-            );
-
+            HGHandle termNode = graph.findOne(and(type(TermNode.class), eq("name", term)));
             if (termNode != null) termNodeMap.put(term, termNode);
         }
 
@@ -336,22 +332,19 @@ public class HypergraphOfEntity {
         for (HGHandle queryTermNode : queryTermNodes.values()) {
             Set<HGHandle> localSeedNodes = new HashSet<>();
 
-            graph.getTransactionManager().beginTransaction();
             HGSearchResult<HGHandle> rs = graph.find(and(type(ContainedInEdge.class), link(queryTermNode)));
 
             try {
                 while (rs.hasNext()) {
                     HGHandle current = rs.next();
                     ContainedInEdge link = graph.get(current);
-                    for (int i = 0; i < link.getArity(); i++) {
-                        Node node = graph.get(link.getTargetAt(i));
+                    for (HGHandle handle : link.getTail()) {
+                        Node node = graph.get(handle);
                         if (node instanceof EntityNode) {
-                            localSeedNodes.add(link.getTargetAt(i));
+                            localSeedNodes.add(handle);
                         }
                     }
                 }
-
-                graph.getTransactionManager().commit();
 
                 if (localSeedNodes.isEmpty()) {
                     localSeedNodes.add(queryTermNode);
@@ -453,17 +446,18 @@ public class HypergraphOfEntity {
         return weights;
     }
 
-    public void getAllPaths(HGHandle source, HGHandle target) {
-        HGALGenerator generator = new SimpleALGenerator(graph);
-        //HGALGenerator generator = new DefaultALGenerator(graph, type());
-        HGDepthFirstTraversal traversal = new HGDepthFirstTraversal(source, generator);
+    public List<List<HGHandle>> getAllPaths(HGHandle source, HGHandle target) {
+        return getAllPaths(source, target, DEFAULT_MAX_DISTANCE);
+    }
 
-        while (traversal.hasNext()) {
-            Pair<HGHandle, HGHandle> current = traversal.next();
-            HGLink link = graph.get(current.getFirst());
-            Object atom = graph.get(current.getSecond());
-            System.out.println("Visiting atom " + atom + " pointed to by " + link);
-        }
+    public List<List<HGHandle>> getAllPaths(HGHandle source, HGHandle target, int maxDistance) {
+        Node sourceNode = graph.get(source);
+        Node targetNode = graph.get(target);
+        System.out.println("Source: " + sourceNode.toString() + " Target: " + targetNode.toString());
+
+        AllPaths allPaths = new AllPaths(graph, source, target);
+        allPaths.traverse();
+        return allPaths.getPaths();
     }
 
     public double entityWeight(HGHandle entity, Set<HGHandle> seedNodes) {
@@ -472,7 +466,10 @@ public class HypergraphOfEntity {
         // get all paths between the entity and a seed node (within a maximum distance)
         // constrained (by max distance) depth first search?
         HGHandle seedNode = seedNodes.iterator().next();
-        getAllPaths(entity, seedNode);
+        List<List<HGHandle>> paths = getAllPaths(entity, seedNode);
+        for (List<HGHandle> path : paths) {
+            path.forEach(h -> System.out.println(graph.get(h).toString()));
+        }
 
         return 0d;
     }
@@ -487,19 +484,18 @@ public class HypergraphOfEntity {
         Set<HGHandle> seedNodes = getSeedNodes(queryTermNodes);
         System.out.println("Seed Nodes: " + seedNodes.stream().map(graph::get).collect(Collectors.toList()));
 
-        HGHandle e1 = graph.findOne(and(type(EntityNode.class), eq("name", "Semantic search")));
-        System.out.println(graph.getIncidenceSet(e1).stream().map(HGHandle::toString).collect(Collectors.toList()));
-
-        double coverage = coverage(graph.findOne(and(type(EntityNode.class), eq("name", "Hercule Poirot"))), seedNodes);
-        System.out.println("Coverage: " + coverage);
-
         Map<HGHandle, Double> seedNodeWeights = seedNodeConfidenceWeights(seedNodes, new HashSet<>(queryTermNodes.values()));
         System.out.println("Seed Node Confidence Weights: " + seedNodeWeights);
 
-        HGSearchResult<HGHandle> entityNodeHandles = graph.find(type(EntityNode.class));
-        while (entityNodeHandles.hasNext()) {
-            HGHandle entityNodeHandle = entityNodeHandles.next();
-            entityWeight(entityNodeHandle, seedNodes);
+        HGSearchResult<HGHandle> rs = null;
+        try {
+            rs = graph.find(type(EntityNode.class));
+            while (rs.hasNext()) {
+                HGHandle entityNodeHandle = rs.next();
+                System.out.println(((Node) graph.get(entityNodeHandle)).getName() + ": " + entityWeight(entityNodeHandle, seedNodes));
+            }
+        } finally {
+            rs.close();
         }
 
         return resultSet;
@@ -528,12 +524,7 @@ public class HypergraphOfEntity {
     }
 
     public void printNodes() {
-        HGSearchResult<HGHandle> rs = graph.find(
-                or(
-                        type(TermNode.class),
-                        type(EntityNode.class)
-                )
-        );
+        HGSearchResult<HGHandle> rs = graph.find(or(type(TermNode.class), type(EntityNode.class)));
 
         try {
             while (rs.hasNext()) {
@@ -574,7 +565,8 @@ public class HypergraphOfEntity {
                         .map(Node::toString)
                         .collect(Collectors.toList()));
 
-                System.out.println(headMembers + " --> " + tailMembers + " : " + edge.getClass().getSimpleName());
+                System.out.println(String.format(
+                        "%s -[%s]-> %s", headMembers, edge.getClass().getSimpleName(), tailMembers));
             }
         } finally {
             rs.close();
