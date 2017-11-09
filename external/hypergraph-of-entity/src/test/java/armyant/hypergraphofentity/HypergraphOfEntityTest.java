@@ -66,6 +66,8 @@ public class HypergraphOfEntityTest {
         System.out.println("====> Depth first traversal starting at 'Semantic search' entity");
         hgoe.printDepthFirst("Semantic search");
         System.out.print("\n");
+
+        //hgoe.printDepthFirst("web");
     }
 
     public void testIndex() throws IOException {
@@ -78,11 +80,18 @@ public class HypergraphOfEntityTest {
     }
 
     public void testSearch() throws IOException {
-        HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
-        //hgoe.printDepthFirst("web");
-        hgoe.search("web search system");
-        //hgoe.search("Monuments of India");
-        //hgoe.search("Poirot");
+        //HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
+        HypergraphOfEntity hgoe = new HypergraphOfEntity("/tmp/hgoe");
+
+        //ResultSet resultSet = hgoe.search("web search system");
+        //ResultSet resultSet = hgoe.search("Monuments of India");
+        ResultSet resultSet = hgoe.search("Poirot");
+
+        for (ResultSet it = resultSet; it.hasNext(); ) {
+            Result result = it.next();
+            System.out.println(String.format("%.4f %s", result.getScore(), result.getNode()));
+        }
+
         hgoe.close();
     }
 

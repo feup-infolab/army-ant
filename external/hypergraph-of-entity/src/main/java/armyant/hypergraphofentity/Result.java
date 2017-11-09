@@ -1,5 +1,7 @@
 package armyant.hypergraphofentity;
 
+import armyant.hypergraphofentity.nodes.Node;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -7,26 +9,26 @@ import java.util.Map;
  * Created by jldevezas on 2017-11-07.
  */
 public class Result {
-    private String docID;
+    private Node node;
     private double score;
     private Map<String, Double> components;
 
-    public Result(String docID, double score) {
-        this(docID, score, null);
+    public Result(Node node, double score) {
+        this(node, score, null);
     }
 
-    public Result(String docID, double score, Map<String, Double> components) {
-        this.docID = docID;
+    public Result(Node node, double score, Map<String, Double> components) {
+        this.node = node;
         this.score = score;
         this.components = components;
     }
 
-    public String getDocID() {
-        return docID;
+    public Node getNode() {
+        return node;
     }
 
-    public void setDocID(String docID) {
-        this.docID = docID;
+    public void setNode(Node node) {
+        this.node = node;
     }
 
     public double getScore() {

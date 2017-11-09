@@ -598,7 +598,7 @@ class HypergraphOfEntity(Index):
         Triple = package.Triple
 
         try:
-            hgoe = HypergraphOfEntity(self.index_location)
+            hgoe = HypergraphOfEntity(self.index_location, True)
             
             for doc in self.reader:
                 logger.debug("Indexing document %s (%d triples)" % (doc.doc_id, len(doc.triples)))

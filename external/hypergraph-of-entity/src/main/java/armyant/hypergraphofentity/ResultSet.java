@@ -1,38 +1,36 @@
 package armyant.hypergraphofentity;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by jldevezas on 2017-11-07.
  */
 public class ResultSet implements Iterator<Result> {
-    private List<Result> results;
+    private SortedSet<Result> results;
     private Long numDocs;
     private Iterator<Result> resultsIterator;
 
     public ResultSet() {
-        this.results = new ArrayList<>();
+        this.results = new TreeSet<>((a, b) -> Double.compare(b.getScore(), a.getScore()));
         this.numDocs = null;
         this.resultsIterator = null;
     }
 
-    public ResultSet(List<Result> results) {
+    public ResultSet(SortedSet<Result> results) {
         this(results, null);
     }
 
-    public ResultSet(List<Result> results, Long numDocs) {
+    public ResultSet(SortedSet<Result> results, Long numDocs) {
         this.results = results;
         this.numDocs = numDocs;
         this.resultsIterator = null;
     }
 
-    public List<Result> getResults() {
+    public SortedSet<Result> getResults() {
         return results;
     }
 
-    public void setResults(List<Result> results) {
+    public void setResults(TreeSet<Result> results) {
         this.results = results;
     }
 
@@ -56,8 +54,8 @@ public class ResultSet implements Iterator<Result> {
         results.add(result);
     }
 
-    public Result removeResult(int i) {
-        return results.remove(i);
+    public boolean removeResult(Result result) {
+        return results.remove(result);
     }
 
     @Override

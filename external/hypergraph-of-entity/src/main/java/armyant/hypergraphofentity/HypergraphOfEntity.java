@@ -54,7 +54,7 @@ import static org.hypergraphdb.HGQuery.hg.*;
  */
 public class HypergraphOfEntity {
     private static final Logger logger = LoggerFactory.getLogger(HypergraphOfEntity.class);
-    private static final int DEFAULT_MAX_DISTANCE = 3;
+    private static final Integer SEARCH_MAX_DISTANCE = 2;
 
     private HGConfiguration config;
     private HyperGraph graph;
@@ -464,9 +464,11 @@ public class HypergraphOfEntity {
 
         // Get all paths between the entity and a seed node (within a maximum distance; null by default).
         for (HGHandle seedNodeHandle : seedNodeHandles) {
+            logger.debug("Calculating score based on seed {}", graph.get(seedNodeHandle).toString());
+
             double seedScore = 0d;
 
-            AllPaths allPaths = new AllPaths(graph, entityHandle, seedNodeHandle, null);
+            AllPaths allPaths = new AllPaths(graph, entityHandle, seedNodeHandle, SEARCH_MAX_DISTANCE);
             allPaths.traverse();
             List<List<HGHandle>> paths = allPaths.getPaths();
 
@@ -489,18 +491,21 @@ public class HypergraphOfEntity {
         List<String> tokens = analyze(query);
         Map<String, HGHandle> queryTermNodeHandles = getQueryTermNodes(tokens);
         Set<HGHandle> seedNodeHandles = getSeedNodes(queryTermNodeHandles);
-        //System.out.println("Seed Nodes: " + seedNodeHandles.stream().map(graph::get).collect(Collectors.toList()));
+        System.out.println("Seed Nodes: " + seedNodeHandles.stream().map(graph::get).collect(Collectors.toList()));
 
         HGSearchResult<HGHandle> rs = null;
         try {
             rs = graph.find(type(EntityNode.class));
             while (rs.hasNext()) {
                 HGHandle entityNodeHandle = rs.next();
+                Node entityNode = graph.get(entityNodeHandle);
+                logger.debug("Ranking {}", entityNode);
                 double score = entityWeight(
                         entityNodeHandle,
                         new HashSet<>(queryTermNodeHandles.values()),
                         seedNodeHandles);
-                System.out.println(((Node) graph.get(entityNodeHandle)).getName() + ": " + score);
+                if (score > 0) resultSet.addResult(new Result(graph.get(entityNodeHandle), score));
+                //System.out.println(((Node) graph.get(entityNodeHandle)).getName() + ": " + score);
             }
         } finally {
             rs.close();
