@@ -69,7 +69,7 @@ public class HypergraphOfEntityTest {
     }
 
     public void testIndex() throws IOException {
-        HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
+        HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath, true);
         hgoe.index(document1);
         hgoe.index(document2);
         hgoe.index(document3);

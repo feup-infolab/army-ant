@@ -26,7 +26,10 @@ import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.AttributeFactory;
 import org.hypergraphdb.*;
-import org.hypergraphdb.algorithms.*;
+import org.hypergraphdb.algorithms.GraphClassics;
+import org.hypergraphdb.algorithms.HGALGenerator;
+import org.hypergraphdb.algorithms.HGDepthFirstTraversal;
+import org.hypergraphdb.algorithms.SimpleALGenerator;
 import org.hypergraphdb.handle.SequentialUUIDHandleFactory;
 import org.hypergraphdb.indexing.ByPartIndexer;
 import org.hypergraphdb.storage.bje.BJEConfig;
@@ -64,20 +67,27 @@ public class HypergraphOfEntity {
     private float avgTimePerDocument;
 
     public HypergraphOfEntity(String path) {
+        this(path, false);
+    }
+
+    public HypergraphOfEntity(String path, boolean bulkLoad) {
         nodeCache = new LRUMap<>(1000000);
 
         avgTimePerDocument = 0f;
         counter = 0;
 
         config = new HGConfiguration();
-        config.setSkipMaintenance(true);
-        config.setTransactional(false);
 
-        SequentialUUIDHandleFactory handleFactory = new SequentialUUIDHandleFactory(System.currentTimeMillis(), 0);
-        config.setHandleFactory(handleFactory);
+        if (bulkLoad) {
+            config.setSkipMaintenance(true);
+            config.setTransactional(false);
 
-        BJEConfig bjeConfig = (BJEConfig) config.getStoreImplementation().getConfiguration();
-        bjeConfig.getEnvironmentConfig().setCacheSize(1024 * 1024 * 1024); // 1 GB
+            SequentialUUIDHandleFactory handleFactory = new SequentialUUIDHandleFactory(System.currentTimeMillis(), 0);
+            config.setHandleFactory(handleFactory);
+
+            BJEConfig bjeConfig = (BJEConfig) config.getStoreImplementation().getConfiguration();
+            bjeConfig.getEnvironmentConfig().setCacheSize(1024 * 1024 * 1024); // 1 GB
+        }
 
         this.graph = HGEnvironment.get(path, config);
 
@@ -463,14 +473,12 @@ public class HypergraphOfEntity {
             for (List<HGHandle> path : paths) {
                 seedScore += seedNodeWeights.get(seedNodeHandle) * 1d / path.size();
             }
-            seedScore /= paths.size();
+            seedScore = paths.isEmpty() ? 0 : seedScore / paths.size();
 
             score += seedScore;
         }
 
-        score /= seedNodeHandles.size();
-
-        if (score == Double.NaN) score = 0d;
+        score = seedNodeHandles.isEmpty() ? 0 : score / seedNodeHandles.size();
 
         return score * coverage(entityHandle, seedNodeHandles);
     }
