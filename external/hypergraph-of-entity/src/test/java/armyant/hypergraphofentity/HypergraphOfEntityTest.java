@@ -73,7 +73,7 @@ public class HypergraphOfEntityTest {
         hgoe.index(document1);
         hgoe.index(document2);
         hgoe.index(document3);
-        hgoe.printNodes();
+        testPrints();
         hgoe.close();
     }
 

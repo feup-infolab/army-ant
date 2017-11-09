@@ -7,6 +7,8 @@ import org.hypergraphdb.HyperGraph;
 
 import java.util.*;
 
+import static org.hypergraphdb.HGQuery.hg.*;
+
 /**
  * Created by jldevezas on 2017-11-08.
  */
@@ -14,6 +16,7 @@ public class AllPaths {
     private HyperGraph graph;
     private HGHandle sourceHandle;
     private HGHandle targetHandle;
+    private Integer maxDistance;
 
     private List<List<HGHandle>> paths;
 
@@ -21,9 +24,14 @@ public class AllPaths {
     private Set<HGHandle> onPath;
 
     public AllPaths(HyperGraph graph, HGHandle sourceHandle, HGHandle targetHandle) {
+        this(graph, sourceHandle, targetHandle, null);
+    }
+
+    public AllPaths(HyperGraph graph, HGHandle sourceHandle, HGHandle targetHandle, Integer maxDistance) {
         this.graph = graph;
         this.sourceHandle = sourceHandle;
         this.targetHandle = targetHandle;
+        this.maxDistance = maxDistance;
 
         this.paths = new ArrayList<>();
 
@@ -35,21 +43,41 @@ public class AllPaths {
         return paths;
     }
 
-    public void traverse() {
-        traverse(sourceHandle);
+    private Set<HGHandle> getNeighborEdges(HGHandle sourceEdgeHandle) {
+        Set<HGHandle> edges = new HashSet<>();
+
+        Edge sourceEdge = graph.get(sourceEdgeHandle);
+
+        for (HGHandle nodeHandle : sourceEdge.getTail()) {
+            edges.addAll(graph.findAll(incident(nodeHandle)));
+        }
+
+        return edges;
     }
 
-    protected void traverse(HGHandle fromNode) {
-        if (fromNode.equals(targetHandle)) {
-            paths.add(path);
+    public void traverse() {
+        HGRandomAccessResult<HGHandle> incidenceEdgeHandles = graph.getIncidenceSet(sourceHandle).getSearchResult();
+        while (incidenceEdgeHandles.hasNext()) {
+            traverse(incidenceEdgeHandles.next());
+        }
+    }
+
+    protected void traverse(HGHandle fromEdgeHandle) {
+        path.push(fromEdgeHandle);
+        onPath.add(fromEdgeHandle);
+
+        Edge fromEdge = graph.get(fromEdgeHandle);
+
+        if (fromEdge.getTail().contains(targetHandle)) {
+            paths.add(new ArrayList<>(path));
         } else {
-            HGRandomAccessResult<HGHandle> incidentEdges = graph.getIncidenceSet(fromNode).getSearchResult();
-            while (incidentEdges.hasNext()) {
-                HGHandle edgeHandle = incidentEdges.next();
-                Edge edge = graph.get(edgeHandle);
-                //if (edge.getTail().contains())
-                if (!onPath.contains(edgeHandle)) traverse(edgeHandle);
+            for (HGHandle neighborEdge : getNeighborEdges(fromEdgeHandle)) {
+                if (maxDistance != null && path.size() >= maxDistance) break;
+                if (!onPath.contains(neighborEdge)) traverse(neighborEdge);
             }
         }
+
+        path.pop();
+        onPath.remove(fromEdgeHandle);
     }
 }

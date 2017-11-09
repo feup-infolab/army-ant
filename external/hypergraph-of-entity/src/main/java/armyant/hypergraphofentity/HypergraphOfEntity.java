@@ -446,53 +446,53 @@ public class HypergraphOfEntity {
         return weights;
     }
 
-    public List<List<HGHandle>> getAllPaths(HGHandle source, HGHandle target) {
-        return getAllPaths(source, target, DEFAULT_MAX_DISTANCE);
-    }
+    public double entityWeight(HGHandle entityHandle, Set<HGHandle> queryTermNodeHandles, Set<HGHandle> seedNodeHandles) {
+        Map<HGHandle, Double> seedNodeWeights = seedNodeConfidenceWeights(seedNodeHandles, queryTermNodeHandles);
+        //System.out.println("Seed Node Confidence Weights: " + seedNodeWeights);
 
-    public List<List<HGHandle>> getAllPaths(HGHandle source, HGHandle target, int maxDistance) {
-        Node sourceNode = graph.get(source);
-        Node targetNode = graph.get(target);
-        System.out.println("Source: " + sourceNode.toString() + " Target: " + targetNode.toString());
+        double score = 0d;
 
-        AllPaths allPaths = new AllPaths(graph, source, target);
-        allPaths.traverse();
-        return allPaths.getPaths();
-    }
+        // Get all paths between the entity and a seed node (within a maximum distance; null by default).
+        for (HGHandle seedNodeHandle : seedNodeHandles) {
+            double seedScore = 0d;
 
-    public double entityWeight(HGHandle entity, Set<HGHandle> seedNodes) {
-        //double score = coverage(entity, seedNodes) * confidenceWeight(entity, seedNodes) * 1d/seedNodes.size() *
+            AllPaths allPaths = new AllPaths(graph, entityHandle, seedNodeHandle, null);
+            allPaths.traverse();
+            List<List<HGHandle>> paths = allPaths.getPaths();
 
-        // get all paths between the entity and a seed node (within a maximum distance)
-        // constrained (by max distance) depth first search?
-        HGHandle seedNode = seedNodes.iterator().next();
-        List<List<HGHandle>> paths = getAllPaths(entity, seedNode);
-        for (List<HGHandle> path : paths) {
-            path.forEach(h -> System.out.println(graph.get(h).toString()));
+            for (List<HGHandle> path : paths) {
+                seedScore += seedNodeWeights.get(seedNodeHandle) * 1d / path.size();
+            }
+            seedScore /= paths.size();
+
+            score += seedScore;
         }
 
-        return 0d;
+        score /= seedNodeHandles.size();
+
+        if (score == Double.NaN) score = 0d;
+
+        return score * coverage(entityHandle, seedNodeHandles);
     }
 
     public ResultSet search(String query) throws IOException {
         ResultSet resultSet = new ResultSet();
 
         List<String> tokens = analyze(query);
-
-        Map<String, HGHandle> queryTermNodes = getQueryTermNodes(tokens);
-
-        Set<HGHandle> seedNodes = getSeedNodes(queryTermNodes);
-        System.out.println("Seed Nodes: " + seedNodes.stream().map(graph::get).collect(Collectors.toList()));
-
-        Map<HGHandle, Double> seedNodeWeights = seedNodeConfidenceWeights(seedNodes, new HashSet<>(queryTermNodes.values()));
-        System.out.println("Seed Node Confidence Weights: " + seedNodeWeights);
+        Map<String, HGHandle> queryTermNodeHandles = getQueryTermNodes(tokens);
+        Set<HGHandle> seedNodeHandles = getSeedNodes(queryTermNodeHandles);
+        //System.out.println("Seed Nodes: " + seedNodeHandles.stream().map(graph::get).collect(Collectors.toList()));
 
         HGSearchResult<HGHandle> rs = null;
         try {
             rs = graph.find(type(EntityNode.class));
             while (rs.hasNext()) {
                 HGHandle entityNodeHandle = rs.next();
-                System.out.println(((Node) graph.get(entityNodeHandle)).getName() + ": " + entityWeight(entityNodeHandle, seedNodes));
+                double score = entityWeight(
+                        entityNodeHandle,
+                        new HashSet<>(queryTermNodeHandles.values()),
+                        seedNodeHandles);
+                System.out.println(((Node) graph.get(entityNodeHandle)).getName() + ": " + score);
             }
         } finally {
             rs.close();
