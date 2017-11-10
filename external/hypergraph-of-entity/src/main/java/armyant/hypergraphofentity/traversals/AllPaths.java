@@ -7,8 +7,6 @@ import org.hypergraphdb.HyperGraph;
 
 import java.util.*;
 
-import static org.hypergraphdb.HGQuery.hg.*;
-
 /**
  * Created by jldevezas on 2017-11-08.
  */
@@ -49,7 +47,11 @@ public class AllPaths {
         Edge sourceEdge = graph.get(sourceEdgeHandle);
 
         for (HGHandle nodeHandle : sourceEdge.getTail()) {
-            edges.addAll(graph.findAll(incident(nodeHandle)));
+            HGRandomAccessResult<HGHandle> incidentEdgeHandles = graph.getIncidenceSet(nodeHandle).getSearchResult();
+            while (incidentEdgeHandles.hasNext()) {
+                edges.add(incidentEdgeHandles.next());
+            }
+            //edges.addAll(graph.findAll(incident(nodeHandle)));
         }
 
         return edges;

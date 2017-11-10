@@ -86,6 +86,7 @@ public class HypergraphOfEntityTest {
         //ResultSet resultSet = hgoe.search("web search system");
         //ResultSet resultSet = hgoe.search("Monuments of India");
         ResultSet resultSet = hgoe.search("Poirot");
+        //ResultSet resultSet = hgoe.search("national park");
 
         for (ResultSet it = resultSet; it.hasNext(); ) {
             Result result = it.next();
