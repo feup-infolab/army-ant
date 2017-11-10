@@ -1,4 +1,4 @@
-package armyant.hypergraphofentity.nodes;
+package armyant.hgoe.indisk.nodes;
 
 /**
  * Created by jldevezas on 2017-10-24.

@@ -1,30 +1,19 @@
-package armyant.hypergraphofentity;
+package armyant.hgoe.indisk;
 
-import armyant.hypergraphofentity.edges.ContainedInEdge;
-import armyant.hypergraphofentity.edges.DocumentEdge;
-import armyant.hypergraphofentity.edges.Edge;
-import armyant.hypergraphofentity.edges.RelatedToEdge;
-import armyant.hypergraphofentity.nodes.DocumentNode;
-import armyant.hypergraphofentity.nodes.EntityNode;
-import armyant.hypergraphofentity.nodes.Node;
-import armyant.hypergraphofentity.nodes.TermNode;
-import armyant.hypergraphofentity.traversals.AllPaths;
-import com.optimaize.langdetect.LanguageDetector;
-import com.optimaize.langdetect.LanguageDetectorBuilder;
-import com.optimaize.langdetect.i18n.LdLocale;
-import com.optimaize.langdetect.ngram.NgramExtractors;
-import com.optimaize.langdetect.profiles.LanguageProfile;
-import com.optimaize.langdetect.profiles.LanguageProfileReader;
+import armyant.hgoe.HypergraphOfEntity;
+import armyant.hgoe.indisk.edges.ContainedInEdge;
+import armyant.hgoe.indisk.edges.DocumentEdge;
+import armyant.hgoe.indisk.edges.Edge;
+import armyant.hgoe.indisk.edges.RelatedToEdge;
+import armyant.hgoe.indisk.nodes.DocumentNode;
+import armyant.hgoe.indisk.nodes.EntityNode;
+import armyant.hgoe.indisk.nodes.Node;
+import armyant.hgoe.indisk.nodes.TermNode;
+import armyant.hgoe.indisk.traversals.AllPaths;
+import armyant.hgoe.structures.Document;
+import armyant.hgoe.structures.Result;
+import armyant.hgoe.structures.ResultSet;
 import org.apache.commons.collections4.map.LRUMap;
-import org.apache.commons.io.IOUtils;
-import org.apache.lucene.analysis.CharArraySet;
-import org.apache.lucene.analysis.LowerCaseFilter;
-import org.apache.lucene.analysis.StopFilter;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.standard.StandardFilter;
-import org.apache.lucene.analysis.standard.StandardTokenizer;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.apache.lucene.util.AttributeFactory;
 import org.hypergraphdb.*;
 import org.hypergraphdb.algorithms.HGALGenerator;
 import org.hypergraphdb.algorithms.HGDepthFirstTraversal;
@@ -33,16 +22,10 @@ import org.hypergraphdb.handle.SequentialUUIDHandleFactory;
 import org.hypergraphdb.indexing.ByPartIndexer;
 import org.hypergraphdb.storage.bje.BJEConfig;
 import org.hypergraphdb.util.Pair;
-import org.joda.time.Duration;
-import org.joda.time.format.PeriodFormatter;
-import org.joda.time.format.PeriodFormatterBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringReader;
-import java.io.StringWriter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -51,25 +34,28 @@ import static org.hypergraphdb.HGQuery.hg.*;
 /**
  * Created by jldevezas on 2017-10-23.
  */
-public class HypergraphOfEntity {
-    private static final Logger logger = LoggerFactory.getLogger(HypergraphOfEntity.class);
+public class HypergraphOfEntityInDisk extends HypergraphOfEntity {
+    private static final Logger logger = LoggerFactory.getLogger(HypergraphOfEntityInDisk.class);
     private static final Integer SEARCH_MAX_DISTANCE = 2;
 
     private HGConfiguration config;
     private HyperGraph graph;
 
     private LRUMap<Node, HGHandle> nodeCache;
-    private LanguageDetector languageDetector;
 
     private long counter;
     private long totalTime;
     private float avgTimePerDocument;
 
-    public HypergraphOfEntity(String path) {
+    public HypergraphOfEntityInDisk(String path) {
         this(path, false);
     }
 
-    public HypergraphOfEntity(String path, boolean bulkLoad) {
+    public HypergraphOfEntityInDisk(String path, boolean bulkLoad) {
+        super();
+
+        logger.info("Using in-disk version of Hypergraph of Entity");
+
         nodeCache = new LRUMap<>(1000000);
 
         avgTimePerDocument = 0f;
@@ -99,37 +85,6 @@ public class HypergraphOfEntity {
 
         HGHandle entityNodeType = graph.getTypeSystem().getTypeHandle(EntityNode.class);
         graph.getIndexManager().register(new ByPartIndexer(entityNodeType, "name"));*/
-
-        try {
-            List<LanguageProfile> languageProfiles = new LanguageProfileReader().readAllBuiltIn();
-            languageDetector = LanguageDetectorBuilder.create(NgramExtractors.standard())
-                    .withProfiles(languageProfiles)
-                    .build();
-        } catch (IOException e) {
-            logger.error(e.getMessage(), e);
-        }
-    }
-
-    public String formatMillis(float millis) {
-        if (millis >= 1000) return formatMillis((long) millis);
-        return String.format("%.2fms", millis);
-    }
-
-    public String formatMillis(long millis) {
-        Duration duration = new Duration(millis); // in milliseconds
-        PeriodFormatter formatter = new PeriodFormatterBuilder()
-                .appendDays()
-                .appendSuffix("d")
-                .appendHours()
-                .appendSuffix("h")
-                .appendMinutes()
-                .appendSuffix("m")
-                .appendSeconds()
-                .appendSuffix("s")
-                .appendMillis()
-                .appendSuffix("ms")
-                .toFormatter();
-        return formatter.print(duration.toPeriod());
     }
 
     public void close() {
@@ -192,52 +147,6 @@ public class HypergraphOfEntity {
         }
         return true;
     }
-
-
-    private CharArraySet getStopwords(String language) {
-        StringWriter writer = new StringWriter();
-
-        logger.debug("Fetching stopwords for {} language", language);
-
-        String defaultFilename = "/stopwords/en.stopwords";
-        String filename = String.format("/stopwords/%s.stopwords", language);
-
-        try {
-            InputStream inputStream = getClass().getResourceAsStream(filename);
-            if (inputStream == null) {
-                logger.warn("Could not load '{}' stopwords, using 'en' as default", language);
-                inputStream = getClass().getResourceAsStream(defaultFilename);
-            }
-            IOUtils.copy(inputStream, writer, "UTF-8");
-            return new CharArraySet(Arrays.asList(writer.toString().split("\n")), true);
-        } catch (IOException e) {
-            logger.warn("Could not load 'en' stopwords, ignoring stopwords");
-            return CharArraySet.EMPTY_SET;
-        }
-    }
-
-    private List<String> analyze(String text) throws IOException {
-        AttributeFactory factory = AttributeFactory.DEFAULT_ATTRIBUTE_FACTORY;
-
-        StandardTokenizer tokenizer = new StandardTokenizer(factory);
-        tokenizer.setReader(new StringReader(text));
-
-        String language = languageDetector.detect(text).or(LdLocale.fromString("en")).getLanguage();
-
-        TokenStream filter = new StandardFilter(tokenizer);
-        filter = new LowerCaseFilter(filter);
-        filter = new StopFilter(filter, getStopwords(language));
-        filter.reset();
-
-        List<String> tokens = new ArrayList<>();
-        CharTermAttribute attr = tokenizer.addAttribute(CharTermAttribute.class);
-        while (filter.incrementToken()) {
-            tokens.add(attr.toString());
-        }
-
-        return tokens;
-    }
-
 
     private Set<HGHandle> indexDocument(Document document, Set<HGHandle> entityHandles) throws IOException {
         List<String> tokens = analyze(document.getText());

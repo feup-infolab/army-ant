@@ -1,6 +1,6 @@
-package armyant.hypergraphofentity.traversals;
+package armyant.hgoe.indisk.traversals;
 
-import armyant.hypergraphofentity.edges.Edge;
+import armyant.hgoe.indisk.edges.Edge;
 import org.hypergraphdb.HGHandle;
 import org.hypergraphdb.HGRandomAccessResult;
 import org.hypergraphdb.HyperGraph;
@@ -51,7 +51,7 @@ public class AllPaths {
             while (incidentEdgeHandles.hasNext()) {
                 edges.add(incidentEdgeHandles.next());
             }
-            //edges.addAll(graph.findAll(incident(nodeHandle)));
+            //armyant.hgoe.inmemory.edges.addAll(graph.findAll(incident(nodeHandle)));
         }
 
         return edges;

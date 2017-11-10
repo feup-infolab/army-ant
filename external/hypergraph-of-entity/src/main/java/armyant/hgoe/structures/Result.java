@@ -1,6 +1,6 @@
-package armyant.hypergraphofentity;
+package armyant.hgoe.structures;
 
-import armyant.hypergraphofentity.nodes.Node;
+import armyant.hgoe.indisk.nodes.Node;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -9,21 +9,21 @@ import java.util.Map;
  * Created by jldevezas on 2017-11-07.
  */
 public class Result {
-    private Node node;
+    private Object node;
     private double score;
     private Map<String, Double> components;
 
-    public Result(Node node, double score) {
+    public Result(Object node, double score) {
         this(node, score, null);
     }
 
-    public Result(Node node, double score, Map<String, Double> components) {
+    public Result(Object node, double score, Map<String, Double> components) {
         this.node = node;
         this.score = score;
         this.components = components;
     }
 
-    public Node getNode() {
+    public Object getNode() {
         return node;
     }
 

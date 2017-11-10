@@ -592,13 +592,13 @@ class HypergraphOfEntity(Index):
         classpath = 'external/hypergraph-of-entity/target/hypergraph-of-entity-0.1-SNAPSHOT-jar-with-dependencies.jar'
         startJVM(jpype.getDefaultJVMPath(), '-Djava.class.path=%s' % classpath, '-Xms5g', '-Xmx5g')
 
-        package = JPackage('armyant.hypergraphofentity')
-        HypergraphOfEntity = package.HypergraphOfEntity
-        Document = package.Document
-        Triple = package.Triple
+        package = JPackage('armyant.hgoe')
+        HypergraphOfEntityInMemory = package.inmemory.HypergraphOfEntityInMemory
+        Document = package.structures.Document
+        Triple = package.structures.Triple
 
         try:
-            hgoe = HypergraphOfEntity(self.index_location, True)
+            hgoe = HypergraphOfEntityInMemory(self.index_location)
             
             for doc in self.reader:
                 logger.debug("Indexing document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
@@ -618,14 +618,14 @@ class HypergraphOfEntity(Index):
         classpath = 'external/hypergraph-of-entity/target/hypergraph-of-entity-0.1-SNAPSHOT-jar-with-dependencies.jar'
         startJVM(jpype.getDefaultJVMPath(), '-Djava.class.path=%s' % classpath, '-Xms5g', '-Xmx5g')
 
-        package = JPackage('armyant.hypergraphofentity')
-        HypergraphOfEntity = package.HypergraphOfEntity
-        Document = package.Document
-        Triple = package.Triple
+        package = JPackage('armyant.hgoe')
+        HypergraphOfEntityInMemory = package.inmemory.HypergraphOfEntityInMemory
+        Document = package.structures.Document
+        Triple = package.structures.Triple
 
         results = []
         try:
-            hgoe = HypergraphOfEntity(self.index_location)
+            hgoe = HypergraphOfEntityInMemory(self.index_location)
             
             results = hgoe.search(query)
             results = [Result(result.getDocID(), -1) for result in results]

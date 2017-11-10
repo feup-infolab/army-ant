@@ -1,5 +1,10 @@
-package armyant.hypergraphofentity;
+package armyant.hgoe;
 
+import armyant.hgoe.inmemory.HypergraphOfEntityInMemory;
+import armyant.hgoe.structures.Document;
+import armyant.hgoe.structures.Result;
+import armyant.hgoe.structures.ResultSet;
+import armyant.hgoe.structures.Triple;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
@@ -10,7 +15,7 @@ import java.util.Collections;
  * Created by jldevezas on 2017-10-23.
  */
 @Test
-public class HypergraphOfEntityTest {
+public class HypergraphOfEntityInMemoryTest {
 
     public static final Document document1 = new Document(
             "D1",
@@ -46,10 +51,10 @@ public class HypergraphOfEntityTest {
             Collections.singletonList(new Triple("Unreachable Me", "related_to", "Unreachable You"))
     );
 
-    private String dbPath = "/tmp/test-hgoe";
+    private String dbPath = "/tmp/test-hgoe-inmemory";
 
-    public void testPrints() {
-        HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
+    /*public void testPrints() {
+        HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory(dbPath);
 
         System.out.println("====> Statistics");
         hgoe.printStatistics();
@@ -68,20 +73,18 @@ public class HypergraphOfEntityTest {
         System.out.print("\n");
 
         //hgoe.printDepthFirst("web");
-    }
+    }*/
 
     public void testIndex() throws IOException {
-        HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath, true);
+        HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory(dbPath);
         hgoe.index(document1);
         hgoe.index(document2);
         hgoe.index(document3);
-        testPrints();
         hgoe.close();
     }
 
     public void testSearch() throws IOException {
-        //HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
-        HypergraphOfEntity hgoe = new HypergraphOfEntity("/tmp/hgoe");
+        HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory(dbPath);
 
         //ResultSet resultSet = hgoe.search("web search system");
         //ResultSet resultSet = hgoe.search("Monuments of India");

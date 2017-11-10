@@ -1,4 +1,4 @@
-package armyant.hypergraphofentity;
+package armyant.hgoe.structures;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,4 +1,4 @@
-package armyant.hypergraphofentity.edges;
+package armyant.hgoe.indisk.edges;
 
 import org.hypergraphdb.HGHandle;
 

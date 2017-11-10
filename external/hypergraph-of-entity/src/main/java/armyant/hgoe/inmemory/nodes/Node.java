@@ -1,4 +1,4 @@
-package armyant.hypergraphofentity.nodes;
+package armyant.hgoe.inmemory.nodes;
 
 /**
  * Created by jldevezas on 2017-10-24.
@@ -7,7 +7,6 @@ public abstract class Node {
     private String name;
 
     public Node() {
-
     }
 
     public Node(String name) {
@@ -36,11 +35,11 @@ public abstract class Node {
 
         Node node = (Node) o;
 
-        return name.equals(node.name);
+        return name != null ? name.equals(node.name) : node.name == null;
     }
 
     @Override
     public int hashCode() {
-        return name.hashCode();
+        return name != null ? name.hashCode() : 0;
     }
 }

@@ -1,4 +1,4 @@
-package armyant.hypergraphofentity;
+package armyant.hgoe.structures;
 
 /**
  * Created by jldevezas on 2017-10-23.
