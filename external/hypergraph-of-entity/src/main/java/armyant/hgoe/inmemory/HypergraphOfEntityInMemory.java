@@ -41,16 +41,26 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
     private float avgTimePerDocument;
 
     public HypergraphOfEntityInMemory(String path) {
+        this(path, false);
+    }
+
+    public HypergraphOfEntityInMemory(String path, boolean overwrite) {
         super();
         this.path = path;
 
         logger.info("Using in-memory version of Hypergraph of Entity");
 
-        try {
-            this.graph = SerializationUtils.deserialize(new FileInputStream(path));
-        } catch (FileNotFoundException e) {
-            logger.info("Creating new graph");
+        if (overwrite) {
+            logger.info("Overwriting graph in {}, if it exists", path);
             this.graph = new SetHypergraph<>();
+        } else {
+            try {
+                logger.info("Loading graph from {}", path);
+                this.graph = SerializationUtils.deserialize(new FileInputStream(path));
+            } catch (FileNotFoundException e) {
+                logger.warn("Graph not found in {}, creating", path);
+                this.graph = new SetHypergraph<>();
+            }
         }
     }
 
@@ -117,6 +127,16 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
         }
     }
 
+    public void indexCorpus(Collection<Document> corpus) throws IOException {
+        corpus.parallelStream().forEach(document -> {
+            try {
+                index(document);
+            } catch (IOException e) {
+                logger.warn("Error indexing document {}, skpping", document.getDocID(), e);
+            }
+        });
+    }
+
     public void index(Document document) throws IOException {
         long startTime = System.currentTimeMillis();
 
@@ -130,10 +150,11 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
         counter++;
         avgTimePerDocument = counter > 1 ? (avgTimePerDocument * (counter - 1) + time) / counter : time;
 
-        if (counter % 10 == 0) {
+        if (counter % 100 == 0) {
             logger.info(
-                    "{} indexed documents in {} (avg./doc: {})",
-                    counter, formatMillis(totalTime), formatMillis(avgTimePerDocument));
+                    "{} indexed documents in {} ({}/doc, {}docs/h)",
+                    counter, formatMillis(totalTime), formatMillis(avgTimePerDocument),
+                    counter * 3600000 / totalTime);
         }
     }
 

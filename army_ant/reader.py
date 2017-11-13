@@ -219,8 +219,10 @@ class INEXReader(Reader):
         raise StopIteration
 
 class INEXDirectoryReader(Reader):
-    def __init__(self, source_path):
+    def __init__(self, source_path, use_memory=True):
         super(INEXDirectoryReader, self).__init__(source_path)
+
+        self.use_memory = use_memory
         
         file_paths = glob.glob(os.path.join(source_path, '*.tar.bz2'))
 
@@ -228,32 +230,42 @@ class INEXDirectoryReader(Reader):
 
         logger.info("Indexing titles by doc_id for all archives")
 
-        self.tmp_dir = tempfile.mkdtemp()
-        logger.info("Using temporary directory %s" % self.tmp_dir)
+        if use_memory:
+            title_index = {}
+        else:
+            self.tmp_dir = tempfile.mkdtemp()
+            logger.info("Using temporary directory %s" % self.tmp_dir)
 
-        title_index_path = os.path.join(self.tmp_dir, 'title_index')
-        with shelve.open(title_index_path) as title_index:
-            for file_path in file_paths:
-                with tarfile.open(file_path, 'r|bz2') as tar:
-                    for member in tar:
-                        if not member.name.endswith('.xml'): continue
-                        try:
-                            article = etree.parse(tar.extractfile(member), parser)
-                            page_id = inex.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
-                            title = get_first(article.xpath('//header/title/text()'))
-                            title_index[page_id] = title
-                        except etree.XMLSyntaxError:
-                            logger.warn("Error parsing XML, skipping title indexing for %s" % member.name)
+            title_index_path = os.path.join(self.tmp_dir, 'title_index')
+            title_index = shelve.open(title_index_path)
 
-        inex_iterators = [iter(INEXReader(file_path, title_index=title_index_path)) for file_path in file_paths]
+        for file_path in file_paths:
+            with tarfile.open(file_path, 'r|bz2') as tar:
+                for member in tar:
+                    if not member.name.endswith('.xml'): continue
+                    try:
+                        article = etree.parse(tar.extractfile(member), parser)
+                        page_id = inex.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
+                        title = get_first(article.xpath('//header/title/text()'))
+                        title_index[page_id] = title
+                    except etree.XMLSyntaxError:
+                        logger.warn("Error parsing XML, skipping title indexing for %s" % member.name)
+
+        if type(title_index) is shelve.DbfilenameShelf: title_index.close()
+
+        inex_iterators = [
+            iter(INEXReader(file_path, title_index=title_index if use_memory else title_index_path))
+            for file_path in file_paths
+        ]
         self.it = itertools.chain(*inex_iterators)
 
     def __next__(self):
         try:
             return next(self.it)
         except StopIteration:
-            logger.info("Removing temporary directory %s" % self.tmp_dir)
-            shutil.rmtree(self.tmp_dir)
+            if not use_memory:
+                logger.info("Removing temporary directory %s" % self.tmp_dir)
+                shutil.rmtree(self.tmp_dir)
             raise
 
 class LivingLabsReader(Reader):

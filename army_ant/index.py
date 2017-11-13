@@ -588,6 +588,8 @@ class GraphOfEntityCSV(GraphOfEntityBatch):
             """, f)
 
 class HypergraphOfEntity(Index):
+    BLOCK_SIZE = 1000
+
     async def index(self):
         classpath = 'external/hypergraph-of-entity/target/hypergraph-of-entity-0.1-SNAPSHOT-jar-with-dependencies.jar'
         startJVM(jpype.getDefaultJVMPath(), '-Djava.class.path=%s' % classpath, '-Xms5g', '-Xmx5g')
@@ -598,13 +600,23 @@ class HypergraphOfEntity(Index):
         Triple = package.structures.Triple
 
         try:
-            hgoe = HypergraphOfEntityInMemory(self.index_location)
+            hgoe = HypergraphOfEntityInMemory(self.index_location, True)
             
+            corpus = []
             for doc in self.reader:
-                logger.debug("Indexing document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
+                logger.debug("Preloading document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
                 triples = list(map(lambda t: Triple(t[0].label, t[1], t[2].label), doc.triples))
                 jDoc = Document(JString(doc.doc_id), JString(doc.text), java.util.Arrays.asList(triples))
-                hgoe.index(jDoc)
+                corpus.append(jDoc)
+
+                if len(corpus) >= HypergraphOfEntity.BLOCK_SIZE:
+                    logger.info("Indexing batch of %d documents" % len(corpus))
+                    hgoe.indexCorpus(java.util.Arrays.asList(corpus))
+                    corpus = []
+
+            if len(corpus) > 0:
+                logger.info("Indexing batch of %d documents" % len(corpus))
+                hgoe.indexCorpus(java.util.Arrays.asList(corpus))
 
             hgoe.close()
         except JavaException as e:
