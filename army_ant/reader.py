@@ -219,7 +219,7 @@ class INEXReader(Reader):
         raise StopIteration
 
 class INEXDirectoryReader(Reader):
-    def __init__(self, source_path, use_memory=True):
+    def __init__(self, source_path, use_memory=False):
         super(INEXDirectoryReader, self).__init__(source_path)
 
         self.use_memory = use_memory
