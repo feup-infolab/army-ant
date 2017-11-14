@@ -130,11 +130,7 @@ class INEXReader(Reader):
         self.counter = 0
         self.parser = etree.XMLParser(remove_blank_text=True, resolve_entities=False)
         self.doc_xpath = '//bdy/descendant-or-self::*[not(ancestor-or-self::template) and not(self::caption)]'
-
-        logger.info("Loading members from tar file")
-        self.tar = tarfile.open(source_path)
-        it = itertools.tee(inex.filter_xml_files(self.tar.getmembers()), 2)
-        self.members = it[0]
+        self.tar = tarfile.open(source_path, 'r|bz2')
 
         if title_index:
             if type(title_index) is str:
@@ -144,16 +140,18 @@ class INEXReader(Reader):
                 logger.info("Using provided title index dictionary")
                 self.title_index = title_index
         else:
-            logger.info("Indexing titles by doc_id")
-            self.title_index = {}
-            for member in it[1]:
-                try:
-                    article = etree.parse(self.tar.extractfile(member), self.parser)
-                    page_id = inex.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
-                    title = get_first(article.xpath('//header/title/text()'))
-                    self.title_index[page_id] = title
-                except etree.XMLSyntaxError:
-                    logger.warn("Error parsing XML, skipping title indexing for %s" % member.name)
+            with tarfile.open(source_path, 'r|bz2') as tar:
+                logger.info("Indexing titles by doc_id")
+                self.title_index = {}
+                for member in tar:
+                    if not member.name.endswith('.xml'): continue
+                    try:
+                        article = etree.parse(tar.extractfile(member), self.parser)
+                        page_id = inex.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
+                        title = get_first(article.xpath('//header/title/text()'))
+                        self.title_index[page_id] = title
+                    except etree.XMLSyntaxError:
+                        logger.warn("Error parsing XML, skipping title indexing for %s" % member.name)
 
     def to_plain_text(self, bdy):
         return re.sub(r'\s+', ' ', ''.join(bdy.xpath('%s/text()' % self.doc_xpath)))
@@ -186,7 +184,11 @@ class INEXReader(Reader):
 
         # Note that this for is only required in case the first element cannot be parsed.
         # If that happens, it skips to the next parsable item.
-        for member in self.members:
+        while True:
+            member = self.tar.next()
+            if member is None: break
+            if not member.name.endswith('.xml'): continue
+
             logger.debug("Reading %s" % member.name)
 
             if self.limit is not None and self.counter >= self.limit: break
@@ -263,7 +265,7 @@ class INEXDirectoryReader(Reader):
         try:
             return next(self.it)
         except StopIteration:
-            if not use_memory:
+            if not self.use_memory:
                 logger.info("Removing temporary directory %s" % self.tmp_dir)
                 shutil.rmtree(self.tmp_dir)
             raise

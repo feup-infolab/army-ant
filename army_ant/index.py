@@ -588,7 +588,7 @@ class GraphOfEntityCSV(GraphOfEntityBatch):
             """, f)
 
 class HypergraphOfEntity(Index):
-    BLOCK_SIZE = 1000
+    BLOCK_SIZE = 5000
 
     async def index(self):
         classpath = 'external/hypergraph-of-entity/target/hypergraph-of-entity-0.1-SNAPSHOT-jar-with-dependencies.jar'
@@ -608,6 +608,8 @@ class HypergraphOfEntity(Index):
                 triples = list(map(lambda t: Triple(t[0].label, t[1], t[2].label), doc.triples))
                 jDoc = Document(JString(doc.doc_id), JString(doc.text), java.util.Arrays.asList(triples))
                 corpus.append(jDoc)
+                if len(corpus) % (HypergraphOfEntity.BLOCK_SIZE // 10) == 0:
+                    logger.info("%d documents preloaded" % len(corpus))
 
                 if len(corpus) >= HypergraphOfEntity.BLOCK_SIZE:
                     logger.info("Indexing batch of %d documents" % len(corpus))

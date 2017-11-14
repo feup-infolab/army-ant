@@ -77,4 +77,12 @@ public class Document {
     public int hashCode() {
         return docID.hashCode();
     }
+
+    @Override
+    public String toString() {
+        return "Document{" +
+               (score != null ? "score=" + score : "") +
+               ", docID='" + docID + '\'' +
+               '}';
+    }
 }

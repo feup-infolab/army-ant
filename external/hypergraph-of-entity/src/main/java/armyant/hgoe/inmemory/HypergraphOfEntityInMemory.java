@@ -142,7 +142,7 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
 
         Set<EntityNode> entityHandles = indexEntities(document);
         Set<TermNode> termHandles = indexDocument(document, entityHandles);
-        linkTextAndKnowledge(termHandles, entityHandles);
+        //linkTextAndKnowledge(termHandles, entityHandles);
 
         long time = System.currentTimeMillis() - startTime;
         totalTime += time;
@@ -152,7 +152,7 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
 
         if (counter % 100 == 0) {
             logger.info(
-                    "{} indexed documents in {} ({}/doc, {}docs/h)",
+                    "{} indexed documents in {} ({}/doc, {} docs/h)",
                     counter, formatMillis(totalTime), formatMillis(avgTimePerDocument),
                     counter * 3600000 / totalTime);
         }
