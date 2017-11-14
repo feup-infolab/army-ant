@@ -8,9 +8,6 @@ import java.io.Serializable;
 public abstract class Node implements Serializable {
     private String name;
 
-    public Node() {
-    }
-
     public Node(String name) {
         this.name = name;
     }

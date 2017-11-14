@@ -9,11 +9,11 @@ import armyant.hgoe.inmemory.nodes.DocumentNode;
 import armyant.hgoe.inmemory.nodes.EntityNode;
 import armyant.hgoe.inmemory.nodes.Node;
 import armyant.hgoe.inmemory.nodes.TermNode;
-import armyant.hgoe.inmemory.traversals.AllPaths;
 import armyant.hgoe.structures.Document;
 import armyant.hgoe.structures.Result;
 import armyant.hgoe.structures.ResultSet;
 import edu.uci.ics.jung.algorithms.shortestpath.BFSDistanceLabeler;
+import edu.uci.ics.jung.algorithms.shortestpath.DijkstraDistance;
 import edu.uci.ics.jung.graph.SetHypergraph;
 import org.ahocorasick.trie.Emit;
 import org.ahocorasick.trie.Trie;
@@ -38,14 +38,12 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
 
     private String path;
     private SetHypergraph<Node, Edge> graph;
+    private DijkstraDistance<Node, Edge> dijkstraDistance;
+
 
     private long counter;
     private long totalTime;
     private float avgTimePerDocument;
-
-    public HypergraphOfEntityInMemory() {
-        this(null);
-    }
 
     public HypergraphOfEntityInMemory(String path) {
         this(path, false);
@@ -69,6 +67,8 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
                 this.graph = new SetHypergraph<>();
             }
         }
+
+        this.dijkstraDistance = new DijkstraDistance<>(graph, edge -> 1);
     }
 
     private void indexDocument(Document document) throws IOException {
@@ -146,7 +146,6 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
 
         for (Node node : graph.getVertices()) {
             if (node instanceof TermNode) {
-                System.out.println(node.getName());
                 trieBuilder.addKeyword(node.getName());
             }
         }
@@ -160,8 +159,6 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
                 nodes.add(node);
 
                 Collection<Emit> emits = trie.parseText(node.getName());
-                System.out.println(node.getName() + ": ");
-                emits.stream().forEach(System.out::println);
                 Set<TermNode> termNodes = emits.stream()
                         .map(e -> new TermNode(e.getKeyword()))
                         .collect(Collectors.toSet());
@@ -240,7 +237,8 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
             }
 
             for (Edge edge : edges) {
-                if (edge instanceof DocumentEdge) continue; // for now ignore document co-occurrence relation to imitate GoE
+                if (edge instanceof DocumentEdge)
+                    continue; // for now ignore document co-occurrence relation to imitate GoE
                 for (Node node : graph.getIncidentVertices(edge)) {
                     if (node instanceof EntityNode) {
                         localSeedNodes.add(node);
@@ -313,14 +311,19 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
 
             double seedScore = 0d;
 
-            AllPaths allPaths = new AllPaths(graph, entityNode, seedNode, SEARCH_MAX_DISTANCE);
+            /*AllPaths allPaths = new AllPaths(graph, entityNode, seedNode, SEARCH_MAX_DISTANCE);
             allPaths.traverse();
             List<List<Edge>> paths = allPaths.getPaths();
 
             for (List<Edge> path : paths) {
-                seedScore += seedNodeWeights.get(seedNode) * 1d / path.size();
+                seedScore += seedNodeWeights.get(seedNode) * 1d / (1 + path.size());
             }
-            seedScore = paths.isEmpty() ? 0 : seedScore / paths.size();
+            seedScore = seedScore / (1 + paths.size());*/
+
+            Number distance = dijkstraDistance.getDistance(entityNode, seedNode);
+            if (distance != null) {
+                seedScore = seedNodeWeights.get(seedNode) * 1d / (1 + distance.doubleValue());
+            }
 
             score += seedScore;
         }

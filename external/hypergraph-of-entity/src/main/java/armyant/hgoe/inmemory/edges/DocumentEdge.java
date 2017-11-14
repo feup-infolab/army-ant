@@ -1,16 +1,10 @@
 package armyant.hgoe.inmemory.edges;
 
-import java.io.Serializable;
-
 /**
  * Created by jldevezas on 2017-10-24.
  */
-public class DocumentEdge extends Edge implements Serializable {
+public class DocumentEdge extends Edge {
     private String docID;
-
-    public DocumentEdge() {
-        super();
-    }
 
     public DocumentEdge(String docID) {
         super();

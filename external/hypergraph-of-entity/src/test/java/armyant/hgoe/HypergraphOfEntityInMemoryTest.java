@@ -53,6 +53,13 @@ public class HypergraphOfEntityInMemoryTest {
 
     private String dbPath = "/tmp/test-hgoe-inmemory";
 
+    public void test() {
+        HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory("/tmp/hgoe-inmemory");
+        //HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory(dbPath);
+        hgoe.printStatistics();
+        hgoe.printEdges();
+    }
+
     public void testPrints() {
         HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory(dbPath);
 
