@@ -15,7 +15,11 @@ import armyant.hgoe.structures.Result;
 import armyant.hgoe.structures.ResultSet;
 import edu.uci.ics.jung.algorithms.shortestpath.BFSDistanceLabeler;
 import edu.uci.ics.jung.graph.SetHypergraph;
+import org.ahocorasick.trie.Emit;
+import org.ahocorasick.trie.Token;
+import org.ahocorasick.trie.Trie;
 import org.apache.commons.lang3.SerializationUtils;
+import org.apache.lucene.index.Term;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +43,10 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
     private long counter;
     private long totalTime;
     private float avgTimePerDocument;
+
+    public HypergraphOfEntityInMemory() {
+        this(null);
+    }
 
     public HypergraphOfEntityInMemory(String path) {
         this(path, false);
@@ -64,27 +72,27 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
         }
     }
 
-    private Set<TermNode> indexDocument(Document document, Set<EntityNode> entityNodes) throws IOException {
+    private void indexDocument(Document document) throws IOException {
+        Set<EntityNode> entityNodes = indexEntities(document);
+
         List<String> tokens = analyze(document.getText());
-        if (tokens.isEmpty()) return new HashSet<>();
+        if (tokens.isEmpty()) return;
 
         Set<Node> nodes = new HashSet<>(entityNodes);
 
         DocumentNode documentNode = new DocumentNode(document.getDocID());
-        if (!graph.containsVertex(documentNode)) graph.addVertex(documentNode);
+        synchronized (this) { if (!graph.containsVertex(documentNode)) graph.addVertex(documentNode); }
 
         Set<TermNode> termNodes = tokens.stream().map(token -> {
             TermNode termNode = new TermNode(token);
-            if (!graph.containsVertex(termNode)) graph.addVertex(termNode);
+            synchronized (this) { if (!graph.containsVertex(termNode)) graph.addVertex(termNode); }
             return termNode;
         }).collect(Collectors.toSet());
 
         nodes.addAll(termNodes);
 
         DocumentEdge link = new DocumentEdge(document.getDocID());
-        graph.addEdge(link, nodes);
-
-        return termNodes;
+        synchronized (this) { graph.addEdge(link, nodes); }
     }
 
     private Set<EntityNode> indexEntities(Document document) {
@@ -93,23 +101,29 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
                         Collectors.groupingBy(t -> new EntityNode(t.getSubject()),
                         Collectors.mapping(t -> new EntityNode(t.getObject()), Collectors.toSet())));
 
-        Set<EntityNode> entityNodes = new HashSet<>();
+        Set<EntityNode> nodes = new HashSet<>();
 
         for (Map.Entry<EntityNode, Set<EntityNode>> entry : edges.entrySet()) {
-            if (!graph.containsVertex(entry.getKey())) graph.addVertex(entry.getKey());
-            entry.getValue().forEach(node -> {
+            Set<EntityNode> entityNodes = new HashSet<>();
+
+            entityNodes.add(entry.getKey());
+            synchronized (this) { if (!graph.containsVertex(entry.getKey())) graph.addVertex(entry.getKey()); }
+
+            for (EntityNode node : entry.getValue()) {
                 entityNodes.add(node);
-                if (!graph.containsVertex(node)) graph.addVertex(node);
-            });
+                synchronized (this) { if (!graph.containsVertex(node)) graph.addVertex(node); }
+            }
+
+            nodes.addAll(entityNodes);
 
             RelatedToEdge link = new RelatedToEdge();
-            graph.addEdge(link, entityNodes);
+            synchronized (this) { graph.addEdge(link, entityNodes); }
         }
 
-        return entityNodes;
+        return nodes;
     }
 
-    private void linkTextAndKnowledge(Set<TermNode> termNodes, Set<EntityNode> entityNodes) {
+    /*private void linkTextAndKnowledge(Set<TermNode> termNodes, Set<EntityNode> entityNodes) {
         for (EntityNode entityNode : entityNodes) {
             Set<Node> nodes = new HashSet<>();
             nodes.add(entityNode);
@@ -124,6 +138,38 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
 
             ContainedInEdge link = new ContainedInEdge();
             graph.addEdge(link, nodes);
+        }
+    }*/
+
+    public void linkTextAndKnowledge() {
+        logger.info("Building trie from term nodes");
+        Trie.TrieBuilder trieBuilder = Trie.builder()
+                .ignoreOverlaps()
+                .onlyWholeWords();
+
+        for (Node node : graph.getVertices()) {
+            if (node instanceof TermNode) {
+                trieBuilder.addKeyword(node.getName());
+            }
+        }
+
+        Trie trie = trieBuilder.build();
+
+        logger.info("Creating links between entity nodes and term nodes using trie");
+        for (Node node : graph.getVertices()) {
+            if (node instanceof EntityNode) {
+                Set<Node> nodes = new HashSet<>();
+                nodes.add(node);
+
+                Collection<Emit> emits = trie.parseText(node.getName());
+                Set<TermNode> termNodes = emits.stream()
+                        .map(e -> new TermNode(e.getKeyword()))
+                        .collect(Collectors.toSet());
+                nodes.addAll(termNodes);
+
+                ContainedInEdge link = new ContainedInEdge();
+                graph.addEdge(link, nodes);
+            }
         }
     }
 
@@ -140,9 +186,7 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
     public void index(Document document) throws IOException {
         long startTime = System.currentTimeMillis();
 
-        Set<EntityNode> entityHandles = indexEntities(document);
-        Set<TermNode> termHandles = indexDocument(document, entityHandles);
-        //linkTextAndKnowledge(termHandles, entityHandles);
+        indexDocument(document);
 
         long time = System.currentTimeMillis() - startTime;
         totalTime += time;

@@ -620,6 +620,8 @@ class HypergraphOfEntity(Index):
                 logger.info("Indexing batch of %d documents" % len(corpus))
                 hgoe.indexCorpus(java.util.Arrays.asList(corpus))
 
+            hgoe.linkTextAndKnowledge()
+
             hgoe.close()
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
