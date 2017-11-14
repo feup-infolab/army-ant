@@ -1,9 +1,11 @@
 package armyant.hgoe.inmemory.nodes;
 
+import java.io.Serializable;
+
 /**
  * Created by jldevezas on 2017-10-24.
  */
-public abstract class Node {
+public abstract class Node implements Serializable {
     private String name;
 
     public Node() {

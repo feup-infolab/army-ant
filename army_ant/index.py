@@ -622,7 +622,7 @@ class HypergraphOfEntity(Index):
 
             hgoe.linkTextAndKnowledge()
 
-            hgoe.close()
+            hgoe.save()
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
@@ -645,8 +645,6 @@ class HypergraphOfEntity(Index):
             
             results = hgoe.search(query)
             results = [Result(result.getDocID(), -1) for result in results]
-
-            hgoe.close()
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 

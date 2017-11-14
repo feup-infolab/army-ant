@@ -16,10 +16,9 @@ import armyant.hgoe.structures.ResultSet;
 import edu.uci.ics.jung.algorithms.shortestpath.BFSDistanceLabeler;
 import edu.uci.ics.jung.graph.SetHypergraph;
 import org.ahocorasick.trie.Emit;
-import org.ahocorasick.trie.Token;
 import org.ahocorasick.trie.Trie;
 import org.apache.commons.lang3.SerializationUtils;
-import org.apache.lucene.index.Term;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,25 +80,34 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
         Set<Node> nodes = new HashSet<>(entityNodes);
 
         DocumentNode documentNode = new DocumentNode(document.getDocID());
-        synchronized (this) { if (!graph.containsVertex(documentNode)) graph.addVertex(documentNode); }
+        nodes.add(documentNode);
+        synchronized (this) {
+            if (!graph.containsVertex(documentNode)) graph.addVertex(documentNode);
+        }
 
-        Set<TermNode> termNodes = tokens.stream().map(token -> {
-            TermNode termNode = new TermNode(token);
-            synchronized (this) { if (!graph.containsVertex(termNode)) graph.addVertex(termNode); }
-            return termNode;
-        }).collect(Collectors.toSet());
+        Set<TermNode> termNodes = tokens.stream()
+                .map(token -> {
+                    TermNode termNode = new TermNode(token);
+                    synchronized (this) {
+                        if (!graph.containsVertex(termNode)) graph.addVertex(termNode);
+                    }
+                    return termNode;
+                })
+                .collect(Collectors.toSet());
 
         nodes.addAll(termNodes);
 
         DocumentEdge link = new DocumentEdge(document.getDocID());
-        synchronized (this) { graph.addEdge(link, nodes); }
+        synchronized (this) {
+            graph.addEdge(link, nodes);
+        }
     }
 
     private Set<EntityNode> indexEntities(Document document) {
         Map<EntityNode, Set<EntityNode>> edges = document.getTriples().stream()
                 .collect(
                         Collectors.groupingBy(t -> new EntityNode(t.getSubject()),
-                        Collectors.mapping(t -> new EntityNode(t.getObject()), Collectors.toSet())));
+                                Collectors.mapping(t -> new EntityNode(t.getObject()), Collectors.toSet())));
 
         Set<EntityNode> nodes = new HashSet<>();
 
@@ -107,48 +115,38 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
             Set<EntityNode> entityNodes = new HashSet<>();
 
             entityNodes.add(entry.getKey());
-            synchronized (this) { if (!graph.containsVertex(entry.getKey())) graph.addVertex(entry.getKey()); }
+            synchronized (this) {
+                if (!graph.containsVertex(entry.getKey())) graph.addVertex(entry.getKey());
+            }
 
             for (EntityNode node : entry.getValue()) {
                 entityNodes.add(node);
-                synchronized (this) { if (!graph.containsVertex(node)) graph.addVertex(node); }
+                synchronized (this) {
+                    if (!graph.containsVertex(node)) graph.addVertex(node);
+                }
             }
 
             nodes.addAll(entityNodes);
 
             RelatedToEdge link = new RelatedToEdge();
-            synchronized (this) { graph.addEdge(link, entityNodes); }
+            synchronized (this) {
+                graph.addEdge(link, entityNodes);
+            }
         }
 
         return nodes;
     }
 
-    /*private void linkTextAndKnowledge(Set<TermNode> termNodes, Set<EntityNode> entityNodes) {
-        for (EntityNode entityNode : entityNodes) {
-            Set<Node> nodes = new HashSet<>();
-            nodes.add(entityNode);
-
-            for (TermNode termNode : termNodes) {
-                if (entityNode.getName().toLowerCase().matches(".*\\b" + termNode.getName().toLowerCase() + "\\b.*")) {
-                    nodes.add(termNode);
-                }
-            }
-
-            if (nodes.isEmpty()) continue;
-
-            ContainedInEdge link = new ContainedInEdge();
-            graph.addEdge(link, nodes);
-        }
-    }*/
-
     public void linkTextAndKnowledge() {
         logger.info("Building trie from term nodes");
         Trie.TrieBuilder trieBuilder = Trie.builder()
                 .ignoreOverlaps()
+                .ignoreCase()
                 .onlyWholeWords();
 
         for (Node node : graph.getVertices()) {
             if (node instanceof TermNode) {
+                System.out.println(node.getName());
                 trieBuilder.addKeyword(node.getName());
             }
         }
@@ -162,9 +160,14 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
                 nodes.add(node);
 
                 Collection<Emit> emits = trie.parseText(node.getName());
+                System.out.println(node.getName() + ": ");
+                emits.stream().forEach(System.out::println);
                 Set<TermNode> termNodes = emits.stream()
                         .map(e -> new TermNode(e.getKeyword()))
                         .collect(Collectors.toSet());
+
+                if (termNodes.isEmpty()) continue;
+
                 nodes.addAll(termNodes);
 
                 ContainedInEdge link = new ContainedInEdge();
@@ -202,7 +205,7 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
         }
     }
 
-    public void close() {
+    public void save() {
         logger.info("Dumping graph to {}", path);
         try {
             SerializationUtils.serialize(graph, new FileOutputStream(path));
@@ -237,6 +240,7 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
             }
 
             for (Edge edge : edges) {
+                if (edge instanceof DocumentEdge) continue; // for now ignore document co-occurrence relation to imitate GoE
                 for (Node node : graph.getIncidentVertices(edge)) {
                     if (node instanceof EntityNode) {
                         localSeedNodes.add(node);
@@ -261,7 +265,8 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
         Set<Node> reachedSeedNodes = new HashSet<>();
 
         for (Node seedNode : seedNodes) {
-            if (bfsDistanceLabeler.getDistance(graph ,seedNode) != -1) {
+            bfsDistanceLabeler.labelDistances(graph, seedNode);
+            if (bfsDistanceLabeler.getDistance(graph, seedNode) != -1) {
                 reachedSeedNodes.add(seedNode);
             }
         }
@@ -270,8 +275,9 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
     }
 
     private Set<Node> getNeighbors(Node sourceNode, Class edgeType) {
-        return graph.getNeighbors(sourceNode).stream()
+        return graph.getIncidentEdges(sourceNode).stream()
                 .filter(edgeType::isInstance)
+                .flatMap(edge -> graph.getIncidentVertices(edge).stream().filter(n -> !n.equals(sourceNode)))
                 .collect(Collectors.toSet());
     }
 
@@ -350,15 +356,15 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
     }
 
 
-    /*public void printStatistics() {
-        long numNodes = graph.count(typePlus(Node.class));
-        long numEdges = graph.count(typePlus(Edge.class));
+    public void printStatistics() {
+        long numNodes = graph.getVertexCount();
+        long numEdges = graph.getEdgeCount();
 
         System.out.println("Nodes: " + numNodes);
         System.out.println("Edges: " + numEdges);
     }
 
-    public void printDepthFirst(String fromNodeName) {
+    /*public void printDepthFirst(String fromNodeName) {
         HGHandle termNode = graph.findOne(and(typePlus(Node.class), eq("name", fromNodeName)));
 
         HGDepthFirstTraversal traversal = new HGDepthFirstTraversal(termNode, new SimpleALGenerator(graph));
@@ -369,55 +375,19 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
             Node atom = graph.get(current.getSecond());
             System.out.println("Visiting node " + atom + " pointed to by " + l);
         }
-    }
+    }*/
 
     public void printNodes() {
-        HGSearchResult<HGHandle> rs = graph.find(or(type(TermNode.class), type(EntityNode.class)));
-
-        try {
-            while (rs.hasNext()) {
-                HGHandle current = rs.next();
-                Node node = graph.get(current);
-                System.out.println(node.getName() + " - " + node.getClass().getSimpleName());
-            }
-        } finally {
-            rs.close();
+        for (Node node : graph.getVertices()) {
+            System.out.println(node.getName() + " - " + node.getClass().getSimpleName());
         }
     }
 
     public void printEdges() {
-        HGSearchResult<HGHandle> rs = graph.find(typePlus(Edge.class));
-
-        try {
-            while (rs.hasNext()) {
-                HGHandle current = rs.next();
-
-                Edge edge = graph.get(current);
-
-                List<Node> headNodes = new ArrayList<>();
-                List<Node> tailNodes = new ArrayList<>();
-
-                for (HGHandle handle : edge.getHead()) {
-                    headNodes.add(graph.get(handle));
-                }
-
-                for (HGHandle handle : edge.getTail()) {
-                    tailNodes.add(graph.get(handle));
-                }
-
-                String headMembers = String.join(", ", headNodes.stream()
-                        .map(Node::toString)
-                        .collect(Collectors.toList()));
-
-                String tailMembers = String.join(", ", tailNodes.stream()
-                        .map(Node::toString)
-                        .collect(Collectors.toList()));
-
-                System.out.println(String.format(
-                        "%s -[%s]-> %s", headMembers, edge.getClass().getSimpleName(), tailMembers));
-            }
-        } finally {
-            rs.close();
+        for (Edge edge : graph.getEdges()) {
+            Collection<Node> nodes = graph.getIncidentVertices(edge);
+            System.out.println(String.format(
+                    "[%s] %s", edge.getClass().getSimpleName(), StringUtils.join(" -- ", nodes)));
         }
-    }*/
+    }
 }
