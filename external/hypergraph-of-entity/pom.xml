@@ -105,6 +105,18 @@
             <artifactId>ahocorasick</artifactId>
             <version>0.4.0</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.esotericsoftware</groupId>
+            <artifactId>kryo</artifactId>
+            <version>4.0.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>es.usc.citius.hipster</groupId>
+            <artifactId>hipster-all</artifactId>
+            <version>1.0.1</version>
+        </dependency>
     </dependencies>
 
     <build>

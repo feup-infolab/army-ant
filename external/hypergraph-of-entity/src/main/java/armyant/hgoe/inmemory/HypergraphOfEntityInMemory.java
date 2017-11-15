@@ -9,15 +9,21 @@ import armyant.hgoe.inmemory.nodes.DocumentNode;
 import armyant.hgoe.inmemory.nodes.EntityNode;
 import armyant.hgoe.inmemory.nodes.Node;
 import armyant.hgoe.inmemory.nodes.TermNode;
+import armyant.hgoe.inmemory.traversals.AllPaths;
 import armyant.hgoe.structures.Document;
 import armyant.hgoe.structures.Result;
 import armyant.hgoe.structures.ResultSet;
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
 import edu.uci.ics.jung.algorithms.shortestpath.BFSDistanceLabeler;
 import edu.uci.ics.jung.algorithms.shortestpath.DijkstraDistance;
 import edu.uci.ics.jung.graph.SetHypergraph;
+import es.usc.citius.hipster.algorithm.Hipster;
+import es.usc.citius.hipster.graph.GraphSearchProblem;
+import es.usc.citius.hipster.model.problem.SearchProblem;
 import org.ahocorasick.trie.Emit;
 import org.ahocorasick.trie.Trie;
-import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,12 +40,13 @@ import java.util.stream.Collectors;
  */
 public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
     private static final Logger logger = LoggerFactory.getLogger(HypergraphOfEntityInMemory.class);
-    private static final Integer SEARCH_MAX_DISTANCE = 2;
+    private static final int SEARCH_MAX_DISTANCE = 2;
+    private static final int WALK_LENGTH = 3;
+    private static final int WALK_ITERATIONS = 10;
 
     private String path;
     private SetHypergraph<Node, Edge> graph;
     private DijkstraDistance<Node, Edge> dijkstraDistance;
-
 
     private long counter;
     private long totalTime;
@@ -61,14 +68,17 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
         } else {
             try {
                 logger.info("Loading graph from {}", path);
-                this.graph = SerializationUtils.deserialize(new FileInputStream(path));
+                Kryo kryo = new Kryo();
+                Input input = new Input(new FileInputStream(path));
+                this.graph = kryo.readObject(input, SetHypergraph.class);
+                input.close();
             } catch (FileNotFoundException e) {
                 logger.warn("Graph not found in {}, creating", path);
                 this.graph = new SetHypergraph<>();
             }
         }
 
-        this.dijkstraDistance = new DijkstraDistance<>(graph, edge -> 1);
+        this.dijkstraDistance = new DijkstraDistance<Node, Edge>(graph, e -> 1);
     }
 
     private void indexDocument(Document document) throws IOException {
@@ -205,12 +215,15 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
     public void save() {
         logger.info("Dumping graph to {}", path);
         try {
-            SerializationUtils.serialize(graph, new FileOutputStream(path));
+            Kryo kryo = new Kryo();
+
+            Output output = new Output(new FileOutputStream(path));
+            kryo.writeObject(output, graph);
+            output.close();
         } catch (FileNotFoundException e) {
             logger.error("Unable to dump graph to {}", path, e);
         }
     }
-
 
     private Set<TermNode> getQueryTermNodes(List<String> terms) {
         Set<TermNode> termNodes = new HashSet<>();
@@ -302,30 +315,78 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
         return weights;
     }
 
+    // FIXME
+    private double perSeedScoreAStar(EntityNode entityNode, Node seedNode, double seedWeight) {
+        double seedScore = 0d;
+        SearchProblem searchProblem = GraphSearchProblem
+                .startingFrom((Node) entityNode)
+                .in(new JUNGHipsterHypergraphAdapter<>(graph))
+                .takeCostsFromEdges()
+                .build();
+
+        int distance = Hipster.createAStar(searchProblem).search(seedNode).getOptimalPaths().size();
+        seedScore = seedWeight * 1d / (1 + distance);
+        return seedScore;
+    }
+
+    private double perSeedScoreDijkstra(EntityNode entityNode, Node seedNode, double seedWeight) {
+        double seedScore = 0d;
+        Number distance = dijkstraDistance.getDistance(entityNode, seedNode);
+        if (distance != null) seedScore = seedWeight * 1d / (1 + distance.doubleValue());
+        return seedScore;
+    }
+
+    private double perSeedScoreAllPaths(EntityNode entityNode, Node seedNode, double seedWeight) {
+        double seedScore = 0d;
+
+        AllPaths allPaths = new AllPaths(graph, entityNode, seedNode, SEARCH_MAX_DISTANCE);
+        allPaths.traverse();
+        List<List<Edge>> paths = allPaths.getPaths();
+
+        for (List<Edge> path : paths) {
+            seedScore += seedWeight * 1d / (1 + path.size());
+        }
+        seedScore /= 1 + paths.size();
+
+        return seedScore;
+    }
+
+    private void randomStep(Node node, int remainingSteps, List<Node> path) {
+        if (remainingSteps == 0) return;
+        Collection<Edge> edges = graph.getIncidentEdges(node);
+        /*edges.stream()
+            .skip();*/ // TODO FIXME
+    }
+
+    private double perSeedScoreRandomWalk(EntityNode entityNode, Node seedNode, double seedWeight) {
+        List<List<Node>> randomPaths;
+        for (int i=0; i < WALK_ITERATIONS; i++) {
+            graph.getIncidentEdges(entityNode);
+        }
+    }
+
+    public double perSeedScore(EntityNode entityNode, Node seedNode, double seedWeight, PerSeedScoreMethod method) {
+        logger.debug("Calculating score based on seed {} using {} method", seedNode, method);
+        switch (method) {
+            case ALL_PATHS:
+                return perSeedScoreAllPaths(entityNode, seedNode, seedWeight);
+            case DIJKSTA:
+                return perSeedScoreDijkstra(entityNode, seedNode, seedWeight);
+            case A_STAR:
+                return perSeedScoreAStar(entityNode, seedNode, seedWeight);
+            case RANDOM_WALK:
+                return perSeedScoreRandomWalk(entityNode, seedNode, seedWeight);
+        }
+    }
+
     public double entityWeight(EntityNode entityNode, Map<Node, Double> seedNodeWeights) {
         double score = 0d;
 
         // Get all paths between the entity and a seed node (within a maximum distance; null by default).
-        for (Node seedNode : seedNodeWeights.keySet()) {
-            logger.debug("Calculating score based on seed {}", seedNode);
-
-            double seedScore = 0d;
-
-            /*AllPaths allPaths = new AllPaths(graph, entityNode, seedNode, SEARCH_MAX_DISTANCE);
-            allPaths.traverse();
-            List<List<Edge>> paths = allPaths.getPaths();
-
-            for (List<Edge> path : paths) {
-                seedScore += seedNodeWeights.get(seedNode) * 1d / (1 + path.size());
-            }
-            seedScore = seedScore / (1 + paths.size());*/
-
-            Number distance = dijkstraDistance.getDistance(entityNode, seedNode);
-            if (distance != null) {
-                seedScore = seedNodeWeights.get(seedNode) * 1d / (1 + distance.doubleValue());
-            }
-
-            score += seedScore;
+        for (Map.Entry<Node, Double> entry : seedNodeWeights.entrySet()) {
+            Node seedNode = entry.getKey();
+            Double seedWeight = entry.getValue();
+            score += perSeedScore(entityNode, seedNode, seedWeight, PerSeedScoreMethod.RANDOM_WALK);
         }
 
         score = seedNodeWeights.isEmpty() ? 0 : score / seedNodeWeights.size();
@@ -351,13 +412,11 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
                 logger.debug("Ranking {}", entityNode);
                 double score = entityWeight(entityNode, seedNodeWeights);
                 if (score > 0) resultSet.addResult(new Result(entityNode, score));
-                //System.out.println(((Node) graph.get(entityNodeHandle)).getName() + ": " + score);
             }
         }
 
         return resultSet;
     }
-
 
     public void printStatistics() {
         long numNodes = graph.getVertexCount();
@@ -365,6 +424,12 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
 
         System.out.println("Nodes: " + numNodes);
         System.out.println("Edges: " + numEdges);
+    }
+
+    public void printNodes() {
+        for (Node node : graph.getVertices()) {
+            System.out.println(node.getName() + " - " + node.getClass().getSimpleName());
+        }
     }
 
     /*public void printDepthFirst(String fromNodeName) {
@@ -380,17 +445,18 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
         }
     }*/
 
-    public void printNodes() {
-        for (Node node : graph.getVertices()) {
-            System.out.println(node.getName() + " - " + node.getClass().getSimpleName());
-        }
-    }
-
     public void printEdges() {
         for (Edge edge : graph.getEdges()) {
             Collection<Node> nodes = graph.getIncidentVertices(edge);
             System.out.println(String.format(
                     "[%s] %s", edge.getClass().getSimpleName(), StringUtils.join(" -- ", nodes)));
         }
+    }
+
+    private enum PerSeedScoreMethod {
+        DIJKSTA,
+        ALL_PATHS,
+        RANDOM_WALK,
+        A_STAR
     }
 }

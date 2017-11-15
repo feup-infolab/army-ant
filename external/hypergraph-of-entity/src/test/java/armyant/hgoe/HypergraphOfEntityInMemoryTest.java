@@ -51,14 +51,7 @@ public class HypergraphOfEntityInMemoryTest {
             Collections.singletonList(new Triple("Unreachable Me", "related_to", "Unreachable You"))
     );
 
-    private String dbPath = "/tmp/test-hgoe-inmemory";
-
-    public void test() {
-        HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory("/tmp/hgoe-inmemory");
-        //HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory(dbPath);
-        hgoe.printStatistics();
-        hgoe.printEdges();
-    }
+    private String dbPath = "/tmp/hgoe-inmemory.kryo";
 
     public void testPrints() {
         HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory(dbPath);
@@ -71,9 +64,9 @@ public class HypergraphOfEntityInMemoryTest {
         hgoe.printNodes();
         System.out.print("\n");
 
-        System.out.println("====> Edges");
+        /*System.out.println("====> Edges");
         hgoe.printEdges();
-        System.out.print("\n");
+        System.out.print("\n");*/
 
         /*System.out.println("====> Depth first traversal starting at 'Semantic search' entity");
         hgoe.printDepthFirst("Semantic search");
@@ -94,10 +87,12 @@ public class HypergraphOfEntityInMemoryTest {
     public void testSearch() throws IOException {
         HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory(dbPath);
 
-        ResultSet resultSet = hgoe.search("web search system");
+        //ResultSet resultSet = hgoe.search("web search system");
         //ResultSet resultSet = hgoe.search("Monuments of India");
         //ResultSet resultSet = hgoe.search("Poirot");
         //ResultSet resultSet = hgoe.search("national park");
+        ResultSet resultSet = hgoe.search("viking");
+        //ResultSet resultSet = hgoe.search("viking ship");
 
         for (ResultSet it = resultSet; it.hasNext(); ) {
             Result result = it.next();

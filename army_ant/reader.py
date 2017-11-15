@@ -241,10 +241,12 @@ class INEXDirectoryReader(Reader):
             title_index_path = os.path.join(self.tmp_dir, 'title_index')
             title_index = shelve.open(title_index_path)
 
+        num_docs = 0
         for file_path in file_paths:
             with tarfile.open(file_path, 'r|bz2') as tar:
                 for member in tar:
                     if not member.name.endswith('.xml'): continue
+                    num_docs += 1
                     try:
                         article = etree.parse(tar.extractfile(member), parser)
                         page_id = inex.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
@@ -254,6 +256,8 @@ class INEXDirectoryReader(Reader):
                         logger.warn("Error parsing XML, skipping title indexing for %s in %s" % (member.name, source_path))
 
         if type(title_index) is shelve.DbfilenameShelf: title_index.close()
+
+        logger.info("Finished indexing titles by doc_id for %d documents in all archives in %s" % (num_docs, source_path))
 
         inex_iterators = [
             iter(INEXReader(file_path, title_index=title_index if use_memory else title_index_path))

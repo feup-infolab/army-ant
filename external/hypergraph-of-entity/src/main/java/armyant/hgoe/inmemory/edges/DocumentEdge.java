@@ -6,6 +6,9 @@ package armyant.hgoe.inmemory.edges;
 public class DocumentEdge extends Edge {
     private String docID;
 
+    public DocumentEdge() {
+    }
+
     public DocumentEdge(String docID) {
         super();
         this.docID = docID;
