@@ -22,9 +22,11 @@ import edu.uci.ics.jung.graph.SetHypergraph;
 import es.usc.citius.hipster.algorithm.Hipster;
 import es.usc.citius.hipster.graph.GraphSearchProblem;
 import es.usc.citius.hipster.model.problem.SearchProblem;
+import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
 import org.ahocorasick.trie.Emit;
 import org.ahocorasick.trie.Trie;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,11 +40,12 @@ import java.util.stream.Collectors;
 /**
  * Created by jldevezas on 2017-10-23.
  */
-public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
-    private static final Logger logger = LoggerFactory.getLogger(HypergraphOfEntityInMemory.class);
+public class HypergraphOfEntityInMemoryJUNG extends HypergraphOfEntity {
+    private static final Logger logger = LoggerFactory.getLogger(HypergraphOfEntityInMemoryJUNG.class);
     private static final int SEARCH_MAX_DISTANCE = 2;
     private static final int WALK_LENGTH = 3;
     private static final int WALK_ITERATIONS = 10;
+    private static final XoRoShiRo128PlusRandom RNG = new XoRoShiRo128PlusRandom();
 
     private String path;
     private SetHypergraph<Node, Edge> graph;
@@ -52,11 +55,11 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
     private long totalTime;
     private float avgTimePerDocument;
 
-    public HypergraphOfEntityInMemory(String path) {
+    public HypergraphOfEntityInMemoryJUNG(String path) {
         this(path, false);
     }
 
-    public HypergraphOfEntityInMemory(String path, boolean overwrite) {
+    public HypergraphOfEntityInMemoryJUNG(String path, boolean overwrite) {
         super();
         this.path = path;
 
@@ -225,8 +228,8 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
         }
     }
 
-    private Set<TermNode> getQueryTermNodes(List<String> terms) {
-        Set<TermNode> termNodes = new HashSet<>();
+    private Set<Node> getQueryTermNodes(List<String> terms) {
+        Set<Node> termNodes = new HashSet<>();
 
         for (String term : terms) {
             TermNode termNode = new TermNode(term);
@@ -236,13 +239,13 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
         return termNodes;
     }
 
-    private Set<Node> getSeedNodes(Set<TermNode> queryTermNodes) {
+    private Set<Node> getSeedNodes(Set<Node> queryTermNodes) {
         Set<Node> seedNodes = new HashSet<>();
 
-        for (TermNode queryTermNode : queryTermNodes) {
+        for (Node queryTermNode : queryTermNodes) {
             Set<Node> localSeedNodes = new HashSet<>();
 
-            Collection<Edge> edges = null;
+            Collection<Edge> edges;
             if (graph.containsVertex(queryTermNode)) {
                 edges = graph.getIncidentEdges(queryTermNode);
             } else {
@@ -259,7 +262,7 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
                 }
             }
 
-            if (localSeedNodes.isEmpty()) {
+            if (localSeedNodes.isEmpty() && graph.containsVertex(queryTermNode)) {
                 localSeedNodes.add(queryTermNode);
             }
 
@@ -285,19 +288,19 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
         return (double) reachedSeedNodes.size() / seedNodes.size();
     }
 
-    private Set<Node> getNeighbors(Node sourceNode, Class edgeType) {
+    private Set<Node> getNeighborsPerEdgeType(Node sourceNode, Class edgeType) {
         return graph.getIncidentEdges(sourceNode).stream()
                 .filter(edgeType::isInstance)
                 .flatMap(edge -> graph.getIncidentVertices(edge).stream().filter(n -> !n.equals(sourceNode)))
                 .collect(Collectors.toSet());
     }
 
-    private double confidenceWeight(Node seedNode, Set<TermNode> queryTermNodes) {
+    private double confidenceWeight(Node seedNode, Set<Node> queryTermNodes) {
         if (seedNode == null) return 0;
 
         if (seedNode instanceof TermNode) return 1;
 
-        Set<Node> neighbors = getNeighbors(seedNode, ContainedInEdge.class);
+        Set<Node> neighbors = getNeighborsPerEdgeType(seedNode, ContainedInEdge.class);
 
         Set<Node> linkedQueryTermNodes = new HashSet<>(neighbors);
         linkedQueryTermNodes.retainAll(queryTermNodes);
@@ -305,7 +308,7 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
         return (double) linkedQueryTermNodes.size() / neighbors.size();
     }
 
-    public Map<Node, Double> seedNodeConfidenceWeights(Set<Node> seedNodes, Set<TermNode> queryTermNodes) {
+    public Map<Node, Double> seedNodeConfidenceWeights(Set<Node> seedNodes, Set<Node> queryTermNodes) {
         Map<Node, Double> weights = new HashMap<>();
 
         for (Node seedNode : seedNodes) {
@@ -315,7 +318,7 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
         return weights;
     }
 
-    // FIXME
+    // FIXME Adapter needs revision to work
     private double perSeedScoreAStar(EntityNode entityNode, Node seedNode, double seedWeight) {
         double seedScore = 0d;
         SearchProblem searchProblem = GraphSearchProblem
@@ -351,18 +354,41 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
         return seedScore;
     }
 
-    private void randomStep(Node node, int remainingSteps, List<Node> path) {
-        if (remainingSteps == 0) return;
-        Collection<Edge> edges = graph.getIncidentEdges(node);
-        /*edges.stream()
-            .skip();*/ // TODO FIXME
+    // TODO Should follow Bellaachia2013 for random walks on hypergraphs (Equation 14)
+    private <T> T getRandom(Collection<T> collection) {
+        return collection.stream()
+                .skip((int) (collection.size() * RNG.nextDoubleFast()))
+                .findFirst().get();
     }
 
+    private List<Edge> randomWalk(Node startNode, int length) {
+        List<Edge> path = new ArrayList<>();
+        randomStep(startNode, length, path);
+        return path;
+    }
+
+    private void randomStep(Node node, int remainingSteps, List<Edge> path) {
+        if (remainingSteps == 0) return;
+
+        Collection<Edge> edges = graph.getIncidentEdges(node);
+        Edge randomEdge = getRandom(edges);
+
+        Collection<Node> nodes = graph.getIncidentVertices(randomEdge);
+        Node randomNode = getRandom(nodes);
+
+        path.add(randomEdge);
+        randomStep(randomNode, remainingSteps - 1, path);
+    }
+
+    // FIXME Unfinished
     private double perSeedScoreRandomWalk(EntityNode entityNode, Node seedNode, double seedWeight) {
-        List<List<Node>> randomPaths;
-        for (int i=0; i < WALK_ITERATIONS; i++) {
-            graph.getIncidentEdges(entityNode);
+        double seedScore = 0d;
+        for (int i = 0; i < WALK_ITERATIONS; i++) {
+            List<Edge> randomPath = randomWalk(entityNode, WALK_LENGTH);
+            int seedIndex = randomPath.indexOf(seedNode);
+            if (seedIndex != -1) seedScore += randomPath.indexOf(seedNode);
         }
+        return seedScore / 10;
     }
 
     public double perSeedScore(EntityNode entityNode, Node seedNode, double seedWeight, PerSeedScoreMethod method) {
@@ -377,6 +403,7 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
             case RANDOM_WALK:
                 return perSeedScoreRandomWalk(entityNode, seedNode, seedWeight);
         }
+        return 0;
     }
 
     public double entityWeight(EntityNode entityNode, Map<Node, Double> seedNodeWeights) {
@@ -390,27 +417,103 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
         }
 
         score = seedNodeWeights.isEmpty() ? 0 : score / seedNodeWeights.size();
+        //score *= coverage(entityNode, seedNodeWeights.keySet());
 
-        return score * coverage(entityNode, seedNodeWeights.keySet());
+        if (score > 0 ) System.out.println(score + "\t" + entityNode);
+
+        return score;
+    }
+
+    /*private Set<Node> getNeighborhood(Node node, int depth) {
+        return getNeighborhood(node, depth, new HashSet<>());
+    }
+
+    private Set<Node> getNeighborhood(Node node, int depth, Set<Node> visited) {
+        visited.add(node);
+
+        Set<Node> neighborhood = new HashSet<>();
+
+        if (depth == 0) return neighborhood;
+
+        Collection<Node> neighbors = graph.getNeighborsPerEdgeType(node);
+        neighborhood.addAll(neighbors);
+
+        for (Node neighbor : neighbors) {
+            if (visited.contains(neighbor)) continue;
+            neighborhood.addAll(getNeighborhood(neighbor, depth - 1, visited));
+        }
+
+        return neighborhood;
+    }*/
+
+    /*public void updateQuerySubgraph(Set<Node> queryTermNodes) {
+        logger.info("Updating query subgraph");
+        Set<Node> nodes = new HashSet<>();
+        for (Node queryTermNode : queryTermNodes) {
+            nodes.addAll(getNeighborhood(queryTermNode, 0));
+        }
+        System.out.println(this.graph.getVertexCount() + " : " + this.graph.getEdgeCount());
+        this.graph = FilterUtils.createInducedSubgraph(nodes, graph);
+        System.out.println(this.graph.getVertexCount() + " : " + this.graph.getEdgeCount());
+    }*/
+
+    private <T> double jaccardSimilarity(Set<T> a, Set<T> b) {
+        Set<T> intersect = new HashSet<>(a);
+        a.retainAll(b);
+
+        Set<T> union = new HashSet<>(a);
+        union.addAll(b);
+
+        return (double)intersect.size() / union.size();
+    }
+
+    public double jaccardScore(EntityNode entityNode, Map<Node, Pair<Set<Node>,Double>> seedNeighborsWeights) {
+        double score = 0d;
+
+        for (Map.Entry<Node, Pair<Set<Node>, Double>> seed : seedNeighborsWeights.entrySet()) {
+            Set<Node> seedNeighbors = seed.getValue().getLeft();
+            Set<Node> entityNeighbors = new HashSet<>(graph.getNeighbors(entityNode));
+            score += seed.getValue().getRight() * jaccardSimilarity(seedNeighbors, entityNeighbors);
+        }
+
+        return score;
     }
 
     public ResultSet search(String query) throws IOException {
+        return search(query, RankingFunction.JACCARD_SCORE);
+    }
+
+    public ResultSet search(String query, RankingFunction function) throws IOException {
         ResultSet resultSet = new ResultSet();
 
         List<String> tokens = analyze(query);
-        Set<TermNode> queryTermNodeHandles = getQueryTermNodes(tokens);
+        Set<Node> queryTermNodes = getQueryTermNodes(tokens);
 
-        Set<Node> seedNodes = getSeedNodes(queryTermNodeHandles);
+        Set<Node> seedNodes = getSeedNodes(queryTermNodes);
         System.out.println("Seed Nodes: " + seedNodes.stream().map(Node::toString).collect(Collectors.toList()));
 
-        Map<Node, Double> seedNodeWeights = seedNodeConfidenceWeights(seedNodes, queryTermNodeHandles);
+        Map<Node, Double> seedNodeWeights = seedNodeConfidenceWeights(seedNodes, queryTermNodes);
         System.out.println("Seed Node Confidence Weights: " + seedNodeWeights);
+
+        Map<Node, Pair<Set<Node>,Double>> seedNeighborsWeights = new HashMap<>();
+        for (Map.Entry<Node, Double> entry : seedNodeWeights.entrySet()) {
+            seedNeighborsWeights.put(entry.getKey(), Pair.of(new HashSet<>(graph.getNeighbors(entry.getKey())), entry.getValue()));
+        }
 
         for (Node node : graph.getVertices()) {
             if (node instanceof EntityNode) {
                 EntityNode entityNode = (EntityNode) node;
-                logger.debug("Ranking {}", entityNode);
-                double score = entityWeight(entityNode, seedNodeWeights);
+                logger.debug("Ranking {} using {}", entityNode, function);
+
+                double score = 0d;
+                switch (function) {
+                    case ENTITY_WEIGHT:
+                        score = entityWeight(entityNode, seedNodeWeights);
+                        break;
+                    case JACCARD_SCORE:
+                        score = jaccardScore(entityNode, seedNeighborsWeights);
+                }
+
                 if (score > 0) resultSet.addResult(new Result(entityNode, score));
             }
         }
@@ -458,5 +561,10 @@ public class HypergraphOfEntityInMemory extends HypergraphOfEntity {
         ALL_PATHS,
         RANDOM_WALK,
         A_STAR
+    }
+
+    private enum RankingFunction {
+        ENTITY_WEIGHT,
+        JACCARD_SCORE
     }
 }

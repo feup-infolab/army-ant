@@ -17,6 +17,12 @@
             <id>hypergraphdb</id>
             <url>http://hypergraphdb.org/maven</url>
         </repository>
+
+        <repository>
+            <id>lhogie.i3s.maven.repo</id>
+            <name>Luc Hogie Maven repository</name>
+            <url>http://www.i3s.unice.fr/~hogie/maven_repository/</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -117,6 +123,18 @@
             <artifactId>hipster-all</artifactId>
             <version>1.0.1</version>
         </dependency>
+
+        <dependency>
+            <groupId>it.unimi.dsi</groupId>
+            <artifactId>dsiutils</artifactId>
+            <version>2.4.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>grph</groupId>
+            <artifactId>grph</artifactId>
+            <version>4.0.0</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -158,5 +176,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

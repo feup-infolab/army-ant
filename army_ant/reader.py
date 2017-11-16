@@ -166,7 +166,10 @@ class INEXReader(Reader):
             if related_id is None: continue
             related_id = inex.xlink_to_page_id(related_id)
 
-            related_title = self.title_index.get(related_id, get_first(link.xpath('text()')))
+            link_text = get_first(link.xpath('text()'))
+            if link_text and len(link_text) < 3: link_text = None
+
+            related_title = self.title_index.get(related_id, link_text)
             if related_title is None: continue
             related_title = related_title.replace('\n', ' ').strip()
 

@@ -1,6 +1,5 @@
 package armyant.hgoe;
 
-import armyant.hgoe.indisk.HypergraphOfEntityInDisk;
 import com.optimaize.langdetect.LanguageDetector;
 import com.optimaize.langdetect.LanguageDetectorBuilder;
 import com.optimaize.langdetect.i18n.LdLocale;
@@ -12,6 +11,7 @@ import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.LowerCaseFilter;
 import org.apache.lucene.analysis.StopFilter;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.miscellaneous.LengthFilter;
 import org.apache.lucene.analysis.standard.StandardFilter;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
@@ -35,6 +35,7 @@ import java.util.List;
  */
 public abstract class HypergraphOfEntity {
     private static final Logger logger = LoggerFactory.getLogger(HypergraphOfEntity.class);
+    private static final int MIN_TOKEN_LENGTH = 3;
 
     private LanguageDetector languageDetector;
 
@@ -109,6 +110,7 @@ public abstract class HypergraphOfEntity {
         TokenStream filter = new StandardFilter(tokenizer);
         filter = new LowerCaseFilter(filter);
         filter = new StopFilter(filter, getStopwords(language));
+        filter = new LengthFilter(filter, MIN_TOKEN_LENGTH, Integer.MAX_VALUE);
         filter.reset();
 
         List<String> tokens = new ArrayList<>();
@@ -119,5 +121,4 @@ public abstract class HypergraphOfEntity {
 
         return tokens;
     }
-
 }

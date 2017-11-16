@@ -1,6 +1,6 @@
 package armyant.hgoe;
 
-import armyant.hgoe.inmemory.HypergraphOfEntityInMemory;
+import armyant.hgoe.inmemory.HypergraphOfEntityInMemoryJUNG;
 import armyant.hgoe.structures.Document;
 import armyant.hgoe.structures.Result;
 import armyant.hgoe.structures.ResultSet;
@@ -54,7 +54,7 @@ public class HypergraphOfEntityInMemoryTest {
     private String dbPath = "/tmp/hgoe-inmemory.kryo";
 
     public void testPrints() {
-        HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory(dbPath);
+        HypergraphOfEntityInMemoryJUNG hgoe = new HypergraphOfEntityInMemoryJUNG(dbPath);
 
         System.out.println("====> Statistics");
         hgoe.printStatistics();
@@ -76,7 +76,7 @@ public class HypergraphOfEntityInMemoryTest {
     }
 
     public void testIndex() throws IOException {
-        HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory(dbPath, true);
+        HypergraphOfEntityInMemoryJUNG hgoe = new HypergraphOfEntityInMemoryJUNG(dbPath, true);
         hgoe.index(document1);
         hgoe.index(document2);
         hgoe.index(document3);
@@ -85,13 +85,13 @@ public class HypergraphOfEntityInMemoryTest {
     }
 
     public void testSearch() throws IOException {
-        HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory(dbPath);
+        HypergraphOfEntityInMemoryJUNG hgoe = new HypergraphOfEntityInMemoryJUNG(dbPath);
 
         //ResultSet resultSet = hgoe.search("web search system");
         //ResultSet resultSet = hgoe.search("Monuments of India");
-        //ResultSet resultSet = hgoe.search("Poirot");
+        ResultSet resultSet = hgoe.search("Poirot");
         //ResultSet resultSet = hgoe.search("national park");
-        ResultSet resultSet = hgoe.search("viking");
+        //ResultSet resultSet = hgoe.search("viking");
         //ResultSet resultSet = hgoe.search("viking ship");
 
         for (ResultSet it = resultSet; it.hasNext(); ) {
