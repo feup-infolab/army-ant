@@ -15,7 +15,7 @@ import java.util.Collections;
  * Created by jldevezas on 2017-10-23.
  */
 @Test
-public class HypergraphOfEntityInMemoryTest {
+public class HypergraphOfEntityInMemoryJUNGTest {
 
     public static final Document document1 = new Document(
             "D1",

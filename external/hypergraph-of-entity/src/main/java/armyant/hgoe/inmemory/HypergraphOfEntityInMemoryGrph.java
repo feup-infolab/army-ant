@@ -1,6 +1,7 @@
 package armyant.hgoe.inmemory;
 
 import armyant.hgoe.HypergraphOfEntity;
+import armyant.hgoe.exceptions.HypergraphException;
 import armyant.hgoe.inmemory.edges.ContainedInEdge;
 import armyant.hgoe.inmemory.edges.DocumentEdge;
 import armyant.hgoe.inmemory.edges.Edge;
@@ -9,32 +10,23 @@ import armyant.hgoe.inmemory.nodes.DocumentNode;
 import armyant.hgoe.inmemory.nodes.EntityNode;
 import armyant.hgoe.inmemory.nodes.Node;
 import armyant.hgoe.inmemory.nodes.TermNode;
-import armyant.hgoe.inmemory.traversals.AllPaths;
 import armyant.hgoe.structures.Document;
-import armyant.hgoe.structures.Result;
-import armyant.hgoe.structures.ResultSet;
 import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.Input;
-import com.esotericsoftware.kryo.io.Output;
-import edu.uci.ics.jung.algorithms.shortestpath.BFSDistanceLabeler;
-import edu.uci.ics.jung.algorithms.shortestpath.DijkstraDistance;
-import edu.uci.ics.jung.graph.SetHypergraph;
-import es.usc.citius.hipster.algorithm.Hipster;
-import es.usc.citius.hipster.graph.GraphSearchProblem;
-import es.usc.citius.hipster.model.problem.SearchProblem;
+import com.esotericsoftware.kryo.serializers.MapSerializer;
+import grph.Grph;
 import grph.in_memory.InMemoryGrph;
 import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
 import org.ahocorasick.trie.Emit;
 import org.ahocorasick.trie.Trie;
+import org.apache.commons.collections4.BidiMap;
+import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
+import org.objenesis.strategy.StdInstantiatorStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import toools.collections.primitive.LucIntSet;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -47,24 +39,54 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
     private static final int WALK_LENGTH = 3;
     private static final int WALK_ITERATIONS = 10;
     private static final XoRoShiRo128PlusRandom RNG = new XoRoShiRo128PlusRandom();
+    private static final Kryo kryo;
+    private static final MapSerializer nodeEdgeIndexSerializer;
 
-    private String path;
+    static {
+        kryo = new Kryo();
+        kryo.setInstantiatorStrategy(new StdInstantiatorStrategy());
+
+        nodeEdgeIndexSerializer = new MapSerializer();
+        nodeEdgeIndexSerializer.setKeyClass(Node.class, kryo.getSerializer(Node.class));
+        nodeEdgeIndexSerializer.setKeysCanBeNull(false);
+        nodeEdgeIndexSerializer.setValueClass(Integer.class, kryo.getSerializer(Integer.class));
+
+        kryo.register(HashMap.class, nodeEdgeIndexSerializer);
+    }
+
+    private File directory;
     private InMemoryGrph graph;
-    private Map<Node,Integer> nodeIndex;
-    private int nextEdgeID = 0;
+    private BidiMap<Node, Integer> nodeIndex;
+    private BidiMap<Edge, Integer> edgeIndex;
 
     private long counter;
     private long totalTime;
     private float avgTimePerDocument;
 
-    public HypergraphOfEntityInMemoryGrph(String path) {
+    public HypergraphOfEntityInMemoryGrph(String path) throws HypergraphException {
         this(path, false);
     }
 
-    public HypergraphOfEntityInMemoryGrph(String path, boolean overwrite) {
+    public HypergraphOfEntityInMemoryGrph(String path, boolean overwrite) throws HypergraphException {
         super();
-        this.path = path;
-        this.nodeIndex = new HashMap<>();
+
+        this.directory = new File(path);
+        if (directory.exists()) {
+            if (!directory.isDirectory()) {
+                throw new HypergraphException(String.format("%s is not a directory", path));
+            }
+
+            if (!directory.canWrite()) {
+                throw new HypergraphException(String.format("%s is not writable", path));
+            }
+        } else {
+            if (!directory.mkdirs()) {
+                throw new HypergraphException(String.format("Could not create directory %s", path));
+            }
+        }
+
+        this.nodeIndex = new DualHashBidiMap<>();
+        this.edgeIndex = new DualHashBidiMap<>();
 
         logger.info("Using in-memory version of Hypergraph of Entity");
 
@@ -72,79 +94,92 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
             logger.info("Overwriting graph in {}, if it exists", path);
             this.graph = new InMemoryGrph();
         } else {
-            try {
-                logger.info("Loading graph from {}", path);
-                Kryo kryo = new Kryo();
-                Input input = new Input(new FileInputStream(path));
-                this.graph = kryo.readObject(input, InMemoryGrph.class);
-                input.close();
-            } catch (FileNotFoundException e) {
-                logger.warn("Graph not found in {}, creating", path);
-                this.graph = new InMemoryGrph();
+            load();
+        }
+    }
+
+    private synchronized int getOrCreateNode(Node node) {
+        if (nodeIndex.containsKey(node)) return nodeIndex.get(node);
+        int nodeID = graph.addVertex();
+        nodeIndex.put(node, nodeID);
+        return nodeID;
+    }
+
+    private synchronized int createEdge(Edge edge) {
+        int edgeID = graph.getNextEdgeAvailable();
+        graph.addDirectedHyperEdge(edgeID);
+        edgeIndex.put(edge, edgeID);
+        return edgeID;
+    }
+
+    private synchronized int getOrCreateEdge(Edge edge) {
+        if (edgeIndex.containsKey(edge)) return edgeIndex.get(edge);
+        return createEdge(edge);
+    }
+
+    private void addNodesToHyperEdgeHead(int edgeID, Set<Integer> nodeIDs) {
+        for (Integer nodeID : nodeIDs) {
+            synchronized (this) {
+                graph.addToDirectedHyperEdgeHead(edgeID, nodeID);
+            }
+        }
+    }
+
+    private void addNodesToHyperEdgeTail(int edgeID, Set<Integer> nodeIDs) {
+        for (Integer nodeID : nodeIDs) {
+            synchronized (this) {
+                graph.addToDirectedHyperEdgeTail(edgeID, nodeID);
             }
         }
     }
 
     private void indexDocument(Document document) throws IOException {
-        Set<EntityNode> entityNodes = indexEntities(document);
+        DocumentEdge documentEdge = new DocumentEdge(document.getDocID());
+        int edgeID = getOrCreateEdge(documentEdge);
+
+        DocumentNode documentNode = new DocumentNode(document.getDocID());
+        int sourceDocumentNodeID = getOrCreateNode(documentNode);
+        synchronized (this) {
+            graph.addToDirectedHyperEdgeHead(edgeID, sourceDocumentNodeID);
+        }
+
+        Set<Integer> targetEntityNodeIDs = indexEntities(document);
+        addNodesToHyperEdgeTail(edgeID, targetEntityNodeIDs);
 
         List<String> tokens = analyze(document.getText());
         if (tokens.isEmpty()) return;
 
-        Set<Node> nodes = new HashSet<>(entityNodes);
-
-        DocumentNode documentNode = new DocumentNode(document.getDocID());
-        nodes.add(documentNode);
-        synchronized (this) {
-            if (!graph.containsVertex(documentNode)) graph.addVertex(documentNode);
-        }
-
-        Set<TermNode> termNodes = tokens.stream()
-                .map(token -> {
-                    TermNode termNode = new TermNode(token);
-                    synchronized (this) {
-                        if (!graph.containsVertex(termNode)) graph.addVertex(termNode);
-                    }
-                    return termNode;
-                })
-                .collect(Collectors.toSet());
-
-        nodes.addAll(termNodes);
-
-        DocumentEdge link = new DocumentEdge(document.getDocID());
-        synchronized (this) {
-            graph.addEdge(link, nodes);
-        }
+        Set<Integer> targetTermNodeIDs = tokens.stream().map(token -> {
+            TermNode termNode = new TermNode(token);
+            return getOrCreateNode(termNode);
+        }).collect(Collectors.toSet());
+        addNodesToHyperEdgeTail(edgeID, targetTermNodeIDs);
     }
 
-    private Set<EntityNode> indexEntities(Document document) {
+    private Set<Integer> indexEntities(Document document) {
         Map<EntityNode, Set<EntityNode>> edges = document.getTriples().stream()
-                .collect(
-                        Collectors.groupingBy(t -> new EntityNode(t.getSubject()),
-                                Collectors.mapping(t -> new EntityNode(t.getObject()), Collectors.toSet())));
+                .collect(Collectors.groupingBy(
+                        t -> new EntityNode(t.getSubject()),
+                        Collectors.mapping(t -> new EntityNode(t.getObject()), Collectors.toSet())));
 
-        Set<EntityNode> nodes = new HashSet<>();
+        Set<Integer> nodes = new HashSet<>();
 
         for (Map.Entry<EntityNode, Set<EntityNode>> entry : edges.entrySet()) {
-            Set<EntityNode> entityNodes = new HashSet<>();
+            int sourceEntityNodeID = getOrCreateNode(entry.getKey());
+            nodes.add(sourceEntityNodeID);
 
-            entityNodes.add(entry.getKey());
+            RelatedToEdge relatedToEdge = new RelatedToEdge();
+            int edgeID = createEdge(relatedToEdge);
             synchronized (this) {
-                if (!graph.containsVertex(entry.getKey())) graph.addVertex(entry.getKey());
+                graph.addToDirectedHyperEdgeHead(edgeID, sourceEntityNodeID);
             }
 
             for (EntityNode node : entry.getValue()) {
-                entityNodes.add(node);
+                int targetEntityNodeID = getOrCreateNode(node);
                 synchronized (this) {
-                    if (!graph.containsVertex(node)) graph.addVertex(node);
+                    graph.addToDirectedHyperEdgeTail(edgeID, targetEntityNodeID);
                 }
-            }
-
-            nodes.addAll(entityNodes);
-
-            RelatedToEdge link = new RelatedToEdge();
-            synchronized (this) {
-                graph.addEdge(link, entityNodes);
+                nodes.add(targetEntityNodeID);
             }
         }
 
@@ -158,31 +193,30 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
                 .ignoreCase()
                 .onlyWholeWords();
 
-        for (Node node : graph.getVertices()) {
-            if (node instanceof TermNode) {
-                trieBuilder.addKeyword(node.getName());
+        for (int termNodeID : graph.getVertices()) {
+            Node termNode = nodeIndex.getKey(termNodeID);
+            if (termNode instanceof TermNode) {
+                trieBuilder.addKeyword(termNode.getName());
             }
         }
 
         Trie trie = trieBuilder.build();
 
         logger.info("Creating links between entity nodes and term nodes using trie");
-        for (Node node : graph.getVertices()) {
-            if (node instanceof EntityNode) {
-                Set<Node> nodes = new HashSet<>();
-                nodes.add(node);
-
-                Collection<Emit> emits = trie.parseText(node.getName());
-                Set<TermNode> termNodes = emits.stream()
-                        .map(e -> new TermNode(e.getKeyword()))
+        for (int entityNodeID : graph.getVertices()) {
+            Node entityNode = nodeIndex.getKey(entityNodeID);
+            if (entityNode instanceof EntityNode) {
+                Collection<Emit> emits = trie.parseText(entityNode.getName());
+                Set<Integer> termNodes = emits.stream()
+                        .map(e -> nodeIndex.get(new TermNode(e.getKeyword())))
                         .collect(Collectors.toSet());
 
                 if (termNodes.isEmpty()) continue;
 
-                nodes.addAll(termNodes);
-
-                ContainedInEdge link = new ContainedInEdge();
-                graph.addEdge(link, nodes);
+                ContainedInEdge containedInEdge = new ContainedInEdge();
+                int edgeID = createEdge(containedInEdge);
+                addNodesToHyperEdgeHead(edgeID, termNodes);
+                graph.addToDirectedHyperEdgeTail(edgeID, entityNodeID);
             }
         }
     }
@@ -217,19 +251,89 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
     }
 
     public void save() {
-        logger.info("Dumping graph to {}", path);
-        try {
-            Kryo kryo = new Kryo();
+        logger.info("Saving index to {}", directory.getAbsolutePath());
 
-            Output output = new Output(new FileOutputStream(path));
-            kryo.writeObject(output, graph);
+        File nodeIndexFile = new File(directory, "node-index.ser");
+        try {
+            ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream(nodeIndexFile));
+            output.writeObject(nodeIndex);
             output.close();
-        } catch (FileNotFoundException e) {
-            logger.error("Unable to dump graph to {}", path, e);
+            /*Output output = new Output(new FileOutputStream(nodeIndexFile));
+            kryo.writeObject(output, nodeIndex, nodeEdgeIndexSerializer);
+            output.close();*/
+        } catch (IOException e) {
+            logger.error("Unable to dump hypergraph to {}", nodeIndexFile, e);
+        }
+
+        File edgeIndexFile = new File(directory, "edge-index.ser");
+        try {
+            ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream(edgeIndexFile));
+            output.writeObject(edgeIndex);
+            output.close();
+            /*Output output = new Output(new FileOutputStream(edgeIndexFile));
+            kryo.writeObject(output, edgeIndex, nodeEdgeIndexSerializer);
+            output.close();*/
+        } catch (IOException e) {
+            logger.error("Unable to dump hypergraph to {}", edgeIndexFile, e);
+        }
+
+        File hypergraphFile = new File(directory, "hypergraph.ser");
+        try {
+            ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream(hypergraphFile));
+            output.writeObject(graph);
+            output.close();
+            /*Output hypergraphOutput = new Output(new FileOutputStream(hypergraphFile));
+            kryo.writeObject(hypergraphOutput, graph);
+            hypergraphOutput.close();*/
+        } catch (IOException e) {
+            logger.error("Unable to dump hypergraph to {}", hypergraphFile, e);
         }
     }
 
-    private Set<Node> getQueryTermNodes(List<String> terms) {
+    public void load() {
+        logger.info("Loading index from {}", directory.getAbsolutePath());
+
+        File nodeIndexFile = new File(directory, "node-index.ser");
+        try {
+            ObjectInputStream input = new ObjectInputStream(new FileInputStream(nodeIndexFile));
+            this.nodeIndex = (BidiMap) input.readObject();
+            input.close();
+            /*Input input = new Input(new FileInputStream(nodeIndexFile));
+            this.nodeIndex = kryo.readObject(input, HashMap.class, nodeEdgeIndexSerializer);
+            input.close();*/
+        } catch (ClassNotFoundException | IOException e) {
+            logger.warn("Node index not found in {}, creating", directory);
+            this.nodeIndex = new DualHashBidiMap<>();
+        }
+
+        File edgeIndexFile = new File(directory, "edge-index.ser");
+        try {
+            ObjectInputStream input = new ObjectInputStream(new FileInputStream(edgeIndexFile));
+            this.edgeIndex = (BidiMap) input.readObject();
+            input.close();
+            /*Input input = new Input(new FileInputStream(edgeIndexFile));
+            this.edgeIndex = kryo.readObject(input, HashMap.class, nodeEdgeIndexSerializer);
+            input.close();*/
+        } catch (ClassNotFoundException | IOException e) {
+            logger.warn("Edge index not found in {}, creating", directory);
+            this.edgeIndex = new DualHashBidiMap<>();
+        }
+
+        File hypergraphFile = new File(directory, "hypergraph.ser");
+        try {
+            ObjectInputStream input = new ObjectInputStream(new FileInputStream(hypergraphFile));
+            this.graph = (InMemoryGrph) input.readObject();
+            input.close();
+            /*Input input = new Input(new FileInputStream(hypergraphFile));
+            this.graph = kryo.readObject(input, InMemoryGrph.class);
+            input.close();*/
+        } catch (ClassNotFoundException | IOException e) {
+            logger.warn("Hypergraph not found in {}, creating", directory);
+            this.graph = new InMemoryGrph();
+        }
+    }
+
+    /*private Set<Node> getQueryTermNodes(List<String> terms) {
         Set<Node> termNodes = new HashSet<>();
 
         for (String term : terms) {
@@ -420,10 +524,10 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         score = seedNodeWeights.isEmpty() ? 0 : score / seedNodeWeights.size();
         //score *= coverage(entityNode, seedNodeWeights.keySet());
 
-        if (score > 0 ) System.out.println(score + "\t" + entityNode);
+        if (score > 0) System.out.println(score + "\t" + entityNode);
 
         return score;
-    }
+    }*/
 
     /*private Set<Node> getNeighborhood(Node node, int depth) {
         return getNeighborhood(node, depth, new HashSet<>());
@@ -458,17 +562,17 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         System.out.println(this.graph.getVertexCount() + " : " + this.graph.getEdgeCount());
     }*/
 
-    private <T> double jaccardSimilarity(Set<T> a, Set<T> b) {
+    /*private <T> double jaccardSimilarity(Set<T> a, Set<T> b) {
         Set<T> intersect = new HashSet<>(a);
         a.retainAll(b);
 
         Set<T> union = new HashSet<>(a);
         union.addAll(b);
 
-        return (double)intersect.size() / union.size();
+        return (double) intersect.size() / union.size();
     }
 
-    public double jaccardScore(EntityNode entityNode, Map<Node, Pair<Set<Node>,Double>> seedNeighborsWeights) {
+    public double jaccardScore(EntityNode entityNode, Map<Node, Pair<Set<Node>, Double>> seedNeighborsWeights) {
         double score = 0d;
 
         for (Map.Entry<Node, Pair<Set<Node>, Double>> seed : seedNeighborsWeights.entrySet()) {
@@ -496,7 +600,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         Map<Node, Double> seedNodeWeights = seedNodeConfidenceWeights(seedNodes, queryTermNodes);
         System.out.println("Seed Node Confidence Weights: " + seedNodeWeights);
 
-        Map<Node, Pair<Set<Node>,Double>> seedNeighborsWeights = new HashMap<>();
+        Map<Node, Pair<Set<Node>, Double>> seedNeighborsWeights = new HashMap<>();
         for (Map.Entry<Node, Double> entry : seedNodeWeights.entrySet()) {
             seedNeighborsWeights.put(entry.getKey(), Pair.of(new HashSet<>(graph.getNeighbors(entry.getKey())), entry.getValue()));
         }
@@ -520,19 +624,20 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         }
 
         return resultSet;
-    }
+    }*/
 
     public void printStatistics() {
-        long numNodes = graph.getVertexCount();
-        long numEdges = graph.getEdgeCount();
+        long numNodes = graph.getNumberOfVertices();
+        long numEdges = graph.getNumberOfEdges();
 
         System.out.println("Nodes: " + numNodes);
         System.out.println("Edges: " + numEdges);
     }
 
     public void printNodes() {
-        for (Node node : graph.getVertices()) {
-            System.out.println(node.getName() + " - " + node.getClass().getSimpleName());
+        for (int nodeID : graph.getVertices()) {
+            Node node = nodeIndex.getKey(nodeID);
+            System.out.println(String.format("%d\t%s - %s", nodeID, node.getName(), node.getClass().getSimpleName()));
         }
     }
 
@@ -550,10 +655,12 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
     }*/
 
     public void printEdges() {
-        for (Edge edge : graph.getEdges()) {
-            Collection<Node> nodes = graph.getIncidentVertices(edge);
+        for (int edgeID : graph.getEdges()) {
+            LucIntSet head = graph.getDirectedHyperEdgeHead(edgeID);
+            LucIntSet tail = graph.getDirectedHyperEdgeTail(edgeID);
+            Edge edge = edgeIndex.getKey(edgeID);
             System.out.println(String.format(
-                    "[%s] %s", edge.getClass().getSimpleName(), StringUtils.join(" -- ", nodes)));
+                    "%d\t[%s] %s -> %s", edgeID, edge.getClass().getSimpleName(), head, tail));
         }
     }
 

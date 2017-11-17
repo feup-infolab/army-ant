@@ -595,7 +595,7 @@ class HypergraphOfEntity(Index):
         startJVM(jpype.getDefaultJVMPath(), '-Djava.class.path=%s' % classpath, '-Xms5g', '-Xmx5g')
 
         package = JPackage('armyant.hgoe')
-        HypergraphOfEntityInMemory = package.inmemory.HypergraphOfEntityInMemory
+        HypergraphOfEntityInMemory = package.inmemory.HypergraphOfEntityInMemoryGrph
         Document = package.structures.Document
         Triple = package.structures.Triple
 
@@ -635,7 +635,7 @@ class HypergraphOfEntity(Index):
         startJVM(jpype.getDefaultJVMPath(), '-Djava.class.path=%s' % classpath, '-Xms5g', '-Xmx5g')
 
         package = JPackage('armyant.hgoe')
-        HypergraphOfEntityInMemory = package.inmemory.HypergraphOfEntityInMemory
+        HypergraphOfEntityInMemory = package.inmemory.HypergraphOfEntityInMemoryGrph
         Document = package.structures.Document
         Triple = package.structures.Triple
 
