@@ -86,12 +86,12 @@ public class HypergraphOfEntityInMemoryGrphTest {
         hgoe.save();
     }
 
-    /*public void testSearch() throws IOException, HypergraphException {
+    public void testSearch() throws IOException, HypergraphException {
         HypergraphOfEntityInMemoryGrph hgoe = new HypergraphOfEntityInMemoryGrph(dbPath);
 
-        //ResultSet resultSet = hgoe.search("web search system");
+        ResultSet resultSet = hgoe.search("web search system");
         //ResultSet resultSet = hgoe.search("Monuments of India");
-        ResultSet resultSet = hgoe.search("Poirot");
+        //ResultSet resultSet = hgoe.search("Poirot");
         //ResultSet resultSet = hgoe.search("national park");
         //ResultSet resultSet = hgoe.search("viking");
         //ResultSet resultSet = hgoe.search("viking ship");
@@ -100,5 +100,5 @@ public class HypergraphOfEntityInMemoryGrphTest {
             Result result = it.next();
             System.out.println(String.format("%.4f %s", result.getScore(), result.getNode()));
         }
-    }*/
+    }
 }

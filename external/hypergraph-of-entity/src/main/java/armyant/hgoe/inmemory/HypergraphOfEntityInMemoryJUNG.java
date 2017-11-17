@@ -9,7 +9,7 @@ import armyant.hgoe.inmemory.nodes.DocumentNode;
 import armyant.hgoe.inmemory.nodes.EntityNode;
 import armyant.hgoe.inmemory.nodes.Node;
 import armyant.hgoe.inmemory.nodes.TermNode;
-import armyant.hgoe.inmemory.traversals.AllPaths;
+import armyant.hgoe.inmemory.traversals.AllPathsJUNG;
 import armyant.hgoe.structures.Document;
 import armyant.hgoe.structures.Result;
 import armyant.hgoe.structures.ResultSet;
@@ -342,7 +342,7 @@ public class HypergraphOfEntityInMemoryJUNG extends HypergraphOfEntity {
     private double perSeedScoreAllPaths(EntityNode entityNode, Node seedNode, double seedWeight) {
         double seedScore = 0d;
 
-        AllPaths allPaths = new AllPaths(graph, entityNode, seedNode, SEARCH_MAX_DISTANCE);
+        AllPathsJUNG allPaths = new AllPathsJUNG(graph, entityNode, seedNode, SEARCH_MAX_DISTANCE);
         allPaths.traverse();
         List<List<Edge>> paths = allPaths.getPaths();
 
@@ -459,7 +459,7 @@ public class HypergraphOfEntityInMemoryJUNG extends HypergraphOfEntity {
 
     private <T> double jaccardSimilarity(Set<T> a, Set<T> b) {
         Set<T> intersect = new HashSet<>(a);
-        a.retainAll(b);
+        intersect.retainAll(b);
 
         Set<T> union = new HashSet<>(a);
         union.addAll(b);

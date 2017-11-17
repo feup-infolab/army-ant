@@ -3,16 +3,13 @@ package armyant.hgoe.inmemory.traversals;
 import armyant.hgoe.inmemory.edges.Edge;
 import armyant.hgoe.inmemory.nodes.Node;
 import edu.uci.ics.jung.graph.SetHypergraph;
-import org.hypergraphdb.HGHandle;
-import org.hypergraphdb.HGRandomAccessResult;
-import org.hypergraphdb.HyperGraph;
 
 import java.util.*;
 
 /**
  * Created by jldevezas on 2017-11-08.
  */
-public class AllPaths {
+public class AllPathsJUNG {
     private SetHypergraph<Node, Edge> graph;
     private Node sourceNode;
     private Node targetNode;
@@ -23,11 +20,11 @@ public class AllPaths {
     private Stack<Edge> path;
     private Set<Edge> onPath;
 
-    public AllPaths(SetHypergraph<Node, Edge> graph, Node sourceNode, Node targetNode) {
+    public AllPathsJUNG(SetHypergraph<Node, Edge> graph, Node sourceNode, Node targetNode) {
         this(graph, sourceNode, targetNode, null);
     }
 
-    public AllPaths(SetHypergraph<Node, Edge> graph, Node sourceNode, Node targetNode, Integer maxDistance) {
+    public AllPathsJUNG(SetHypergraph<Node, Edge> graph, Node sourceNode, Node targetNode, Integer maxDistance) {
         this.graph = graph;
         this.sourceNode = sourceNode;
         this.targetNode = targetNode;
