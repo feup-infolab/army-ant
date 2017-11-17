@@ -92,6 +92,14 @@ class Result(object):
         if len(self.components) == 0:
             self.components = None
 
+    def __getitem__(self, key):
+        if key == 'docID':
+            return self.doc_id
+        elif key == 'score':
+            return self.score
+        else:
+            raise KeyError
+
 class ResultSet(object):
     def __init__(self, results, num_docs):
         self.results = results
@@ -644,7 +652,7 @@ class HypergraphOfEntity(Index):
             hgoe = HypergraphOfEntityInMemory(self.index_location)
             
             results = hgoe.search(query)
-            results = [Result(result.getDocID(), -1) for result in results]
+            results = [Result(result.getNode().getName(), result.getScore()) for result in results]
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
