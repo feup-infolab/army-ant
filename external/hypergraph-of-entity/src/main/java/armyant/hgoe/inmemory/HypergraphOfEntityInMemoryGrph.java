@@ -434,11 +434,8 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         LucIntSet neighborIDs = getUndirectedNeighborsPerEdgeType(seedNodeID, ContainedInEdge.class);
 
         LucIntSet linkedQueryTermNodes = new LucIntHashSet();
-        linkedQueryTermNodes.addAll(queryTermNodeIDs);
+        linkedQueryTermNodes.addAll(neighborIDs);
         linkedQueryTermNodes.retainAll(queryTermNodeIDs);
-
-        System.out.println(neighborIDs);
-        System.out.println(linkedQueryTermNodes);
 
         //if (neighborIDs.isEmpty()) return 0;
 
