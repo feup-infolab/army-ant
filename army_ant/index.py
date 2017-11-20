@@ -5,7 +5,7 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import logging, string, asyncio, pymongo, re, json, psycopg2, os, jpype
+import logging, string, asyncio, pymongo, re, json, psycopg2, os, jpype, itertools
 from jpype import *
 from aiogremlin import Cluster
 from aiogremlin.gremlin_python.structure.graph import Vertex
@@ -21,6 +21,12 @@ from army_ant.exception import ArmyAntException
 logger = logging.getLogger(__name__)
 
 class Index(object):
+    PRELOADED = {}
+
+    @staticmethod
+    def __preloaded_key__(index_location, index_type):
+        return '%s::%s' % (index_location, index_type)
+
     @staticmethod
     def factory(reader, index_location, index_type, loop):
         if index_type == 'gow':
@@ -42,6 +48,9 @@ class Index(object):
 
     @staticmethod
     def open(index_location, index_type, loop):
+        key = Index.__preloaded_key__(index_location, index_type)
+        if key in Index.PRELOADED: return Index.PRELOADED[key]
+
         if index_type == 'gow':
             return GraphOfWord(None, index_location, loop)
         elif index_type == 'goe':
@@ -61,6 +70,13 @@ class Index(object):
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 
+    @staticmethod
+    async def preload(index_location, index_type, loop):
+        index = Index.open(index_location, index_type, loop)
+        await index.load()
+        key = Index.__preloaded_key__(index_location, index_type)
+        Index.PRELOADED[key] = index
+
     def __init__(self, reader, index_location, loop):
         self.reader = reader
         self.index_location = index_location
@@ -75,6 +91,9 @@ class Index(object):
 
     async def search(self, query, offset, limit):
         raise ArmyAntException("Search not implemented for %s" % self.__class__.__name__)
+
+    async def load(self):
+        raise ArmyAntException("Load not implemented for %s" % self.__class__.__name__)
 
 class Result(object):
     def __init__(self, doc_id, score, components=None):
@@ -109,7 +128,7 @@ class ResultSet(object):
     def __getitem__(self, key):
         if key == 'results':
             return self.results
-        elif key == 'num_docs':
+        elif key == 'numDocs':
             return self.num_docs
         else:
             raise KeyError
@@ -597,24 +616,38 @@ class GraphOfEntityCSV(GraphOfEntityBatch):
 
 class HypergraphOfEntity(Index):
     BLOCK_SIZE = 5000
+    CLASSPATH = 'external/hypergraph-of-entity/target/hypergraph-of-entity-0.1-SNAPSHOT-jar-with-dependencies.jar'
+    MEMORY_MB = 5120
 
-    async def index(self):
-        classpath = 'external/hypergraph-of-entity/target/hypergraph-of-entity-0.1-SNAPSHOT-jar-with-dependencies.jar'
-        startJVM(jpype.getDefaultJVMPath(), '-Djava.class.path=%s' % classpath, '-Xms5g', '-Xmx5g')
+    def init(self):
+        if isJVMStarted(): return
+
+        startJVM(
+            jpype.getDefaultJVMPath(),
+            '-Djava.class.path=%s' % HypergraphOfEntity.CLASSPATH,
+            '-Xms%dm' % HypergraphOfEntity.MEMORY_MB,
+            '-Xmx%dm' % HypergraphOfEntity.MEMORY_MB)
 
         package = JPackage('armyant.hgoe')
-        HypergraphOfEntityInMemory = package.inmemory.HypergraphOfEntityInMemoryGrph
-        Document = package.structures.Document
-        Triple = package.structures.Triple
+        HypergraphOfEntity.JHypergraphOfEntityInMemory = package.inmemory.HypergraphOfEntityInMemoryGrph
+        HypergraphOfEntity.JDocument = package.structures.Document
+        HypergraphOfEntity.JTriple = package.structures.Triple
+
+    async def load(self):
+        self.init()
+        HypergraphOfEntity.INSTANCE = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location)
+
+    async def index(self):
+        self.init()
 
         try:
-            hgoe = HypergraphOfEntityInMemory(self.index_location, True)
+            hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location, True)
             
             corpus = []
             for doc in self.reader:
                 logger.debug("Preloading document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
-                triples = list(map(lambda t: Triple(t[0].label, t[1], t[2].label), doc.triples))
-                jDoc = Document(JString(doc.doc_id), JString(doc.text), java.util.Arrays.asList(triples))
+                triples = list(map(lambda t: HypergraphOfEntity.JTriple(t[0].label, t[1], t[2].label), doc.triples))
+                jDoc = HypergraphOfEntity.JDocument(JString(doc.doc_id), JString(doc.text), java.util.Arrays.asList(triples))
                 corpus.append(jDoc)
                 if len(corpus) % (HypergraphOfEntity.BLOCK_SIZE // 10) == 0:
                     logger.info("%d documents preloaded" % len(corpus))
@@ -623,6 +656,23 @@ class HypergraphOfEntity(Index):
                     logger.info("Indexing batch of %d documents" % len(corpus))
                     hgoe.indexCorpus(java.util.Arrays.asList(corpus))
                     corpus = []
+
+                # To search for a document
+                yield Document(
+                    doc_id = doc.doc_id,
+                    metadata = {
+                        'url': doc.metadata.get('url'),
+                        'name': doc.metadata.get('name')
+                    })
+
+                # To search for an entity
+                if 'name' in doc.metadata:
+                    yield Document(
+                        doc_id = doc.metadata['name'],
+                        metadata = {
+                            'url': doc.metadata.get('url'),
+                            'name': doc.metadata.get('name')
+                        })
 
             if len(corpus) > 0:
                 logger.info("Indexing batch of %d documents" % len(corpus))
@@ -634,28 +684,21 @@ class HypergraphOfEntity(Index):
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
-        for i in []: yield i
-        shutdownJVM()
-
-    
     async def search(self, query, offset, limit):
-        classpath = 'external/hypergraph-of-entity/target/hypergraph-of-entity-0.1-SNAPSHOT-jar-with-dependencies.jar'
-        startJVM(jpype.getDefaultJVMPath(), '-Djava.class.path=%s' % classpath, '-Xms5g', '-Xmx5g')
-
-        package = JPackage('armyant.hgoe')
-        HypergraphOfEntityInMemory = package.inmemory.HypergraphOfEntityInMemoryGrph
-        Document = package.structures.Document
-        Triple = package.structures.Triple
+        self.init()
 
         results = []
         try:
-            hgoe = HypergraphOfEntityInMemory(self.index_location)
+            if HypergraphOfEntity.INSTANCE:
+                hgoe = HypergraphOfEntity.INSTANCE
+            else:
+                hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location)
             
             results = hgoe.search(query)
-            results = [Result(result.getNode().getName(), result.getScore()) for result in results]
+            num_docs = results.getNumDocs()
+            results = [Result(result.getNode().getName(), result.getScore())
+                       for result in itertools.islice(results, offset, offset+limit)]
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
-        shutdownJVM()
-
-        return ResultSet(results, len(results))
+        return ResultSet(results, num_docs)

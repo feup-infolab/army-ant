@@ -46,8 +46,9 @@ class MongoDatabase(Database):
         self.db = self.client[self.db_name]
 
     async def store(self, index):
+        logger.info("Storing metadata for all documents")
         async for doc in index:
-            logger.info("Storing metadata for %s" % doc.doc_id)
+            logger.debug("Storing metadata for %s" % doc.doc_id)
             self.db['documents'].update_one(
                 { 'doc_id': doc.doc_id },
                 { '$set': {'doc_id': doc.doc_id, 'metadata': doc.metadata } },

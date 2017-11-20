@@ -514,7 +514,7 @@ public class HypergraphOfEntityInMemoryJUNG extends HypergraphOfEntity {
                         score = jaccardScore(entityNode, seedNeighborsWeights);
                 }
 
-                if (score > 0) resultSet.addResult(new Result(entityNode, score));
+                if (score > 0) resultSet.addResult(new Result(score, entityNode));
             }
         }
 

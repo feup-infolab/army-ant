@@ -35,6 +35,10 @@ public class ResultSet implements Iterator<Result> {
     }
 
     public Long getNumDocs() {
+        if (numDocs == null) {
+            numDocs = (long)results.size();
+            return numDocs;
+        }
         return numDocs;
     }
 

@@ -4,23 +4,37 @@ import armyant.hgoe.indisk.nodes.Node;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by jldevezas on 2017-11-07.
  */
 public class Result {
-    private Object node;
     private double score;
+    private Object node;
+    private Set<String> docIDs;
     private Map<String, Double> components;
 
-    public Result(Object node, double score) {
-        this(node, score, null);
+    public Result(double score, Object node) {
+        this(score, node, null, null);
     }
 
-    public Result(Object node, double score, Map<String, Double> components) {
+    public Result(double score, Object node, Set<String> docIDs) {
+        this(score, node, docIDs, null);
+    }
+
+    public Result(double score, Object node, Set<String> docIDs, Map<String, Double> components) {
         this.node = node;
         this.score = score;
         this.components = components;
+    }
+
+    public double getScore() {
+        return score;
+    }
+
+    public void setScore(double score) {
+        this.score = score;
     }
 
     public Object getNode() {
@@ -31,12 +45,12 @@ public class Result {
         this.node = node;
     }
 
-    public double getScore() {
-        return score;
+    public Set<String> getDocIDs() {
+        return docIDs;
     }
 
-    public void setScore(double score) {
-        this.score = score;
+    public void setDocIDs(Set<String> docIDs) {
+        this.docIDs = docIDs;
     }
 
     public Map<String, Double> getComponents() {

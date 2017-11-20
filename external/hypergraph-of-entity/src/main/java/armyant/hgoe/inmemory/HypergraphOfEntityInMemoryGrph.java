@@ -15,6 +15,7 @@ import armyant.hgoe.structures.Result;
 import armyant.hgoe.structures.ResultSet;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.serializers.MapSerializer;
+import grph.Grph;
 import grph.algo.AllPaths;
 import grph.in_memory.InMemoryGrph;
 import grph.path.ArrayListPath;
@@ -591,15 +592,19 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
     }
 
     public double jaccardScore(int entityNodeID, Map<Integer, Pair<LucIntSet, Double>> seedNeighborsWeights) {
-        double score = 0d;
-
-        for (Map.Entry<Integer, Pair<LucIntSet, Double>> seed : seedNeighborsWeights.entrySet()) {
+        return seedNeighborsWeights.entrySet().stream().map(seed -> {
             LucIntSet seedNeighbors = seed.getValue().getLeft();
             LucIntSet entityNeighbors = graph.getNeighbours(entityNodeID);
-            score += seed.getValue().getRight() * jaccardSimilarity(seedNeighbors, entityNeighbors);
-        }
+            return seed.getValue().getRight() * jaccardSimilarity(seedNeighbors, entityNeighbors);
+        }).mapToDouble(f -> f).sum();
+    }
 
-        return score;
+    private Set<String> getDocIDs(int entityNodeID) {
+        return graph.getNeighbours(entityNodeID, Grph.DIRECTION.in).stream()
+                .map(neighborID -> nodeIndex.getKey(neighborID))
+                .filter(neighbor -> neighbor instanceof DocumentNode)
+                .map(Node::getName)
+                .collect(Collectors.toSet());
     }
 
     public ResultSet search(String query) throws IOException {
@@ -613,7 +618,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         LucIntSet queryTermNodeIDs = getQueryTermNodeIDs(tokens);
 
         LucIntSet seedNodeIDs = getSeedNodeIDs(queryTermNodeIDs);
-        System.out.println("Seed Nodes: " + seedNodeIDs.stream().map(nodeID -> nodeID + ": " + nodeIndex.getKey(nodeID).toString()).collect(Collectors.toList()));
+        System.out.println("Seed Nodes: " + seedNodeIDs.stream().map(nodeID -> nodeID + "=" + nodeIndex.getKey(nodeID).toString()).collect(Collectors.toList()));
 
         Map<Integer, Double> seedNodeWeights = seedNodeConfidenceWeights(seedNodeIDs, queryTermNodeIDs);
         System.out.println("Seed Node Confidence Weights: " + seedNodeWeights);
@@ -623,7 +628,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
             seedNeighborsWeights.put(entry.getKey(), Pair.of(graph.getNeighbours(entry.getKey()), entry.getValue()));
         }
 
-        for (int nodeID : graph.getVertices()) {
+        graph.getVertices().parallelStream().forEach(nodeID -> {
             Node node = nodeIndex.getKey(nodeID);
             if (node instanceof EntityNode) {
                 EntityNode entityNode = (EntityNode) node;
@@ -639,10 +644,12 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
                 }
 
                 if (score > 0) {
-                    resultSet.addResult(new Result(entityNode, score));
+                    synchronized (this) {
+                        resultSet.addResult(new Result(score, entityNode, getDocIDs(nodeID)));
+                    }
                 }
             }
-        }
+        });
 
         return resultSet;
     }

@@ -22,7 +22,9 @@
       <!-- form radio control -->
       <select class="form-select" id="engine" name="engine">
         {% for app_engine in app.engines %}
-        <option value="{{app_engine}}" {% if engine == app_engine %} selected="selected" {% endif %}>{{app.engines[app_engine].name}}</option>
+        <option value="{{app_engine}}" {% if engine == app_engine %} selected="selected" {% endif %}>
+          {{app.engines[app_engine].name}}
+        </option>
         {% endfor %}
       </select>
     </div>
@@ -363,7 +365,13 @@
 
           <td> <div class="image" style="background-image: url('{{
               app.router.static.url(filename='img/thumbnail_placeholder.png') }}')"></div> </td>
-          <td> <a href="{{ result.docID if result.docID.startswith('http') else '#' }}" target="_blank">{{ result.docID }}</a> </td>
+          <td>
+            {% if result.docID.startswith('http') %}
+            <a href="{{ result.docID }}" target="_blank">{{ result.docID }}</a>
+            {% else %}
+            {{ result.docID }}
+            {% endif %}
+          </td>
 
           {% endif %}
         </tr>

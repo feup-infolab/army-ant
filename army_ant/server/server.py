@@ -1,9 +1,10 @@
-import aiohttp, aiohttp_jinja2, jinja2, asyncio, configparser, math, time, tempfile, os
+import aiohttp, aiohttp_jinja2, jinja2, asyncio, configparser, math, time, tempfile, os, json
+from jpype import *
 from datetime import datetime
 from collections import OrderedDict
 from aiohttp import web
 from aiohttp.errors import ClientOSError
-from army_ant.index import Index
+from army_ant.index import Index, Result
 from army_ant.database import Database
 from army_ant.evaluation import EvaluationTask, EvaluationTaskManager
 from army_ant.exception import ArmyAntException
@@ -19,6 +20,11 @@ async def page_link(request):
 
 def timestamp_to_date(timestamp):
     return datetime.fromtimestamp(int(round(timestamp / 1000)))
+
+def serialize_json(obj):
+    if isinstance(obj, Result):
+        return obj.__dict__
+    return obj
 
 @aiohttp_jinja2.template('home.html')
 async def home(request):
@@ -49,10 +55,12 @@ async def search(request):
                 loop)
             engine_response = await index.search(query, offset, limit)
 
+            num_docs = len(engine_response['results'])
+            if engine_response['numDocs']: num_docs = engine_response['numDocs'].longValue()
+
             results = engine_response['results']
-            num_docs = engine_response['numDocs']
-            page = int((offset+limit) / limit) 
-            pages = math.ceil(engine_response['numDocs'] / limit)
+            page = int((offset+limit) / limit)
+            pages = math.ceil(num_docs / limit)
             
             db = Database.factory(
                 request.app['engines'][engine]['db_location'],
@@ -96,7 +104,7 @@ async def search(request):
 
     fmt = request.GET.get('format', 'html')
     if fmt == 'json':
-        return web.json_response(response)
+        return web.json_response(response, dumps = lambda obj: json.dumps(obj, default=serialize_json))
     else:
         return response
 
@@ -220,6 +228,24 @@ async def cleanup_background_tasks(app):
     app['evaluation_queue_listener'].cancel()
     await app['evaluation_queue_listener']
 
+async def shutdown_jvm(app):
+    if isJVMStarted(): shutdownJVM()
+
+async def preload_engines(app):
+    for engine, config in app['engines'].items():
+        config['preload'] = config['preload'] == 'True'
+        if config['preload']:
+            if 'preloaded_engines' in app:
+                if 'engine' in app['preloaded_engines']: continue
+            else:
+                app['preloaded_engines'] = {}
+
+            loop = asyncio.get_event_loop()
+            await Index.preload(
+                app['engines'][engine]['index_location'],
+                app['engines'][engine]['index_type'],
+                loop)
+
 def run_app(loop):
     config = configparser.ConfigParser()
     config.read('server.cfg')
@@ -248,7 +274,9 @@ def run_app(loop):
 
     app.router.add_static('/static', 'army_ant/server/static', name='static', follow_symlinks=True)
 
+    app.on_startup.append(preload_engines)
     app.on_startup.append(start_background_tasks)
     app.on_cleanup.append(cleanup_background_tasks)    
+    app.on_cleanup.append(shutdown_jvm)
 
     web.run_app(app)
