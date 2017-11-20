@@ -97,7 +97,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         this.nodeIndex = new DualHashBidiMap<>();
         this.edgeIndex = new DualHashBidiMap<>();
 
-        logger.info("Using in-memory version of Hypergraph of Entity");
+        logger.info("Using in-memory version of Hypergraph of Entity for {}", path);
 
         if (overwrite) {
             logger.info("Overwriting graph in {}, if it exists", path);

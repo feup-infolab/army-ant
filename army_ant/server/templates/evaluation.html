@@ -98,16 +98,19 @@
         <th>Index</th>
         <th>Status</th>
         <th>Detail</th>
+        <th>Manage</th>
       </thead>
 
       <tbody>
         {% for task in tasks %}
 
+        {% set delete_url = app.router['evaluation_delete'].url_for().with_query(task_id=task._id) %}
+        
         {% if task.eval_format == 'll-api' %}
         {% set outcome_url = app.router['evaluation_results_ll_api'].url_for().with_query(task_id=task._id, fmt='html') %}
         {% endif %}
-        
-        <tr {% if task._id %} data-id="{{ task._id }}" {% endif %}
+
+        <tr {% if task._id %} data-id="{{ task._id }}" data-delete-url="{{ delete_url }}" {% endif %}
             {% if task.eval_format == 'll-api' %} data-outcome-url="{{ outcome_url }}" {% endif %}>
           <td>{{ task.time|timestamp_to_date }}</td>
 
@@ -140,41 +143,55 @@
           {% else %}
 
           <td>{{ task.status.name }}</td>
-          <td>N/A</td>
+          <td>
+            <button class="btn btn-sm disabled"><i class="icon icon-plus"></i></button>
+          </td>
 
           {% endif %}
 
-          {% if task.status == 3 %}
-          <tr class="d-hide">
-            <td colspan="5" class="text-center">
-              <div class="wide-table">
-                <table class="table table-two">
-                  <thead>
+          <td>
+            <button class="task-delete-btn btn btn-sm tooltip" data-tooltip="Delete task and computed results.">
+              <i class="icon icon-delete"></i>
+            </button>
+            <button
+              class="task-reset-btn btn btn-sm tooltip {% if task.status == 2 %} disabled {% endif %}"
+              data-tooltip="Re-run task discarding computed results.">
+              <i class="icon icon-refresh"></i>
+            </button>
+          </td>
+        </tr>
+
+        {% if task.status == 3 %}
+        <tr class="d-hide">
+          <td colspan="5" class="text-center">
+            <div class="wide-table">
+              <table class="table table-two">
+                <thead>
+                  {% for metric in task.results %}
+                  <th>{{ metric }}</th>
+                  {% endfor %}
+                </thead>
+                <tbody>
+                  <tr>
                     {% for metric in task.results %}
-                    <th>{{ metric }}</th>
+                    <td>{{ task.results[metric]|round(6) }}</td>
                     {% endfor %}
-                  </thead>
-                  <tbody>
-                    <tr>
-                      {% for metric in task.results %}
-                      <td>{{ task.results[metric]|round(6) }}</td>
-                      {% endfor %}
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </td>
-          </tr>
-          {% elif task.status == 4 and task.eval_format == 'll-api' %}
-          <tr class="d-hide">
-            <td colspan="5" class="text-center">
-              <div class="ll-api-results">
-                <i class="loading"></i>
-                <div class="outcome"></div>
-              </div>
-            </td>
-          </tr>
-          {% endif %}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </td>
+        </tr>
+        {% elif task.status == 4 and task.eval_format == 'll-api' %}
+        <tr class="d-hide">
+          <td colspan="5" class="text-center">
+            <div class="ll-api-results">
+              <i class="loading"></i>
+              <div class="outcome"></div>
+            </div>
+          </td>
+        </tr>
+        {% endif %}
         {% endfor %}
       </tbody>
     </table>
@@ -195,6 +212,31 @@
 
 <script type="text/javascript">
   (function() {
+    $(document).on('click', '.task-delete-btn', function(e) {
+      var taskID = $(this).parents('[data-id]').data('id');
+      var $task = $('tr[data-id="' + taskID + '"]');
+      var deleteURL = $task.data('delete-url');
+
+      $.ajax({
+        url: deleteURL,
+        type: 'DELETE',
+        success: function(data, status, xhr) {
+          $task.remove();
+        },
+        error: function(xhr, errorType, error) {
+          console.log(xhr);
+          console.log(error);
+          $('#error .message').text(error);
+          $('#error').removeClass('d-hide');
+        }
+      });
+    });
+
+    $(document).on('click', '.task-reset-btn', function(e) {
+      if ($(this).hasClass('disabled')) return;
+      console.log("reset");
+    });
+
     $(document).on('click', '.inex-expand-btn', function(e) {
       var taskID = $(this).parents('[data-id]').data('id');
       var $detail = $('tr[data-id="' + taskID + '"]').next();

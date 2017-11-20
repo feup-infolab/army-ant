@@ -17,7 +17,7 @@ code {
 }
 
 .global-message {
-  position: absolute;
+  position: fixed;
   width: 960px;
   bottom: 0;
   left: 0;

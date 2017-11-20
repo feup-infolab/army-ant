@@ -303,8 +303,8 @@ class INEXEvaluator(FilesystemEvaluator):
         self.results['NDCG@%d' % p] = 0.0 if len(ndcgs) == 0 else sum(ndcgs) / len(ndcgs)
 
     async def run(self):
-        #assessed_topic_ids = self.get_assessed_topic_ids()
-        #await self.get_topic_results(assessed_topic_ids)
+        assessed_topic_ids = self.get_assessed_topic_ids()
+        await self.get_topic_results(assessed_topic_ids)
         self.calculate_precision_recall()
         self.calculate_precision_at_n(n=10)
         self.calculate_precision_at_n(n=100)
@@ -473,6 +473,9 @@ class EvaluationTaskManager(object):
     def add_task(self, task):
         self.tasks.append(task)
 
+    def del_task(self, task_id):
+        return self.db['evaluation_tasks'].delete_one({ '_id': task_id }).deleted_count > 0
+
     def get_tasks(self):
         tasks = []
         for task in self.db['evaluation_tasks'].find().sort('time'):
@@ -487,6 +490,11 @@ class EvaluationTaskManager(object):
             query, { '$set': { 'status': 2 } },
             sort=[('time', pymongo.ASCENDING)])
         if task: return EvaluationTask(**task)
+
+    def reset_task(self, task_id):
+        return self.db['evaluation_tasks'].update_one(
+            { '_id': ObjectId(task_id) },
+            { '$set': { 'status': 1 } }).matched_count > 0
 
     def reset_running_tasks(self):
         logger.warning("Resetting running tasks to the WAITING status")
