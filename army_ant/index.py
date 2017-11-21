@@ -648,7 +648,8 @@ class HypergraphOfEntity(Index):
             for doc in self.reader:
                 logger.debug("Preloading document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
                 triples = list(map(lambda t: HypergraphOfEntity.JTriple(t[0].label, t[1], t[2].label), doc.triples))
-                jDoc = HypergraphOfEntity.JDocument(JString(doc.doc_id), JString(doc.text), java.util.Arrays.asList(triples))
+                jDoc = HypergraphOfEntity.JDocument(
+                    JString(doc.doc_id), JString(doc.entity), JString(doc.text), java.util.Arrays.asList(triples))
                 corpus.append(jDoc)
                 if len(corpus) % (HypergraphOfEntity.BLOCK_SIZE // 10) == 0:
                     logger.info("%d documents preloaded" % len(corpus))
@@ -658,22 +659,12 @@ class HypergraphOfEntity(Index):
                     hgoe.indexCorpus(java.util.Arrays.asList(corpus))
                     corpus = []
 
-                # To search for a document
                 yield Document(
                     doc_id = doc.doc_id,
                     metadata = {
                         'url': doc.metadata.get('url'),
                         'name': doc.metadata.get('name')
                     })
-
-                # To search for an entity
-                if 'name' in doc.metadata:
-                    yield Document(
-                        doc_id = doc.metadata['name'],
-                        metadata = {
-                            'url': doc.metadata.get('url'),
-                            'name': doc.metadata.get('name')
-                        })
 
             if len(corpus) > 0:
                 logger.info("Indexing batch of %d documents" % len(corpus))
@@ -689,6 +680,7 @@ class HypergraphOfEntity(Index):
         self.init()
 
         results = []
+        num_docs = 0
         try:
             if HypergraphOfEntity.INSTANCE:
                 hgoe = HypergraphOfEntity.INSTANCE
@@ -698,11 +690,9 @@ class HypergraphOfEntity(Index):
             
             results = hgoe.search(query)
             num_docs = results.getNumDocs()
-            results = [Result(result.getNode().getName(), result.getScore())
+            results = [Result(result.getDocID(), result.getScore())
                        for result in itertools.islice(results, offset, offset+limit)]
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
-        except Exception as e:
-            logger.error(e)
 
         return ResultSet(results, num_docs)

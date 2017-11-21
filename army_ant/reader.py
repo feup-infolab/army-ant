@@ -45,8 +45,9 @@ class Reader(object):
         raise ArmyAntException("Reader __next__ not implemented")
 
 class Document(object):
-    def __init__(self, doc_id, text = None, triples = None, metadata = None):
+    def __init__(self, doc_id, entity = None, text = None, triples = None, metadata = None):
         self.doc_id = doc_id
+        self.entity = entity
         self.text = text
         self.triples = triples
         self.metadata = metadata
@@ -107,6 +108,7 @@ class WikipediaDataReader(Reader):
             if line == '\n':
                 return Document(
                     doc_id = url,
+                    entity = entity,
                     text = self.to_plain_text(html),
                     triples = self.to_triples(entity, html),
                     metadata = { 'url': url, 'name': entity })
@@ -215,6 +217,7 @@ class INEXReader(Reader):
 
             return Document(
                 doc_id = page_id,
+                entity = title,
                 text = self.to_plain_text(bdy),
                 triples = self.to_triples(page_id, title, bdy),
                 metadata = { 'url': url, 'name': title })

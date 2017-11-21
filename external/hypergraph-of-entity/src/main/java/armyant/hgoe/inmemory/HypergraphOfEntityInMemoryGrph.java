@@ -15,7 +15,6 @@ import armyant.hgoe.structures.Result;
 import armyant.hgoe.structures.ResultSet;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.serializers.MapSerializer;
-import grph.Grph;
 import grph.algo.AllPaths;
 import grph.in_memory.InMemoryGrph;
 import grph.path.ArrayListPath;
@@ -94,6 +93,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
             }
         }
 
+        this.graph = new InMemoryGrph();
         this.nodeIndex = new DualHashBidiMap<>();
         this.edgeIndex = new DualHashBidiMap<>();
 
@@ -101,9 +101,10 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
 
         if (overwrite) {
             logger.info("Overwriting graph in {}, if it exists", path);
-            this.graph = new InMemoryGrph();
         } else {
-            load();
+            if (!load()) {
+                logger.warn("Could not load graph in {}, creating", path);
+            }
         }
     }
 
@@ -168,8 +169,8 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
     private Set<Integer> indexEntities(Document document) {
         Map<EntityNode, Set<EntityNode>> edges = document.getTriples().stream()
                 .collect(Collectors.groupingBy(
-                        t -> new EntityNode(t.getSubject()),
-                        Collectors.mapping(t -> new EntityNode(t.getObject()), Collectors.toSet())));
+                        t -> new EntityNode(document, t.getSubject()),
+                        Collectors.mapping(t -> new EntityNode(document, t.getObject()), Collectors.toSet())));
 
         Set<Integer> nodes = new HashSet<>();
 
@@ -299,7 +300,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         }
     }
 
-    public void load() {
+    public boolean load() {
         logger.info("Loading index from {}", directory.getAbsolutePath());
 
         File nodeIndexFile = new File(directory, "node-index.ser");
@@ -311,8 +312,8 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
             this.nodeIndex = kryo.readObject(input, HashMap.class, nodeEdgeIndexSerializer);
             input.close();*/
         } catch (ClassNotFoundException | IOException e) {
-            logger.warn("Node index not found in {}, creating", directory);
-            this.nodeIndex = new DualHashBidiMap<>();
+            logger.warn("Node index not found in {}", directory);
+            return false;
         }
 
         File edgeIndexFile = new File(directory, "edge-index.ser");
@@ -324,8 +325,8 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
             this.edgeIndex = kryo.readObject(input, HashMap.class, nodeEdgeIndexSerializer);
             input.close();*/
         } catch (ClassNotFoundException | IOException e) {
-            logger.warn("Edge index not found in {}, creating", directory);
-            this.edgeIndex = new DualHashBidiMap<>();
+            logger.warn("Edge index not found in {}", directory);
+            return false;
         }
 
         File hypergraphFile = new File(directory, "hypergraph.ser");
@@ -337,9 +338,11 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
             this.graph = kryo.readObject(input, InMemoryGrph.class);
             input.close();*/
         } catch (ClassNotFoundException | IOException e) {
-            logger.warn("Hypergraph not found in {}, creating", directory);
-            this.graph = new InMemoryGrph();
+            logger.warn("Hypergraph not found in {}", directory);
+            return false;
         }
+
+        return true;
     }
 
     private LucIntSet getQueryTermNodeIDs(List<String> terms) {
@@ -580,12 +583,10 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
     }*/
 
     private double jaccardSimilarity(LucIntSet a, LucIntSet b) {
-        LucIntSet intersect = new LucIntHashSet();
-        intersect.addAll(a);
+        IntSet intersect = new IntOpenHashSet(a);
         intersect.retainAll(b);
 
-        LucIntSet union = new LucIntHashSet();
-        union.addAll(a);
+        IntSet union = new IntOpenHashSet(a);
         union.addAll(b);
 
         return (double) intersect.size() / union.size();
@@ -597,14 +598,6 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
             LucIntSet entityNeighbors = graph.getNeighbours(entityNodeID);
             return seed.getValue().getRight() * jaccardSimilarity(seedNeighbors, entityNeighbors);
         }).mapToDouble(f -> f).sum();
-    }
-
-    private Set<String> getDocIDs(int entityNodeID) {
-        return graph.getNeighbours(entityNodeID, Grph.DIRECTION.in).stream()
-                .map(neighborID -> nodeIndex.getKey(neighborID))
-                .filter(neighbor -> neighbor instanceof DocumentNode)
-                .map(Node::getName)
-                .collect(Collectors.toSet());
     }
 
     public ResultSet search(String query) throws IOException {
@@ -644,9 +637,9 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
                         score = jaccardScore(nodeID, seedNeighborsWeights);
                 }
 
-                if (score > 0) {
+                if (score > 0 && entityNode.hasDocID()) {
                     synchronized (this) {
-                        resultSet.addResult(new Result(score, entityNode, getDocIDs(nodeID)));
+                        resultSet.addReplaceResult(new Result(score, entityNode, entityNode.getDocID()));
                     }
                 }
             }

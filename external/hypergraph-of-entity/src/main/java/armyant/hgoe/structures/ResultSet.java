@@ -7,13 +7,12 @@ import java.util.*;
  */
 public class ResultSet implements Iterator<Result> {
     private SortedSet<Result> results;
+    private Map<String, Result> maxResultPerDocID;
     private Long numDocs;
     private Iterator<Result> resultsIterator;
 
     public ResultSet() {
-        this.results = new TreeSet<>((a, b) -> Double.compare(b.getScore(), a.getScore()));
-        this.numDocs = null;
-        this.resultsIterator = null;
+        this(new TreeSet<>((a, b) -> Double.compare(b.getScore(), a.getScore())), null);
     }
 
     public ResultSet(SortedSet<Result> results) {
@@ -22,6 +21,8 @@ public class ResultSet implements Iterator<Result> {
 
     public ResultSet(SortedSet<Result> results, Long numDocs) {
         this.results = results;
+        this.maxResultPerDocID = new HashMap<>();
+        addReplaceResults(results);
         this.numDocs = numDocs;
         this.resultsIterator = null;
     }
@@ -36,7 +37,7 @@ public class ResultSet implements Iterator<Result> {
 
     public Long getNumDocs() {
         if (numDocs == null) {
-            numDocs = (long)results.size();
+            numDocs = (long) results.size();
             return numDocs;
         }
         return numDocs;
@@ -46,20 +47,36 @@ public class ResultSet implements Iterator<Result> {
         this.numDocs = numDocs;
     }
 
-    public void addResults(List<Result> results) {
-        this.results.addAll(results);
-    }
-
-    public boolean removeResults(List<Result> results) {
-        return this.results.removeAll(results);
-    }
-
     public void addResult(Result result) {
         results.add(result);
     }
 
+    public void addReplaceResult(Result result) {
+        maxResultPerDocID.put(result.getDocID(), result);
+        results.add(result);
+
+        Result maxResult = maxResultPerDocID.get(result.getDocID());
+        if (maxResult != null && result.getScore() > maxResult.getScore()) {
+            results.remove(maxResult);
+        }
+    }
+
+    public void addResults(SortedSet<Result> results) {
+        this.results.addAll(results);
+    }
+
+    public void addReplaceResults(SortedSet<Result> results) {
+        for (Result result : results) {
+            addReplaceResult(result);
+        }
+    }
+
     public boolean removeResult(Result result) {
         return results.remove(result);
+    }
+
+    public boolean removeResults(List<Result> results) {
+        return this.results.removeAll(results);
     }
 
     @Override

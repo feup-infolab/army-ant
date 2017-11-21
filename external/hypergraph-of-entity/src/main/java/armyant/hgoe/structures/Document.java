@@ -9,16 +9,18 @@ import java.util.List;
 public class Document {
     private Double score;
     private String docID;
+    private String entity;
     private String text;
     private List<Triple> triples;
 
-    public Document(String docID, String text, List<Triple> triples) {
-        this(null, docID, text, triples);
+    public Document(String docID, String entity, String text, List<Triple> triples) {
+        this(null, docID, entity, text, triples);
     }
 
-    public Document(Double score, String docID, String text, List<Triple> triples) {
+    public Document(Double score, String docID, String entity, String text, List<Triple> triples) {
         this.score = score;
         this.docID = docID;
+        this.entity = entity;
         this.text = text;
         this.triples = triples;
     }
@@ -37,6 +39,14 @@ public class Document {
 
     public void setDocID(String docID) {
         this.docID = docID;
+    }
+
+    public String getEntity() {
+        return entity;
+    }
+
+    public void setEntity(String entity) {
+        this.entity = entity;
     }
 
     public String getText() {

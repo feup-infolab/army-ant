@@ -6,7 +6,7 @@ import java.io.Serializable;
  * Created by jldevezas on 2017-10-24.
  */
 public class Node implements Serializable {
-    private String name;
+    protected String name;
 
     public Node() {
     }

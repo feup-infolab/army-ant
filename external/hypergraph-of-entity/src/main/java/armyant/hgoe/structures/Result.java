@@ -12,20 +12,21 @@ import java.util.Set;
 public class Result {
     private double score;
     private Object node;
-    private Set<String> docIDs;
+    private String docID;
     private Map<String, Double> components;
 
     public Result(double score, Object node) {
         this(score, node, null, null);
     }
 
-    public Result(double score, Object node, Set<String> docIDs) {
-        this(score, node, docIDs, null);
+    public Result(double score, Object node, String docID) {
+        this(score, node, docID, null);
     }
 
-    public Result(double score, Object node, Set<String> docIDs, Map<String, Double> components) {
+    public Result(double score, Object node, String docID, Map<String, Double> components) {
         this.node = node;
         this.score = score;
+        this.docID = docID;
         this.components = components;
     }
 
@@ -45,12 +46,12 @@ public class Result {
         this.node = node;
     }
 
-    public Set<String> getDocIDs() {
-        return docIDs;
+    public String getDocID() {
+        return docID;
     }
 
-    public void setDocIDs(Set<String> docIDs) {
-        this.docIDs = docIDs;
+    public void setDocID(String docID) {
+        this.docID = docID;
     }
 
     public Map<String, Double> getComponents() {
