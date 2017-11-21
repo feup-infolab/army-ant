@@ -483,7 +483,10 @@ class EvaluationTaskManager(object):
         self.tasks.append(task)
 
     def del_task(self, task_id):
-        return self.db['evaluation_tasks'].delete_one({ '_id': ObjectId(task_id) }).deleted_count > 0
+        result = self.db['evaluation_tasks'].delete_one({ '_id': ObjectId(task_id) }).deleted_count > 0
+        self.clean_spool()
+        self.clean_results_and_assessments()
+        return result
 
     def reset_task(self, task_id):
         if self.running:
