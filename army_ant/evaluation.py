@@ -49,15 +49,15 @@ class FilesystemEvaluator(Evaluator):
         self.o_results_path = os.path.join(eval_location, 'results', task._id)
         self.o_assessments_path = os.path.join(eval_location, 'assessments', task._id)
         
-        #try:
-            #os.makedirs(self.o_results_path)
-        #except FileExistsError:
-            #raise ArmyAntException("Results directory '%s' already exists" % self.o_results_path)
+        try:
+            os.makedirs(self.o_results_path)
+        except FileExistsError:
+            raise ArmyAntException("Results directory '%s' already exists" % self.o_results_path)
 
-        #try:
-            #os.makedirs(self.o_assessments_path)
-        #except FileExistsError:
-            #raise ArmyAntException("Assessments directory '%s' already exists" % self.o_assessments_path)
+        try:
+            os.makedirs(self.o_assessments_path)
+        except FileExistsError:
+            raise ArmyAntException("Assessments directory '%s' already exists" % self.o_assessments_path)
 
     def remove_output(self):
         shutil.rmtree(self.o_results_path)

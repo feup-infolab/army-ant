@@ -702,5 +702,7 @@ class HypergraphOfEntity(Index):
                        for result in itertools.islice(results, offset, offset+limit)]
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
+        except Exception as e:
+            logger.error(e)
 
         return ResultSet(results, num_docs)

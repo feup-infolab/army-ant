@@ -618,10 +618,11 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         LucIntSet queryTermNodeIDs = getQueryTermNodeIDs(tokens);
 
         LucIntSet seedNodeIDs = getSeedNodeIDs(queryTermNodeIDs);
-        System.out.println("Seed Nodes: " + seedNodeIDs.stream().map(nodeID -> nodeID + "=" + nodeIndex.getKey(nodeID).toString()).collect(Collectors.toList()));
+        //System.out.println("Seed Nodes: " + seedNodeIDs.stream().map(nodeID -> nodeID + "=" + nodeIndex.getKey(nodeID).toString()).collect(Collectors.toList()));
 
         Map<Integer, Double> seedNodeWeights = seedNodeConfidenceWeights(seedNodeIDs, queryTermNodeIDs);
-        System.out.println("Seed Node Confidence Weights: " + seedNodeWeights);
+        //System.out.println("Seed Node Confidence Weights: " + seedNodeWeights);
+        logger.info("{} seed nodes weights calculated for [ {} ]", seedNodeWeights.size(), query);
 
         Map<Integer, Pair<LucIntSet, Double>> seedNeighborsWeights = new HashMap<>();
         for (Map.Entry<Integer, Double> entry : seedNodeWeights.entrySet()) {
@@ -650,6 +651,8 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
                 }
             }
         });
+
+        logger.info("{} entities ranked for [ {} ]", resultSet.getNumDocs(), query);
 
         return resultSet;
     }
