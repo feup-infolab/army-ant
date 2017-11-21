@@ -36,6 +36,7 @@ class Evaluator(object):
     def __init__(self, task, eval_location):
         self.task = task
         self.results = {}
+        self.interrupt = False
         self.start_date = datetime.now()
 
     async def run(self):
@@ -97,6 +98,10 @@ class INEXEvaluator(FilesystemEvaluator):
         topics = etree.parse(self.task.topics_path)
         
         for topic in topics.xpath('//topic'):
+            if self.interrupt:
+                logger.warn("Evaluation task was interruped")
+                break
+
             topic_id = get_first(topic.xpath('@id'))
 
             if filter and not topic_id in filter:
@@ -390,6 +395,10 @@ class LivingLabsEvaluator(Evaluator):
         queries = self.get_queries()
         try:
             for query in queries:
+                if self.interrupt:
+                    logger.warn("Evaluation task was interrupted")
+                    break
+
                 logging.info("Searching for %s (qid=%s)" % (query['qstr'], query['qid']))
 
                 pickle_path = os.path.join(self.pickle_dir, '%s.pickle' % query['qid'])
@@ -474,7 +483,16 @@ class EvaluationTaskManager(object):
         self.tasks.append(task)
 
     def del_task(self, task_id):
-        return self.db['evaluation_tasks'].delete_one({ '_id': task_id }).deleted_count > 0
+        return self.db['evaluation_tasks'].delete_one({ '_id': ObjectId(task_id) }).deleted_count > 0
+
+    def reset_task(self, task_id):
+        if self.running:
+            self.running.interrupt = True
+            if type(self.running) != LivingLabsEvaluator:
+                self.running.remove_output()
+        return self.db['evaluation_tasks'].update_one(
+            { '_id': ObjectId(task_id) },
+            { '$set': { 'status': 1 } }).matched_count > 0
 
     def get_tasks(self):
         tasks = []
@@ -490,11 +508,6 @@ class EvaluationTaskManager(object):
             query, { '$set': { 'status': 2 } },
             sort=[('time', pymongo.ASCENDING)])
         if task: return EvaluationTask(**task)
-
-    def reset_task(self, task_id):
-        return self.db['evaluation_tasks'].update_one(
-            { '_id': ObjectId(task_id) },
-            { '$set': { 'status': 1 } }).matched_count > 0
 
     def reset_running_tasks(self):
         logger.warning("Resetting running tasks to the WAITING status")

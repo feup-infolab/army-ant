@@ -115,13 +115,24 @@ async def evaluation_get(request):
 async def evaluation_delete(request):
     manager = EvaluationTaskManager(request.app['db_location'], request.app['default_eval_location'])
     task_id = request.GET.get('task_id')
+
     success = False
     if task_id: success = manager.del_task(task_id)
+
     if success:
-        response = { 'success': "Deleted task with task_id = %s" % task_id }
-    else:
-        response = { 'error': "Could not delete task with task_id = %s" % task_id }
-    return web.json_response(response)
+        return web.json_response({ 'success': "Deleted task with task_id = %s." % task_id })
+    return web.json_response({ 'error': "Could not delete task with task_id = %s." % task_id }, status=404)
+
+async def evaluation_reset(request):
+    manager = EvaluationTaskManager(request.app['db_location'], request.app['default_eval_location'])
+    task_id = request.GET.get('task_id')
+
+    success = False
+    if task_id: success = manager.reset_task(task_id)
+
+    if success:
+        return web.json_response({ 'success': "Reset task with task_id = %s to WAITING status." % task_id })
+    return web.json_response({ 'error': "Could not reset task with task_id = %s to WAITING status." % task_id }, status=404)
 
 async def evaluation_post(request):
     data = await request.post()
@@ -228,6 +239,8 @@ async def evaluation(request):
         return await evaluation_post(request)
     elif request.method == 'DELETE':
         return await evaluation_delete(request)
+    elif request.method == 'PUT':
+        return await evaluation_reset(request)
 
 @aiohttp_jinja2.template('about.html')
 async def about(request):
@@ -282,6 +295,7 @@ def run_app(loop):
     app.router.add_get('/evaluation', evaluation, name='evaluation')
     app.router.add_post('/evaluation', evaluation)
     app.router.add_delete('/evaluation', evaluation, name='evaluation_delete')
+    app.router.add_put('/evaluation', evaluation, name='evaluation_reset')
     app.router.add_get('/evaluation/results/archive', evaluation_results_archive, name='evaluation_results_archive')
     app.router.add_get('/evaluation/results/ll-api', evaluation_results_ll_api, name='evaluation_results_ll_api')
     app.router.add_get('/about', about, name='about')

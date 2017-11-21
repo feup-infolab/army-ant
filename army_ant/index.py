@@ -618,6 +618,7 @@ class HypergraphOfEntity(Index):
     BLOCK_SIZE = 5000
     CLASSPATH = 'external/hypergraph-of-entity/target/hypergraph-of-entity-0.1-SNAPSHOT-jar-with-dependencies.jar'
     MEMORY_MB = 5120
+    INSTANCE = None
 
     def init(self):
         if isJVMStarted(): return
@@ -693,6 +694,7 @@ class HypergraphOfEntity(Index):
                 hgoe = HypergraphOfEntity.INSTANCE
             else:
                 hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location)
+                HypergraphOfEntity.INSTANCE = hgoe
             
             results = hgoe.search(query)
             num_docs = results.getNumDocs()

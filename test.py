@@ -8,7 +8,7 @@
 import logging, asyncio, sys
 
 from army_ant.reader import INEXReader, LivingLabsReader
-#from army_ant.index import Index
+from army_ant.index import Index
 from army_ant.evaluation import Evaluator, LivingLabsEvaluator
 
 logging.basicConfig(
@@ -75,10 +75,23 @@ def test_to_edge_list(*argv):
     for edge in edge_list:
         print(edge)
 
+def test_preloaded_index(*argv):
+    if len(argv) < 2:
+        print("Must provide arguments: index_location")
+        return
+
+    index_location = argv[1]
+    
+    loop = asyncio.get_event_loop()
+    index = Index.open(index_location, 'hgoe', loop)
+    results = loop.run_until_complete(index.search("viking", 0, 10))
+    results = loop.run_until_complete(index.search("viking ship", 0, 10))
+
 if __name__ == '__main__':
     # This is used during development to test individual methods.
     #test_inexreader()
     #test_inexevaluator()
     #test_livinglabsreader(*sys.argv)
     #test_livinglabsevaluator(*sys.argv)
-    test_to_edge_list(*sys.argv)
+    #test_to_edge_list(*sys.argv)
+    test_preloaded_index(*sys.argv)
