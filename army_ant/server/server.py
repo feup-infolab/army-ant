@@ -110,7 +110,12 @@ async def search(request):
 
 async def evaluation_get(request):
     manager = EvaluationTaskManager(request.app['db_location'], request.app['default_eval_location'])
-    return { 'tasks': manager.get_tasks() }
+    tasks = manager.get_tasks()
+    metrics = set([])
+    for task in tasks:
+        if hasattr(task, 'results'):
+            metrics = metrics.union([metric for metric in task.results.keys()])
+    return { 'tasks': tasks, 'metrics': sorted(metrics) }
 
 async def evaluation_delete(request):
     manager = EvaluationTaskManager(request.app['db_location'], request.app['default_eval_location'])
@@ -200,6 +205,28 @@ async def evaluation_post(request):
 
     return response
 
+async def evaluation_download(request):
+    metrics = request.GET.get('metrics')
+    if metrics is None: return web.HTTPNotFound()
+
+    metrics = metrics.split(',')
+    fmt = request.GET.get('fmt', 'csv')
+
+    manager = EvaluationTaskManager(request.app['db_location'], request.app['default_eval_location'])
+    try:
+        with manager.get_results_summary(metrics, fmt) as f:
+            response = web.StreamResponse(headers={ 'Content-Disposition': 'attachment; filename="metrics.%s"' % fmt })
+            await response.prepare(request)
+
+            f.seek(0)
+            response.write(f.read())
+            response.write_eof()
+            await response.drain()
+
+            return response
+    except FileNotFoundError:
+        return web.HTTPNotFound()
+ 
 async def evaluation_results_archive(request):
     task_id = request.GET.get('task_id')
     if task_id is None: return web.HTTPNotFound()
@@ -296,6 +323,7 @@ def run_app(loop):
     app.router.add_post('/evaluation', evaluation)
     app.router.add_delete('/evaluation', evaluation, name='evaluation_delete')
     app.router.add_put('/evaluation', evaluation, name='evaluation_reset')
+    app.router.add_get('/evaluation/download', evaluation_download, name='evaluation_download')
     app.router.add_get('/evaluation/results/archive', evaluation_results_archive, name='evaluation_results_archive')
     app.router.add_get('/evaluation/results/ll-api', evaluation_results_ll_api, name='evaluation_results_ll_api')
     app.router.add_get('/about', about, name='about')

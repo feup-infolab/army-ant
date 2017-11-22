@@ -7,6 +7,7 @@
 
 import json, time, pymongo, asyncio, logging, csv, os, shutil, gzip
 import tempfile, zipfile, math, requests, requests_cache, pickle, itertools
+import pandas as pd
 from enum import IntEnum
 from lxml import etree
 from datetime import datetime
@@ -546,6 +547,29 @@ class EvaluationTaskManager(object):
         self.db['evaluation_tasks'].update_one(
             { '_id': ObjectId(task._id) },
             { '$set': { 'status': status } })
+
+    @contextmanager
+    def get_results_summary(self, metrics, fmt, decimals=4):
+        tasks = list(self.db['evaluation_tasks'].find({ 'results': { '$exists': 1 } }))
+        if len(tasks) < 1: return
+
+        with tempfile.NamedTemporaryFile() as tmp_file:
+            columns = ['Type', 'Location']
+            columns.extend(metrics)
+            df = pd.DataFrame(columns=columns)
+
+            for task in tasks:
+                task = EvaluationTask(**task)
+                values = [task.index_type, task.index_location]
+                values.extend([task.results.get(metric) for metric in metrics])
+                df = df.append(pd.DataFrame([values], columns=columns))
+            
+            if fmt == 'csv':
+                tmp_file.write(df.to_csv(index=False, float_format="%%.%df" % decimals).encode('utf-8'))
+            elif fmt == 'tex':
+                tmp_file.write(df.to_latex().encode('utf-8'))
+
+            yield tmp_file
 
     @contextmanager
     def get_results_archive(self, task_id):

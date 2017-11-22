@@ -10,6 +10,10 @@ code {
   overflow-y: auto;
 }
 
+.divider.spaced {
+  margin: 2em 0;
+}
+
 .bg-gray {
   background: #f8f9fa;
   color: #667189;
@@ -67,6 +71,17 @@ code {
   width: 100% !important;
 }
 
+.eval {
+  margin-top: 1em;
+}
+.eval .table.metadata th {
+  width: 15em;
+  font-size: 0.8em;
+}
+.eval .table.metadata th, .eval .table.metadata td {
+  padding: 0.5em 0em;
+}
+
 .table.table-two {
   background-color: #f7f7f7;
   font-size: 0.82em;
@@ -86,8 +101,11 @@ code {
   margin: 1em 0 2em 0;
 }
 
-.wide-table {
-  /* same width as grid-lg */
-  width: 976px !important;
+.detail {
+  margin: 2em 0;
+  min-height: 1em;
+}
+.wide-table-container {
+  display: block;
   overflow-x: auto;
 }
