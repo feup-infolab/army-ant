@@ -549,25 +549,34 @@ class EvaluationTaskManager(object):
             { '$set': { 'status': status } })
 
     @contextmanager
-    def get_results_summary(self, metrics, fmt, decimals=4):
+    def get_results_summary(self, headers, metrics, decimals, fmt):
         tasks = list(self.db['evaluation_tasks'].find({ 'results': { '$exists': 1 } }))
         if len(tasks) < 1: return
 
         with tempfile.NamedTemporaryFile() as tmp_file:
-            columns = ['Type', 'Location']
+            columns = headers if headers else []
             columns.extend(metrics)
             df = pd.DataFrame(columns=columns)
 
             for task in tasks:
                 task = EvaluationTask(**task)
-                values = [task.index_type, task.index_location]
+                values = []
+                if 'Type' in columns: values.append(task.index_type)
+                if 'Location' in columns: values.append(task.index_location)
                 values.extend([task.results.get(metric) for metric in metrics])
                 df = df.append(pd.DataFrame([values], columns=columns))
-            
+
+            float_format = "%%.%df" % decimals
             if fmt == 'csv':
-                tmp_file.write(df.to_csv(index=False, float_format="%%.%df" % decimals).encode('utf-8'))
+                tmp_file.write(df.to_csv(index=False, float_format=float_format).encode('utf-8'))
             elif fmt == 'tex':
-                tmp_file.write(df.to_latex().encode('utf-8'))
+                tmp_file.write(df.to_latex(index=False, float_format=float_format).encode('utf-8'))
+            elif fmt == 'html':
+                tmp_file.write(df.to_html(
+                    index=False,
+                    float_format=float_format,
+                    border=0,
+                    classes='table table-sm table-scroll table-striped').encode('utf-8'))
 
             yield tmp_file
 

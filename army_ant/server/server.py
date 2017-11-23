@@ -1,4 +1,5 @@
 import aiohttp, aiohttp_jinja2, jinja2, asyncio, configparser, math, time, tempfile, os, json
+from datetime import datetime
 from jpype import *
 from datetime import datetime
 from collections import OrderedDict
@@ -206,16 +207,22 @@ async def evaluation_post(request):
     return response
 
 async def evaluation_download(request):
+    headers = request.GET.get('headers')
     metrics = request.GET.get('metrics')
     if metrics is None: return web.HTTPNotFound()
 
+    headers = headers.split(',') if headers else None
     metrics = metrics.split(',')
+    decimals = int(request.GET.get('decimals', '4'))
     fmt = request.GET.get('fmt', 'csv')
 
     manager = EvaluationTaskManager(request.app['db_location'], request.app['default_eval_location'])
     try:
-        with manager.get_results_summary(metrics, fmt) as f:
-            response = web.StreamResponse(headers={ 'Content-Disposition': 'attachment; filename="metrics.%s"' % fmt })
+        with manager.get_results_summary(headers, metrics, decimals, fmt) as f:
+            timestamp = datetime.now().strftime('%Y%m%dT%H%M%S')
+            response = web.StreamResponse(headers={
+                'Content-Disposition': 'attachment; filename="metrics-%s.%s"' % (timestamp, fmt)
+            })
             await response.prepare(request)
 
             f.seek(0)

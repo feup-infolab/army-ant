@@ -71,20 +71,32 @@ code {
   width: 100% !important;
 }
 
+.table.table-sm {
+  font-size: 0.8em;
+}
+.table.table-sm th, .table.table-sm td {
+  padding: 0.5em;
+}
+
+.dataframe.table {
+  margin-top: 1em;
+}
+
 .eval {
   margin-top: 1em;
 }
 .eval .table.metadata th {
   width: 15em;
-  font-size: 0.8em;
-}
-.eval .table.metadata th, .eval .table.metadata td {
-  padding: 0.5em 0em;
 }
 
-.table.table-two {
+.detail .table tr {
   background-color: #f7f7f7;
-  font-size: 0.82em;
+}
+.detail .table th, .detail .table td {
+  white-space: normal;
+  text-align: center;
+  padding: 0.5em;
+  text-align: center;
 }
 
 .image {

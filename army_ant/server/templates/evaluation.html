@@ -97,7 +97,7 @@
   </div>
 </div>
 
-<div class="modal generate active" data-download-url="{{ app.router['evaluation_download'].url_for() }}">
+<div class="modal generate" data-download-url="{{ app.router['evaluation_download'].url_for() }}">
   <div class="modal-overlay"></div>
   <div class="modal-container">
     <div class="modal-header">
@@ -122,57 +122,81 @@
     </div>
     <div class="modal-body">
       <div class="content">
-        <div class="columns">
-          <div class="form-group">
-            <label class="form-switch">
-              <input class="toggle-all-metrics-checkbox" type="checkbox" checked="checked">
-              <i class="form-icon"></i> Toggle all
-            </label>
-          </div>
-          <button class="btn btn-sm select-classic-metrics-btn">Select Classic</button>
-        </div>
-
-        <br>
-
-        {% set metrics_length = metrics|length %}
-        <div class="columns metrics">
-          <div class="column">
-            {% for metric in metrics[0:(metrics_length//2)] %}
+        <div class="container">
+          <div class="columns">
             <div class="form-group">
-              <label class="form-checkbox">
-                <input type="checkbox" checked="checked" value="{{ metric }}">
-                <i class="form-icon"></i> {{ metric }}
+              <label class="form-switch">
+                <input class="toggle-all-metrics-checkbox" type="checkbox" checked="checked">
+                <i class="form-icon"></i> Toggle all
               </label>
             </div>
-            {% endfor %}
+            <button class="btn btn-sm select-classic-metrics-btn">Select Classic</button>
           </div>
 
-          <div class="column">
-            {% for metric in metrics[(metrics_length//2+1):metrics_length] %}
-            <div class="form-group">
-              <label class="form-checkbox">
-                <input type="checkbox" checked="checked" value="{{ metric }}">
-                <i class="form-icon"></i> {{ metric }}
-              </label>
+          <br>
+
+          {% set metrics_length = metrics|length %}
+          <div class="columns metrics">
+            <div class="column">
+              {% for metric in metrics[0:(metrics_length//2)] %}
+              <div class="form-group">
+                <label class="form-checkbox">
+                  <input type="checkbox" checked="checked" value="{{ metric }}">
+                  <i class="form-icon"></i> {{ metric }}
+                </label>
+              </div>
+              {% endfor %}
             </div>
-            {% endfor %}
-          </div>
-        </div>
 
-        <br>
-
-        <div class="form-group">
-          <label class="form-label" for="decimal-places-input">Decimal Places</label>
-          <div class="input-group">
-            <input id="decimal-places-input" class="form-input" type="text" placeholder="Number of decimal places" value="4">
-            <button id="decimal-places-inc" class="btn"><i class="icon icon-arrow-up"></i></button>
-            <button id="decimal-places-dec" class="btn"><i class="icon icon-arrow-down"></i></button>
+            <div class="column">
+              {% for metric in metrics[(metrics_length//2+1):metrics_length] %}
+              <div class="form-group">
+                <label class="form-checkbox">
+                  <input type="checkbox" checked="checked" value="{{ metric }}">
+                  <i class="form-icon"></i> {{ metric }}
+                </label>
+              </div>
+              {% endfor %}
+            </div>
           </div>
+
+          <br>
+
+          <div class="columns">
+            <div class="column">
+              <div class="form-group">
+                <label class="form-label" for="decimals-input">Decimals</label>
+                <div class="input-group">
+                  <input id="decimals-input" class="form-input" type="text" placeholder="Number of decimal places" value="4"
+                    style="width: 50%;">
+                  <button id="decimals-inc" class="btn input-group-btn"><i class="icon icon-arrow-up"></i></button>
+                  <button id="decimals-dec" class="btn input-group-btn"><i class="icon icon-arrow-down"></i></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="column">
+              <div class="form-group">
+                <label class="form-label">Columns</label>
+                <label class="form-checkbox">
+                  <input id="index-type-checkbox" type="checkbox" checked="checked" value="Type">
+                  <i class="form-icon"></i> Type
+                </label>
+                <label class="form-checkbox">
+                  <input id="index-location-checkbox" type="checkbox" checked="checked" value="Location">
+                  <i class="form-icon"></i> Location
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div id="html-preview"></div>
         </div>
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn close-modal-btn">Cancel</button>
+      <button id="preview-btn" class="btn tooltip" data-tooltip="Preview"><i class="icon icon-search"></i></button>
       <button id="download-btn" class="btn btn-primary">Download</button>
     </div>
   </div>
@@ -233,7 +257,7 @@
   </div>
 
   <div class="card-body">
-    <table class="table metadata">
+    <table class="table table-striped table-sm metadata">
       <tr>
         <th>Index Type</th>
         <td>{{ task.index_type }}</td>
@@ -274,8 +298,8 @@
 
     <!-- START DETAIL -->
     {% if task.status == 3 %}
-    <div class="d-hide detail wide-table-container">
-      <table class="table table-two">
+    <div class="d-hide detail">
+      <table class="table table-scroll table-sm">
         <thead>
           {% for metric in task.results %}
           <th>{{ metric }}</th>
@@ -347,7 +371,7 @@
     }
 
     function addDecimalPlaces(n) {
-      var value = +$('#decimal-places-input').val();
+      var value = +$('#decimals-input').val();
       var nextValue = value;
 
       if (!isInteger(value)) {
@@ -360,18 +384,18 @@
           nextValue = 10;
         }
       }
-      $('#decimal-places-input').val(nextValue);
+      $('#decimals-input').val(nextValue);
     }
 
     var incTimeoutID = 0;
     var incIntervalID = 0;
-    $(document).on('mousedown mouseup', '#decimal-places-inc', function(e) {
+    $(document).on('mousedown mouseup', '#decimals-inc', function(e) {
       clearTimeout(incTimeoutID);
       if (e.type == 'mousedown') {
         addDecimalPlaces(1);
         incTimeoutID = setTimeout(function() {
           incIntervalID = setInterval(function() { addDecimalPlaces(1); }, 50);
-        }, 1000);
+        }, 500);
       } else {
         clearTimeout(incIntervalID);
       }
@@ -379,29 +403,66 @@
 
     var decTimeoutID = 0;
     var decIntervalID = 0;
-    $(document).on('mousedown mouseup', '#decimal-places-dec', function(e) {
+    $(document).on('mousedown mouseup', '#decimals-dec', function(e) {
       clearTimeout(decTimeoutID);
       if (e.type == 'mousedown') {
         addDecimalPlaces(-1);
         decTimeoutID = setTimeout(function() {
           decIntervalID = setInterval(function() { addDecimalPlaces(-1); }, 50);
-        }, 1000);
+        }, 500);
       } else {
         clearTimeout(decIntervalID);
       }
     });
 
-    $(document).on('click', '#download-btn', function(e) {
-      var $modal = $(this).parents('.modal');
-      var format = $modal.find('input[name="format"]:checked').val();
+    function downloadSummary($modal, format) {
+      var headers = [];
+      if ($modal.find('#index-type-checkbox').prop('checked')) {
+        headers.push($modal.find('#index-type-checkbox').val());
+      }
+      if ($modal.find('#index-location-checkbox').prop('checked')) {
+        headers.push($modal.find('#index-location-checkbox').val());
+      }
+      headers = headers.join(',');
+  
       var metrics = $modal.find('.metrics input[type="checkbox"]:checked')
         .map(function(index, item) { return $(item).val(); })
-        .toArray();
-  
+        .toArray().join(',');
+
+      var decimals = $modal.find('#decimals-input').val();
+      if (!format) format = $modal.find('input[name="format"]:checked').val();
+      
       var downloadURL = $modal.data('download-url');
-      window.location = downloadURL + '?metrics=' + metrics + '&fmt=' + format;
+
+      var params = [];
+      if (headers) params.push('headers=' + headers);
+      if (metrics) params.push('metrics=' + metrics);
+      if (decimals) params.push('decimals=' + decimals);
+      if (format) params.push('fmt=' + format);
+      if (params.length > 0) {
+        downloadURL += '?' + params.join('&');
+      }
+
+      if (format == 'html') {
+        $('#html-preview').append($('<i>').addClass('loading'));
+        $.get(downloadURL, function(html) {
+          $('#html-preview').html(html);
+        });
+      } else {
+        window.location = downloadURL;
+      }
+    }
+
+    $(document).on('click', '#download-btn', function(e) {
+      var $modal = $(this).parents('.modal.generate');
+      downloadSummary($modal);
     });
 
+    $(document).on('click', '#preview-btn', function(e) {
+      var $modal = $(this).parents('.modal.generate');
+      downloadSummary($modal, 'html');
+    });
+ 
     $(document).on('change', '.toggle-all-metrics-checkbox', function(e) {
       if ($(this).prop('checked')) {
         $(this).parents('.modal')
