@@ -536,22 +536,18 @@
       $modal.removeClass('active');
     });
 
-    $(document).on('keydown', '.run-id-rename-input', function(e) {
-      $(this).css('width', $(this).val().length + 'ex');
-    });
-
     $(document).on('click', '.task-rename-btn', function(e) {
       e.preventDefault();
 
       var $task = $(this).parents('[data-id]');
       var $runID = $task.find('.run-id-rename-input');
 
-      $task.find('.title-display').addClass('d-hide');
       $runID
         .css('flex', 'none')
         .css('min-width', '15ex')
         .css('max-width', '80ex')
-        .css('width', $runID.val().length + 'ex');
+        .css('width', $task.find('.title').width() + 'px');
+      $task.find('.title-display').addClass('d-hide');
       $task.find('.title-edit').removeClass('d-hide');
       $runID.focus();
     });
