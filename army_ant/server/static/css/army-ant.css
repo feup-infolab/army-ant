@@ -14,6 +14,10 @@ code {
   margin: 2em 0;
 }
 
+.input-tall {
+  height: 2.8em;
+}
+
 .bg-gray {
   background: #f8f9fa;
   color: #667189;

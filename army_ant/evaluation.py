@@ -8,6 +8,7 @@
 import json, time, pymongo, asyncio, logging, csv, os, shutil, gzip
 import tempfile, zipfile, math, requests, requests_cache, pickle, itertools
 import pandas as pd
+import numpy as np
 from enum import IntEnum
 from lxml import etree
 from datetime import datetime
@@ -498,6 +499,13 @@ class EvaluationTaskManager(object):
             { '_id': ObjectId(task_id) },
             { '$set': { 'status': 1 } }).matched_count > 0
 
+    def rename_task(self, task_id, run_id):
+        task = self.db['evaluation_tasks'].find_one(ObjectId(task_id))
+        if task['eval_format'] == 'll-api': return False
+        return self.db['evaluation_tasks'].update_one(
+            { '_id': ObjectId(task_id) },
+            { '$set': { 'run_id': run_id } }).matched_count > 0
+
     def get_tasks(self):
         tasks = []
         for task in self.db['evaluation_tasks'].find().sort('time'):
@@ -523,9 +531,12 @@ class EvaluationTaskManager(object):
 
     def queue(self):
         duplicate_error = False
+        run_id_error = False
 
         inserted_ids = []
         for task in self.tasks:
+            run_id_error = task.run_id is None or task.run_id.strip() == ''
+            if run_id_error: continue
             try:
                 task.time = int(round(time.time() * 1000))
                 result = self.db['evaluation_tasks'].insert_one(task.__dict__)
@@ -535,6 +546,9 @@ class EvaluationTaskManager(object):
 
         if duplicate_error:
             raise ArmyAntException("You can only launch one task per topics + assessments + engine.")
+
+        if run_id_error:
+            raise ArmyAntException("Tasks without a Run ID are not accepted")
         
         return inserted_ids
 
@@ -561,9 +575,13 @@ class EvaluationTaskManager(object):
             for task in tasks:
                 task = EvaluationTask(**task)
                 values = []
+                if 'Run ID' in columns: values.append(task.run_id)
                 if 'Type' in columns: values.append(task.index_type)
                 if 'Location' in columns: values.append(task.index_location)
-                values.extend([task.results.get(metric) for metric in metrics])
+                values.extend([
+                    task.results[metric] if metric in task.results and task.results[metric] != '' else np.nan
+                    for metric in metrics
+                ])
                 df = df.append(pd.DataFrame([values], columns=columns))
 
             float_format = "%%.%df" % decimals

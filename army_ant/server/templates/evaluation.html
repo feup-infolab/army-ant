@@ -45,25 +45,31 @@
         <input class="form-input" type="file" id="assessments" name="assessments" value="">
       </div>
     </div>
+    <div class="column">
+      <div class="form-group">
+        <label class="form-label" for="run-id">Run ID</label>
+        <input class="form-input input-tall" type="text" id="run-id" name="run-id" value="" placeholder="Dataset - retrieval model">
+      </div>
+    </div>
   </div>
 
   <div id="ll-api-block" class="columns dynamic-block d-hide">
     <div class="column">
       <div class="form-group">
         <label class="form-label" for="base-url">Base URL</label>
-        <input class="form-input" type="text" id="base-url" name="base-url" value="" placeholder="http://api.trec-open-search.org">
+        <input class="form-input input-tall" type="text" id="base-url" name="base-url" value="" placeholder="http://api.trec-open-search.org">
       </div>
     </div>
     <div class="column">
       <div class="form-group">
         <label class="form-label" for="api-key">API Key</label>
-        <input class="form-input" type="text" id="api-key" name="api-key" value="" placeholder="2C2BB98ABEE4CD40-F0RDVC4KZ6SNFZGY">
+        <input class="form-input input-tall" type="text" id="api-key" name="api-key" value="" placeholder="2C2BB98ABEE4CD40-F0RDVC4KZ6SNFZGY">
       </div>
     </div>
     <div class="column">
       <div class="form-group">
         <label class="form-label" for="run-id">Run ID</label>
-        <input class="form-input" type="text" id="run-id" name="run-id" value="" placeholder="retrieval_model-run_1">
+        <input class="form-input input-tall" type="text" id="run-id" name="run-id" value="" placeholder="Dataset - retrieval model - run">
       </div>
     </div>
   </div>
@@ -163,21 +169,25 @@
           <br>
 
           <div class="columns">
-            <div class="column">
+            <div class="column col-5">
               <div class="form-group">
                 <label class="form-label" for="decimals-input">Decimals</label>
                 <div class="input-group">
-                  <input id="decimals-input" class="form-input" type="text" placeholder="Number of decimal places" value="4"
-                    style="width: 50%;">
-                  <button id="decimals-inc" class="btn input-group-btn"><i class="icon icon-arrow-up"></i></button>
-                  <button id="decimals-dec" class="btn input-group-btn"><i class="icon icon-arrow-down"></i></button>
+                  <input id="decimals-input" class="form-input input-sm" type="text" placeholder="Number of decimal places" value="4"
+                    style="max-width: 70%;">
+                  <button id="decimals-inc" class="btn btn-sm input-group-btn"><i class="icon icon-arrow-up"></i></button>
+                  <button id="decimals-dec" class="btn btn-sm input-group-btn"><i class="icon icon-arrow-down"></i></button>
                 </div>
               </div>
             </div>
 
-            <div class="column">
+            <div class="column col-7">
               <div class="form-group">
                 <label class="form-label">Columns</label>
+                <label class="form-checkbox">
+                  <input id="index-runid-checkbox" type="checkbox" checked="checked" value="Run ID">
+                  <i class="form-icon"></i> Run ID
+                </label>
                 <label class="form-checkbox">
                   <input id="index-type-checkbox" type="checkbox" checked="checked" value="Type">
                   <i class="form-icon"></i> Type
@@ -208,24 +218,37 @@
 
 {% set delete_url = app.router['evaluation_delete'].url_for().with_query(task_id=task._id) %}
 {% set reset_url = app.router['evaluation_reset'].url_for().with_query(task_id=task._id) %}
+{% set rename_url = app.router['evaluation_rename'].url_for().with_query(task_id=task._id) %}
 
 {% if task.eval_format == 'll-api' %}
 {% set outcome_url = app.router['evaluation_results_ll_api'].url_for().with_query(task_id=task._id, fmt='html') %}
 {% endif %}
 
 <div class="card eval"
-  {% if task._id %} data-id="{{ task._id }}" data-format="{{ task.eval_format }}" data-delete-url="{{ delete_url }}" data-reset-url="{{ reset_url }}" {% endif %}
+  {% if task._id %} data-id="{{ task._id }}" data-format="{{ task.eval_format }}" data-delete-url="{{ delete_url }}"
+    data-reset-url="{{ reset_url }}" data-rename-url="{{ rename_url }}" {% endif %}
   {% if task.eval_format == 'll-api' %} data-outcome-url="{{ outcome_url }}" {% endif %}>
 
   <div class="card-header">
     <div class="columns">
-      <div class="column">
-        <div class="card-title h5">{{ task.index_location }}</div>
+      <div class="column col-10">
+        <div class="card-title h5">
+          <div class="title-display">
+            <span class="title">{{ task.run_id }}</span>
+            <a class="task-rename-btn" href="#"><small><i class="icon icon-edit"></i></small></a>
+          </div>
+          <div class="input-group title-edit d-hide">
+            <input class="form-input input-sm run-id-rename-input" type="text" value="{{ task.run_id}}"
+              placeholder="Rename task run ID">
+            <button class="btn btn-sm input-group-btn task-rename-confirm-btn">OK</button>
+            <button class="btn btn-sm input-group-btn task-rename-cancel-btn">Cancel</button>
+          </div>
+        </div>
         <div class="card-subtitle text-gray">Queued: {{ task.time|timestamp_to_date }}</div>
       </div>
 
       <!-- START DETAIL BUTTONS -->
-      <div class="column text-right">
+      <div class="column col-2 text-right">
         <div class="btn-group">
           {% if task.status == 3 %}
 
@@ -259,6 +282,10 @@
   <div class="card-body">
     <table class="table table-striped table-sm metadata">
       <tr>
+        <th>Index Location</th>
+        <td>{{ task.index_location }}</td>
+      </tr>
+      <tr>
         <th>Index Type</th>
         <td>{{ task.index_type }}</td>
       </tr>
@@ -286,10 +313,6 @@
       <tr>
         <th>API Key</th>
         <td>{{ task.api_key }}</td>
-      </tr>
-      <tr>
-        <th>Run ID</th>
-        <td>{{ task.run_id }}</td>
       </tr>
       <!-- END LL-API METADATA -->
 
@@ -417,6 +440,9 @@
 
     function downloadSummary($modal, format) {
       var headers = [];
+      if ($modal.find('#index-runid-checkbox').prop('checked')) {
+        headers.push($modal.find('#index-runid-checkbox').val());
+      }
       if ($modal.find('#index-type-checkbox').prop('checked')) {
         headers.push($modal.find('#index-type-checkbox').val());
       }
@@ -510,9 +536,57 @@
       $modal.removeClass('active');
     });
 
+    $(document).on('keydown', '.run-id-rename-input', function(e) {
+      $(this).css('width', $(this).val().length + 'ex');
+    });
+
+    $(document).on('click', '.task-rename-btn', function(e) {
+      e.preventDefault();
+
+      var $task = $(this).parents('[data-id]');
+      var $runID = $task.find('.run-id-rename-input');
+
+      $task.find('.title-display').addClass('d-hide');
+      $runID
+        .css('flex', 'none')
+        .css('min-width', '15ex')
+        .css('max-width', '80ex')
+        .css('width', $runID.val().length + 'ex');
+      $task.find('.title-edit').removeClass('d-hide');
+      $runID.focus();
+    });
+
+    $(document).on('click', '.task-rename-cancel-btn', function(e) {
+      var $task = $(this).parents('[data-id]');
+      $task.find('.run-id-rename-input').val($task.find('.title').text());
+      $task.find('.title-display').removeClass('d-hide');
+      $task.find('.title-edit').addClass('d-hide');
+    });
+
+    $(document).on('click', '.task-rename-confirm-btn', function(e) {
+      var $task = $(this).parents('[data-id]');
+      var runID = $task.find('.run-id-rename-input').val();
+      if (runID === undefined || runID === null || runID === "") return;
+      var renameURL = $task.data('rename-url') + '&run_id=' + runID;
+
+      $.ajax({
+        url: renameURL,
+        type: 'PUT',
+        success: function(data, status, xhr) {
+          $task.find('.title').text(runID);
+          $task.find('.title-display').removeClass('d-hide');
+          $task.find('.title-edit').addClass('d-hide');
+        },
+        error: function(xhr, errorType, error) {
+          var json = $.parseJSON(xhr.response);
+          $('#error .message').text(json.error);
+          $('#error').removeClass('d-hide');
+        }
+      });
+    });
+
     $(document).on('click', '.task-reset-btn', function(e) {
       var $task = $(this).parents('[data-id]');
-      var taskID = $task.data('id');
       var resetURL = $task.data('reset-url');
 
       if (confirm("Are you sure you want to reset this task?")) {
@@ -533,7 +607,6 @@
 
     $(document).on('click', '.task-delete-btn', function(e) {
       var $task = $(this).parents('[data-id]');
-      var taskID = $task.data('id');
       var deleteURL = $task.data('delete-url');
 
       if (confirm("Are you sure you want to delete this task?")) {

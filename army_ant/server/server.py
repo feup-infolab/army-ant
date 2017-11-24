@@ -140,11 +140,23 @@ async def evaluation_reset(request):
         return web.json_response({ 'success': "Reset task with task_id = %s to WAITING status." % task_id })
     return web.json_response({ 'error': "Could not reset task with task_id = %s to WAITING status." % task_id }, status=404)
 
+async def evaluation_rename(request):
+    manager = EvaluationTaskManager(request.app['db_location'], request.app['default_eval_location'])
+    task_id = request.GET.get('task_id')
+    run_id = request.GET.get('run_id')
+
+    success = False
+    if task_id and run_id: success = manager.rename_task(task_id, run_id)
+
+    if success: return web.json_response({ 'success': "Renamed Run ID of task %s to '%s'." % (task_id, run_id) })
+    return web.json_response({ 'error': "Could not rename Run ID of task %s to '%s'." % (task_id, run_id) }, status=404)
+
 async def evaluation_post(request):
     data = await request.post()
 
     if len(data['topics']) > 0:
-        with tempfile.NamedTemporaryFile(dir=os.path.join(request.app['default_eval_location'], 'spool'), prefix='eval_topics_', delete=False) as fp:
+        with tempfile.NamedTemporaryFile(dir=os.path.join(request.app['default_eval_location'], 'spool'),
+                                         prefix='eval_topics_', delete=False) as fp:
             fp.write(data['topics'].file.read())
             topics_filename = data['topics'].filename
             topics_path = fp.name
@@ -273,8 +285,6 @@ async def evaluation(request):
         return await evaluation_post(request)
     elif request.method == 'DELETE':
         return await evaluation_delete(request)
-    elif request.method == 'PUT':
-        return await evaluation_reset(request)
 
 @aiohttp_jinja2.template('about.html')
 async def about(request):
@@ -329,7 +339,8 @@ def run_app(loop):
     app.router.add_get('/evaluation', evaluation, name='evaluation')
     app.router.add_post('/evaluation', evaluation)
     app.router.add_delete('/evaluation', evaluation, name='evaluation_delete')
-    app.router.add_put('/evaluation', evaluation, name='evaluation_reset')
+    app.router.add_put('/evaluation/reset', evaluation_reset, name='evaluation_reset')
+    app.router.add_put('/evaluation/rename', evaluation_rename, name='evaluation_rename')
     app.router.add_get('/evaluation/download', evaluation_download, name='evaluation_download')
     app.router.add_get('/evaluation/results/archive', evaluation_results_archive, name='evaluation_results_archive')
     app.router.add_get('/evaluation/results/ll-api', evaluation_results_ll_api, name='evaluation_results_ll_api')
