@@ -552,15 +552,7 @@
       $runID.focus();
     });
 
-    $(document).on('click', '.task-rename-cancel-btn', function(e) {
-      var $task = $(this).parents('[data-id]');
-      $task.find('.run-id-rename-input').val($task.find('.title').text());
-      $task.find('.title-display').removeClass('d-hide');
-      $task.find('.title-edit').addClass('d-hide');
-    });
-
-    $(document).on('click', '.task-rename-confirm-btn', function(e) {
-      var $task = $(this).parents('[data-id]');
+    function confirmRename($task) {
       var runID = $task.find('.run-id-rename-input').val();
       if (runID === undefined || runID === null || runID === "") return;
       var renameURL = $task.data('rename-url') + '&run_id=' + runID;
@@ -579,6 +571,28 @@
           $('#error').removeClass('d-hide');
         }
       });
+    }
+
+    function cancelRename($task) {
+      $task.find('.run-id-rename-input').val($task.find('.title').text());
+      $task.find('.title-display').removeClass('d-hide');
+      $task.find('.title-edit').addClass('d-hide');
+    }
+
+    $(document).on('keydown', '.run-id-rename-input', function(e) {
+      var $task = $(this).parents('[data-id]');
+      if (e.keyCode == 13) confirmRename($task);
+      if (e.keyCode == 27) cancelRename($task);
+    });
+
+    $(document).on('click', '.task-rename-confirm-btn', function(e) {
+      var $task = $(this).parents('[data-id]');
+      confirmRename($task);
+    });
+
+    $(document).on('click', '.task-rename-cancel-btn', function(e) {
+      var $task = $(this).parents('[data-id]');
+      cancelRename($task);
     });
 
     $(document).on('click', '.task-reset-btn', function(e) {

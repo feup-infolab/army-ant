@@ -1,4 +1,5 @@
-import aiohttp, aiohttp_jinja2, jinja2, asyncio, configparser, math, time, tempfile, os, json
+import aiohttp, aiohttp_jinja2, jinja2, asyncio, configparser, math, time, tempfile, os, json, logging
+from jpype import *
 from datetime import datetime
 from jpype import *
 from datetime import datetime
@@ -9,6 +10,8 @@ from army_ant.index import Index, Result
 from army_ant.database import Database
 from army_ant.evaluation import EvaluationTask, EvaluationTaskManager
 from army_ant.exception import ArmyAntException
+
+logger = logging.getLogger(__name__)
 
 async def page_link(request):
     def _page_link(page, limit):
@@ -57,7 +60,8 @@ async def search(request):
             engine_response = await index.search(query, offset, limit)
 
             num_docs = len(engine_response['results'])
-            if engine_response['numDocs']: num_docs = engine_response['numDocs'].longValue()
+            if engine_response['numDocs']: num_docs = engine_response['numDocs']
+            if type(num_docs) is java.lang.Long: num_docs = num_docs.longValue()
 
             results = engine_response['results']
             page = int((offset+limit) / limit)
@@ -303,8 +307,8 @@ async def shutdown_jvm(app):
 
 async def preload_engines(app):
     for engine, config in app['engines'].items():
-        config['preload'] = config['preload'] == 'True'
-        if config['preload']:
+        preload = config['preload'] == 'True' if 'preload' in config else False
+        if preload:
             if 'preloaded_engines' in app:
                 if 'engine' in app['preloaded_engines']: continue
             else:
@@ -325,6 +329,7 @@ def run_app(loop):
     app['engines'] = OrderedDict()
     for section in config.sections():
         app['engines'][section] = dict(config[section])
+        if 'message' in config[section]: logger.warn(config[section]['message'])
     app['db_location'] = config['DEFAULT'].get('db_location', 'localhost')
     app['default_eval_location'] = config['DEFAULT'].get('eval_location', tempfile.gettempdir())
 
