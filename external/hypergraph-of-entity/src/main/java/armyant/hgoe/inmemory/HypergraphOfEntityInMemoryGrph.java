@@ -16,11 +16,11 @@ import armyant.hgoe.structures.ResultSet;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.serializers.MapSerializer;
 import grph.algo.AllPaths;
+import grph.algo.ConnectedComponentsAlgorithm;
 import grph.in_memory.InMemoryGrph;
 import grph.path.ArrayListPath;
 import grph.path.Path;
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
-import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.ints.*;
 import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
 import org.ahocorasick.trie.Emit;
 import org.ahocorasick.trie.Trie;
@@ -31,7 +31,6 @@ import org.objenesis.strategy.StdInstantiatorStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import toools.collections.primitive.LucIntHashSet;
-import toools.collections.primitive.LucIntSet;
 
 import java.io.*;
 import java.util.*;
@@ -45,7 +44,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
     private static final int SEARCH_MAX_DISTANCE = 2;
     private static final int MAX_PATHS_PER_PAIR = 1000;
     private static final int WALK_LENGTH = 3;
-    private static final int WALK_ITERATIONS = 10;
+    private static final int WALK_RESTARTS = 10;
     private static final XoRoShiRo128PlusRandom RNG = new XoRoShiRo128PlusRandom();
     private static final Kryo kryo;
     private static final MapSerializer nodeEdgeIndexSerializer;
@@ -66,6 +65,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
     private InMemoryGrph graph;
     private BidiMap<Node, Integer> nodeIndex;
     private BidiMap<Edge, Integer> edgeIndex;
+    private Map<Integer, IntSet> reachabilityIndex;
 
     private long counter;
     private long totalTime;
@@ -96,6 +96,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         this.graph = new InMemoryGrph();
         this.nodeIndex = new DualHashBidiMap<>();
         this.edgeIndex = new DualHashBidiMap<>();
+        this.reachabilityIndex = new HashMap<>();
 
         logger.info("Using in-memory version of Hypergraph of Entity for {}", path);
 
@@ -196,7 +197,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         return nodes;
     }
 
-    public void linkTextAndKnowledge() {
+    private void linkTextAndKnowledge() {
         logger.info("Building trie from term nodes");
         Trie.TrieBuilder trieBuilder = Trie.builder()
                 .ignoreOverlaps()
@@ -231,6 +232,22 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         }
     }
 
+    private void createReachabilityIndex() {
+        logger.info("Computing connected components and creating reachability index");
+        ConnectedComponentsAlgorithm connectedComponentsAlgorithm = new ConnectedComponentsAlgorithm();
+        Collection<IntSet> connectedComponents = connectedComponentsAlgorithm.compute(graph);
+        for (IntSet connectedComponent : connectedComponents) {
+            for (int nodeID : connectedComponent.toIntArray()) {
+                reachabilityIndex.put(nodeID, connectedComponent);
+            }
+        }
+    }
+
+    public void postProcessing() {
+        linkTextAndKnowledge();
+        createReachabilityIndex();
+    }
+
     public void indexCorpus(Collection<Document> corpus) throws IOException {
         corpus.parallelStream().forEach(document -> {
             try {
@@ -263,38 +280,38 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
     public void save() {
         logger.info("Saving index to {}", directory.getAbsolutePath());
 
-        File nodeIndexFile = new File(directory, "node-index.ser");
+        File nodeIndexFile = new File(directory, "node.idx");
         try {
             ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream(nodeIndexFile));
             output.writeObject(nodeIndex);
             output.close();
-            /*Output output = new Output(new FileOutputStream(nodeIndexFile));
-            kryo.writeObject(output, nodeIndex, nodeEdgeIndexSerializer);
-            output.close();*/
         } catch (IOException e) {
-            logger.error("Unable to dump hypergraph to {}", nodeIndexFile, e);
+            logger.error("Unable to dump node index to {}", nodeIndexFile, e);
         }
 
-        File edgeIndexFile = new File(directory, "edge-index.ser");
+        File edgeIndexFile = new File(directory, "edge.idx");
         try {
             ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream(edgeIndexFile));
             output.writeObject(edgeIndex);
             output.close();
-            /*Output output = new Output(new FileOutputStream(edgeIndexFile));
-            kryo.writeObject(output, edgeIndex, nodeEdgeIndexSerializer);
-            output.close();*/
         } catch (IOException e) {
-            logger.error("Unable to dump hypergraph to {}", edgeIndexFile, e);
+            logger.error("Unable to dump edge index to {}", edgeIndexFile, e);
         }
 
-        File hypergraphFile = new File(directory, "hypergraph.ser");
+        File reachabilityIndexFile = new File(directory, "reachability.idx");
+        try {
+            ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream(reachabilityIndexFile));
+            output.writeObject(reachabilityIndex);
+            output.close();
+        } catch (IOException e) {
+            logger.error("Unable to dump reachability index to {}", reachabilityIndexFile, e);
+        }
+
+        File hypergraphFile = new File(directory, "hypergraph.graph");
         try {
             ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream(hypergraphFile));
             output.writeObject(graph);
             output.close();
-            /*Output hypergraphOutput = new Output(new FileOutputStream(hypergraphFile));
-            kryo.writeObject(hypergraphOutput, graph);
-            hypergraphOutput.close();*/
         } catch (IOException e) {
             logger.error("Unable to dump hypergraph to {}", hypergraphFile, e);
         }
@@ -303,66 +320,67 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
     public boolean load() {
         logger.info("Loading index from {}", directory.getAbsolutePath());
 
-        File nodeIndexFile = new File(directory, "node-index.ser");
+        File nodeIndexFile = new File(directory, "node.idx");
         try {
             ObjectInputStream input = new ObjectInputStream(new FileInputStream(nodeIndexFile));
             this.nodeIndex = (BidiMap) input.readObject();
             input.close();
-            /*Input input = new Input(new FileInputStream(nodeIndexFile));
-            this.nodeIndex = kryo.readObject(input, HashMap.class, nodeEdgeIndexSerializer);
-            input.close();*/
         } catch (ClassNotFoundException | IOException e) {
-            logger.warn("Node index not found in {}", directory);
+            logger.warn("Cannot read node index from {}", nodeIndexFile);
             return false;
         }
 
-        File edgeIndexFile = new File(directory, "edge-index.ser");
+        File edgeIndexFile = new File(directory, "edge.idx");
         try {
             ObjectInputStream input = new ObjectInputStream(new FileInputStream(edgeIndexFile));
             this.edgeIndex = (BidiMap) input.readObject();
             input.close();
-            /*Input input = new Input(new FileInputStream(edgeIndexFile));
-            this.edgeIndex = kryo.readObject(input, HashMap.class, nodeEdgeIndexSerializer);
-            input.close();*/
         } catch (ClassNotFoundException | IOException e) {
-            logger.warn("Edge index not found in {}", directory);
+            logger.warn("Cannot read edge index from {}", edgeIndexFile);
             return false;
         }
 
-        File hypergraphFile = new File(directory, "hypergraph.ser");
+        File reachabilityIndexFile = new File(directory, "reachability.idx");
+        try {
+            ObjectInputStream input = new ObjectInputStream(new FileInputStream(reachabilityIndexFile));
+            this.reachabilityIndex = (Map) input.readObject();
+            input.close();
+        } catch (ClassNotFoundException | IOException e) {
+            logger.warn("Cannot read  reachability index from {}", reachabilityIndexFile);
+            return false;
+        }
+
+        File hypergraphFile = new File(directory, "hypergraph.graph");
         try {
             ObjectInputStream input = new ObjectInputStream(new FileInputStream(hypergraphFile));
             this.graph = (InMemoryGrph) input.readObject();
             input.close();
-            /*Input input = new Input(new FileInputStream(hypergraphFile));
-            this.graph = kryo.readObject(input, InMemoryGrph.class);
-            input.close();*/
         } catch (ClassNotFoundException | IOException e) {
-            logger.warn("Hypergraph not found in {}", directory);
+            logger.warn("Cannot read hypergraph from {}", hypergraphFile);
             return false;
         }
 
         return true;
     }
 
-    private LucIntSet getQueryTermNodeIDs(List<String> terms) {
-        LucIntSet termNodes = new LucIntHashSet();
+    private IntSet getQueryTermNodeIDs(List<String> terms) {
+        IntSet termNodes = new LucIntHashSet();
 
         for (String term : terms) {
             TermNode termNode = new TermNode(term);
             if (nodeIndex.containsKey(termNode)) {
-                termNodes.add(nodeIndex.get(termNode));
+                termNodes.add(nodeIndex.get(termNode).intValue());
             }
         }
 
         return termNodes;
     }
 
-    private LucIntSet getSeedNodeIDs(LucIntSet queryTermNodeIDs) {
-        LucIntSet seedNodes = new LucIntHashSet();
+    private IntSet getSeedNodeIDs(IntSet queryTermNodeIDs) {
+        IntSet seedNodes = new LucIntHashSet();
 
         for (Integer queryTermNode : queryTermNodeIDs) {
-            LucIntSet localSeedNodes = new LucIntHashSet();
+            IntSet localSeedNodes = new LucIntHashSet();
 
             IntSet edgeIDs;
             if (graph.containsVertex(queryTermNode)) {
@@ -385,7 +403,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
             }
 
             if (localSeedNodes.isEmpty() && graph.containsVertex(queryTermNode)) {
-                localSeedNodes.add(queryTermNode);
+                localSeedNodes.add(queryTermNode.intValue());
             }
 
             seedNodes.addAll(localSeedNodes);
@@ -394,32 +412,25 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         return seedNodes;
     }
 
-    /*private double coverage(EntityNode entityNode, Set<Node> seedNodes) {
-        if (seedNodes.isEmpty()) return 0d;
+    private double coverage(int entityNodeID, IntSet seedNodeIDs) {
+        if (seedNodeIDs.isEmpty()) return 0d;
 
-        BFSDistanceLabeler<Node, Edge> bfsDistanceLabeler = new BFSDistanceLabeler<>();
-        Set<Node> reachedSeedNodes = new HashSet<>();
+        IntSet reachableSeedNodeIDs = new IntOpenHashSet(reachabilityIndex.get(entityNodeID));
+        reachableSeedNodeIDs.retainAll(seedNodeIDs);
 
-        for (Node seedNode : seedNodes) {
-            bfsDistanceLabeler.labelDistances(graph, seedNode);
-            if (bfsDistanceLabeler.getDistance(graph, seedNode) != -1) {
-                reachedSeedNodes.add(seedNode);
-            }
-        }
-
-        return (double) reachedSeedNodes.size() / seedNodes.size();
-    }*/
+        return (double) reachableSeedNodeIDs.size() / seedNodeIDs.size();
+    }
 
     // TODO Can be improved with an edge index per edge type: Map<Class<? extends Edge>, Set<Integer>>
-    private LucIntSet getUndirectedNeighborsPerEdgeType(int sourceNodeID, Class edgeType) {
-        LucIntSet result = new LucIntHashSet();
+    private IntSet getUndirectedNeighborsPerEdgeType(int sourceNodeID, Class edgeType) {
+        IntSet result = new LucIntHashSet();
         result.addAll(graph.getEdgesIncidentTo(sourceNodeID).stream()
                 .filter(edgeID -> {
                     Edge edge = edgeIndex.getKey(edgeID);
                     return edgeType.isInstance(edge);
                 })
                 .flatMap(edgeID -> {
-                    LucIntSet nodeIDs = new LucIntHashSet();
+                    IntSet nodeIDs = new LucIntHashSet();
                     nodeIDs.addAll(graph.getDirectedHyperEdgeHead(edgeID));
                     nodeIDs.addAll(graph.getDirectedHyperEdgeTail(edgeID));
                     return nodeIDs.stream().filter(nodeID -> !nodeID.equals(sourceNodeID));
@@ -428,16 +439,16 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         return result;
     }
 
-    private double confidenceWeight(int seedNodeID, LucIntSet queryTermNodeIDs) {
+    private double confidenceWeight(int seedNodeID, IntSet queryTermNodeIDs) {
         Node seedNode = nodeIndex.getKey(seedNodeID);
 
         if (seedNode == null) return 0;
 
         if (seedNode instanceof TermNode) return 1;
 
-        LucIntSet neighborIDs = getUndirectedNeighborsPerEdgeType(seedNodeID, ContainedInEdge.class);
+        IntSet neighborIDs = getUndirectedNeighborsPerEdgeType(seedNodeID, ContainedInEdge.class);
 
-        LucIntSet linkedQueryTermNodes = new LucIntHashSet();
+        IntSet linkedQueryTermNodes = new LucIntHashSet();
         linkedQueryTermNodes.addAll(neighborIDs);
         linkedQueryTermNodes.retainAll(queryTermNodeIDs);
 
@@ -446,7 +457,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         return (double) linkedQueryTermNodes.size() / neighborIDs.size();
     }
 
-    public Map<Integer, Double> seedNodeConfidenceWeights(LucIntSet seedNodeIDs, LucIntSet queryTermNodeIDs) {
+    public Map<Integer, Double> seedNodeConfidenceWeights(IntSet seedNodeIDs, IntSet queryTermNodeIDs) {
         Map<Integer, Double> weights = new HashMap<>();
 
         for (int seedNode : seedNodeIDs) {
@@ -456,15 +467,17 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         return weights;
     }
 
+    // FIXME getShortestPath() does not seem to work with hyperedges.
     private double perSeedScoreDijkstra(int entityNodeID, int seedNodeID, double seedWeight) {
-        double seedScore = 0d;
+        double perSeedScore = 0d;
         Path shortestPath = graph.getShortestPath(entityNodeID, seedNodeID);
-        if (shortestPath != null) seedScore = seedWeight * 1d / (1 + shortestPath.getLength());
-        return seedScore;
+        if (shortestPath != null) perSeedScore = seedWeight * 1d / (1 + shortestPath.getLength());
+        return perSeedScore;
     }
 
+    // FIXME AllPaths does not work with hyperedges.
     private double perSeedScoreAllPaths(int entityNodeID, int seedNodeID, double seedWeight) {
-        double seedScore = 0d;
+        double perSeedScore = 0d;
 
         List<Path> paths = AllPaths.compute(entityNodeID, graph, SEARCH_MAX_DISTANCE, MAX_PATHS_PER_PAIR, false)
                 .stream()
@@ -473,11 +486,11 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
                 .collect(Collectors.toList());
 
         for (Path path : paths) {
-            seedScore += seedWeight * 1d / (1 + path.getLength());
+            perSeedScore += seedWeight * 1d / (1 + path.getLength());
         }
-        seedScore /= 1 + paths.size();
+        perSeedScore /= 1 + paths.size();
 
-        return seedScore;
+        return perSeedScore;
     }
 
     // TODO Should follow Bellaachia2013 for random walks on hypergraphs (Equation 14)
@@ -508,41 +521,61 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
     }
 
     // FIXME Unfinished
-    private double perSeedScoreRandomWalk(int entityNodeID, int seedNodeID, double seedWeight) {
-        double seedScore = 0d;
-        for (int i = 0; i < WALK_ITERATIONS; i++) {
-            Path randomPath = randomWalk(entityNodeID, WALK_LENGTH);
-            int seedIndex = randomPath.indexOfVertex(seedNodeID);
-            if (seedIndex != -1) seedScore += seedWeight * seedIndex;
+    public ResultSet randomWalkSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights) {
+        Int2FloatOpenHashMap weightedNodeVisitProbability = new Int2FloatOpenHashMap();
+
+        for (int seedNodeID : seedNodeIDs) {
+            Int2IntOpenHashMap nodeVisits = new Int2IntOpenHashMap();
+
+            for (int i = 0; i < WALK_RESTARTS; i++) {
+                Path randomPath = randomWalk(seedNodeID, WALK_LENGTH);
+                for (int nodeID : randomPath.toVertexArray()) {
+                    nodeVisits.addTo(nodeID, 1);
+                }
+            }
+
+            for (int nodeID : nodeVisits.keySet()) {
+                weightedNodeVisitProbability.compute(
+                        nodeID, (k, v) -> (v == null ? 0 : v) + nodeVisits.get(nodeID) * seedNodeWeights.get(seedNodeID).floatValue());
+            }
         }
-        return seedScore / 10;
+
+        ResultSet resultSet = new ResultSet();
+        for (int nodeID : weightedNodeVisitProbability.keySet()) {
+            Node node = nodeIndex.getKey(nodeID);
+            if (node instanceof EntityNode) {
+                EntityNode entityNode = (EntityNode) node;
+                logger.debug("Ranking {} using RANDOM_WALK_SCORE", entityNode);
+                double score = weightedNodeVisitProbability.get(nodeID);
+                resultSet.addReplaceResult(new Result(score, entityNode, entityNode.getDocID()));
+            }
+        }
+        return resultSet;
     }
 
-    public double perSeedScore(int entityNodeID, int seedNodeID, double seedWeight, PerSeedScoreMethod method) {
-        logger.debug("Calculating score based on seed {} using {} method", seedNodeID, method);
-        switch (method) {
-            case ALL_PATHS:
-                return perSeedScoreAllPaths(entityNodeID, seedNodeID, seedWeight);
-            case DIJKSTA:
-                return perSeedScoreDijkstra(entityNodeID, seedNodeID, seedWeight);
-            case RANDOM_WALK:
-                return perSeedScoreRandomWalk(entityNodeID, seedNodeID, seedWeight);
-        }
-        return 0;
+    public double entityWeight(int entityNodeID, IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights) {
+        return entityWeight(entityNodeID, seedNodeIDs, seedNodeWeights, true, PerSeedScoreMethod.ALL_PATHS);
     }
 
-    public double entityWeight(int entityNodeID, Map<Integer, Double> seedNodeWeights) {
+    // FIXME ALL_PATHS and DIJKSTRA do not work for hypergraphs
+    public double entityWeight(int entityNodeID, IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights,
+                               boolean withCoverage, PerSeedScoreMethod method) {
         double score = 0d;
 
         // Get all paths between the entity and a seed node (within a maximum distance; null by default).
         for (Map.Entry<Integer, Double> entry : seedNodeWeights.entrySet()) {
             int seedNodeID = entry.getKey();
             double seedWeight = entry.getValue();
-            score += perSeedScore(entityNodeID, seedNodeID, seedWeight, PerSeedScoreMethod.RANDOM_WALK);
+            switch (method) {
+                case ALL_PATHS:
+                    score += perSeedScoreAllPaths(entityNodeID, seedNodeID, seedWeight);
+                case DIJKSTA:
+                    score += perSeedScoreDijkstra(entityNodeID, seedNodeID, seedWeight);
+            }
         }
 
         score = seedNodeWeights.isEmpty() ? 0 : score / seedNodeWeights.size();
-        //score *= coverage(entityNode, seedNodeWeights.keySet());
+        if (withCoverage) score *= coverage(entityNodeID, seedNodeIDs);
 
         if (score > 0) System.out.println(score + "\t" + entityNodeID);
 
@@ -582,7 +615,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         System.out.println(this.graph.getVertexCount() + " : " + this.graph.getEdgeCount());
     }*/
 
-    private double jaccardSimilarity(LucIntSet a, LucIntSet b) {
+    private double jaccardSimilarity(IntSet a, IntSet b) {
         IntSet intersect = new IntOpenHashSet(a);
         intersect.retainAll(b);
 
@@ -592,37 +625,42 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         return (double) intersect.size() / union.size();
     }
 
-    public double jaccardScore(int entityNodeID, Map<Integer, Pair<LucIntSet, Double>> seedNeighborsWeights) {
+    public double jaccardScore(int entityNodeID, Map<Integer, Pair<IntSet, Double>> seedNeighborsWeights) {
         return seedNeighborsWeights.entrySet().stream().map(seed -> {
-            LucIntSet seedNeighbors = seed.getValue().getLeft();
-            LucIntSet entityNeighbors = graph.getNeighbours(entityNodeID);
+            IntSet seedNeighbors = seed.getValue().getLeft();
+            IntSet entityNeighbors = graph.getNeighbours(entityNodeID);
             return seed.getValue().getRight() * jaccardSimilarity(seedNeighbors, entityNeighbors);
         }).mapToDouble(f -> f).sum();
     }
 
     public ResultSet search(String query) throws IOException {
-        return search(query, RankingFunction.JACCARD_SCORE);
+        return search(query, RankingFunction.RANDOM_WALK_SCORE);
     }
 
     public ResultSet search(String query, RankingFunction function) throws IOException {
         ResultSet resultSet = new ResultSet();
 
         List<String> tokens = analyze(query);
-        LucIntSet queryTermNodeIDs = getQueryTermNodeIDs(tokens);
+        IntSet queryTermNodeIDs = getQueryTermNodeIDs(tokens);
 
-        LucIntSet seedNodeIDs = getSeedNodeIDs(queryTermNodeIDs);
+        IntSet seedNodeIDs = getSeedNodeIDs(queryTermNodeIDs);
         //System.out.println("Seed Nodes: " + seedNodeIDs.stream().map(nodeID -> nodeID + "=" + nodeIndex.getKey(nodeID).toString()).collect(Collectors.toList()));
 
         Map<Integer, Double> seedNodeWeights = seedNodeConfidenceWeights(seedNodeIDs, queryTermNodeIDs);
         //System.out.println("Seed Node Confidence Weights: " + seedNodeWeights);
         logger.info("{} seed nodes weights calculated for [ {} ]", seedNodeWeights.size(), query);
 
-        Map<Integer, Pair<LucIntSet, Double>> seedNeighborsWeights = new HashMap<>();
+        Map<Integer, Pair<IntSet, Double>> seedNeighborsWeights = new HashMap<>();
         for (Map.Entry<Integer, Double> entry : seedNodeWeights.entrySet()) {
             seedNeighborsWeights.put(entry.getKey(), Pair.of(graph.getNeighbours(entry.getKey()), entry.getValue()));
         }
 
-        graph.getVertices().parallelStream().forEach(nodeID -> {
+        if (function == RankingFunction.RANDOM_WALK_SCORE) {
+            return randomWalkSearch(seedNodeIDs, seedNodeWeights);
+        }
+
+        //graph.getVertices().parallelStream().forEach(nodeID -> {
+        for (int nodeID : graph.getVertices()) {
             Node node = nodeIndex.getKey(nodeID);
             if (node instanceof EntityNode) {
                 EntityNode entityNode = (EntityNode) node;
@@ -631,10 +669,11 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
                 double score = 0d;
                 switch (function) {
                     case ENTITY_WEIGHT:
-                        score = entityWeight(nodeID, seedNodeWeights);
+                        score = entityWeight(nodeID, seedNodeIDs, seedNodeWeights);
                         break;
                     case JACCARD_SCORE:
                         score = jaccardScore(nodeID, seedNeighborsWeights);
+                        break;
                 }
 
                 if (score > 0 && entityNode.hasDocID()) {
@@ -643,7 +682,8 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
                     }
                 }
             }
-        });
+        }
+        //});
 
         logger.info("{} entities ranked for [ {} ]", resultSet.getNumDocs(), query);
 
@@ -680,8 +720,8 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
 
     public void printEdges() {
         for (int edgeID : graph.getEdges()) {
-            LucIntSet head = graph.getDirectedHyperEdgeHead(edgeID);
-            LucIntSet tail = graph.getDirectedHyperEdgeTail(edgeID);
+            IntSet head = graph.getDirectedHyperEdgeHead(edgeID);
+            IntSet tail = graph.getDirectedHyperEdgeTail(edgeID);
             Edge edge = edgeIndex.getKey(edgeID);
             System.out.println(String.format(
                     "%d\t[%s] %s -> %s", edgeID, edge.getClass().getSimpleName(), head, tail));
@@ -690,12 +730,12 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
 
     private enum PerSeedScoreMethod {
         DIJKSTA,
-        ALL_PATHS,
-        RANDOM_WALK
+        ALL_PATHS
     }
 
     private enum RankingFunction {
         ENTITY_WEIGHT,
-        JACCARD_SCORE
+        JACCARD_SCORE,
+        RANDOM_WALK_SCORE
     }
 }

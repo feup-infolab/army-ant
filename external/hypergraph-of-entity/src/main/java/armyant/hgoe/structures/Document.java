@@ -9,18 +9,18 @@ import java.util.List;
 public class Document {
     private Double score;
     private String docID;
-    private String entity;
+    private String title;
     private String text;
     private List<Triple> triples;
 
-    public Document(String docID, String entity, String text, List<Triple> triples) {
-        this(null, docID, entity, text, triples);
+    public Document(String docID, String title, String text, List<Triple> triples) {
+        this(null, docID, title, text, triples);
     }
 
-    public Document(Double score, String docID, String entity, String text, List<Triple> triples) {
+    public Document(Double score, String docID, String title, String text, List<Triple> triples) {
         this.score = score;
         this.docID = docID;
-        this.entity = entity;
+        this.title = title;
         this.text = text;
         this.triples = triples;
     }
@@ -41,12 +41,12 @@ public class Document {
         this.docID = docID;
     }
 
-    public String getEntity() {
-        return entity;
+    public String getTitle() {
+        return title;
     }
 
-    public void setEntity(String entity) {
-        this.entity = entity;
+    public void setTitle(String title) {
+        this.title = title;
     }
 
     public String getText() {

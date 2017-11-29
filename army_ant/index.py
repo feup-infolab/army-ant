@@ -670,7 +670,7 @@ class HypergraphOfEntity(Index):
                 logger.info("Indexing batch of %d documents" % len(corpus))
                 hgoe.indexCorpus(java.util.Arrays.asList(corpus))
 
-            hgoe.linkTextAndKnowledge()
+            hgoe.postProcessing()
 
             hgoe.save()
         except JavaException as e:

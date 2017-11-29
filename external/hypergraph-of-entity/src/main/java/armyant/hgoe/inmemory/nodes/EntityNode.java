@@ -18,7 +18,7 @@ public class EntityNode extends Node implements Rankable {
 
     public EntityNode(Document document, String name) {
         super(name);
-        if (name.equals(document.getEntity())) {
+        if (name.equals(document.getTitle())) {
             this.docID = document.getDocID();
         } else {
             this.docID = null;

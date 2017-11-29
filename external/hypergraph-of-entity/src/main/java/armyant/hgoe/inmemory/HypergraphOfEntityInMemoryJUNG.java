@@ -318,20 +318,6 @@ public class HypergraphOfEntityInMemoryJUNG extends HypergraphOfEntity {
         return weights;
     }
 
-    // FIXME Adapter needs revision to work
-    private double perSeedScoreAStar(EntityNode entityNode, Node seedNode, double seedWeight) {
-        double seedScore = 0d;
-        SearchProblem searchProblem = GraphSearchProblem
-                .startingFrom((Node) entityNode)
-                .in(new JUNGHipsterHypergraphAdapter<>(graph))
-                .takeCostsFromEdges()
-                .build();
-
-        int distance = Hipster.createAStar(searchProblem).search(seedNode).getOptimalPaths().size();
-        seedScore = seedWeight * 1d / (1 + distance);
-        return seedScore;
-    }
-
     private double perSeedScoreDijkstra(EntityNode entityNode, Node seedNode, double seedWeight) {
         double seedScore = 0d;
         Number distance = dijkstraDistance.getDistance(entityNode, seedNode);
@@ -398,8 +384,6 @@ public class HypergraphOfEntityInMemoryJUNG extends HypergraphOfEntity {
                 return perSeedScoreAllPaths(entityNode, seedNode, seedWeight);
             case DIJKSTA:
                 return perSeedScoreDijkstra(entityNode, seedNode, seedWeight);
-            case A_STAR:
-                return perSeedScoreAStar(entityNode, seedNode, seedWeight);
             case RANDOM_WALK:
                 return perSeedScoreRandomWalk(entityNode, seedNode, seedWeight);
         }
@@ -559,8 +543,7 @@ public class HypergraphOfEntityInMemoryJUNG extends HypergraphOfEntity {
     private enum PerSeedScoreMethod {
         DIJKSTA,
         ALL_PATHS,
-        RANDOM_WALK,
-        A_STAR
+        RANDOM_WALK
     }
 
     private enum RankingFunction {
