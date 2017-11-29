@@ -474,12 +474,13 @@ class EvaluationTaskManager(object):
         self.client = MongoClient(db_location, db_port)
         self.db = self.client['army_ant']
 
-        self.db['evaluation_tasks'].create_index([
-            ('topics_md5', pymongo.ASCENDING),
-            ('assessments_md5', pymongo.ASCENDING),
-            ('index_location', pymongo.ASCENDING),
-            ('index_type', pymongo.ASCENDING)
-        ], unique=True)
+        #self.db['evaluation_tasks'].create_index([
+            #('topics_md5', pymongo.ASCENDING),
+            #('assessments_md5', pymongo.ASCENDING),
+            #('index_location', pymongo.ASCENDING),
+            #('index_type', pymongo.ASCENDING)
+        #], unique=True)
+        self.db['evaluation_tasks'].create_index('run_id', unique=True)
 
     def add_task(self, task):
         self.tasks.append(task)
@@ -545,7 +546,7 @@ class EvaluationTaskManager(object):
                 duplicate_error = True
 
         if duplicate_error:
-            raise ArmyAntException("You can only launch one task per topics + assessments + engine.")
+            raise ArmyAntException("The Run ID must be unique.")
 
         if run_id_error:
             raise ArmyAntException("Tasks without a Run ID are not accepted")
