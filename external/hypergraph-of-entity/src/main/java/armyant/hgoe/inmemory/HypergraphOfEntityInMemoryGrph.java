@@ -547,7 +547,9 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
                 EntityNode entityNode = (EntityNode) node;
                 logger.debug("Ranking {} using RANDOM_WALK_SCORE", entityNode);
                 double score = weightedNodeVisitProbability.get(nodeID);
-                resultSet.addReplaceResult(new Result(score, entityNode, entityNode.getDocID()));
+                if (score > 0 && entityNode.hasDocID()) {
+                    resultSet.addReplaceResult(new Result(score, entityNode, entityNode.getDocID()));
+                }
             }
         }
         return resultSet;
@@ -659,8 +661,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
             return randomWalkSearch(seedNodeIDs, seedNodeWeights);
         }
 
-        //graph.getVertices().parallelStream().forEach(nodeID -> {
-        for (int nodeID : graph.getVertices()) {
+        graph.getVertices().parallelStream().forEach(nodeID -> {
             Node node = nodeIndex.getKey(nodeID);
             if (node instanceof EntityNode) {
                 EntityNode entityNode = (EntityNode) node;
@@ -682,8 +683,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
                     }
                 }
             }
-        }
-        //});
+        });
 
         logger.info("{} entities ranked for [ {} ]", resultSet.getNumDocs(), query);
 

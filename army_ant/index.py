@@ -119,6 +119,10 @@ class Result(object):
         else:
             raise KeyError
 
+    def __repr__(self):
+        return """{ "docID": %s, "score": %f, "components": %s }""" % (
+            self.doc_id, self.score, (self.components or "null"))
+
 class ResultSet(object):
     def __init__(self, results, num_docs):
         self.results = results
