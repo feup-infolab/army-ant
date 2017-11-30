@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 async def fetch_wikipedia_images(db_location, db_name, db_type, loop):
     db = Database.factory(db_location, db_name, db_type, loop)
-    async for record in db.cursor():
+    async for record in db.without_img_url():
         if 'metadata' in record and 'url' in record['metadata']:
             url = record['metadata']['url']
             match = re.match(r'http[s]?://[^.]+\.wikipedia\.org/(wiki/(.*)|\?curid=\d+)', url)

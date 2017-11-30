@@ -10,6 +10,16 @@
 
     <nav class="panel-nav">
       <ul class="tab tab-block">
+        <li class="tab-item">
+          <a href="#trace">
+            Trace
+          </a>
+        </li>
+        <li class="tab-item">
+          <a href="#results">
+            Results
+          </a>
+        </li>
         {% if index_type in ['gow', 'goe'] %}
         <li class="tab-item">
           <a href="#score-components-plot">
@@ -24,245 +34,15 @@
         </li>
         <li class="tab-item">
           <a href="#dataset">
-            Dataset
-          </a>
-        </li>
-        <li class="tab-item">
-          <a href="#results">
-            Results
+            Collection
           </a>
         </li>
       </ul>
     </nav>
 
     <div class="panel-body">
-      {% if index_type in ['gow', 'goe'] %}
-      <div id="score-components-plot" class="parcoords tab-content d-hide"></div>
-      {% endif %}
-
-      <div id="score-explanation" class="tab-content container d-hide">
-        <div class="column">
-          {% if index_type == 'gow' %}
-          <dl>
-            <dt>TW-IDF</dt>
-            <dd>
-              TW-IDF is calculated using the indegree of the nodes that match each query term in the graph-of-word for each document as the term weight (TW). The formula used is the following:
-
-              $$TW\text{-}IDF(q, d) = \sum_{t \in q}^d \left( \frac{tw(t, d)}{1 - b + b \times \frac{|d|}{avdl}} \times log \frac{N + 1}{df(t)} \right)$$
-
-              Where:
-              <ul>
-                <li>$b = 0.003$,</li>
-                <li>$tw(t, d)$ is the indegree of the node for term $t$, in the graph-of-word, for document $d$,</li>
-                <li>$|d|$ is the document length,</li>
-                <li>$avdl$ is the average document length for the whole corpus,</li>
-                <li>$N$ is the size of the corpus,</li>
-                <li>$df(t)$ is the document frequency of term $t$, i.e. the number of documents that contain term $t$.</li>
-              </ul>
-            </dd>
-
-            <dt>Doc ID</dt>
-            <dd>Doc ID can be a number or a string, but it must be a unique identifier for documents (e.g. a URI).</dd>
-
-            <dt>Paper</dt>
-            <dd>
-              <blockquote>
-                <p>François Rousseau and Michalis Vazirgiannis. 2013. Graph-of-word and TW-IDF: new approach to ad hoc
-                  IR. In Proceedings of the 22nd ACM international conference on Information &amp; Knowledge
-                  Management (CIKM '13). ACM, New York, NY, USA, 59-68.
-                  DOI=http://dx.doi.org/10.1145/2505515.2505671</p>
-                <cite><a href="http://dl.acm.org/citation.cfm?id=2505671" target="_blank">ACM Digital Library</a></cite>
-              </blockquote>
-            </dd>
-          </dl>
-
-          {% else %}
-
-          <span class="label label-error">There is no information about this ranking function.</span>
-
-          {% endif %}
-        </div>
-      </div>
-
-      <div id="dataset" class="tab-content d-hide">
-        <div class="container">
-          <div class="column">
-            {% if dataset == 'wikipedia_data' %}
-
-            <dl>
-              <dt>Source</dt>
-              <dd>
-                <a href="http://cs.iit.edu/~culotta/data/wikipedia.html" target="_blank">
-                  Wikipedia Relation Extraction Data v1.0
-                </a>
-              </dd>
-              
-              <dt>Description</dt>
-              <dd>
-                <i>
-                  "This data contains Wikipedia pages for which links between pages have been annotated with a
-                  relation type, e.g. father, education, superior, etc. This data was created in collaboration
-                  between the University of Massachusetts and Google, Inc."
-                </i>
-              </dd>
-
-              <dt>Example</dt>
-              <dd>
-                <code>url=http://en.wikipedia.org/wiki/Charles_Darwin
-                  In recognition of Darwin's pre-eminence, he was buried in &lt;a href="/wiki/Westminster_Abbey" title="Westminster Abbey" relation="death_place"&gt;Westminster Abbey&lt;/a&gt;, close to &lt;a href="/wiki/William_Herschel" title="William Herschel"&gt;William Herschel&lt;/a&gt; and &lt;a href="/wiki/Isaac_Newton" title="Isaac Newton"&gt;Isaac Newton&lt;/a&gt;.
-                </code>
-              </dd>
-
-              <dt>Paper</dt>
-              <dd>
-                <blockquote>
-                  <p>Aron Culotta, Andrew McCallum, and Jonathan Betz. 2006. Integrating probabilistic
-                    extraction models and data mining to discover relations and patterns in text. In Proceedings
-                    of the main conference on Human Language Technology Conference of the North American Chapter
-                    of the Association of Computational Linguistics (HLT-NAACL '06). Association for
-                    Computational Linguistics, Stroudsburg, PA, USA, 296-303.
-                    DOI=http://dx.doi.org/10.3115/1220835.1220873</p>
-                  <cite><a href="http://dl.acm.org/citation.cfm?id=1220873" target="_blank">ACM Digital Library</a></cite>
-                </blockquote>
-              </dd>
-            </table>
-
-            {% elif dataset == 'inex' %}
-
-            <dl>
-              <dt>Source</dt>
-              <dd>
-                <a href="http://inex.mmci.uni-saarland.de/data/documentcollection.html#wikipedia" target="_blank">
-                  INEX Document Collections - Adhoc Track (2009-2010) and Wikipedia Collection (2009-)
-                </a>
-              </dd>
-
-              <dt>Date</dt>
-              <dd>
-                October 8, 2008
-              </dd>
-              
-              <dt>Description</dt>
-              <dd>
-                <i>
-                  <p>"Starting in 2009, INEX uses a new document collection based on the Wikipedia. The original Wiki
-                    syntax has been converted into XML, using both general tags of the layout structure (like
-                    article, section, paragraph, title, list and item), typographical tags (like bold, emphatic),
-                    and frequently occurring link-tags. The annotation is enhanced with semantic markup of articles
-                    and outgoing links, based on the semantic knowledge base YAGO, explicitly labeling more than
-                    5,800 classes of entities like persons, movies, cities, and many more. For a more technical
-                    description of a preliminary version of this collection, see [9].</p>
-
-                  <p>The collection was created from the October 8, 2008 dump of the English Wikipedia articles and
-                    incorporates semantic annotations from the 2008-w40- 2 version of YAGO. It contains 2,666,190
-                    Wikipedia articles and has a total uncompressed size of 50.7 Gb. There are 101,917,424 XML
-                    elements of at least 50 characters (excluding white-space)."</p>
-                </i>
-              </dd>
-
-              <dt>Example</dt>
-              <dd>
-                <code>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
-                  &lt;!-- generated by CLiX/Wiki2XML [MPI-Inf, MMCI@UdS] $LastChangedRevision: 92 $ on 16.04.2009 22:55:41[mciao0825] --&gt;
-                  &lt;!DOCTYPE article SYSTEM &quot;../article.dtd&quot;&gt;
-                  &lt;article xmlns:xlink=&quot;http://www.w3.org/1999/xlink&quot;&gt;
-                  &lt;person  confidence=&quot;0.9638700866880419&quot; wordnetid=&quot;100007846&quot;&gt;
-                  &lt;header&gt;
-                  &lt;title&gt;Johnny Burke&lt;/title&gt;
-                  &lt;id&gt;7577000&lt;/id&gt;
-                  &lt;revision&gt;
-                  &lt;id&gt;224802323&lt;/id&gt;
-                  &lt;timestamp&gt;2008-07-10T14:04:46Z&lt;/timestamp&gt;
-                  &lt;contributor&gt;
-                  &lt;username&gt;Lightbot&lt;/username&gt;
-                  &lt;id&gt;7178666&lt;/id&gt;
-                  &lt;/contributor&gt;
-                  &lt;/revision&gt;
-                  &lt;categories&gt;
-                  &lt;category&gt;Newfoundland and Labrador musicians&lt;/category&gt;
-                  &lt;category&gt;Pre-Confederation Newfoundland and Labrador people&lt;/category&gt;
-                  &lt;category&gt;1930 deaths&lt;/category&gt;
-                  &lt;category&gt;People from Newfoundland&lt;/category&gt;
-                  &lt;category&gt;1851 births&lt;/category&gt;
-                  &lt;/categories&gt;
-                  &lt;/header&gt;
-                  &lt;bdy&gt;
-
-                  For the &lt;body wordnetid=&quot;107965085&quot; confidence=&quot;0.8&quot;&gt;
-                  &lt;social_group wordnetid=&quot;107950920&quot; confidence=&quot;0.8&quot;&gt;
-                  &lt;political_orientation wordnetid=&quot;106212839&quot; confidence=&quot;0.8&quot;&gt;
-                  &lt;colony wordnetid=&quot;108374049&quot; confidence=&quot;0.8&quot;&gt;
-                  &lt;state wordnetid=&quot;108168978&quot; confidence=&quot;0.8&quot;&gt;
-                  &lt;political_unit wordnetid=&quot;108359949&quot; confidence=&quot;0.8&quot;&gt;
-                  &lt;group wordnetid=&quot;100031264&quot; confidence=&quot;0.8&quot;&gt;
-                  &lt;democracy wordnetid=&quot;106217103&quot; confidence=&quot;0.8&quot;&gt;
-                  &lt;link xlink:type=&quot;simple&quot; xlink:href=&quot;../750/3434750.xml&quot;&gt;
-                  American&lt;/link&gt;&lt;/democracy&gt;
-                  &lt;/group&gt;
-                  &lt;/political_unit&gt;
-                  &lt;/state&gt;
-                  &lt;/colony&gt;
-                  &lt;/political_orientation&gt;
-                  &lt;/social_group&gt;
-                  &lt;/body&gt;
-                  lyricist who died in 1964, see &lt;physical_entity wordnetid=&quot;100001930&quot; confidence=&quot;0.8&quot;&gt;
-                  &lt;songwriter wordnetid=&quot;110624540&quot; confidence=&quot;0.8&quot;&gt;
-                  &lt;composer wordnetid=&quot;109947232&quot; confidence=&quot;0.8&quot;&gt;
-                  &lt;communicator wordnetid=&quot;109610660&quot; confidence=&quot;0.8&quot;&gt;
-                  &lt;person wordnetid=&quot;100007846&quot; confidence=&quot;0.8&quot;&gt;
-                  &lt;lyricist wordnetid=&quot;110277912&quot; confidence=&quot;0.8&quot;&gt;
-                  &lt;musician wordnetid=&quot;110339966&quot; confidence=&quot;0.8&quot;&gt;
-                  &lt;causal_agent wordnetid=&quot;100007347&quot; confidence=&quot;0.8&quot;&gt;
-                  &lt;artist wordnetid=&quot;109812338&quot; confidence=&quot;0.8&quot;&gt;
-                  &lt;writer wordnetid=&quot;110794014&quot; confidence=&quot;0.8&quot;&gt;
-                  &lt;creator wordnetid=&quot;109614315&quot; confidence=&quot;0.8&quot;&gt;
-                  &lt;link xlink:type=&quot;simple&quot; xlink:href=&quot;../007/690007.xml&quot;&gt;
-                  Johnny Burke (lyricist)&lt;/link&gt;&lt;/creator&gt;
-                  &lt;/writer&gt;
-                  &lt;/artist&gt;
-                  &lt;/causal_agent&gt;
-                  &lt;/musician&gt;
-                  &lt;/lyricist&gt;
-                  &lt;/person&gt;
-                  &lt;/communicator&gt;
-                  &lt;/composer&gt;
-                  &lt;/songwriter&gt;
-                  &lt;/physical_entity&gt;
-                  .
-                  ----
-                  &lt;image location=&quot;right&quot; width=&quot;150px&quot; src=&quot;Johnny_burke_(1851-1930).jpg&quot; type=&quot;thumb&quot;&gt;
-                  &lt;caption&gt;
-
-                  Johnny Burke at the St. John's regatta in 1903
-                  &lt;/caption&gt;
-                  &lt;/image&gt;
-                  &lt;p&gt;
-
-                  &lt;b&gt;Johnny Burke&lt;/b&gt; (1851 - 1930) was a &lt;country wordnetid=&quot;108544813&quot; confidence=&quot;0.9508927676800064&quot;&gt;
-                  &lt;link xlink:type=&quot;simple&quot; xlink:href=&quot;../561/697561.xml&quot;&gt;
-                  Newfoundland&lt;/link&gt;&lt;/country&gt;
-                  songwriter and musician.  He was nicknamed the 'Bard of Prescott Street'.  He wrote many popular songs that artists in the 1930s and 1940s released.&lt;/p&gt;</code>
-              </dd>
-
-              <dt>Paper</dt>
-              <dd>
-                <blockquote>
-                  <p>Geva S., Kamps J., Lethonen M., Schenkel R., Thom J.A., Trotman A. (2010) Overview of the
-                    INEX 2009 Ad Hoc Track. In: Geva S., Kamps J., Trotman A. (eds) Focused Retrieval and
-                    Evaluation. INEX 2009. Lecture Notes in Computer Science, vol 6203. Springer, Berlin,
-                    Heidelberg</p>
-                  <cite><a href="https://link.springer.com/chapter/10.1007/978-3-642-14556-8_4" target="_blank">Springer Link</a></cite>
-                </blockquote>
-              </dd>
-            </table>
-
-            {% else %}
-
-            <span class="label">There is no information about this dataset.</span>
-
-            {% endif %}
-          </div>
-        </div>
+      <div id="trace" class="tab-content d-hide">
+        TRACE
       </div>
 
       <div id="results" class="tab-content d-hide">
@@ -292,6 +72,32 @@
             {% endfor %}
           </tbody>
         </table>
+      </div>
+
+      {% if index_type in ['gow', 'goe'] %}
+      <div id="score-components-plot" class="parcoords tab-content d-hide"></div>
+      {% endif %}
+
+      <div id="score-explanation" class="tab-content container d-hide">
+        <div class="column">
+          {% if index_type in ['gow', 'goe', 'hgoe'] %}
+          {% include 'search/debug/ranking_models/%s.html' % index_type %}
+          {% else %}
+          <span class="label label-error">There is no information about this ranking function.</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div id="dataset" class="tab-content d-hide">
+        <div class="container">
+          <div class="column">
+            {% if dataset in ['wikipedia_data', 'inex'] %}
+            {% include 'search/debug/collections/%s.html' % dataset %}
+            {% else %}
+            <span class="label">There is no information about this dataset.</span>
+            {% endif %}
+          </div>
+        </div>
       </div>
     </div>
   </div>

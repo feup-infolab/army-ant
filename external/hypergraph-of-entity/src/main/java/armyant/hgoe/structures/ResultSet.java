@@ -9,21 +9,23 @@ public class ResultSet implements Iterator<Result> {
     private SortedSet<Result> results;
     private Map<String, Result> maxResultPerDocID;
     private Long numDocs;
+    private Trace trace;
     private Iterator<Result> resultsIterator;
 
     public ResultSet() {
-        this(new TreeSet<>((a, b) -> Double.compare(b.getScore(), a.getScore())), null);
+        this(new TreeSet<>((a, b) -> Double.compare(b.getScore(), a.getScore())), null, null);
     }
 
     public ResultSet(SortedSet<Result> results) {
-        this(results, null);
+        this(results, null, null);
     }
 
-    public ResultSet(SortedSet<Result> results, Long numDocs) {
+    public ResultSet(SortedSet<Result> results, Long numDocs, Trace trace) {
         this.results = results;
         this.maxResultPerDocID = new HashMap<>();
         addReplaceResults(results);
         this.numDocs = numDocs;
+        this.trace = trace;
         this.resultsIterator = null;
     }
 
@@ -45,6 +47,14 @@ public class ResultSet implements Iterator<Result> {
 
     public void setNumDocs(Long numDocs) {
         this.numDocs = numDocs;
+    }
+
+    public Trace getTrace() {
+        return trace;
+    }
+
+    public void setTrace(Trace trace) {
+        this.trace = trace;
     }
 
     public void addResult(Result result) {

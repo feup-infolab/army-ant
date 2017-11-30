@@ -41,7 +41,7 @@ public class HypergraphOfEntityInMemoryJUNGTest extends HypergraphOfEntityTest {
         hgoe.index(document1);
         hgoe.index(document2);
         hgoe.index(document3);
-        hgoe.linkTextAndKnowledge();
+        hgoe.postProcessing();
         hgoe.save();
     }
 

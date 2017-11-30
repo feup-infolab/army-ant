@@ -5,7 +5,7 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import logging, string, asyncio, pymongo, re, json, psycopg2, os, jpype, itertools
+import logging, string, asyncio, pymongo, re, json, psycopg2, os, jpype, itertools, json
 from jpype import *
 from aiogremlin import Cluster
 from aiogremlin.gremlin_python.structure.graph import Vertex
@@ -120,13 +120,14 @@ class Result(object):
             raise KeyError
 
     def __repr__(self):
-        return """{ "docID": %s, "score": %f, "components": %s }""" % (
-            self.doc_id, self.score, (self.components or "null"))
+        return """{ "docID": %s, "score": %f, "has_components": %s }""" % (
+            self.doc_id, self.score, ("true" if self.components else "false"))
 
 class ResultSet(object):
-    def __init__(self, results, num_docs):
+    def __init__(self, results, num_docs, trace=None):
         self.results = results
         self.num_docs = num_docs
+        self.trace = trace
 
     # For compatibility with external implementations depending on dictionaries
     def __getitem__(self, key):
@@ -134,6 +135,8 @@ class ResultSet(object):
             return self.results
         elif key == 'numDocs':
             return self.num_docs
+        elif key == 'trace':
+            return self.trace
         else:
             raise KeyError
 
@@ -685,6 +688,7 @@ class HypergraphOfEntity(Index):
 
         results = []
         num_docs = 0
+        trace = None
         try:
             if HypergraphOfEntity.INSTANCE:
                 hgoe = HypergraphOfEntity.INSTANCE
@@ -694,9 +698,10 @@ class HypergraphOfEntity(Index):
             
             results = hgoe.search(query)
             num_docs = results.getNumDocs()
+            trace = results.getTrace()
             results = [Result(result.getDocID(), result.getScore())
                        for result in itertools.islice(results, offset, offset+limit)]
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
-        return ResultSet(results, num_docs)
+        return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()))

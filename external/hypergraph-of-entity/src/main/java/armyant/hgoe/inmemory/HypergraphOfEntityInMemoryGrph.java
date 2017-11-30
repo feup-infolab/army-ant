@@ -13,6 +13,7 @@ import armyant.hgoe.inmemory.nodes.TermNode;
 import armyant.hgoe.structures.Document;
 import armyant.hgoe.structures.Result;
 import armyant.hgoe.structures.ResultSet;
+import armyant.hgoe.structures.Trace;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.serializers.MapSerializer;
 import grph.algo.AllPaths;
@@ -26,6 +27,7 @@ import org.ahocorasick.trie.Emit;
 import org.ahocorasick.trie.Trie;
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.objenesis.strategy.StdInstantiatorStrategy;
 import org.slf4j.Logger;
@@ -66,6 +68,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
     private BidiMap<Node, Integer> nodeIndex;
     private BidiMap<Edge, Integer> edgeIndex;
     private Map<Integer, IntSet> reachabilityIndex;
+    private Trace trace;
 
     private long counter;
     private long totalTime;
@@ -97,6 +100,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         this.nodeIndex = new DualHashBidiMap<>();
         this.edgeIndex = new DualHashBidiMap<>();
         this.reachabilityIndex = new HashMap<>();
+        this.trace = new Trace();
 
         logger.info("Using in-memory version of Hypergraph of Entity for {}", path);
 
@@ -243,11 +247,13 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         }
     }
 
+    @Override
     public void postProcessing() {
         linkTextAndKnowledge();
         createReachabilityIndex();
     }
 
+    @Override
     public void indexCorpus(Collection<Document> corpus) throws IOException {
         corpus.parallelStream().forEach(document -> {
             try {
@@ -258,6 +264,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         });
     }
 
+    @Override
     public void index(Document document) throws IOException {
         long startTime = System.currentTimeMillis();
 
@@ -541,6 +548,8 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         }
 
         ResultSet resultSet = new ResultSet();
+        resultSet.setTrace(trace);
+
         for (int nodeID : weightedNodeVisitProbability.keySet()) {
             Node node = nodeIndex.getKey(nodeID);
             if (node instanceof EntityNode) {
@@ -552,6 +561,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
                 }
             }
         }
+
         return resultSet;
     }
 
@@ -635,18 +645,27 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         }).mapToDouble(f -> f).sum();
     }
 
+    @Override
     public ResultSet search(String query) throws IOException {
         return search(query, RankingFunction.RANDOM_WALK_SCORE);
     }
 
     public ResultSet search(String query, RankingFunction function) throws IOException {
         ResultSet resultSet = new ResultSet();
+        resultSet.setTrace(trace);
 
         List<String> tokens = analyze(query);
         IntSet queryTermNodeIDs = getQueryTermNodeIDs(tokens);
+        trace.add("Mapping query terms [ %s ] to query term nodes", StringUtils.join(tokens, ", "));
 
         IntSet seedNodeIDs = getSeedNodeIDs(queryTermNodeIDs);
         //System.out.println("Seed Nodes: " + seedNodeIDs.stream().map(nodeID -> nodeID + "=" + nodeIndex.getKey(nodeID).toString()).collect(Collectors.toList()));
+        trace.add("Mapping query term nodes to seed nodes");
+        trace.goDown();
+        for (int seedNodeID: seedNodeIDs) {
+            trace.add(nodeIndex.getKey(seedNodeID).toString());
+        }
+        trace.goUp();
 
         Map<Integer, Double> seedNodeWeights = seedNodeConfidenceWeights(seedNodeIDs, queryTermNodeIDs);
         //System.out.println("Seed Node Confidence Weights: " + seedNodeWeights);

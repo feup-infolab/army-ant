@@ -150,7 +150,7 @@ public class HypergraphOfEntityInMemoryJUNG extends HypergraphOfEntity {
         return nodes;
     }
 
-    public void linkTextAndKnowledge() {
+    private void linkTextAndKnowledge() {
         logger.info("Building trie from term nodes");
         Trie.TrieBuilder trieBuilder = Trie.builder()
                 .ignoreOverlaps()
@@ -186,6 +186,12 @@ public class HypergraphOfEntityInMemoryJUNG extends HypergraphOfEntity {
         }
     }
 
+    @Override
+    public void postProcessing() {
+        linkTextAndKnowledge();
+    }
+
+    @Override
     public void indexCorpus(Collection<Document> corpus) throws IOException {
         corpus.parallelStream().forEach(document -> {
             try {
@@ -196,6 +202,7 @@ public class HypergraphOfEntityInMemoryJUNG extends HypergraphOfEntity {
         });
     }
 
+    @Override
     public void index(Document document) throws IOException {
         long startTime = System.currentTimeMillis();
 
@@ -463,6 +470,7 @@ public class HypergraphOfEntityInMemoryJUNG extends HypergraphOfEntity {
         return score;
     }
 
+    @Override
     public ResultSet search(String query) throws IOException {
         return search(query, RankingFunction.JACCARD_SCORE);
     }

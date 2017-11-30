@@ -87,6 +87,7 @@ public class HypergraphOfEntityInDisk extends HypergraphOfEntity {
         graph.getIndexManager().register(new ByPartIndexer(entityNodeType, "name"));*/
     }
 
+    @Override
     public void close() {
         graph.close();
     }
@@ -213,6 +214,7 @@ public class HypergraphOfEntityInDisk extends HypergraphOfEntity {
         }
     }
 
+    @Override
     public void index(Document document) throws IOException {
         long startTime = System.currentTimeMillis();
 
@@ -379,6 +381,7 @@ public class HypergraphOfEntityInDisk extends HypergraphOfEntity {
         return score * coverage(entityHandle, seedNodeWeights.keySet());
     }
 
+    @Override
     public ResultSet search(String query) throws IOException {
         ResultSet resultSet = new ResultSet();
 

@@ -1,0 +1,32 @@
+<dl>
+  <dt>TW-IDF</dt>
+  <dd>
+    TW-IDF is calculated using the indegree of the nodes that match each query term in the graph-of-word for each document as the term weight (TW). The formula used is the following:
+
+    $$TW\text{-}IDF(q, d) = \sum_{t \in q}^d \left( \frac{tw(t, d)}{1 - b + b \times \frac{|d|}{avdl}} \times log \frac{N + 1}{df(t)} \right)$$
+
+    Where:
+    <ul>
+      <li>$b = 0.003$,</li>
+      <li>$tw(t, d)$ is the indegree of the node for term $t$, in the graph-of-word, for document $d$,</li>
+      <li>$|d|$ is the document length,</li>
+      <li>$avdl$ is the average document length for the whole corpus,</li>
+      <li>$N$ is the size of the corpus,</li>
+      <li>$df(t)$ is the document frequency of term $t$, i.e. the number of documents that contain term $t$.</li>
+    </ul>
+  </dd>
+
+  <dt>Doc ID</dt>
+  <dd>Doc ID can be a number or a string, but it must be a unique identifier for documents (e.g. a URI).</dd>
+
+  <dt>Paper</dt>
+  <dd>
+    <blockquote>
+      <p>François Rousseau and Michalis Vazirgiannis. 2013. Graph-of-word and TW-IDF: new approach to ad hoc
+        IR. In Proceedings of the 22nd ACM international conference on Information &amp; Knowledge
+        Management (CIKM '13). ACM, New York, NY, USA, 59-68.
+        DOI=http://dx.doi.org/10.1145/2505515.2505671</p>
+      <cite><a href="http://dl.acm.org/citation.cfm?id=2505671" target="_blank">ACM Digital Library</a></cite>
+    </blockquote>
+  </dd>
+</dl>

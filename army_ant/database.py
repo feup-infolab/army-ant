@@ -65,9 +65,14 @@ class MongoDatabase(Database):
 
         return metadata
 
-    async def cursor(self):
+    async def all(self):
         logger.info("Iterating over metadata for all documents")
         for record in self.db['documents'].find():
+            yield record
+
+    async def without_img_url(self):
+        logger.info("Iterating over metadata for all documents without a URL")
+        for record in self.db['documents'].find({ 'metadata.img_url': { '$exists': False } }):
             yield record
 
     async def set_metadata(self, doc_id, key, value):

@@ -1,5 +1,7 @@
 package armyant.hgoe;
 
+import armyant.hgoe.structures.Document;
+import armyant.hgoe.structures.ResultSet;
 import com.optimaize.langdetect.LanguageDetector;
 import com.optimaize.langdetect.LanguageDetectorBuilder;
 import com.optimaize.langdetect.i18n.LdLocale;
@@ -28,6 +30,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -50,9 +53,11 @@ public abstract class HypergraphOfEntity {
         }
     }
 
-    public void close() {
-
-    }
+    public abstract void index(Document document) throws IOException;
+    public void indexCorpus(Collection<Document> corpus) throws IOException {};
+    public void postProcessing() { }
+    public abstract ResultSet search(String query) throws IOException;
+    public void close() { }
 
     protected String formatMillis(float millis) {
         if (millis >= 1000) return formatMillis((long) millis);
