@@ -33,19 +33,19 @@
   </div>
 
   <div id="inex-block" class="columns dynamic-block">
-    <div class="column">
+    <div class="column col-6">
       <div class="form-group">
         <label class="form-label" for="topics">Topics</label>
         <input class="form-input" type="file" id="topics" name="topics" value="">
       </div>
     </div>
-    <div class="column">
+    <div class="column col-6">
       <div class="form-group">
         <label class="form-label" for="assessments">Assessments</label>
         <input class="form-input" type="file" id="assessments" name="assessments" value="">
       </div>
     </div>
-    <div class="column">
+    <div class="column col-12">
       <div class="form-group">
         <label class="form-label" for="run-id">Run ID</label>
         <input class="form-input input-tall" type="text" id="run-id" name="run-id" value="" placeholder="Dataset - retrieval model">
@@ -54,19 +54,19 @@
   </div>
 
   <div id="ll-api-block" class="columns dynamic-block d-hide">
-    <div class="column">
+    <div class="column col-6">
       <div class="form-group">
         <label class="form-label" for="base-url">Base URL</label>
         <input class="form-input input-tall" type="text" id="base-url" name="base-url" value="" placeholder="http://api.trec-open-search.org">
       </div>
     </div>
-    <div class="column">
+    <div class="column col-6">
       <div class="form-group">
         <label class="form-label" for="api-key">API Key</label>
         <input class="form-input input-tall" type="text" id="api-key" name="api-key" value="" placeholder="2C2BB98ABEE4CD40-F0RDVC4KZ6SNFZGY">
       </div>
     </div>
-    <div class="column">
+    <div class="column col-12">
       <div class="form-group">
         <label class="form-label" for="run-id">Run ID</label>
         <input class="form-input input-tall" type="text" id="run-id" name="run-id" value="" placeholder="Dataset - retrieval model - run">
@@ -147,7 +147,7 @@
               {% for metric in metrics[0:(metrics_length//2)] %}
               <div class="form-group">
                 <label class="form-checkbox">
-                  <input type="checkbox" checked="checked" value="{{ metric }}">
+                  <input class="toggle-metric-checkbox" type="checkbox" checked="checked" value="{{ metric }}">
                   <i class="form-icon"></i> {{ metric }}
                 </label>
               </div>
@@ -232,7 +232,7 @@
   <div class="card-header">
     <div class="columns">
       <div class="column col-10">
-        <div class="card-title h5">
+        <div class="card-title h6">
           <div class="title-display">
             <span class="title">{{ task.run_id }}</span>
             <a class="task-rename-btn" href="#"><small><i class="icon icon-edit"></i></small></a>
@@ -481,6 +481,7 @@
 
     $(document).on('click', '#download-btn', function(e) {
       var $modal = $(this).parents('.modal.generate');
+      $('#html-preview').empty();
       downloadSummary($modal);
     });
 
@@ -489,6 +490,13 @@
       downloadSummary($modal, 'html');
     });
  
+    $(document).on('change', '.toggle-metric-checkbox', function(e) {
+      console.log($('.toggle-metric-checkbox:checked').length);
+      if ($('.toggle-metric-checkbox:checked').length == 0) {
+        $('.toggle-all-metrics-checkbox').prop('checked', true);
+      }
+    });
+
     $(document).on('change', '.toggle-all-metrics-checkbox', function(e) {
       if ($(this).prop('checked')) {
         $(this).parents('.modal')
@@ -533,6 +541,7 @@
 
     $(document).on('click', '.close-modal-btn', function(e) {
       var $modal = $(this).parents('.modal');
+      $('#html-preview').empty();
       $modal.removeClass('active');
     });
 
