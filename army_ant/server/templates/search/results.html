@@ -1,0 +1,31 @@
+<div class="contained">
+  <div class="column">
+    <table class="table table-striped table-hover">
+      <tbody>
+        {% for result in results %}
+        <tr>
+          {% if result.docID in metadata %}
+
+          <td> <div class="image" style="background-image: url('{{
+              metadata[result.docID].img_url or app.router.static.url(filename='img/thumbnail_placeholder.png') }}')"></div> </td>
+          <td> <a href="{{ metadata[result.docID].url }}" target="_blank">{{ metadata[result.docID].name }}</a> </td>
+
+          {% else %}
+
+          <td> <div class="image" style="background-image: url('{{
+              app.router.static.url(filename='img/thumbnail_placeholder.png') }}')"></div> </td>
+          <td>
+            {% if result.docID.startswith('http') %}
+            <a href="{{ result.docID }}" target="_blank">{{ result.docID }}</a>
+            {% else %}
+            {{ result.docID }}
+            {% endif %}
+          </td>
+
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

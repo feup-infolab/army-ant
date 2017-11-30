@@ -496,6 +496,10 @@ class EvaluationTaskManager(object):
             self.running.interrupt = True
             if type(self.running) != LivingLabsEvaluator:
                 self.running.remove_output()
+
+        shutil.rmtree(os.path.join(self.default_eval_location, 'results', task_id), ignore_errors=True)
+        shutil.rmtree(os.path.join(self.default_eval_location, 'assessments', task_id), ignore_errors=True)
+
         return self.db['evaluation_tasks'].update_one(
             { '_id': ObjectId(task_id) },
             { '$set': { 'status': 1 } }).matched_count > 0
@@ -724,7 +728,6 @@ class EvaluationTaskManager(object):
                             self.running = None
                         elif task.eval_format == 'll-api':
                             self.set_status(task, status)
-
                     except ArmyAntException as e:
                         logger.error("Could not run evaluation task %s: %s" % (task._id, str(e)))
 

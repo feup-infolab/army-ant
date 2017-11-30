@@ -1,0 +1,74 @@
+<form method="post" accept-charset="utf-8" enctype="multipart/form-data">
+  <div class="columns">
+    <div class="column">
+      <div class="form-group">
+        <label class="form-label" for="eval-format">Evaluator Format</label>
+        <select class="form-select" id="eval-format" name="eval-format">
+          <option value="inex">INEX</option>
+          <option value="ll-api">Living Labs API</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="form-group">
+        <label class="form-label" for="engine">Search Engine</label>
+        <select class="form-select" id="engine" name="engine">
+          {% for app_engine in app.engines %}
+          <option value="{{app_engine}}">{{ app.engines[app_engine].name }}</option>
+          {% endfor %}
+          <option value="__all__">All Engines</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="inex-block" class="columns dynamic-block">
+    <div class="column col-6">
+      <div class="form-group">
+        <label class="form-label" for="topics">Topics</label>
+        <input class="form-input" type="file" id="topics" name="topics" value="">
+      </div>
+    </div>
+    <div class="column col-6">
+      <div class="form-group">
+        <label class="form-label" for="assessments">Assessments</label>
+        <input class="form-input" type="file" id="assessments" name="assessments" value="">
+      </div>
+    </div>
+    <div class="column col-12">
+      <div class="form-group">
+        <label class="form-label" for="run-id">Run ID</label>
+        <input class="form-input input-tall" type="text" id="run-id" name="run-id" value="" placeholder="Dataset - retrieval model">
+      </div>
+    </div>
+  </div>
+
+  <div id="ll-api-block" class="columns dynamic-block d-hide">
+    <div class="column col-6">
+      <div class="form-group">
+        <label class="form-label" for="base-url">Base URL</label>
+        <input class="form-input input-tall" type="text" id="base-url" name="base-url" value="" placeholder="http://api.trec-open-search.org">
+      </div>
+    </div>
+    <div class="column col-6">
+      <div class="form-group">
+        <label class="form-label" for="api-key">API Key</label>
+        <input class="form-input input-tall" type="text" id="api-key" name="api-key" value="" placeholder="2C2BB98ABEE4CD40-F0RDVC4KZ6SNFZGY">
+      </div>
+    </div>
+    <div class="column col-12">
+      <div class="form-group">
+        <label class="form-label" for="run-id">Run ID</label>
+        <input class="form-input input-tall" type="text" id="run-id" name="run-id" value="" placeholder="Dataset - retrieval model - run">
+      </div>
+    </div>
+  </div>
+
+  <br>
+
+  <div class="form-group">
+    <button class="btn btn-primary" type="submit">Launch assessment</button>
+    <button class="btn" type="reset">Clear form</button>
+  </div>
+</form>

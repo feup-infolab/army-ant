@@ -1,0 +1,108 @@
+<div class="modal generate" data-download-url="{{ app.router['evaluation_download'].url_for() }}">
+  <div class="modal-overlay"></div>
+  <div class="modal-container">
+    <div class="modal-header">
+      <div class="columns">
+        <div class="column">
+          <div class="modal-title h5">Configure output</div>
+        </div>
+
+        <div class="column text-right">
+          <div class="form-group">
+            <label class="form-radio">
+              <input type="radio" name="format" value="csv" checked="checked">
+              <i class="form-icon"></i> CSV
+            </label>
+            <label class="form-radio">
+              <input type="radio" name="format" value="tex">
+              <i class="form-icon"></i> LaTeX
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="content">
+        <div class="container">
+          <div class="columns">
+            <div class="form-group">
+              <label class="form-switch">
+                <input class="toggle-all-metrics-checkbox" type="checkbox" checked="checked">
+                <i class="form-icon"></i> Toggle all
+              </label>
+            </div>
+            <button class="btn btn-sm select-classic-metrics-btn">Select Classic</button>
+          </div>
+
+          <br>
+
+          {% set metrics_length = metrics|length %}
+          <div class="columns metrics">
+            <div class="column">
+              {% for metric in metrics[0:(metrics_length//2)] %}
+              <div class="form-group">
+                <label class="form-checkbox">
+                  <input class="toggle-metric-checkbox" type="checkbox" checked="checked" value="{{ metric }}">
+                  <i class="form-icon"></i> {{ metric }}
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+
+            <div class="column">
+              {% for metric in metrics[(metrics_length//2+1):metrics_length] %}
+              <div class="form-group">
+                <label class="form-checkbox">
+                  <input type="checkbox" checked="checked" value="{{ metric }}">
+                  <i class="form-icon"></i> {{ metric }}
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <br>
+
+          <div class="columns">
+            <div class="column col-5">
+              <div class="form-group">
+                <label class="form-label" for="decimals-input">Decimals</label>
+                <div class="input-group">
+                  <input id="decimals-input" class="form-input input-sm" type="text" placeholder="Number of decimal places" value="4"
+                    style="max-width: 70%;">
+                  <button id="decimals-inc" class="btn btn-sm input-group-btn"><i class="icon icon-arrow-up"></i></button>
+                  <button id="decimals-dec" class="btn btn-sm input-group-btn"><i class="icon icon-arrow-down"></i></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="column col-7">
+              <div class="form-group">
+                <label class="form-label">Columns</label>
+                <label class="form-checkbox">
+                  <input id="index-runid-checkbox" type="checkbox" checked="checked" value="Run ID">
+                  <i class="form-icon"></i> Run ID
+                </label>
+                <label class="form-checkbox">
+                  <input id="index-type-checkbox" type="checkbox" value="Type">
+                  <i class="form-icon"></i> Type
+                </label>
+                <label class="form-checkbox">
+                  <input id="index-location-checkbox" type="checkbox" value="Location">
+                  <i class="form-icon"></i> Location
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div id="html-preview"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn close-modal-btn">Cancel</button>
+      <button id="preview-btn" class="btn tooltip" data-tooltip="Preview"><i class="icon icon-search"></i></button>
+      <button id="download-btn" class="btn btn-primary">Download</button>
+    </div>
+  </div>
+</div>

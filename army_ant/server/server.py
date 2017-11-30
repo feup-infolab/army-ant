@@ -329,7 +329,7 @@ def run_app(loop):
     app['engines'] = OrderedDict()
     for section in config.sections():
         app['engines'][section] = dict(config[section])
-        if 'message' in config[section]: logger.warn(config[section]['message'])
+        if 'message' in config[section]: logger.warn("%s: %s" % (section, config[section]['message']))
     app['db_location'] = config['DEFAULT'].get('db_location', 'localhost')
     app['default_eval_location'] = config['DEFAULT'].get('eval_location', tempfile.gettempdir())
 

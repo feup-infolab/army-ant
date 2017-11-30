@@ -1,0 +1,160 @@
+{% for task in tasks|sort(attribute='time', reverse=True) %}
+
+{% set delete_url = app.router['evaluation_delete'].url_for().with_query(task_id=task._id) %}
+{% set reset_url = app.router['evaluation_reset'].url_for().with_query(task_id=task._id) %}
+{% set rename_url = app.router['evaluation_rename'].url_for().with_query(task_id=task._id) %}
+
+{% if task.eval_format == 'll-api' %}
+{% set outcome_url = app.router['evaluation_results_ll_api'].url_for().with_query(task_id=task._id, fmt='html') %}
+{% endif %}
+
+<div class="card eval"
+  {% if task._id %} data-id="{{ task._id }}" data-format="{{ task.eval_format }}" data-delete-url="{{ delete_url }}"
+    data-reset-url="{{ reset_url }}" data-rename-url="{{ rename_url }}" {% endif %}
+  {% if task.eval_format == 'll-api' %} data-outcome-url="{{ outcome_url }}" {% endif %}>
+
+  <div class="card-header">
+    <div class="columns">
+      <div class="column col-10">
+        <div class="card-title h5">
+          <div class="title-display">
+            <span class="title">{{ task.run_id }}</span>
+            <a class="task-rename-btn" href="#"><small><i class="icon icon-edit"></i></small></a>
+          </div>
+          <div class="input-group title-edit d-hide">
+            <input class="form-input input-sm run-id-rename-input" type="text" value="{{ task.run_id}}"
+              placeholder="Rename task run ID">
+            <button class="btn btn-sm input-group-btn task-rename-confirm-btn">OK</button>
+            <button class="btn btn-sm input-group-btn task-rename-cancel-btn">Cancel</button>
+          </div>
+        </div>
+        <div class="card-subtitle text-gray">Queued: {{ task.time|timestamp_to_date }}</div>
+      </div>
+
+      <!-- START DETAIL BUTTONS -->
+      <div class="column col-2 text-right">
+        <div class="btn-group">
+          {% if task.status == 3 %}
+
+          <a class="btn btn-sm tooltip" data-tooltip="Download ZIP file with evaluation details."
+            href="{{ app.router['evaluation_results_archive'].url_for().with_query(task_id=task._id) }}">
+            <i class="icon icon-download"></i>
+          </a>
+          <button class="expand-btn btn btn-sm tooltip" data-tooltip="View computed evaluation metrics.">
+            <i class="icon icon-plus"></i>
+          </button>
+
+          {% elif task.status == 4 %}
+
+          <button class="expand-btn btn btn-sm tooltip" data-tooltip="Request and view Living Labs API outcome.">
+            <i class="icon icon-plus"></i>
+          </button>
+
+          {% else %}
+
+          <button class="btn btn-sm disabled tooltip" data-tooltip="View evaluation results, when available.">
+            <i class="icon icon-plus"></i>
+          </button>
+
+          {% endif %}
+        </div>
+      </div>
+      <!-- END DETAIL BUTTONS -->
+    </div>
+  </div>
+
+  <div class="card-body">
+    <table class="table table-striped table-sm metadata">
+      <tr>
+        <th>Index Location</th>
+        <td>{{ task.index_location }}</td>
+      </tr>
+      <tr>
+        <th>Index Type</th>
+        <td>{{ task.index_type }}</td>
+      </tr>
+
+      {% if task.eval_format == "inex" %}
+
+      <!-- START INEX METADATA -->
+      <tr>
+        <th>Topics Filename</th>
+        <td>{{ task.topics_filename}}</td>
+      </tr>
+      <tr>
+        <th>Assessments Filename</th>
+        <td>{{ task.assessments_filename }}</td>
+      </tr>
+      <!-- END INEX METADATA -->
+
+      {% elif task.eval_format == "ll-api" %}
+
+      <!-- START LL-API METADATA -->
+      <tr>
+        <th>Base URL</th>
+        <td>{{ task.base_url }}</td>
+      </tr>
+      <tr>
+        <th>API Key</th>
+        <td>{{ task.api_key }}</td>
+      </tr>
+      <!-- END LL-API METADATA -->
+
+      {% endif %}
+    </table>
+
+    <!-- START DETAIL -->
+    {% if task.status == 3 %}
+    <div class="d-hide detail">
+      <table class="table table-scroll table-sm">
+        <thead>
+          {% for metric in task.results %}
+          <th>{{ metric }}</th>
+          {% endfor %}
+        </thead>
+        <tbody>
+          <tr>
+            {% for metric in task.results %}
+            <td>{{ task.results[metric]|round(6) }}</td>
+            {% endfor %}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    {% elif task.status == 4 and task.eval_format == 'll-api' %}
+    <div class="d-hide detail ll-api-results">
+      <i class="loading"></i>
+      <div class="outcome"></div>
+    </div>
+    {% endif %}
+    <!-- END DETAIL -->
+  </div>
+
+  <div class="card-footer">
+    <div class="columns">
+      <!-- START STATUS -->
+      <div class="column">
+        <span class="label label-rounded label-primary status">
+          {{ task.status.name }} 
+        </span>
+      </div>
+      <!-- END STATUS -->
+
+      <!-- START TASK BUTTONS -->
+      <div class="column text-right">
+        <div class="btn-group">
+          <button class="task-delete-btn btn btn-primary btn-sm tooltip" data-tooltip="Delete task and computed results.">
+            <i class="icon icon-delete"></i>
+          </button>
+          <button
+            class="task-reset-btn btn btn-primary btn-sm tooltip"
+            data-tooltip="Reset task to WAITING status.">
+            <i class="icon icon-refresh"></i>
+          </button>
+        </div>
+      </div>
+      <!-- END TASK BUTTONS -->
+    </div>
+  </div>
+</div>
+{% endfor %}
