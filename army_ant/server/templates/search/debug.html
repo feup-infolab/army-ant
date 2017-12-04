@@ -10,12 +10,7 @@
 
     <nav class="panel-nav">
       <ul class="tab tab-block">
-        <li class="tab-item">
-          <a href="#trace">
-            Trace
-          </a>
-        </li>
-        <li class="tab-item">
+        <li class="tab-item active">
           <a href="#results">
             Results
           </a>
@@ -23,13 +18,18 @@
         {% if index_type in ['gow', 'goe'] %}
         <li class="tab-item">
           <a href="#score-components-plot">
-            Parallel Coordinates Plot: Score Components
+            Score Components
           </a>
         </li>
         {% endif %}
         <li class="tab-item">
+          <a href="#trace">
+            Trace
+          </a>
+        </li>
+        <li class="tab-item">
           <a href="#score-explanation">
-            Score
+            Model
           </a>
         </li>
         <li class="tab-item">
@@ -42,7 +42,7 @@
 
     <div class="panel-body">
       <div id="trace" class="tab-content d-hide">
-        TRACE
+        {% include 'search/debug/trace.html' %}
       </div>
 
       <div id="results" class="tab-content d-hide">
@@ -102,3 +102,27 @@
     </div>
   </div>
 </div>
+
+<script type="text/javascript">
+  (function() {
+    var $activeTab = $('#learn .tab-item.active');
+    var tabContentID = $activeTab.find('a').first().attr('href');
+    $activeTab.addClass('active');
+    $(tabContentID).removeClass('d-hide');
+    
+    $('#learn .tab-item a').on('click', function(e) {
+      e.preventDefault();
+
+      $('#learn .tab-item').removeClass('active');
+      $(this).parent('.tab-item').addClass('active');
+      var tabContentID = $(this).attr('href');
+      $('.tab-content').addClass('d-hide');
+      $(tabContentID).removeClass('d-hide');
+    });
+
+    $(document).on('click', '[href="#score-components-plot"]', function(e) {
+      var visScoreComponents = new ScoreComponents({{ results }}, '#score-components-plot');
+      visScoreComponents.render();
+    });
+  })();
+</script>

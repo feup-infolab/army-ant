@@ -1,0 +1,33 @@
+{% if trace %}
+<ul class="trace collapsibleList">
+  <li>
+    {{ trace.message }}
+    <ul class="trace">
+      {%- for item in trace.details recursive %}
+      <li>
+        {{ item.message }}
+        {%- if item.details -%}
+        <ul class="trace">{{ loop(item.details) }}</ul>
+        {%- endif %}
+      </li>
+      {%- endfor %}
+    </ul>
+  </li>
+</ul>
+
+<script type="text/javascript">
+  (function() {
+    CollapsibleLists.apply();
+    $('.collapsibleListClosed').first()
+      .removeClass('collapsibleListClosed')
+      .addClass('collapsibleListOpen')
+      .children('ul')
+      .css('display', 'block');
+  })();
+</script>
+
+{% else %}
+
+<span class="label label-warning">Trace not implemented for '{{ index_type }}'.</span>
+
+{% endif %}

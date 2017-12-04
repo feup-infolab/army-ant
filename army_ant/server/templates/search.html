@@ -113,21 +113,6 @@
 <script type="text/javascript">
   (function() {
     document.getElementById("query").focus();
-
-    $('#learn .tab-item:first-child').addClass('active');
-    $('#learn .tab-content:first-child').removeClass('d-hide');
-    
-    $('#learn .tab-item a').on('click', function(e) {
-      $('#learn .tab-item').removeClass('active');
-      $(this).parent('.tab-item').addClass('active');
-      var tabContentID = $(this).attr('href');
-      $('.tab-content').addClass('d-hide');
-      $(tabContentID).removeClass('d-hide');
-      return false;
-    });
-
-    var visScoreComponents = new ScoreComponents({{ results }}, '#score-components-plot');
-    visScoreComponents.render();
   })();
 </script>
 {% endblock %}

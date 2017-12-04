@@ -125,3 +125,32 @@ code {
   display: block;
   overflow-x: auto;
 }
+
+.collapsibleList li {
+  padding: 0 0 0 2em;
+  cursor: auto;
+}
+
+li.collapsibleListOpen {
+  list-style: none;
+  background: url('../img/ic_expand_less_black_24px.svg') no-repeat left top;
+  cursor: pointer;
+}
+
+li.collapsibleListClosed {
+  list-style: none;
+  background: url('../img/ic_expand_more_black_24px.svg') no-repeat left top;
+  cursor: pointer;
+}
+
+.trace {
+  font-size: 0.7rem;
+}
+
+dl {
+  margin-left: 0;
+}
+dl dl {
+  margin-left: 2em;
+  margin-top: 1em;
+}

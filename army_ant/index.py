@@ -119,6 +119,10 @@ class Result(object):
         else:
             raise KeyError
 
+    def __contains__(self, key):
+        return (key == 'docID' and self.doc_id or
+                key == 'score' and self.score)
+
     def __repr__(self):
         return """{ "docID": %s, "score": %f, "has_components": %s }""" % (
             self.doc_id, self.score, ("true" if self.components else "false"))
@@ -139,6 +143,11 @@ class ResultSet(object):
             return self.trace
         else:
             raise KeyError
+
+    def __contains__(self, key):
+        return (key == 'results' and self.results or
+                key == 'numDocs' and self.num_docs or
+                key == 'trace' and self.trace)
 
 class ServiceIndex(Index):
     def __init__(self, reader, index_location, loop):

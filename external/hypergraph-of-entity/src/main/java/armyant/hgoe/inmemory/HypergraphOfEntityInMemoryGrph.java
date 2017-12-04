@@ -46,7 +46,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
     private static final int SEARCH_MAX_DISTANCE = 2;
     private static final int MAX_PATHS_PER_PAIR = 1000;
     private static final int WALK_LENGTH = 3;
-    private static final int WALK_RESTARTS = 10;
+    private static final int WALK_REPEATS = 10;
     private static final XoRoShiRo128PlusRandom RNG = new XoRoShiRo128PlusRandom();
     private static final Kryo kryo;
     private static final MapSerializer nodeEdgeIndexSerializer;
@@ -527,25 +527,58 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         randomStep(randomNodeID, remainingSteps - 1, path);
     }
 
-    // FIXME Unfinished
     public ResultSet randomWalkSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights) {
         Int2FloatOpenHashMap weightedNodeVisitProbability = new Int2FloatOpenHashMap();
+        trace.add("Random walk search");
+        trace.goDown();
 
         for (int seedNodeID : seedNodeIDs) {
             Int2IntOpenHashMap nodeVisits = new Int2IntOpenHashMap();
+            trace.add("From seed node: %s", nodeIndex.getKey(seedNodeID));
+            trace.goDown();
+            trace.add("Random walk with restart (WALK_LENGTH = %d, WALK_REPEATS = %d)", WALK_LENGTH, WALK_REPEATS);
+            trace.goDown();
 
-            for (int i = 0; i < WALK_RESTARTS; i++) {
+            for (int i = 0; i < WALK_REPEATS; i++) {
                 Path randomPath = randomWalk(seedNodeID, WALK_LENGTH);
+
+                String messageRandomPath = Arrays.stream(randomPath.toVertexArray())
+                        .mapToObj(nodeID -> nodeIndex.getKey(nodeID).toString())
+                        .collect(Collectors.joining(" -> "));
+                trace.add(messageRandomPath);
+                trace.goDown();
+
                 for (int nodeID : randomPath.toVertexArray()) {
                     nodeVisits.addTo(nodeID, 1);
+                    trace.add("Node %s visited %d times", nodeIndex.getKey(nodeID), nodeVisits.get(nodeID));
                 }
+
+                trace.goUp();
             }
 
+            trace.goUp();
+
+            trace.add("Accumulating (non-normalized) visit probability, weighted by seed node confidence");
+            trace.goDown();
             for (int nodeID : nodeVisits.keySet()) {
                 weightedNodeVisitProbability.compute(
                         nodeID, (k, v) -> (v == null ? 0 : v) + nodeVisits.get(nodeID) * seedNodeWeights.get(seedNodeID).floatValue());
+                trace.add("score(%s) += visits(%s) * w(%s)",
+                        nodeIndex.getKey(nodeID),
+                        nodeIndex.getKey(nodeID),
+                        nodeIndex.getKey(seedNodeID));
+                trace.goDown();
+                trace.add("visits(%s) = %d", nodeIndex.getKey(nodeID).toString(), nodeVisits.get(nodeID));
+                trace.add("w(%s) = %f", nodeIndex.getKey(seedNodeID), seedNodeWeights.get(seedNodeID));
+                trace.add("score(%s) = %f", nodeIndex.getKey(nodeID), weightedNodeVisitProbability.get(nodeID));
+                trace.goUp();
             }
+
+            trace.goUp();
+            trace.goUp();
         }
+
+        trace.goUp();
 
         ResultSet resultSet = new ResultSet();
         resultSet.setTrace(trace);
@@ -560,6 +593,18 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
                     resultSet.addReplaceResult(new Result(score, entityNode, entityNode.getDocID()));
                 }
             }
+        }
+
+        trace.add("Collecting results (class=EntityNode; hasDocID()=true)");
+        trace.goDown();
+
+        for (Result result : resultSet) {
+            trace.add(result.getNode().toString());
+            trace.goDown();
+            trace.add("score = %f", result.getScore());
+            trace.add("docID = %s", result.getDocID());
+            trace.add("nodeID = %d", nodeIndex.get(result.getNode()));
+            trace.goUp();
         }
 
         return resultSet;
@@ -637,12 +682,52 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         return (double) intersect.size() / union.size();
     }
 
-    public double jaccardScore(int entityNodeID, Map<Integer, Pair<IntSet, Double>> seedNeighborsWeights) {
+    public double jaccardScore(int entityNodeID, Map<Integer, Double> seedNodeWeights) {
+        Map<Integer, Pair<IntSet, Double>> seedNeighborsWeights = new HashMap<>();
+        for (Map.Entry<Integer, Double> entry : seedNodeWeights.entrySet()) {
+            seedNeighborsWeights.put(entry.getKey(), Pair.of(graph.getNeighbours(entry.getKey()), entry.getValue()));
+        }
+
         return seedNeighborsWeights.entrySet().stream().map(seed -> {
             IntSet seedNeighbors = seed.getValue().getLeft();
             IntSet entityNeighbors = graph.getNeighbours(entityNodeID);
             return seed.getValue().getRight() * jaccardSimilarity(seedNeighbors, entityNeighbors);
         }).mapToDouble(f -> f).sum();
+    }
+
+    public ResultSet entityIteratorSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights,
+                                          RankingFunction function) {
+        ResultSet resultSet = new ResultSet();
+        resultSet.setTrace(trace);
+
+        graph.getVertices().parallelStream().forEach(nodeID -> {
+            Node node = nodeIndex.getKey(nodeID);
+            if (node instanceof EntityNode) {
+                EntityNode entityNode = (EntityNode) node;
+                logger.debug("Ranking {} using {}", entityNode, function);
+
+                double score;
+                switch (function) {
+                    case ENTITY_WEIGHT:
+                        score = entityWeight(nodeID, seedNodeIDs, seedNodeWeights);
+                        break;
+                    case JACCARD_SCORE:
+                        score = jaccardScore(nodeID, seedNodeWeights);
+                        break;
+                    default:
+                        logger.warn("Ranking function {} is unsupported for entity iterator search", function);
+                        score = 0d;
+                }
+
+                if (score > 0 && entityNode.hasDocID()) {
+                    synchronized (this) {
+                        resultSet.addReplaceResult(new Result(score, entityNode, entityNode.getDocID()));
+                    }
+                }
+            }
+        });
+
+        return resultSet;
     }
 
     @Override
@@ -651,12 +736,16 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
     }
 
     public ResultSet search(String query, RankingFunction function) throws IOException {
-        ResultSet resultSet = new ResultSet();
-        resultSet.setTrace(trace);
+        trace.reset();
 
         List<String> tokens = analyze(query);
         IntSet queryTermNodeIDs = getQueryTermNodeIDs(tokens);
         trace.add("Mapping query terms [ %s ] to query term nodes", StringUtils.join(tokens, ", "));
+        trace.goDown();
+        for (int queryTermNodeID : queryTermNodeIDs) {
+            trace.add(nodeIndex.getKey(queryTermNodeID).toString());
+        }
+        trace.goUp();
 
         IntSet seedNodeIDs = getSeedNodeIDs(queryTermNodeIDs);
         //System.out.println("Seed Nodes: " + seedNodeIDs.stream().map(nodeID -> nodeID + "=" + nodeIndex.getKey(nodeID).toString()).collect(Collectors.toList()));
@@ -670,42 +759,28 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         Map<Integer, Double> seedNodeWeights = seedNodeConfidenceWeights(seedNodeIDs, queryTermNodeIDs);
         //System.out.println("Seed Node Confidence Weights: " + seedNodeWeights);
         logger.info("{} seed nodes weights calculated for [ {} ]", seedNodeWeights.size(), query);
-
-        Map<Integer, Pair<IntSet, Double>> seedNeighborsWeights = new HashMap<>();
+        trace.add("Calculating confidence weight for seed nodes");
+        trace.goDown();
         for (Map.Entry<Integer, Double> entry : seedNodeWeights.entrySet()) {
-            seedNeighborsWeights.put(entry.getKey(), Pair.of(graph.getNeighbours(entry.getKey()), entry.getValue()));
+            trace.add("w(%s) = %f", nodeIndex.getKey(entry.getKey()), entry.getValue());
         }
+        trace.goUp();
 
-        if (function == RankingFunction.RANDOM_WALK_SCORE) {
-            return randomWalkSearch(seedNodeIDs, seedNodeWeights);
+        ResultSet resultSet;
+        switch (function) {
+            case RANDOM_WALK_SCORE:
+                resultSet = randomWalkSearch(seedNodeIDs, seedNodeWeights);
+                break;
+            case ENTITY_WEIGHT:
+            case JACCARD_SCORE:
+                resultSet = entityIteratorSearch(seedNodeIDs, seedNodeWeights, function);
+                break;
+            default:
+                logger.warn("Ranking function {} is unsupported", function);
+                resultSet = ResultSet.empty();
         }
-
-        graph.getVertices().parallelStream().forEach(nodeID -> {
-            Node node = nodeIndex.getKey(nodeID);
-            if (node instanceof EntityNode) {
-                EntityNode entityNode = (EntityNode) node;
-                logger.debug("Ranking {} using {}", entityNode, function);
-
-                double score = 0d;
-                switch (function) {
-                    case ENTITY_WEIGHT:
-                        score = entityWeight(nodeID, seedNodeIDs, seedNodeWeights);
-                        break;
-                    case JACCARD_SCORE:
-                        score = jaccardScore(nodeID, seedNeighborsWeights);
-                        break;
-                }
-
-                if (score > 0 && entityNode.hasDocID()) {
-                    synchronized (this) {
-                        resultSet.addReplaceResult(new Result(score, entityNode, entityNode.getDocID()));
-                    }
-                }
-            }
-        });
 
         logger.info("{} entities ranked for [ {} ]", resultSet.getNumDocs(), query);
-
         return resultSet;
     }
 

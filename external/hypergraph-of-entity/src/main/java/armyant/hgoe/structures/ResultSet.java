@@ -1,11 +1,13 @@
 package armyant.hgoe.structures;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.*;
 
 /**
  * Created by jldevezas on 2017-11-07.
  */
-public class ResultSet implements Iterator<Result> {
+public class ResultSet implements Iterator<Result>, Iterable<Result> {
     private SortedSet<Result> results;
     private Map<String, Result> maxResultPerDocID;
     private Long numDocs;
@@ -57,6 +59,10 @@ public class ResultSet implements Iterator<Result> {
         this.trace = trace;
     }
 
+    public void unsetTrace() {
+        this.trace = null;
+    }
+
     public void addResult(Result result) {
         results.add(result);
     }
@@ -100,5 +106,15 @@ public class ResultSet implements Iterator<Result> {
     @Override
     public Result next() {
         return resultsIterator.next();
+    }
+
+    public static ResultSet empty() {
+        return new ResultSet();
+    }
+
+    @NotNull
+    @Override
+    public Iterator<Result> iterator() {
+        return results.iterator();
     }
 }
