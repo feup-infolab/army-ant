@@ -154,3 +154,12 @@ dl dl {
   margin-left: 2em;
   margin-top: 1em;
 }
+
+.tab-content {
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+.results td:first-child {
+  width: 15%;
+}
