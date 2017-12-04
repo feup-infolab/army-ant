@@ -73,6 +73,6 @@ public class HypergraphOfEntityInMemoryGrphTest extends HypergraphOfEntityTest {
         //ResultSet resultSet = hgoe.search("viking ship");
         ResultSet resultSet = hgoe.search("doom");
 
-        resultSet.getTrace().print();
+        resultSet.getTrace().toASCII();
     }
 }

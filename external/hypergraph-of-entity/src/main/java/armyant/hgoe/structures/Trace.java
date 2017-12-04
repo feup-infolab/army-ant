@@ -61,22 +61,24 @@ public class Trace {
         System.gc();
     }
 
-    private void printIndent(int n) {
+    private void indent(StringBuilder builder, int n) {
         for (int i=0; i < n; i++) {
-            System.out.print("|  ");
+            builder.append("|  ");
         }
     }
 
-    public void print() {
-        System.out.println(root.message);
-        print(root.details, 0);
+    public String toASCII() {
+        StringBuilder builder = new StringBuilder(root.message);
+        builder.append('\n');
+        toASCII(builder, root.details, 0);
+        return builder.toString();
     }
 
-    private void print(List<Node> children, int level) {
+    private void toASCII(StringBuilder builder, List<Node> children, int level) {
         for (Node child : children) {
-            printIndent(level);
-            System.out.println("+-- " + child.message);
-            print(child.details, level + 1);
+            indent(builder, level);
+            builder.append("+-- ").append(child.message).append('\n');
+            toASCII(builder, child.details, level + 1);
         }
     }
 

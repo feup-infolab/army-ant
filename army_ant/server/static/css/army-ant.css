@@ -163,3 +163,13 @@ dl dl {
 .results td:first-child {
   width: 15%;
 }
+
+#trace-ascii {
+  resize: none;
+  font-family: monospace;
+  font-size: 0.7em;
+}
+
+#trace-export-btn {
+  float: right;
+}

@@ -1,3 +1,55 @@
+{% if trace_ascii %}
+<button id="trace-export-btn" class="btn btn-primary">Export</button>
+
+<div class="modal trace-ascii">
+  <div class="modal-overlay"></div>
+  <div class="modal-container">
+    <div class="modal-header">
+      <div class="modal-title h5">Trace ASCII</div>
+    </div>
+    <div class="modal-body">
+      <div class="content">
+        <div class="form-group">
+          <textarea class="form-input" id="trace-ascii" placeholder="Textarea" rows="10" readonly>{{ trace_ascii|safe }}</textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn close-modal-btn">Cancel</button>
+      <button id="trace-copy-btn" class="btn btn-primary">Copy and Close</button>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+  (function() {
+    $(document).on('click', '#trace-export-btn', function(e) {
+      $('.modal.trace-ascii').addClass('active');
+    });
+
+    $(document).on('click', '#trace-copy-btn', function(e) {
+      document.getElementById('trace-ascii').select();
+      if (document.execCommand("Copy")) {
+        $(this).parents('.modal').removeClass('active');
+        $('#success')
+          .removeClass('d-hide')
+          .find('.message')
+          .text("Copied to the clipboard")
+
+        setTimeout(function() { $('#success').addClass('d-hide'); }, 5000);
+      } else {
+        $('#error')
+          .removeClass('d-hide')
+          .find('.message')
+          .text("Failed to copy to clipboard")
+
+        setTimeout(function() { $('#error').addClass('d-hide'); }, 5000);
+      }
+    });
+  })();
+</script>
+{% endif %}
+
 {% if trace %}
 <ul class="trace collapsibleList">
   <li>
@@ -23,6 +75,12 @@
       .addClass('collapsibleListOpen')
       .children('ul')
       .css('display', 'block');
+
+
+    $(document).on('click', '.close-modal-btn', function(e) {
+      var $modal = $(this).parents('.modal');
+      $modal.removeClass('active');
+    });
   })();
 </script>
 

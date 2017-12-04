@@ -45,6 +45,8 @@ async def search(request):
 
     query = request.GET.get('query')
     error = None
+    trace = None
+    trace_ascii = None
     offset = 0
     limit = 30 if debug == 'on' else 5
 
@@ -63,7 +65,8 @@ async def search(request):
             if engine_response['numDocs']: num_docs = engine_response['numDocs']
             if type(num_docs) is java.lang.Long: num_docs = num_docs.longValue()
 
-            trace = engine_response['trace'] if 'trace' in engine_response else None
+            if 'trace' in engine_response: trace = engine_response['trace']
+            if 'traceASCII' in engine_response: trace_ascii = engine_response['traceASCII']
 
             results = engine_response['results']
             page = int((offset+limit) / limit)
@@ -107,7 +110,8 @@ async def search(request):
             'pages': pages,
             'results': results,
             'metadata': metadata,
-            'trace': trace
+            'trace': trace,
+            'trace_ascii': trace_ascii
         }
 
     fmt = request.GET.get('format', 'html')

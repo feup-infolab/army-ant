@@ -128,10 +128,11 @@ class Result(object):
             self.doc_id, self.score, ("true" if self.components else "false"))
 
 class ResultSet(object):
-    def __init__(self, results, num_docs, trace=None):
+    def __init__(self, results, num_docs, trace=None, trace_ascii=None):
         self.results = results
         self.num_docs = num_docs
         self.trace = trace
+        self.trace_ascii = trace_ascii
 
     # For compatibility with external implementations depending on dictionaries
     def __getitem__(self, key):
@@ -141,13 +142,16 @@ class ResultSet(object):
             return self.num_docs
         elif key == 'trace':
             return self.trace
+        elif key == 'traceASCII':
+            return self.trace_ascii
         else:
             raise KeyError
 
     def __contains__(self, key):
         return (key == 'results' and self.results or
                 key == 'numDocs' and self.num_docs or
-                key == 'trace' and self.trace)
+                key == 'trace' and self.trace or
+                key == 'traceASCII' and self.trace_ascii)
 
 class ServiceIndex(Index):
     def __init__(self, reader, index_location, loop):
@@ -713,4 +717,4 @@ class HypergraphOfEntity(Index):
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
-        return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()))
+        return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()), trace_ascii=trace.toASCII())

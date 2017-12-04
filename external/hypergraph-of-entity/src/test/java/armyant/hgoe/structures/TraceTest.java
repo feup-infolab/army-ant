@@ -19,11 +19,11 @@ public class TraceTest {
         trace.add("level1.2");
     }
 
-    public void testPrint() {
-        trace.print();
+    public void testToASCII() {
+        System.out.println(trace.toASCII());
     }
 
-    public void toJSON() {
+    public void testToJSON() {
         System.out.println(trace.toJSON());
     }
 }
