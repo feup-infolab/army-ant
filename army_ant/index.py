@@ -638,7 +638,7 @@ class HypergraphOfEntity(Index):
     BLOCK_SIZE = 5000
     CLASSPATH = 'external/hypergraph-of-entity/target/hypergraph-of-entity-0.1-SNAPSHOT-jar-with-dependencies.jar'
     MEMORY_MB = 5120
-    INSTANCE = None
+    INSTANCES = {}
 
     def init(self):
         if isJVMStarted(): return
@@ -656,7 +656,7 @@ class HypergraphOfEntity(Index):
 
     async def load(self):
         self.init()
-        HypergraphOfEntity.INSTANCE = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location)
+        HypergraphOfEntity.INSTANCES[self.index_location] = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location)
 
     async def index(self):
         self.init()
@@ -703,11 +703,11 @@ class HypergraphOfEntity(Index):
         num_docs = 0
         trace = None
         try:
-            if HypergraphOfEntity.INSTANCE:
-                hgoe = HypergraphOfEntity.INSTANCE
+            if self.index_location in HypergraphOfEntity.INSTANCES:
+                hgoe = HypergraphOfEntity.INSTANCES[self.index_location]
             else:
                 hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location)
-                HypergraphOfEntity.INSTANCE = hgoe
+                HypergraphOfEntity.INSTANCES[self.index_location] = hgoe
             
             results = hgoe.search(query)
             num_docs = results.getNumDocs()
