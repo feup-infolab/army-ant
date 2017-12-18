@@ -429,13 +429,14 @@ class EvaluationTaskStatus(IntEnum):
     ERROR = 5
 
 class EvaluationTask(object):
-    def __init__(self, index_location, index_type, eval_format, topics_filename=None, topics_path=None,
-                 assessments_filename=None, assessments_path=None, base_url=None, api_key=None, run_id=None,
-                 status=EvaluationTaskStatus.WAITING, topics_md5=None, assessments_md5=None, time=None,
-                 _id=None, results=None):
+    def __init__(self, index_location, index_type, eval_format, ranking_function=None,
+                 topics_filename=None, topics_path=None, assessments_filename=None, assessments_path=None,
+                 base_url=None, api_key=None, run_id=None, status=EvaluationTaskStatus.WAITING,
+                 topics_md5=None, assessments_md5=None, time=None, _id=None, results=None):
         self.index_location = index_location
         self.index_type = index_type
         self.eval_format = eval_format
+        self.ranking_function = ranking_function
         self.topics_filename = topics_filename
         self.topics_path = topics_path
         self.topics_md5 = topics_md5 or (md5(topics_path) if topics_path else None)

@@ -196,11 +196,13 @@ async def evaluation_post(request):
         for engine in request.app['engines']:
             index_location = request.app['engines'][engine]['index_location']
             index_type = request.app['engines'][engine]['index_type']
+            ranking_function = request.app['engines'][engine]['ranking_function']
 
             manager.add_task(EvaluationTask(
                 index_location,
                 index_type,
                 data['eval-format'],
+                ranking_function,
                 topics_filename,
                 topics_path,
                 assessments_filename,
@@ -211,11 +213,13 @@ async def evaluation_post(request):
     else:
         index_location = request.app['engines'][data['engine']]['index_location']
         index_type = request.app['engines'][data['engine']]['index_type']
+        ranking_function = request.app['engines'][data['engine']]['ranking_function']
 
         manager.add_task(EvaluationTask(
             index_location,
             index_type,
             data['eval-format'],
+            ranking_function,
             topics_filename,
             topics_path,
             assessments_filename,
@@ -342,7 +346,13 @@ def run_app(loop):
     app['engines'] = OrderedDict()
     for section in config.sections():
         app['engines'][section] = dict(config[section])
+        
         if 'message' in config[section]: logger.warn("%s: %s" % (section, config[section]['message']))
+        
+        engine_index_ranking = section.split(':', 1)
+        if len(engine_index_ranking) > 1:
+            config[section]['ranking_function'] = engine_index_ranking[1]
+
     app['db_location'] = config['DEFAULT'].get('db_location', 'localhost')
     app['default_eval_location'] = config['DEFAULT'].get('eval_location', tempfile.gettempdir())
 

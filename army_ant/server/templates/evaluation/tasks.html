@@ -74,6 +74,13 @@
         <td>{{ task.index_type }}</td>
       </tr>
 
+      {% if task.ranking_function %}
+      <tr>
+        <th>Ranking Function</th>
+        <td>{{ task.ranking_function }}</td>
+      </tr>
+      {% endif %}
+
       {% if task.eval_format == "inex" %}
 
       <!-- START INEX METADATA -->
