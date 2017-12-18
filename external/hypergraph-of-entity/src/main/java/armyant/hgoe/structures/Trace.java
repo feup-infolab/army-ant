@@ -33,7 +33,7 @@ public class Trace {
 
     public void add(String message, Object... objects) {
         Node node = new Node();
-        node.message = String.format(message, objects);
+        node.message = String.format(message.replace("%", "%%"), objects);
         node.details = new ArrayList<>();
         node.parent = current;
         current.details.add(node);

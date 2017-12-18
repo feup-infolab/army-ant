@@ -196,7 +196,7 @@ async def evaluation_post(request):
         for engine in request.app['engines']:
             index_location = request.app['engines'][engine]['index_location']
             index_type = request.app['engines'][engine]['index_type']
-            ranking_function = request.app['engines'][engine]['ranking_function']
+            ranking_function = request.app['engines'][engine].get('ranking_function')
 
             manager.add_task(EvaluationTask(
                 index_location,
@@ -213,7 +213,7 @@ async def evaluation_post(request):
     else:
         index_location = request.app['engines'][data['engine']]['index_location']
         index_type = request.app['engines'][data['engine']]['index_type']
-        ranking_function = request.app['engines'][data['engine']]['ranking_function']
+        ranking_function = request.app['engines'][data['engine']].get('ranking_function')
 
         manager.add_task(EvaluationTask(
             index_location,
