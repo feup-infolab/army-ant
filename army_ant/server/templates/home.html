@@ -31,9 +31,7 @@
       src="{{ app.router.static.url(filename='node_modules/mathjax/MathJax.js') }}?config=TeX-MML-AM_CHTML">
     </script>
 
-    {% block title %}
-    <title>{{ query if query }} {% if query %} - {% endif %} Army ANT</title>
-    {% endblock %}
+    <title>{{ request.host }} - {% block title %}{% endblock %} {% if self.title() %} - {% endif %}Army ANT</title>
   </head>
   <body>
     <div id="error" class="global-message toast toast-error d-hide">

@@ -1,6 +1,6 @@
 {% extends "home.html" %}
 {% block title %}
-<title>{{ query if query }} {% if query %} - {% endif %} Army ANT</title>
+{{ query if query else "Search"}}
 {% endblock %}
 
 {% set border_pages = 2 %}
