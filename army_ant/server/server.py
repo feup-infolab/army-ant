@@ -41,6 +41,12 @@ async def search(request):
     engine = request.GET.get('engine')
     if engine is None: engine = list(request.app['engines'].keys())[0]
 
+    engine_index_ranking = engine.split(':', 1)
+    if len(engine_index_ranking) > 1:
+        ranking_function = engine_index_ranking[1]
+    else:
+        ranking_function = None
+
     debug = request.GET.get('debug', 'off')
 
     query = request.GET.get('query')
@@ -59,7 +65,7 @@ async def search(request):
                 request.app['engines'][engine]['index_location'],
                 request.app['engines'][engine]['index_type'],
                 loop)
-            engine_response = await index.search(query, offset, limit)
+            engine_response = await index.search(query, offset, limit, ranking_function)
 
             num_docs = len(engine_response['results'])
             if engine_response['numDocs']: num_docs = engine_response['numDocs']

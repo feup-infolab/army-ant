@@ -6,6 +6,7 @@
 # 2017-03-09
 
 import logging, string, asyncio, pymongo, re, json, psycopg2, os, jpype, itertools, json
+from enum import Enum
 from jpype import *
 from aiogremlin import Cluster
 from aiogremlin.gremlin_python.structure.graph import Vertex
@@ -89,7 +90,7 @@ class Index(object):
     async def index(self):
         raise ArmyAntException("Index not implemented for %s" % self.__class__.__name__)
 
-    async def search(self, query, offset, limit):
+    async def search(self, query, offset, limit, ranking_function=None):
         raise ArmyAntException("Search not implemented for %s" % self.__class__.__name__)
 
     async def load(self):
@@ -231,7 +232,7 @@ class GraphOfWord(GremlinServerIndex):
 
         await self.cluster.close()
 
-    async def search(self, query, offset, limit):
+    async def search(self, query, offset, limit, ranking_function=None):
         self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
         self.client = await self.cluster.connect()
 
@@ -307,7 +308,7 @@ class GraphOfEntity(GremlinServerIndex):
 
         await self.cluster.close()
 
-    async def search(self, query, offset, limit):
+    async def search(self, query, offset, limit, ranking_function=None):
         self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
         self.client = await self.cluster.connect()
 
@@ -640,6 +641,11 @@ class HypergraphOfEntity(Index):
     MEMORY_MB = 5120
     INSTANCES = {}
 
+    class RankingFunction(Enum):
+        entity_weight = 'ENTITY_WEIGHT'
+        jaccard = 'JACCARD_SCORE'
+        random_walk = 'RANDOM_WALK_SCORE'
+
     def init(self):
         if isJVMStarted(): return
 
@@ -653,9 +659,13 @@ class HypergraphOfEntity(Index):
         HypergraphOfEntity.JHypergraphOfEntityInMemory = package.inmemory.HypergraphOfEntityInMemoryGrph
         HypergraphOfEntity.JDocument = package.structures.Document
         HypergraphOfEntity.JTriple = package.structures.Triple
+        HypergraphOfEntity.JRankingFunction = JClass("armyant.hgoe.inmemory.HypergraphOfEntityInMemoryGrph$RankingFunction")
 
     async def load(self):
         self.init()
+        if self.index_location in HypergraphOfEntity.INSTANCES:
+            logger.warn("%s is already loaded, skipping" % self.index_location)
+            return
         HypergraphOfEntity.INSTANCES[self.index_location] = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location)
 
     async def index(self):
@@ -696,8 +706,16 @@ class HypergraphOfEntity(Index):
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
-    async def search(self, query, offset, limit):
+    async def search(self, query, offset, limit, ranking_function=None):
         self.init()
+
+        if ranking_function:
+            ranking_function = HypergraphOfEntity.RankingFunction[ranking_function]
+        else:
+            ranking_function = HypergraphOfEntity.RankingFunction['random_walk']
+
+        logger.info("Using '%s' as ranking function" % ranking_function.value)
+        ranking_function = HypergraphOfEntity.JRankingFunction.valueOf(ranking_function.value)
 
         results = []
         num_docs = 0
@@ -709,7 +727,7 @@ class HypergraphOfEntity(Index):
                 hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location)
                 HypergraphOfEntity.INSTANCES[self.index_location] = hgoe
             
-            results = hgoe.search(query)
+            results = hgoe.search(query, ranking_function)
             num_docs = results.getNumDocs()
             trace = results.getTrace()
             results = [Result(result.getDocID(), result.getScore())

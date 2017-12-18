@@ -554,7 +554,7 @@ public class HypergraphOfEntityInMemoryJUNG extends HypergraphOfEntity {
         RANDOM_WALK
     }
 
-    private enum RankingFunction {
+    public enum RankingFunction {
         ENTITY_WEIGHT,
         JACCARD_SCORE
     }

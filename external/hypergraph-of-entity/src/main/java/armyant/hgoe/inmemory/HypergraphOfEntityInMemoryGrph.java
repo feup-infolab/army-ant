@@ -827,7 +827,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         ALL_PATHS
     }
 
-    private enum RankingFunction {
+    public enum RankingFunction {
         ENTITY_WEIGHT,
         JACCARD_SCORE,
         RANDOM_WALK_SCORE
