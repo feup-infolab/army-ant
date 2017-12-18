@@ -351,7 +351,7 @@ def run_app(loop):
         
         engine_index_ranking = section.split(':', 1)
         if len(engine_index_ranking) > 1:
-            config[section]['ranking_function'] = engine_index_ranking[1]
+            app['engines'][section]['ranking_function'] = engine_index_ranking[1]
 
     app['db_location'] = config['DEFAULT'].get('db_location', 'localhost')
     app['default_eval_location'] = config['DEFAULT'].get('eval_location', tempfile.gettempdir())
