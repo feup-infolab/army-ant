@@ -688,9 +688,10 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
             seedNeighborsWeights.put(entry.getKey(), Pair.of(graph.getNeighbours(entry.getKey()), entry.getValue()));
         }
 
+        IntSet entityNeighbors = graph.getNeighbours(entityNodeID);
+
         return seedNeighborsWeights.entrySet().stream().map(seed -> {
             IntSet seedNeighbors = seed.getValue().getLeft();
-            IntSet entityNeighbors = graph.getNeighbours(entityNodeID);
             return seed.getValue().getRight() * jaccardSimilarity(seedNeighbors, entityNeighbors);
         }).mapToDouble(f -> f).sum();
     }
