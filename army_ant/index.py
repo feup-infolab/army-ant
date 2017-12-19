@@ -5,7 +5,7 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import logging, string, asyncio, pymongo, re, json, psycopg2, os, jpype, itertools, json
+import logging, string, asyncio, pymongo, re, json, psycopg2, os, jpype, itertools, json, signal
 from enum import Enum
 from jpype import *
 from aiogremlin import Cluster
@@ -635,6 +635,8 @@ class GraphOfEntityCSV(GraphOfEntityBatch):
             TO STDOUT WITH CSV HEADER
             """, f)
 
+def handler(signum, frame): raise KeyboardInterrupt
+
 class HypergraphOfEntity(Index):
     BLOCK_SIZE = 5000
     CLASSPATH = 'external/hypergraph-of-entity/target/hypergraph-of-entity-0.1-SNAPSHOT-jar-with-dependencies.jar'
@@ -654,6 +656,8 @@ class HypergraphOfEntity(Index):
             '-Djava.class.path=%s' % HypergraphOfEntity.CLASSPATH,
             '-Xms%dm' % HypergraphOfEntity.MEMORY_MB,
             '-Xmx%dm' % HypergraphOfEntity.MEMORY_MB)
+
+        signal.signal(signal.SIGINT, handler)
 
         package = JPackage('armyant.hgoe')
         HypergraphOfEntity.JHypergraphOfEntityInMemory = package.inmemory.HypergraphOfEntityInMemoryGrph

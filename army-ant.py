@@ -175,9 +175,9 @@ class CommandLineInterface(object):
         s = Sampler.factory(method, reader, output_location, size)
         s.sample()
 
-    def server(self):
+    def server(self, host='127.0.0.1', port=8080):
         loop = asyncio.get_event_loop()
-        run_app(loop)
+        run_app(loop, host, port)
 
 if __name__ == '__main__':
     fire.Fire(CommandLineInterface)

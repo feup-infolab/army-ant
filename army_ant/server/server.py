@@ -312,17 +312,21 @@ async def about(request):
     pass
 
 async def start_background_tasks(app):
+    logger.info("Starting background tasks")
     manager = EvaluationTaskManager(app['db_location'], app['default_eval_location'])
     app['evaluation_queue_listener'] = app.loop.create_task(manager.process())
 
 async def cleanup_background_tasks(app):
+    logger.info("Stopping background tasks")
     app['evaluation_queue_listener'].cancel()
     await app['evaluation_queue_listener']
 
 async def shutdown_jvm(app):
+    logger.info("Shutting down JVM")
     if isJVMStarted(): shutdownJVM()
 
 async def preload_engines(app):
+    logger.info("Preloading engines")
     for engine, config in app['engines'].items():
         preload = config['preload'] == 'True' if 'preload' in config else False
         if preload:
@@ -337,7 +341,7 @@ async def preload_engines(app):
                 app['engines'][engine]['index_type'],
                 loop)
 
-def run_app(loop):
+def run_app(loop, host, port):
     config = configparser.ConfigParser()
     config.read('server.cfg')
 
@@ -376,9 +380,9 @@ def run_app(loop):
 
     app.router.add_static('/static', 'army_ant/server/static', name='static', follow_symlinks=True)
 
-    app.on_startup.append(preload_engines)
     app.on_startup.append(start_background_tasks)
-    app.on_cleanup.append(cleanup_background_tasks)    
+    app.on_startup.append(preload_engines)
     app.on_cleanup.append(shutdown_jvm)
+    app.on_cleanup.append(cleanup_background_tasks)
 
-    web.run_app(app)
+    web.run_app(app, host=host, port=port)
