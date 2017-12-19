@@ -5,7 +5,7 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import logging, string, asyncio, pymongo, re, json, psycopg2, os, jpype, itertools, json, signal
+import logging, string, asyncio, pymongo, re, json, psycopg2, os, jpype, itertools, json, signal, configparser
 from enum import Enum
 from jpype import *
 from aiogremlin import Cluster
@@ -640,8 +640,11 @@ def handler(signum, frame): raise KeyboardInterrupt
 class HypergraphOfEntity(Index):
     BLOCK_SIZE = 5000
     CLASSPATH = 'external/hypergraph-of-entity/target/hypergraph-of-entity-0.1-SNAPSHOT-jar-with-dependencies.jar'
-    MEMORY_MB = 5120
     INSTANCES = {}
+
+    config = configparser.ConfigParser()
+    config.read('server.cfg')
+    MEMORY_MB = config['DEFAULT'].get('jvm_memory', 5120)
 
     class RankingFunction(Enum):
         entity_weight = 'ENTITY_WEIGHT'
