@@ -1,7 +1,8 @@
-package armyant.hgoe.structures;
+package armyant.structures;
 
-import armyant.hgoe.structures.gson.CollectionAdapter;
-import com.google.gson.*;
+import armyant.structures.gson.CollectionAdapter;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -9,10 +10,7 @@ import java.util.List;
 
 /**
  * Created by jldevezas on 2017-11-30.
- *
- * @deprecated Use armyant.structures.Trace instead
  */
-@Deprecated
 public class Trace {
     private Node root;
     private transient Node current;

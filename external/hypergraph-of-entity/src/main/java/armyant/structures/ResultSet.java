@@ -1,4 +1,4 @@
-package armyant.hgoe.structures;
+package armyant.structures;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -6,10 +6,7 @@ import java.util.*;
 
 /**
  * Created by jldevezas on 2017-11-07.
- *
- * @deprecated Use armyant.structures.ResultSet instead
  */
-@Deprecated
 public class ResultSet implements Iterator<Result>, Iterable<Result> {
     private SortedSet<Result> results;
     private Map<String, Result> maxResultPerDocID;

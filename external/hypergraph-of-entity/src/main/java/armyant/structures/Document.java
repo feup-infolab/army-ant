@@ -1,14 +1,11 @@
-package armyant.hgoe.structures;
+package armyant.structures;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Created by jldevezas on 2017-10-23.
- *
- * @deprecated Use armyant.structures.Document instead
  */
-@Deprecated
 public class Document {
     private Double score;
     private String docID;

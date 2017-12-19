@@ -44,6 +44,8 @@ class Index(object):
             return GraphOfEntityCSV(reader, index_location, loop)
         elif index_type == 'hgoe':
             return HypergraphOfEntity(reader, index_location, loop)
+        elif index_type == 'lucene':
+            return LuceneEngine(reader, index_location, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 
@@ -68,6 +70,8 @@ class Index(object):
             return GremlinServerIndex(None, index_location, loop)
         elif index_type == 'hgoe':
             return HypergraphOfEntity(None, index_location, loop)
+        elif index_type == 'lucene':
+            return LuceneEngine(None, index_location, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 
@@ -662,10 +666,10 @@ class HypergraphOfEntity(Index):
 
         signal.signal(signal.SIGINT, handler)
 
-        package = JPackage('armyant.hgoe')
-        HypergraphOfEntity.JHypergraphOfEntityInMemory = package.inmemory.HypergraphOfEntityInMemoryGrph
-        HypergraphOfEntity.JDocument = package.structures.Document
-        HypergraphOfEntity.JTriple = package.structures.Triple
+        package = JPackage('armyant')
+        HypergraphOfEntity.JHypergraphOfEntityInMemory = package.hgoe.inmemory.HypergraphOfEntityInMemoryGrph
+        HypergraphOfEntity.JDocument = package.hgoe.structures.Document
+        HypergraphOfEntity.JTriple = package.hgoe.structures.Triple
         HypergraphOfEntity.JRankingFunction = JClass("armyant.hgoe.inmemory.HypergraphOfEntityInMemoryGrph$RankingFunction")
 
     async def load(self):
@@ -735,6 +739,86 @@ class HypergraphOfEntity(Index):
                 HypergraphOfEntity.INSTANCES[self.index_location] = hgoe
             
             results = hgoe.search(query, ranking_function)
+            num_docs = results.getNumDocs()
+            trace = results.getTrace()
+            results = [Result(result.getDocID(), result.getScore())
+                       for result in itertools.islice(results, offset, offset+limit)]
+        except JavaException as e:
+            logger.error("Java Exception: %s" % e.stacktrace())
+
+        return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()), trace_ascii=trace.toASCII())
+
+# TODO rename hypergraph-of-entity to general "Army ANT Java implementations"
+class LuceneEngine(Index):
+    CLASSPATH = 'external/hypergraph-of-entity/target/hypergraph-of-entity-0.1-SNAPSHOT-jar-with-dependencies.jar'
+
+    config = configparser.ConfigParser()
+    config.read('server.cfg')
+    MEMORY_MB = int(config['DEFAULT'].get('jvm_memory', '5120'))
+
+    class RankingFunction(Enum):
+        tf_idf = 'TF_IDF'
+
+    def init(self):
+        if isJVMStarted(): return
+
+        startJVM(
+            jpype.getDefaultJVMPath(),
+            '-Djava.class.path=%s' % LuceneEngine.CLASSPATH,
+            '-Xms%dm' % LuceneEngine.MEMORY_MB,
+            '-Xmx%dm' % LuceneEngine.MEMORY_MB)
+
+        signal.signal(signal.SIGINT, handler)
+
+        package = JPackage('armyant')
+        LuceneEngine.JLuceneEngine = package.lucene.LuceneEngine
+        LuceneEngine.JDocument = package.structures.Document
+        LuceneEngine.JTriple = package.structures.Triple
+        LuceneEngine.JRankingFunction = JClass("armyant.lucene.LuceneEngine$RankingFunction")
+
+    async def index(self):
+        self.init()
+
+        try:
+            lucene = LuceneEngine.JLuceneEngine(self.index_location)
+            
+            corpus = []
+            for doc in self.reader:
+                logger.debug("Indexing document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
+                triples = list(map(lambda t: LuceneEngine.JTriple(t[0].label, t[1], t[2].label), doc.triples))
+                jDoc = LuceneEngine.JDocument(
+                    JString(doc.doc_id), JString(doc.entity), JString(doc.text), java.util.Arrays.asList(triples))
+                lucene.indexDocument(jDoc)
+
+                yield Document(
+                    doc_id = doc.doc_id,
+                    metadata = {
+                        'url': doc.metadata.get('url'),
+                        'name': doc.metadata.get('name')
+                    })
+
+            lucene.close()
+        except JavaException as e:
+            logger.error("Java Exception: %s" % e.stacktrace())
+
+    async def search(self, query, offset, limit, ranking_function=None):
+        self.init()
+
+        if ranking_function:
+            ranking_function = LuceneEngine.RankingFunction[ranking_function]
+        else:
+            ranking_function = LuceneEngine.RankingFunction['tf_idf']
+
+        logger.info("Using '%s' as ranking function" % ranking_function.value)
+        ranking_function = LuceneEngine.JRankingFunction.valueOf(ranking_function.value)
+
+        results = []
+        num_docs = 0
+        trace = None
+        try:
+            lucene = LuceneEngine.JLuceneEngine(self.index_location)
+            
+            results = lucene.search(query, offset, limit, ranking_function)
             num_docs = results.getNumDocs()
             trace = results.getTrace()
             results = [Result(result.getDocID(), result.getScore())

@@ -1,17 +1,13 @@
-package armyant.hgoe.structures;
+package armyant.structures;
 
 import armyant.hgoe.indisk.nodes.Node;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Created by jldevezas on 2017-11-07.
- *
- * @deprecated Use armyant.structures.Result instead
  */
-@Deprecated
 public class Result {
     private double score;
     private Object node;

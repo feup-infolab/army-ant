@@ -1,11 +1,8 @@
-package armyant.hgoe.structures;
+package armyant.structures;
 
 /**
  * Created by jldevezas on 2017-10-23.
- *
- * @deprecated Use armyant.structures.Triple instead
  */
-@Deprecated
 public class Triple {
     private String subject;
     private String predicate;

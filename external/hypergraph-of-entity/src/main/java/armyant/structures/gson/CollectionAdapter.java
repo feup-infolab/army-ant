@@ -1,4 +1,4 @@
-package armyant.hgoe.structures.gson;
+package armyant.structures.gson;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -10,10 +10,7 @@ import java.util.Collection;
 
 /**
  * Created by jldevezas on 2017-12-04.
- *
- * @deprecated Use armyant.structures.CollectionAdapter instead
  */
-@Deprecated
 public class CollectionAdapter implements JsonSerializer<Collection<?>> {
     @Override
     public JsonElement serialize(Collection<?> src, Type typeOfSrc, JsonSerializationContext context) {
