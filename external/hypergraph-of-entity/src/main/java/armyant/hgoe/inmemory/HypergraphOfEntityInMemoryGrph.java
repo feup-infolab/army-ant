@@ -545,7 +545,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
                 String messageRandomPath = Arrays.stream(randomPath.toVertexArray())
                         .mapToObj(nodeID -> nodeIndex.getKey(nodeID).toString())
                         .collect(Collectors.joining(" -> "));
-                trace.add(messageRandomPath);
+                trace.add(messageRandomPath.replace("%", "%%"));
                 trace.goDown();
 
                 for (int nodeID : randomPath.toVertexArray()) {
