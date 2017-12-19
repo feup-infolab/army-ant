@@ -644,7 +644,7 @@ class HypergraphOfEntity(Index):
 
     config = configparser.ConfigParser()
     config.read('server.cfg')
-    MEMORY_MB = config['DEFAULT'].get('jvm_memory', 5120)
+    MEMORY_MB = int(config['DEFAULT'].get('jvm_memory', '5120'))
 
     class RankingFunction(Enum):
         entity_weight = 'ENTITY_WEIGHT'
