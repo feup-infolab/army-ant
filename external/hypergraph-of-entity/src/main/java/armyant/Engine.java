@@ -1,7 +1,7 @@
-package armyant.hgoe;
+package armyant;
 
-import armyant.hgoe.structures.Document;
-import armyant.hgoe.structures.ResultSet;
+import armyant.structures.Document;
+import armyant.structures.ResultSet;
 import com.optimaize.langdetect.LanguageDetector;
 import com.optimaize.langdetect.LanguageDetectorBuilder;
 import com.optimaize.langdetect.i18n.LdLocale;
@@ -35,17 +35,14 @@ import java.util.List;
 
 /**
  * Created by jldevezas on 2017-11-10.
- *
- * @deprecated Use armyant.Engine instead
  */
-@Deprecated
-public abstract class HypergraphOfEntity {
-    private static final Logger logger = LoggerFactory.getLogger(HypergraphOfEntity.class);
+public abstract class Engine {
+    private static final Logger logger = LoggerFactory.getLogger(Engine.class);
     private static final int MIN_TOKEN_LENGTH = 3;
 
     private LanguageDetector languageDetector;
 
-    public HypergraphOfEntity() {
+    public Engine() {
         try {
             List<LanguageProfile> languageProfiles = new LanguageProfileReader().readAllBuiltIn();
             languageDetector = LanguageDetectorBuilder.create(NgramExtractors.standard())
@@ -56,11 +53,11 @@ public abstract class HypergraphOfEntity {
         }
     }
 
-    public abstract void index(Document document) throws IOException;
-    public void indexCorpus(Collection<Document> corpus) throws IOException {};
+    public abstract void index(Document document) throws Exception;
+    public void indexCorpus(Collection<Document> corpus) {}
     public void postProcessing() { }
-    public abstract ResultSet search(String query) throws IOException;
-    public void close() { }
+    public abstract ResultSet search(String query, int offset, int limit) throws Exception;
+    public void close() throws Exception { }
 
     protected String formatMillis(float millis) {
         if (millis >= 1000) return formatMillis((long) millis);

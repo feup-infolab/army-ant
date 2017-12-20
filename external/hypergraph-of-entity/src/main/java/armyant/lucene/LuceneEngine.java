@@ -1,5 +1,6 @@
 package armyant.lucene;
 
+import armyant.Engine;
 import armyant.structures.Document;
 import armyant.structures.Result;
 import armyant.structures.ResultSet;
@@ -28,7 +29,7 @@ import java.util.Collection;
 /**
  * Created by jldevezas on 2017-12-19.
  */
-public class LuceneEngine {
+public class LuceneEngine extends Engine {
     private static final Logger logger = LoggerFactory.getLogger(LuceneEngine.class);
 
     private String path;
@@ -36,7 +37,11 @@ public class LuceneEngine {
     private Directory directory;
     private IndexWriter writer;
 
-    public LuceneEngine(String path) throws IOException {
+    private long counter = 0;
+    private long totalTime = 0;
+    private float avgTimePerDocument = 0;
+
+    public LuceneEngine(String path) throws Exception {
         this.path = path;
         directory = FSDirectory.open(Paths.get(path));
         analyzer = new StandardAnalyzer();
@@ -45,23 +50,39 @@ public class LuceneEngine {
         writer = new IndexWriter(directory, writerConfig);
     }
 
-    public void indexDocument(Document document) throws IOException {
+    public void index(Document document) throws Exception {
+        long startTime = System.currentTimeMillis();
+
         org.apache.lucene.document.Document luceneDocument = new org.apache.lucene.document.Document();
         luceneDocument.add(new TextField("text", document.getText(), TextField.Store.YES));
         writer.addDocument(luceneDocument);
+
+        long time = System.currentTimeMillis() - startTime;
+        totalTime += time;
+
+        counter++;
+        avgTimePerDocument = counter > 1 ? (avgTimePerDocument * (counter - 1) + time) / counter : time;
+
+        if (counter % 100 == 0) {
+            logger.info(
+                    "{} indexed documents in {} ({}/doc, {} docs/h)",
+                    counter, formatMillis(totalTime), formatMillis(avgTimePerDocument),
+                    counter * 3600000 / totalTime);
+        }
     }
 
     public void indexCorpus(Collection<Document> corpus) {
         corpus.parallelStream().forEach(document -> {
             try {
-                indexDocument(document);
-            } catch (IOException e) {
+                index(document);
+            } catch (Exception e) {
                 logger.warn("Error indexing document {}, skpping", document.getDocID(), e);
             }
         });
     }
 
-    public ResultSet search(String query, int offset, int limit) throws IOException, ParseException {
+    @Override
+    public ResultSet search(String query, int offset, int limit) throws Exception {
         return search(query, offset, limit, RankingFunction.TF_IDF);
     }
 
@@ -89,7 +110,7 @@ public class LuceneEngine {
         return results;
     }
 
-    public void close() throws IOException {
+    public void close() throws Exception {
         if (writer != null) writer.close();
     }
 
