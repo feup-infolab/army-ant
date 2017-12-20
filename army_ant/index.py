@@ -645,47 +645,44 @@ class GraphOfEntityCSV(GraphOfEntityBatch):
 
 def handler(signum, frame): raise KeyboardInterrupt
 
-class HypergraphOfEntity(Index):
+class JavaIndex(Index):
     BLOCK_SIZE = 5000
-    CLASSPATH = 'external/hypergraph-of-entity/target/hypergraph-of-entity-0.1-SNAPSHOT-jar-with-dependencies.jar'
+    CLASSPATH = 'external/java-impl/target/java-impl-0.1-SNAPSHOT-jar-with-dependencies.jar'
     INSTANCES = {}
 
     config = configparser.ConfigParser()
     config.read('server.cfg')
     MEMORY_MB = int(config['DEFAULT'].get('jvm_memory', '5120'))
 
+    if not isJVMStarted():
+        startJVM(
+            jpype.getDefaultJVMPath(),
+            '-Djava.class.path=%s' % CLASSPATH,
+            '-Xms%dm' % MEMORY_MB,
+            '-Xmx%dm' % MEMORY_MB)
+
+    signal.signal(signal.SIGINT, handler)
+
+    armyant = JPackage('armyant')
+    JDocument = armyant.hgoe.structures.Document
+    JTriple = armyant.hgoe.structures.Triple
+
+class HypergraphOfEntity(JavaIndex):
     class RankingFunction(Enum):
         entity_weight = 'ENTITY_WEIGHT'
         jaccard = 'JACCARD_SCORE'
         random_walk = 'RANDOM_WALK_SCORE'
 
-    def init(self):
-        if isJVMStarted(): return
-
-        startJVM(
-            jpype.getDefaultJVMPath(),
-            '-Djava.class.path=%s' % HypergraphOfEntity.CLASSPATH,
-            '-Xms%dm' % HypergraphOfEntity.MEMORY_MB,
-            '-Xmx%dm' % HypergraphOfEntity.MEMORY_MB)
-
-        signal.signal(signal.SIGINT, handler)
-
-        package = JPackage('armyant')
-        HypergraphOfEntity.JHypergraphOfEntityInMemory = package.hgoe.inmemory.HypergraphOfEntityInMemoryGrph
-        HypergraphOfEntity.JDocument = package.hgoe.structures.Document
-        HypergraphOfEntity.JTriple = package.hgoe.structures.Triple
-        HypergraphOfEntity.JRankingFunction = JClass("armyant.hgoe.inmemory.HypergraphOfEntityInMemoryGrph$RankingFunction")
+    JHypergraphOfEntityInMemory = JavaIndex.armyant.hgoe.inmemory.HypergraphOfEntityInMemoryGrph
+    JRankingFunction = JClass("armyant.hgoe.inmemory.HypergraphOfEntityInMemoryGrph$RankingFunction")
 
     async def load(self):
-        self.init()
-        if self.index_location in HypergraphOfEntity.INSTANCES:
+        if self.index_location in JavaIndex.INSTANCES:
             logger.warn("%s is already loaded, skipping" % self.index_location)
             return
-        HypergraphOfEntity.INSTANCES[self.index_location] = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location)
+        JavaIndex.INSTANCES[self.index_location] = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location)
 
     async def index(self):
-        self.init()
-
         try:
             hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location, True)
             
@@ -722,8 +719,6 @@ class HypergraphOfEntity(Index):
             logger.error("Java Exception: %s" % e.stacktrace())
 
     async def search(self, query, offset, limit, ranking_function=None):
-        self.init()
-
         if ranking_function:
             ranking_function = HypergraphOfEntity.RankingFunction[ranking_function]
         else:
@@ -752,39 +747,14 @@ class HypergraphOfEntity(Index):
 
         return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()), trace_ascii=trace.toASCII())
 
-# TODO rename hypergraph-of-entity to general "Army ANT Java implementations"
-class LuceneEngine(Index):
-    BLOCK_SIZE = 5000
-    CLASSPATH = 'external/hypergraph-of-entity/target/hypergraph-of-entity-0.1-SNAPSHOT-jar-with-dependencies.jar'
-    INSTANCES = {}
-
-    config = configparser.ConfigParser()
-    config.read('server.cfg')
-    MEMORY_MB = int(config['DEFAULT'].get('jvm_memory', '5120'))
-
+class LuceneEngine(JavaIndex):
     class RankingFunction(Enum):
         tf_idf = 'TF_IDF'
 
-    def init(self):
-        if isJVMStarted(): return
-
-        startJVM(
-            jpype.getDefaultJVMPath(),
-            '-Djava.class.path=%s' % LuceneEngine.CLASSPATH,
-            '-Xms%dm' % LuceneEngine.MEMORY_MB,
-            '-Xmx%dm' % LuceneEngine.MEMORY_MB)
-
-        signal.signal(signal.SIGINT, handler)
-
-        package = JPackage('armyant')
-        LuceneEngine.JLuceneEngine = package.lucene.LuceneEngine
-        LuceneEngine.JDocument = package.structures.Document
-        LuceneEngine.JTriple = package.structures.Triple
-        LuceneEngine.JRankingFunction = JClass("armyant.lucene.LuceneEngine$RankingFunction")
+    JLuceneEngine = JavaIndex.armyant.lucene.LuceneEngine
+    JRankingFunction = JClass("armyant.lucene.LuceneEngine$RankingFunction")
 
     async def index(self):
-        self.init()
-
         try:
             lucene = LuceneEngine.JLuceneEngine(self.index_location)
             
@@ -819,8 +789,6 @@ class LuceneEngine(Index):
             logger.error("Java Exception: %s" % e.stacktrace())
 
     async def search(self, query, offset, limit, ranking_function=None):
-        self.init()
-
         if ranking_function:
             ranking_function = LuceneEngine.RankingFunction[ranking_function]
         else:
