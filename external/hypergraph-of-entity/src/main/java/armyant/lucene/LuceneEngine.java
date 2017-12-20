@@ -7,6 +7,8 @@ import armyant.structures.ResultSet;
 import armyant.structures.Trace;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.document.Field;
+import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
@@ -54,7 +56,8 @@ public class LuceneEngine extends Engine {
         long startTime = System.currentTimeMillis();
 
         org.apache.lucene.document.Document luceneDocument = new org.apache.lucene.document.Document();
-        luceneDocument.add(new TextField("text", document.getText(), TextField.Store.YES));
+        luceneDocument.add(new StringField("doc_id", document.getDocID(), Field.Store.YES));
+        luceneDocument.add(new TextField("text", document.getText(), Field.Store.YES));
         writer.addDocument(luceneDocument);
 
         long time = System.currentTimeMillis() - startTime;
@@ -102,7 +105,8 @@ public class LuceneEngine extends Engine {
 
         int end = Math.min(offset + limit, hits.length);
         for (int i = offset; i < end; i++) {
-            results.addResult(new Result(hits[i].score, null, Integer.toString(hits[i].doc)));
+            String docID = searcher.doc(hits[i].doc).get("doc_id");
+            results.addResult(new Result(hits[i].score, null, docID));
         }
 
         reader.close();
