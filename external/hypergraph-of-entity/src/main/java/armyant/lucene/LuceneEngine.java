@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.Arrays;
+import java.util.Collection;
 
 /**
  * Created by jldevezas on 2017-12-19.
@@ -32,35 +32,33 @@ public class LuceneEngine {
     private static final Logger logger = LoggerFactory.getLogger(LuceneEngine.class);
 
     private String path;
-    private Analyzer lAnalyzer;
-    private IndexWriter lWriter = null;
+    private Analyzer analyzer;
+    private Directory directory;
+    private IndexWriter writer;
 
-    public LuceneEngine(String path) {
-        try {
-            this.path = path;
-            lAnalyzer = new StandardAnalyzer();
+    public LuceneEngine(String path) throws IOException {
+        this.path = path;
+        directory = FSDirectory.open(Paths.get(path));
+        analyzer = new StandardAnalyzer();
 
-            Directory lDirectory = FSDirectory.open(Paths.get(path));
-            IndexWriterConfig lWriterConfig = new IndexWriterConfig(lAnalyzer);
-            lWriter = new IndexWriter(lDirectory, lWriterConfig);
-        } catch (IOException e) {
-            logger.error(e.getMessage(), e);
-        }
+        IndexWriterConfig writerConfig = new IndexWriterConfig(analyzer);
+        writer = new IndexWriter(directory, writerConfig);
     }
 
-    public void indexDocument(Document document) {
-        if (lWriter == null) {
-            logger.error("Index writer is null");
-            return;
-        }
+    public void indexDocument(Document document) throws IOException {
+        org.apache.lucene.document.Document luceneDocument = new org.apache.lucene.document.Document();
+        luceneDocument.add(new TextField("text", document.getText(), TextField.Store.YES));
+        writer.addDocument(luceneDocument);
+    }
 
-        try {
-            org.apache.lucene.document.Document lDoc = new org.apache.lucene.document.Document();
-            lDoc.add(new TextField("text", document.getText(), TextField.Store.YES));
-            lWriter.addDocument(lDoc);
-        } catch (IOException e) {
-            logger.error(e.getMessage(), e);
-        }
+    public void indexCorpus(Collection<Document> corpus) {
+        corpus.parallelStream().forEach(document -> {
+            try {
+                indexDocument(document);
+            } catch (IOException e) {
+                logger.warn("Error indexing document {}, skpping", document.getDocID(), e);
+            }
+        });
     }
 
     public ResultSet search(String query, int offset, int limit) throws IOException, ParseException {
@@ -70,34 +68,29 @@ public class LuceneEngine {
     // TODO implement rankingFunction selection
     public ResultSet search(String query, int offset, int limit, RankingFunction rankingFunction)
             throws IOException, ParseException {
-        IndexReader lReader = DirectoryReader.open(FSDirectory.open(Paths.get(path)));
-        IndexSearcher lSearcher = new IndexSearcher(lReader);
+        IndexReader reader = DirectoryReader.open(directory);
+        IndexSearcher searcher = new IndexSearcher(reader);
 
-        QueryParser parser = new QueryParser("content", lAnalyzer);
-        Query lQuery = parser.parse(query);
-        ScoreDoc[] hits = lSearcher.search(lQuery, offset+limit).scoreDocs;
-        Arrays.stream(hits).forEach(System.out::println);
+        QueryParser parser = new QueryParser("text", analyzer);
+        Query luceneQuery = parser.parse(query);
+        ScoreDoc[] hits = searcher.search(luceneQuery, offset + limit).scoreDocs;
 
         ResultSet results = new ResultSet();
         results.setNumDocs((long) hits.length);
         results.setTrace(new Trace());
 
-        int end = Math.min(offset+limit, hits.length);
+        int end = Math.min(offset + limit, hits.length);
         for (int i = offset; i < end; i++) {
             results.addResult(new Result(hits[i].score, null, Integer.toString(hits[i].doc)));
         }
 
-        lReader.close();
+        reader.close();
 
         return results;
     }
 
-    public void close() {
-        try {
-            if (lWriter != null) lWriter.close();
-        } catch (IOException e) {
-            logger.error(e.getMessage(), e);
-        }
+    public void close() throws IOException {
+        if (writer != null) writer.close();
     }
 
     public enum RankingFunction {

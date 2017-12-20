@@ -82,6 +82,10 @@ class Index(object):
         key = Index.__preloaded_key__(index_location, index_type)
         Index.PRELOADED[key] = index
 
+    @staticmethod
+    async def no_store(index):
+        async for doc in index: pass
+
     def __init__(self, reader, index_location, loop):
         self.reader = reader
         self.index_location = index_location
@@ -750,7 +754,9 @@ class HypergraphOfEntity(Index):
 
 # TODO rename hypergraph-of-entity to general "Army ANT Java implementations"
 class LuceneEngine(Index):
+    BLOCK_SIZE = 5000
     CLASSPATH = 'external/hypergraph-of-entity/target/hypergraph-of-entity-0.1-SNAPSHOT-jar-with-dependencies.jar'
+    INSTANCES = {}
 
     config = configparser.ConfigParser()
     config.read('server.cfg')
@@ -784,11 +790,18 @@ class LuceneEngine(Index):
             
             corpus = []
             for doc in self.reader:
-                logger.debug("Indexing document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
+                logger.debug("Preloading document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
                 triples = list(map(lambda t: LuceneEngine.JTriple(t[0].label, t[1], t[2].label), doc.triples))
                 jDoc = LuceneEngine.JDocument(
                     JString(doc.doc_id), JString(doc.entity), JString(doc.text), java.util.Arrays.asList(triples))
-                lucene.indexDocument(jDoc)
+                corpus.append(jDoc)
+                if len(corpus) % (LuceneEngine.BLOCK_SIZE // 10) == 0:
+                    logger.info("%d documents preloaded" % len(corpus))
+
+                if len(corpus) >= LuceneEngine.BLOCK_SIZE:
+                    logger.info("Indexing batch of %d documents" % len(corpus))
+                    lucene.indexCorpus(java.util.Arrays.asList(corpus))
+                    corpus = []
 
                 yield Document(
                     doc_id = doc.doc_id,
@@ -796,6 +809,10 @@ class LuceneEngine(Index):
                         'url': doc.metadata.get('url'),
                         'name': doc.metadata.get('name')
                     })
+
+            if len(corpus) > 0:
+                logger.info("Indexing batch of %d documents" % len(corpus))
+                lucene.indexCorpus(java.util.Arrays.asList(corpus))
 
             lucene.close()
         except JavaException as e:
@@ -816,7 +833,11 @@ class LuceneEngine(Index):
         num_docs = 0
         trace = None
         try:
-            lucene = LuceneEngine.JLuceneEngine(self.index_location)
+            if self.index_location in LuceneEngine.INSTANCES:
+                lucene = LuceneEngine.INSTANCES[self.index_location]
+            else:
+                lucene = LuceneEngine.JLuceneEngine(self.index_location)
+                LuceneEngine.INSTANCES[self.index_location] = lucene
             
             results = lucene.search(query, offset, limit, ranking_function)
             num_docs = results.getNumDocs()

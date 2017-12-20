@@ -69,7 +69,7 @@ class CommandLineInterface(object):
         self.sampling = CommandLineInterfaceSampling()
 
     def index(self, source_path, source_reader, index_location='localhost', index_type='gow',
-              db_location='localhost', db_name='army_ant', db_type='mongo', limit=None):
+              db_location='localhost', db_name=None, db_type='mongo', limit=None):
         try:
             reader = Reader.factory(source_path, source_reader, limit)
 
@@ -80,7 +80,7 @@ class CommandLineInterface(object):
                     db = Database.factory(db_location, db_name, db_type, loop)
                     loop.run_until_complete(db.store(index.index()))
                 else:
-                    loop.run_until_complete(index.index())
+                    loop.run_until_complete(Index.no_store(index.index()))
             finally:
                 loop.run_until_complete(loop.shutdown_asyncgens())
                 loop.close()
@@ -88,7 +88,7 @@ class CommandLineInterface(object):
             logger.error(e)
 
     def search(self, query, offset=0, limit=10, index_location='localhost', index_type='gow',
-               db_location='localhost', db_name='army_ant', db_type='mongo'):
+               db_location='localhost', db_name=None, db_type='mongo'):
         try:
             loop = asyncio.get_event_loop()
             try:
@@ -98,6 +98,8 @@ class CommandLineInterface(object):
                 if db_location and db_name and db_type:
                     db = Database.factory(db_location, db_name, db_type, loop)
                     metadata = loop.run_until_complete(db.retrieve(response['results']))
+                else:
+                    metadata = []
                 
                 for (result, i) in zip(response['results'], range(offset, offset+limit)):
                     print("===> %3d %7.2f %s" % (i+1, result['score'], result['docID']))
