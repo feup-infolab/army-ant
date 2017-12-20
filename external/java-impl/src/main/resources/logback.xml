@@ -4,7 +4,7 @@
     <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
         <target>System.err</target>
         <encoder>
-            <pattern>%d{YYYY-MM-dd HH:mm:ss} hgoe: [%class{0}] %level: %msg%n</pattern>
+            <pattern>%d{YYYY-MM-dd HH:mm:ss} java-impl: [%class{0}] %level: %msg%n</pattern>
         </encoder>
     </appender>
 
