@@ -81,6 +81,22 @@
       </tr>
       {% endif %}
 
+      {% if task.stats %}
+      {% if task.stats.total_query_time %}
+      <tr>
+        <th>Total Query Time</th>
+        <td>{{ task.stats.total_query_time / 1000 }}s</td>
+      </tr>
+      {% endif %}
+
+      {% if task.stats.avg_query_time %}
+      <tr>
+        <th>Average Query Time</th>
+        <td>{{ task.stats.avg_query_time / 1000 }}s</td>
+      </tr>
+      {% endif %}
+      {% endif %}
+
       {% if task.eval_format == "inex" %}
 
       <!-- START INEX METADATA -->

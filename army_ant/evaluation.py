@@ -38,6 +38,7 @@ class Evaluator(object):
     def __init__(self, task, eval_location):
         self.task = task
         self.results = {}
+        self.stats = {}
         self.interrupt = False
         self.start_date = datetime.now()
 
@@ -99,6 +100,8 @@ class INEXEvaluator(FilesystemEvaluator):
 
         topics = etree.parse(self.task.topics_path)
         
+        self.stats['query_time'] = {}
+
         for topic in topics.xpath('//topic'):
             if self.interrupt:
                 logger.warn("Evaluation task was interruped")
@@ -112,8 +115,12 @@ class INEXEvaluator(FilesystemEvaluator):
             
             query = get_first(topic.xpath('title/text()'))
             
-            logger.info("Obtaining results for query '%s' of topic '%s' using '%s' index at '%s'" % (query, topic_id, self.task.index_type, self.task.index_location))
-            engine_response = await self.index.search(query, 0, 10000)
+            logger.info("Obtaining results for query '%s' of topic '%s' using '%s' index at '%s'" % (
+                query, topic_id, self.task.index_type, self.task.index_location))
+            start_time = time.time()
+            engine_response = await self.index.search(query, 0, 10000, self.task.ranking_function)
+            end_time = int(round((time.time() - start_time) * 1000))
+            self.stats['query_time'][topic_id] = end_time
 
             with open(os.path.join(self.o_results_path, '%s.csv' % topic_id), 'w', newline='') as f:
                 writer = csv.writer(f)
@@ -122,6 +129,9 @@ class INEXEvaluator(FilesystemEvaluator):
                     doc_id = result['docID']
                     relevant = topic_doc_judgements[topic_id][doc_id] > 0 if doc_id in topic_doc_judgements[topic_id] else False
                     writer.writerow([i, doc_id, relevant])
+
+        self.stats['total_query_time'] = sum([t for t in self.stats['query_time'].values()])
+        self.stats['avg_query_time'] = self.stats['total_query_time'] / len(self.stats['query_time'])
 
     def path_to_topic_id(self, path):
         return os.path.basename(os.path.splitext(path)[0])
@@ -408,7 +418,7 @@ class LivingLabsEvaluator(Evaluator):
                     with open(pickle_path, 'rb') as f:
                         results = pickle.load(f)
                 else:
-                    engine_response = await self.index.search(query['qstr'], 0, 10000)
+                    engine_response = await self.index.search(query['qstr'], 0, 10000, self.task.ranking_function)
                     results = engine_response['results']
                     with open(pickle_path, 'wb') as f:
                         pickle.dump(results, f)
@@ -432,7 +442,7 @@ class EvaluationTask(object):
     def __init__(self, index_location, index_type, eval_format, ranking_function=None,
                  topics_filename=None, topics_path=None, assessments_filename=None, assessments_path=None,
                  base_url=None, api_key=None, run_id=None, status=EvaluationTaskStatus.WAITING,
-                 topics_md5=None, assessments_md5=None, time=None, _id=None, results=None):
+                 topics_md5=None, assessments_md5=None, time=None, _id=None, results=None, stats=None):
         self.index_location = index_location
         self.index_type = index_type
         self.eval_format = eval_format
@@ -449,6 +459,7 @@ class EvaluationTask(object):
         self.status = EvaluationTaskStatus(status)
         self.time = time
         if results: self.results = results
+        if stats: self.stats = stats
         if _id: self._id = str(_id)
 
     def __repr__(self):
@@ -558,10 +569,10 @@ class EvaluationTaskManager(object):
         
         return inserted_ids
 
-    def save_results(self, task, results):
+    def save(self, task, results, stats=None):
         self.db['evaluation_tasks'].update_one(
             { '_id': ObjectId(task._id) },
-            { '$set': { 'status': EvaluationTaskStatus.DONE, 'results': results } })
+            { '$set': { 'status': EvaluationTaskStatus.DONE, 'results': results, 'stats': stats } })
 
     def set_status(self, task, status):
         self.db['evaluation_tasks'].update_one(
@@ -725,7 +736,7 @@ class EvaluationTaskManager(object):
                         status = await e.run()
 
                         if task.eval_format == 'inex':
-                            self.save_results(task, e.results)
+                            self.save(task, e.results, e.stats)
                             self.running = None
                         elif task.eval_format == 'll-api':
                             self.set_status(task, status)
