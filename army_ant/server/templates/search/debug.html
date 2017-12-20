@@ -15,7 +15,7 @@
             Results
           </a>
         </li>
-        {% if index_type in ['gow', 'goe'] %}
+        {% if results and results|length > 0 and results[0]['components'] %}
         <li class="tab-item">
           <a href="#score-components-plot">
             Score Components

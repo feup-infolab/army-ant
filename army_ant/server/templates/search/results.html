@@ -15,7 +15,7 @@
           <td> <div class="image" style="background-image: url('{{
               app.router.static.url(filename='img/thumbnail_placeholder.png') }}')"></div> </td>
           <td>
-            {% if result.docID.startswith('http') %}
+            {% if result.docID and result.docID.startswith('http') %}
             <a href="{{ result.docID }}" target="_blank">{{ result.docID }}</a>
             {% else %}
             {{ result.docID }}

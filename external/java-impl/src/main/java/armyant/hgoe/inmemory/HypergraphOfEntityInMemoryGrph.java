@@ -45,10 +45,27 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
     private static final Logger logger = LoggerFactory.getLogger(HypergraphOfEntityInMemoryGrph.class);
     private static final int SEARCH_MAX_DISTANCE = 2;
     private static final int MAX_PATHS_PER_PAIR = 1000;
-    private static final int WALK_LENGTH = 3;
-    private static final int WALK_REPEATS = 10;
+
+    // Default
+    /*private static final int WALK_LENGTH = 3;
+    private static final int WALK_REPEATS = 10;*/
+
+    // Increase repeats
+    /*private static final int WALK_LENGTH = 3;
+    private static final int WALK_REPEATS = 10000;*/
+
+    // Increase length
+    /*private static final int WALK_LENGTH = 10;
+    private static final int WALK_REPEATS = 10;*/
+
+    // Increase length and repeats
+    /*private static final int WALK_LENGTH = 10;
+    private static final int WALK_REPEATS = 10000;*/
+
+    private static final float PROBABILITY_THRESHOLD = 0.005f;
     private static final XoRoShiRo128PlusRandom RNG = new XoRoShiRo128PlusRandom();
-    private static final Kryo kryo;
+
+    /*private static final Kryo kryo;
     private static final MapSerializer nodeEdgeIndexSerializer;
 
     static {
@@ -61,7 +78,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         nodeEdgeIndexSerializer.setValueClass(Integer.class, kryo.getSerializer(Integer.class));
 
         kryo.register(HashMap.class, nodeEdgeIndexSerializer);
-    }
+    }*/
 
     private File directory;
     private InMemoryGrph graph;
@@ -527,55 +544,69 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         randomStep(randomNodeID, remainingSteps - 1, path);
     }
 
-    public ResultSet randomWalkSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights) {
+    public ResultSet randomWalkSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights, int walk_length, int walk_repeats) {
+        logger.info("WALK_LENGTH = {}, WALK_REPEATS = {}", walk_length, walk_repeats);
+
         Int2FloatOpenHashMap weightedNodeVisitProbability = new Int2FloatOpenHashMap();
-        trace.add("Random walk search");
+        Int2DoubleOpenHashMap nodeCoverage = new Int2DoubleOpenHashMap();
+
+        trace.add("Random walk search (WALK_LENGTH = %d, WALK_REPEATS = %d)", walk_length, walk_repeats);
         trace.goDown();
 
         for (int seedNodeID : seedNodeIDs) {
             Int2IntOpenHashMap nodeVisits = new Int2IntOpenHashMap();
             trace.add("From seed node: %s", nodeIndex.getKey(seedNodeID));
-            trace.goDown();
+            /*trace.goDown();
             trace.add("Random walk with restart (WALK_LENGTH = %d, WALK_REPEATS = %d)", WALK_LENGTH, WALK_REPEATS);
-            trace.goDown();
+            trace.goDown();*/
 
-            for (int i = 0; i < WALK_REPEATS; i++) {
-                Path randomPath = randomWalk(seedNodeID, WALK_LENGTH);
+            for (int i = 0; i < walk_repeats; i++) {
+                Path randomPath = randomWalk(seedNodeID, walk_length);
 
-                String messageRandomPath = Arrays.stream(randomPath.toVertexArray())
+                /*String messageRandomPath = Arrays.stream(randomPath.toVertexArray())
                         .mapToObj(nodeID -> nodeIndex.getKey(nodeID).toString())
                         .collect(Collectors.joining(" -> "));
                 trace.add(messageRandomPath.replace("%", "%%"));
-                trace.goDown();
+                trace.goDown();*/
 
                 for (int nodeID : randomPath.toVertexArray()) {
                     nodeVisits.addTo(nodeID, 1);
-                    trace.add("Node %s visited %d times", nodeIndex.getKey(nodeID), nodeVisits.get(nodeID));
+                    //trace.add("Node %s visited %d times", nodeIndex.getKey(nodeID), nodeVisits.get(nodeID));
                 }
 
-                trace.goUp();
+                //trace.goUp();
             }
 
-            trace.goUp();
+            //trace.goUp();
 
-            trace.add("Accumulating (non-normalized) visit probability, weighted by seed node confidence");
+            int maxVisits = Arrays.stream(nodeVisits.values().toIntArray()).max().orElse(0);
             trace.goDown();
+            trace.add("max(visits) = %d", maxVisits);
+
+            /*trace.add("Accumulating visit probability, weighted by seed node confidence");
+            trace.goDown();*/
             for (int nodeID : nodeVisits.keySet()) {
-                weightedNodeVisitProbability.compute(
-                        nodeID, (k, v) -> (v == null ? 0 : v) + nodeVisits.get(nodeID) * seedNodeWeights.get(seedNodeID).floatValue());
-                trace.add("score(%s) += visits(%s) * w(%s)",
+                nodeCoverage.addTo(nodeID, 1);
+                synchronized (this) {
+                    weightedNodeVisitProbability.compute(
+                            nodeID, (k, v) -> (v == null ? 0 : v) + (float) nodeVisits.get(nodeID) / maxVisits * seedNodeWeights.get(seedNodeID).floatValue());
+                }
+                /*trace.add("score(%s) += visits(%s) * w(%s)",
                         nodeIndex.getKey(nodeID),
                         nodeIndex.getKey(nodeID),
                         nodeIndex.getKey(seedNodeID));
                 trace.goDown();
-                trace.add("visits(%s) = %d", nodeIndex.getKey(nodeID).toString(), nodeVisits.get(nodeID));
+                trace.add("P(visit(%s)) = %f", nodeIndex.getKey(nodeID).toString(), (float) nodeVisits.get(nodeID) / maxVisits);
                 trace.add("w(%s) = %f", nodeIndex.getKey(seedNodeID), seedNodeWeights.get(seedNodeID));
                 trace.add("score(%s) = %f", nodeIndex.getKey(nodeID), weightedNodeVisitProbability.get(nodeID));
-                trace.goUp();
+                trace.goUp();*/
             }
 
+            trace.add("%d visited nodes", nodeVisits.size());
             trace.goUp();
-            trace.goUp();
+
+            /*trace.goUp();
+            trace.goUp();*/
         }
 
         trace.goUp();
@@ -583,17 +614,40 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         ResultSet resultSet = new ResultSet();
         resultSet.setTrace(trace);
 
+        trace.add("Weighted nodes");
+        trace.goDown();
+
+        double maxCoverage = Arrays.stream(nodeCoverage.values().toDoubleArray()).max().orElse(0d);
+        trace.add("max(coverage) = %f", maxCoverage);
+
         for (int nodeID : weightedNodeVisitProbability.keySet()) {
+            nodeCoverage.compute(nodeID, (k, v) -> v / maxCoverage);
+
             Node node = nodeIndex.getKey(nodeID);
+            trace.add(node.toString().replace("%", "%%"));
+            trace.goDown();
+            trace.add("score = %f", weightedNodeVisitProbability.get(nodeID));
+            trace.add("coverage = %f", nodeCoverage.get(nodeID));
+            trace.goUp();
+
             if (node instanceof EntityNode) {
                 EntityNode entityNode = (EntityNode) node;
                 logger.debug("Ranking {} using RANDOM_WALK_SCORE", entityNode);
-                double score = weightedNodeVisitProbability.get(nodeID);
-                if (score > 0 && entityNode.hasDocID()) {
+                double score = nodeCoverage.get(nodeID) * weightedNodeVisitProbability.get(nodeID);
+                if (score > PROBABILITY_THRESHOLD && entityNode.hasDocID()) {
                     resultSet.addReplaceResult(new Result(score, entityNode, entityNode.getDocID()));
                 }
+                /*if (score > PROBABILITY_THRESHOLD) {
+                    if (entityNode.hasDocID()) {
+                        resultSet.addReplaceResult(new Result(score, entityNode, entityNode.getDocID()));
+                    } else {
+                        resultSet.addReplaceResult(new Result(score, entityNode, entityNode.getName()));
+                    }
+                }*/
             }
         }
+
+        trace.goUp();
 
         trace.add("Collecting results (class=EntityNode; hasDocID()=true)");
         trace.goDown();
@@ -733,7 +787,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
 
     @Override
     public ResultSet search(String query) throws IOException {
-        return search(query, RankingFunction.RANDOM_WALK_SCORE);
+        return search(query, RankingFunction.RANDOM_WALK_SCORE_10_10000);
     }
 
     public ResultSet search(String query, RankingFunction function) throws IOException {
@@ -752,7 +806,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         //System.out.println("Seed Nodes: " + seedNodeIDs.stream().map(nodeID -> nodeID + "=" + nodeIndex.getKey(nodeID).toString()).collect(Collectors.toList()));
         trace.add("Mapping query term nodes to seed nodes");
         trace.goDown();
-        for (int seedNodeID: seedNodeIDs) {
+        for (int seedNodeID : seedNodeIDs) {
             trace.add(nodeIndex.getKey(seedNodeID).toString());
         }
         trace.goUp();
@@ -769,8 +823,17 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
 
         ResultSet resultSet;
         switch (function) {
-            case RANDOM_WALK_SCORE:
-                resultSet = randomWalkSearch(seedNodeIDs, seedNodeWeights);
+            case RANDOM_WALK_SCORE_3_10:
+                resultSet = randomWalkSearch(seedNodeIDs, seedNodeWeights, 3, 10);
+                break;
+            case RANDOM_WALK_SCORE_3_10000:
+                resultSet = randomWalkSearch(seedNodeIDs, seedNodeWeights, 3, 10000);
+                break;
+            case RANDOM_WALK_SCORE_10_10:
+                resultSet = randomWalkSearch(seedNodeIDs, seedNodeWeights, 10, 10);
+                break;
+            case RANDOM_WALK_SCORE_10_10000:
+                resultSet = randomWalkSearch(seedNodeIDs, seedNodeWeights, 10, 10000);
                 break;
             case ENTITY_WEIGHT:
             case JACCARD_SCORE:
@@ -831,6 +894,9 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
     public enum RankingFunction {
         ENTITY_WEIGHT,
         JACCARD_SCORE,
-        RANDOM_WALK_SCORE
+        RANDOM_WALK_SCORE_3_10,
+        RANDOM_WALK_SCORE_3_10000,
+        RANDOM_WALK_SCORE_10_10,
+        RANDOM_WALK_SCORE_10_10000
     }
 }
