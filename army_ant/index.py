@@ -766,6 +766,7 @@ class LuceneEngine(JavaIndex):
     async def index(self):
         try:
             lucene = LuceneEngine.JLuceneEngine(self.index_location)
+            lucene.open()
             
             corpus = []
             for doc in self.reader:

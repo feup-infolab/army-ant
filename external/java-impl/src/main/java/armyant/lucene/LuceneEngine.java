@@ -48,7 +48,10 @@ public class LuceneEngine extends Engine {
         this.path = path;
         directory = FSDirectory.open(Paths.get(path));
         analyzer = new StandardAnalyzer();
+    }
 
+    public void open() throws Exception {
+        logger.info("Opening for indexing");
         IndexWriterConfig writerConfig = new IndexWriterConfig(analyzer);
         writer = new IndexWriter(directory, writerConfig);
     }
@@ -129,6 +132,7 @@ public class LuceneEngine extends Engine {
     }
 
     public void close() throws Exception {
+        logger.info("Closing index writer");
         if (writer != null) writer.close();
     }
 
