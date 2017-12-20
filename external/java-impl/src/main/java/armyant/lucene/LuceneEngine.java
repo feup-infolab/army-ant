@@ -19,6 +19,7 @@ import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.similarities.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.slf4j.Logger;
@@ -89,11 +90,24 @@ public class LuceneEngine extends Engine {
         return search(query, offset, limit, RankingFunction.TF_IDF);
     }
 
-    // TODO implement rankingFunction selection
     public ResultSet search(String query, int offset, int limit, RankingFunction rankingFunction)
             throws IOException, ParseException {
         IndexReader reader = DirectoryReader.open(directory);
         IndexSearcher searcher = new IndexSearcher(reader);
+
+        switch (rankingFunction) {
+            case TF_IDF:
+                searcher.setSimilarity(new ClassicSimilarity());
+                break;
+            case BM25:
+                searcher.setSimilarity(new BM25Similarity());
+                break;
+            case DFR_BE_L_H1:
+                searcher.setSimilarity(new DFRSimilarity(new BasicModelBE(), new AfterEffectL(), new NormalizationH1()));
+                break;
+            default:
+                searcher.setSimilarity(new ClassicSimilarity());
+        }
 
         QueryParser parser = new QueryParser("text", analyzer);
         Query luceneQuery = parser.parse(query);
@@ -119,6 +133,8 @@ public class LuceneEngine extends Engine {
     }
 
     public enum RankingFunction {
-        TF_IDF
+        TF_IDF,
+        BM25,
+        DFR_BE_L_H1
     }
 }

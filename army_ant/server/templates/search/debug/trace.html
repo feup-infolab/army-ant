@@ -1,4 +1,4 @@
-{% if trace_ascii %}
+{% if trace and trace|length > 1 and trace_ascii %}
 <button id="trace-export-btn" class="btn btn-primary">Export</button>
 
 <div class="modal trace-ascii">
@@ -50,7 +50,7 @@
 </script>
 {% endif %}
 
-{% if trace %}
+{% if trace and trace|length > 1 %}
 <ul class="trace collapsibleList">
   <li>
     {{ trace.message }}

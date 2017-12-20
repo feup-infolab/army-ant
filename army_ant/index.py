@@ -720,7 +720,11 @@ class HypergraphOfEntity(JavaIndex):
 
     async def search(self, query, offset, limit, ranking_function=None):
         if ranking_function:
-            ranking_function = HypergraphOfEntity.RankingFunction[ranking_function]
+            try:
+                ranking_function = HypergraphOfEntity.RankingFunction[ranking_function]
+            except (JavaException, KeyError) as e:
+                logger.error("Could not use '%s' as the ranking function" % ranking_function)
+                ranking_function = HypergraphOfEntity.RankingFunction['random_walk']
         else:
             ranking_function = HypergraphOfEntity.RankingFunction['random_walk']
 
@@ -750,6 +754,8 @@ class HypergraphOfEntity(JavaIndex):
 class LuceneEngine(JavaIndex):
     class RankingFunction(Enum):
         tf_idf = 'TF_IDF'
+        bm25 = 'BM25'
+        dfr_be_l_h1 = 'DFR_BE_L_H1'
 
     JLuceneEngine = JavaIndex.armyant.lucene.LuceneEngine
     JRankingFunction = JClass("armyant.lucene.LuceneEngine$RankingFunction")
@@ -790,7 +796,11 @@ class LuceneEngine(JavaIndex):
 
     async def search(self, query, offset, limit, ranking_function=None):
         if ranking_function:
-            ranking_function = LuceneEngine.RankingFunction[ranking_function]
+            try:
+                ranking_function = LuceneEngine.RankingFunction[ranking_function]
+            except (JavaException, KeyError) as e:
+                logger.error("Could not use '%s' as the ranking function" % ranking_function)
+                ranking_function = LuceneEngine.RankingFunction['tf_idf']
         else:
             ranking_function = LuceneEngine.RankingFunction['tf_idf']
 

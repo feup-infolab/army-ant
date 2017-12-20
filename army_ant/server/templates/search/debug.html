@@ -83,7 +83,7 @@
           {% if index_type in ['gow', 'goe', 'hgoe'] %}
           {% include 'search/debug/ranking_models/%s.html' % index_type %}
           {% else %}
-          <span class="label label-error">There is no information about this ranking function.</span>
+          <span class="label label-error">There is no information about this model.</span>
           {% endif %}
         </div>
       </div>
@@ -94,7 +94,7 @@
             {% if dataset in ['wikipedia_data', 'inex'] %}
             {% include 'search/debug/collections/%s.html' % dataset %}
             {% else %}
-            <span class="label">There is no information about this dataset.</span>
+            <span class="label">There is no information about this collection.</span>
             {% endif %}
           </div>
         </div>

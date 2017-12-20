@@ -18,7 +18,7 @@ public class Trace {
     private transient String rootData;
 
     public Trace() {
-        this("Hypergraph of Entity Ranking Model Trace");
+        this("Model Trace");
     }
 
     public Trace(String rootData) {
