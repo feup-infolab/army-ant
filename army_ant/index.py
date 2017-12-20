@@ -664,8 +664,8 @@ class JavaIndex(Index):
     signal.signal(signal.SIGINT, handler)
 
     armyant = JPackage('armyant')
-    JDocument = armyant.hgoe.structures.Document
-    JTriple = armyant.hgoe.structures.Triple
+    JDocument = armyant.structures.Document
+    JTriple = armyant.structures.Triple
 
 class HypergraphOfEntity(JavaIndex):
     class RankingFunction(Enum):
@@ -676,6 +676,8 @@ class HypergraphOfEntity(JavaIndex):
         random_walk_10_10 = 'RANDOM_WALK_SCORE_10_10'
         random_walk_10_10000 = 'RANDOM_WALK_SCORE_10_10000'
 
+    JDocument = armyant.hgoe.structures.Document
+    JTriple = armyant.hgoe.structures.Triple
     JHypergraphOfEntityInMemory = JavaIndex.armyant.hgoe.inmemory.HypergraphOfEntityInMemoryGrph
     JRankingFunction = JClass("armyant.hgoe.inmemory.HypergraphOfEntityInMemoryGrph$RankingFunction")
 
