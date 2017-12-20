@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>army-ant</groupId>
-    <artifactId>hypergraph-of-entity</artifactId>
+    <artifactId>java-impl</artifactId>
     <version>0.1-SNAPSHOT</version>
 
     <properties>
