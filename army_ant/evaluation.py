@@ -194,10 +194,10 @@ class INEXEvaluator(FilesystemEvaluator):
 
                     logger.debug("%s - TP(%d) + FP(%d) + TN(%d) + FN(%d) = %d" % (topic_id, tp, fp, tn, fn, tp+fp+tn+fn))
 
-                    precision = tp / (tp + fp)
+                    precision = tp / (tp + fp) if tp + fp > 0 else 0
                     precisions.append(precision)
 
-                    recall = tp / (tp + fn)
+                    recall = tp / (tp + fn) if tp + fn > 0 else 0
                     recalls.append(recall)
 
                     f_0_5_score = self.f_score(precision, recall, beta=0.5)
