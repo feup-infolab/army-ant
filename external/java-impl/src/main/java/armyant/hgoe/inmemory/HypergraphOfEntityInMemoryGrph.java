@@ -807,7 +807,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         trace.add("Mapping query term nodes to seed nodes");
         trace.goDown();
         for (int seedNodeID : seedNodeIDs) {
-            trace.add(nodeIndex.getKey(seedNodeID).toString());
+            trace.add(nodeIndex.getKey(seedNodeID).toString().replace("%", "%%"));
         }
         trace.goUp();
 

@@ -35,6 +35,13 @@ public class Trace {
     }
 
     public void add(String message, Object... objects) {
+        for (int i=0; i < objects.length; i++) {
+            if (objects[i] instanceof String) {
+                String object = (String) objects[i];
+                objects[i] = object.replace("%", "%%");
+            }
+        }
+
         Node node = new Node();
         node.message = String.format(message, objects);
         node.details = new ArrayList<>();
