@@ -341,7 +341,7 @@ async def preload_engines(app):
                 app['engines'][engine]['index_type'],
                 loop)
 
-def run_app(loop, host, port):
+def run_app(loop, host, port, path=None):
     config = configparser.ConfigParser()
     config.read('server.cfg')
 
@@ -385,4 +385,9 @@ def run_app(loop, host, port):
     app.on_cleanup.append(shutdown_jvm)
     app.on_cleanup.append(cleanup_background_tasks)
 
-    web.run_app(app, host=host, port=port)
+    if path:
+        os.umask(0o000)
+        web.run_app(app, path=path)
+    else:
+        web.run_app(app, host=host, port=port)
+
