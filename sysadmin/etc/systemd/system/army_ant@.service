@@ -1,0 +1,12 @@
+[Unit]
+Description=Army ANT Server %i
+
+[Service]
+Environment=USER=jld
+User=${USER}
+Group=${USER}
+WorkingDirectory=/home/${USER}/InfoLab/army-ant
+ExecStart=/home/jldevezas/.pyenv/shims/python /home/${USER}/army-ant/army-ant.py server --path=/tmp/army_ant_%i.sock
+
+[Install]
+WantedBy=multi-user.target
