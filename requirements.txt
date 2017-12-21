@@ -20,6 +20,7 @@ pandas==0.20.3
 #jinja2==2.9.5
 
 aiogremlin==3.2.6rc1
+gremlinpython==3.2.6
 aiohttp==2.3.6
 aiohttp_jinja2==0.14.0
 jinja2==2.10
