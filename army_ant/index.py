@@ -9,7 +9,7 @@ import logging, string, asyncio, pymongo, re, json, psycopg2, os, jpype, itertoo
 from enum import Enum
 from jpype import *
 from aiogremlin import Cluster
-from aiogremlin.gremlin_python.structure.graph import Vertex
+#from aiogremlin.gremlin_python.structure.graph import Vertex
 from threading import RLock
 from concurrent.futures import ThreadPoolExecutor
 from nltk import word_tokenize

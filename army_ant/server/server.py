@@ -5,7 +5,7 @@ from jpype import *
 from datetime import datetime
 from collections import OrderedDict
 from aiohttp import web
-from aiohttp.errors import ClientOSError
+from aiohttp.client_exceptions import ClientOSError
 from army_ant.index import Index, Result
 from army_ant.database import Database
 from army_ant.evaluation import EvaluationTask, EvaluationTaskManager
