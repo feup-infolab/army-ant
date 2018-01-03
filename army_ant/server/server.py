@@ -345,7 +345,7 @@ def run_app(loop, host, port, path=None):
     config = configparser.ConfigParser()
     config.read('server.cfg')
 
-    app = web.Application(loop=loop)
+    app = web.Application(client_max_size=1024*1024*4, loop=loop)
 
     app['engines'] = OrderedDict()
     for section in config.sections():
