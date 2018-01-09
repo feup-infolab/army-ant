@@ -59,7 +59,7 @@ class Document(object):
             triples = '\n'.join([str(triple) for triple in self.triples])
 
         if self.metadata is None:
-            metadata = {}
+            metadata = ''
         else:
             metadata = '\n'.join([str((k, v)) for k, v in self.metadata.items()])
 
