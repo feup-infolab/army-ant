@@ -172,11 +172,6 @@ class CommandLineInterface(object):
         fe = FeatureExtractor.factory(method, reader, output_location)
         fe.extract()
 
-    def sampling(self, method, source_path, source_reader, output_location, size):
-        reader = Reader.factory(source_path, source_reader)
-        s = Sampler.factory(method, reader, output_location, size)
-        s.sample()
-
     def server(self, host='127.0.0.1', port=8080, path=None):
         loop = asyncio.get_event_loop()
         run_app(loop, host, port, path)
