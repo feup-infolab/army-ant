@@ -1,4 +1,4 @@
-# ![Army ANT Logo](resources/army_ant_logo-60x60.png) Army ANT
+# ![Army ANT Logo](resources/army_ant_logo-48x48.png) Army ANT
 
 If you're an information retrieval researcher, defining an engine in Army ANT (i.e., implementing an index() and search() methods) will give you direct access to a web interface with the following features.
 
