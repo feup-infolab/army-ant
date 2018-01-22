@@ -1,0 +1,31 @@
+defaults:
+  db:
+    location: localhost
+    type: mongo
+  eval:
+    location: /opt/army-ant/eval
+  jvm:
+    memory: 5120
+
+engines:
+  hgoe-inex_dev:
+    name: INEX Dev - Hypergraph-of-Entity
+    message: Activating hypergraph-of-entity for INEX Development.
+    db:
+      name: hgoe_inex
+    index:
+      type: hgoe
+      location: /opt/army-ant/data/inex-dev/hypergraph-of-entity
+      preload: true
+    ranking:
+      default:
+        id: random_walk
+        parameters:
+          l: 3
+          r: 100
+      functions:
+        - id: jaccard
+        - id: random_walk
+          parameters:
+            l: [1,2,3,4,5,6]
+            r: [10, 100, 250, 500, 750, 1000]

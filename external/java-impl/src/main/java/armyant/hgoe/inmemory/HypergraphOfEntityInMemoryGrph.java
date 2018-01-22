@@ -14,8 +14,6 @@ import armyant.hgoe.structures.Document;
 import armyant.hgoe.structures.Result;
 import armyant.hgoe.structures.ResultSet;
 import armyant.hgoe.structures.Trace;
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.serializers.MapSerializer;
 import grph.algo.AllPaths;
 import grph.algo.ConnectedComponentsAlgorithm;
 import grph.in_memory.InMemoryGrph;
@@ -29,7 +27,6 @@ import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.objenesis.strategy.StdInstantiatorStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import toools.collections.primitive.LucIntHashSet;
@@ -787,7 +784,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
 
     @Override
     public ResultSet search(String query) throws IOException {
-        return search(query, RankingFunction.RANDOM_WALK_SCORE_10_10000);
+        return search(query, RankingFunction.RANDOM_WALK_SCORE);
     }
 
     public ResultSet search(String query, RankingFunction function) throws IOException {
@@ -823,17 +820,8 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
 
         ResultSet resultSet;
         switch (function) {
-            case RANDOM_WALK_SCORE_3_10:
+            case RANDOM_WALK_SCORE:
                 resultSet = randomWalkSearch(seedNodeIDs, seedNodeWeights, 3, 10);
-                break;
-            case RANDOM_WALK_SCORE_3_10000:
-                resultSet = randomWalkSearch(seedNodeIDs, seedNodeWeights, 3, 10000);
-                break;
-            case RANDOM_WALK_SCORE_10_10:
-                resultSet = randomWalkSearch(seedNodeIDs, seedNodeWeights, 10, 10);
-                break;
-            case RANDOM_WALK_SCORE_10_10000:
-                resultSet = randomWalkSearch(seedNodeIDs, seedNodeWeights, 10, 10000);
                 break;
             case ENTITY_WEIGHT:
             case JACCARD_SCORE:
@@ -894,9 +882,6 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
     public enum RankingFunction {
         ENTITY_WEIGHT,
         JACCARD_SCORE,
-        RANDOM_WALK_SCORE_3_10,
-        RANDOM_WALK_SCORE_3_10000,
-        RANDOM_WALK_SCORE_10_10,
-        RANDOM_WALK_SCORE_10_10000
+        RANDOM_WALK_SCORE
     }
 }

@@ -47,3 +47,10 @@ def zipdir(path, ziph):
         for file in files:
             ziph.write(os.path.join(root, file))
     os.chdir(pwd)
+
+def set_dict_defaults(d, defaults):
+    for k, v in defaults.items():
+        if isinstance(v, dict):
+            set_dict_defaults(d.setdefault(k, {}), v)
+        else:
+            d.setdefault(k, v)

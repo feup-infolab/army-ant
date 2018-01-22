@@ -5,7 +5,7 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import fire, logging, asyncio, shutil, configparser, os, tempfile
+import fire, logging, asyncio, shutil, os, tempfile, yaml
 import networkx as nx
 from army_ant.exception import ArmyAntException
 from army_ant.reader import Reader
@@ -148,9 +148,9 @@ class CommandLineInterface(object):
             api_key,
             run_id)
 
-        config = configparser.ConfigParser()
-        config.read('server.cfg')
-        manager = EvaluationTaskManager(config['DEFAULT'].get('db_location', 'localhost'), output_dir)
+        config = yaml.load(open('config.yaml'))
+        db_location = config['default'].get('db', {}).get('location', 'localhost')
+        manager = EvaluationTaskManager(db_location, output_dir)
 
         manager.add_task(task)
         inserted_ids = manager.queue()

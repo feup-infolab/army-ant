@@ -671,10 +671,7 @@ class HypergraphOfEntity(JavaIndex):
     class RankingFunction(Enum):
         entity_weight = 'ENTITY_WEIGHT'
         jaccard = 'JACCARD_SCORE'
-        random_walk_3_10 = 'RANDOM_WALK_SCORE_3_10'
-        random_walk_3_10000 = 'RANDOM_WALK_SCORE_3_10000'
-        random_walk_10_10 = 'RANDOM_WALK_SCORE_10_10'
-        random_walk_10_10000 = 'RANDOM_WALK_SCORE_10_10000'
+        random_walk = 'RANDOM_WALK_SCORE'
 
     JDocument = JavaIndex.armyant.hgoe.structures.Document
     JTriple = JavaIndex.armyant.hgoe.structures.Triple

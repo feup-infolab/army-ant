@@ -1,4 +1,4 @@
-import aiohttp, aiohttp_jinja2, jinja2, asyncio, configparser, math, time, tempfile, os, json, logging
+import aiohttp, aiohttp_jinja2, jinja2, asyncio, math, time, tempfile, os, json, logging, yaml
 from jpype import *
 from datetime import datetime
 from jpype import *
@@ -9,6 +9,7 @@ from aiohttp.client_exceptions import ClientOSError
 from army_ant.index import Index, Result
 from army_ant.database import Database
 from army_ant.evaluation import EvaluationTask, EvaluationTaskManager
+from army_ant.util import set_dict_defaults
 from army_ant.exception import ArmyAntException
 
 logger = logging.getLogger(__name__)
@@ -41,11 +42,9 @@ async def search(request):
     engine = request.GET.get('engine')
     if engine is None: engine = list(request.app['engines'].keys())[0]
 
-    engine_index_ranking = engine.split(':', 1)
-    if len(engine_index_ranking) > 1:
-        ranking_function = engine_index_ranking[1]
-    else:
-        ranking_function = None
+    ranking_function = request.GET.get('ranking')
+    if ranking_function is None:
+        ranking_function = request.app['engines'][engine]['ranking']['default']['id']
 
     debug = request.GET.get('debug', 'off')
 
@@ -62,8 +61,8 @@ async def search(request):
         try:
             loop = asyncio.get_event_loop()
             index = Index.open(
-                request.app['engines'][engine]['index_location'],
-                request.app['engines'][engine]['index_type'],
+                request.app['engines'][engine]['index']['location'],
+                request.app['engines'][engine]['index']['type'],
                 loop)
             engine_response = await index.search(query, offset, limit, ranking_function)
 
@@ -79,9 +78,9 @@ async def search(request):
             pages = math.ceil(num_docs / limit)
             
             db = Database.factory(
-                request.app['engines'][engine]['db_location'],
-                request.app['engines'][engine]['db_name'],
-                request.app['engines'][engine]['db_type'],
+                request.app['engines'][engine]['db']['location'],
+                request.app['engines'][engine]['db']['name'],
+                request.app['engines'][engine]['db']['type'],
                 loop)
             metadata = await db.retrieve(results)
         except (ArmyAntException, ClientOSError) as e:
@@ -127,7 +126,9 @@ async def search(request):
         return response
 
 async def evaluation_get(request):
-    manager = EvaluationTaskManager(request.app['db_location'], request.app['default_eval_location'])
+    manager = EvaluationTaskManager(
+        request.app['defaults']['db']['location'],
+        request.app['defaults']['eval']['location'])
     tasks = manager.get_tasks()
     metrics = set([])
     for task in tasks:
@@ -136,7 +137,9 @@ async def evaluation_get(request):
     return { 'tasks': tasks, 'metrics': sorted(metrics) }
 
 async def evaluation_delete(request):
-    manager = EvaluationTaskManager(request.app['db_location'], request.app['default_eval_location'])
+    manager = EvaluationTaskManager(
+        request.app['defaults']['db']['location'],
+        request.app['defaults']['eval']['location'])
     task_id = request.GET.get('task_id')
 
     success = False
@@ -147,7 +150,9 @@ async def evaluation_delete(request):
     return web.json_response({ 'error': "Could not delete task with task_id = %s." % task_id }, status=404)
 
 async def evaluation_reset(request):
-    manager = EvaluationTaskManager(request.app['db_location'], request.app['default_eval_location'])
+    manager = EvaluationTaskManager(
+        request.app['defaults']['db']['location'],
+        request.app['defaults']['eval']['location'])
     task_id = request.GET.get('task_id')
 
     success = False
@@ -158,7 +163,9 @@ async def evaluation_reset(request):
     return web.json_response({ 'error': "Could not reset task with task_id = %s to WAITING status." % task_id }, status=404)
 
 async def evaluation_rename(request):
-    manager = EvaluationTaskManager(request.app['db_location'], request.app['default_eval_location'])
+    manager = EvaluationTaskManager(
+        request.app['defaults']['db']['location'],
+        request.app['defaults']['eval']['location'])
     task_id = request.GET.get('task_id')
     run_id = request.GET.get('run_id')
 
@@ -172,7 +179,7 @@ async def evaluation_post(request):
     data = await request.post()
 
     if len(data['topics']) > 0:
-        with tempfile.NamedTemporaryFile(dir=os.path.join(request.app['default_eval_location'], 'spool'),
+        with tempfile.NamedTemporaryFile(dir=os.path.join(request.app['defaults']['eval']['location'], 'spool'),
                                          prefix='eval_topics_', delete=False) as fp:
             fp.write(data['topics'].file.read())
             topics_filename = data['topics'].filename
@@ -182,7 +189,8 @@ async def evaluation_post(request):
         topics_path = None
 
     if len(data['assessments']) > 0:
-        with tempfile.NamedTemporaryFile(dir=os.path.join(request.app['default_eval_location'], 'spool'), prefix='eval_assessments_', delete=False) as fp:
+        with tempfile.NamedTemporaryFile(dir=os.path.join(request.app['defaults']['eval']['location'], 'spool'),
+                                         prefix='eval_assessments_', delete=False) as fp:
             fp.write(data['assessments'].file.read())
             assessments_filename = data['assessments'].filename
             assessments_path = fp.name
@@ -190,43 +198,26 @@ async def evaluation_post(request):
         assessments_filename = None
         assessments_path = None
 
-    manager = EvaluationTaskManager(request.app['db_location'], request.app['default_eval_location'])
+    manager = EvaluationTaskManager(
+        request.app['defaults']['db']['location'],
+        request.app['defaults']['eval']['location'])
 
-    if data['engine'] == '__all__':
-        for engine in request.app['engines']:
-            index_location = request.app['engines'][engine]['index_location']
-            index_type = request.app['engines'][engine]['index_type']
-            ranking_function = request.app['engines'][engine].get('ranking_function')
+    index_location = request.app['engines'][data['engine']]['index']['location']
+    index_type = request.app['engines'][data['engine']]['index']['type']
+    ranking_function = request.app['engines'][data['engine']].get('ranking', {}).get('default', {}).get('id')
 
-            manager.add_task(EvaluationTask(
-                index_location,
-                index_type,
-                data['eval-format'],
-                ranking_function,
-                topics_filename,
-                topics_path,
-                assessments_filename,
-                assessments_path,
-                data['base-url'],
-                data['api-key'],
-                data['run-id']))
-    else:
-        index_location = request.app['engines'][data['engine']]['index_location']
-        index_type = request.app['engines'][data['engine']]['index_type']
-        ranking_function = request.app['engines'][data['engine']].get('ranking_function')
-
-        manager.add_task(EvaluationTask(
-            index_location,
-            index_type,
-            data['eval-format'],
-            ranking_function,
-            topics_filename,
-            topics_path,
-            assessments_filename,
-            assessments_path,
-            data['base-url'],
-            data['api-key'],
-            data['run-id']))
+    manager.add_task(EvaluationTask(
+        index_location,
+        index_type,
+        data['eval-format'],
+        ranking_function,
+        topics_filename,
+        topics_path,
+        assessments_filename,
+        assessments_path,
+        data['base-url'],
+        data['api-key'],
+        data['run-id']))
 
     error = None
     try:
@@ -249,7 +240,10 @@ async def evaluation_download(request):
     decimals = int(request.GET.get('decimals', '4'))
     fmt = request.GET.get('fmt', 'csv')
 
-    manager = EvaluationTaskManager(request.app['db_location'], request.app['default_eval_location'])
+    manager = EvaluationTaskManager(
+        request.app['defaults']['db']['location'],
+        request.app['defaults']['eval']['location'])
+
     try:
         with manager.get_results_summary(headers, metrics, decimals, fmt) as f:
             timestamp = datetime.now().strftime('%Y%m%dT%H%M%S')
@@ -271,7 +265,10 @@ async def evaluation_results_archive(request):
     task_id = request.GET.get('task_id')
     if task_id is None: return web.HTTPNotFound()
 
-    manager = EvaluationTaskManager(request.app['db_location'], request.app['default_eval_location'])
+    manager = EvaluationTaskManager(
+        request.app['defaults']['db']['location'],
+        request.app['defaults']['eval']['location'])
+
     try:
         with manager.get_results_archive(task_id) as archive_filename:
             response = web.StreamResponse(headers={ 'Content-Disposition': 'attachment; filename="%s.zip"' % task_id })
@@ -291,7 +288,10 @@ async def evaluation_results_ll_api(request):
     task_id = request.GET.get('task_id')
     if task_id is None: return web.HTTPNotFound()
 
-    manager = EvaluationTaskManager(request.app['db_location'], request.app['default_eval_location'])
+    manager = EvaluationTaskManager(
+        request.app['defaults']['db']['location'],
+        request.app['defaults']['eval']['location'])
+
     data = manager.get_results_json(task_id)
 
     fmt = request.GET.get('fmt', 'json')
@@ -313,7 +313,9 @@ async def about(request):
 
 async def start_background_tasks(app):
     logger.info("Starting background tasks")
-    manager = EvaluationTaskManager(app['db_location'], app['default_eval_location'])
+    manager = EvaluationTaskManager(
+        app['defaults']['db']['location'],
+        app['defaults']['eval']['location'])
     app['evaluation_queue_listener'] = app.loop.create_task(manager.process())
 
 async def cleanup_background_tasks(app):
@@ -328,7 +330,7 @@ async def shutdown_jvm(app):
 async def preload_engines(app):
     logger.info("Preloading engines")
     for engine, config in app['engines'].items():
-        preload = config['preload'] == 'True' if 'preload' in config else False
+        preload = config['index'].get('preload', False)
         if preload:
             if 'preloaded_engines' in app:
                 if 'engine' in app['preloaded_engines']: continue
@@ -337,28 +339,27 @@ async def preload_engines(app):
 
             loop = asyncio.get_event_loop()
             await Index.preload(
-                app['engines'][engine]['index_location'],
-                app['engines'][engine]['index_type'],
+                app['engines'][engine]['index']['location'],
+                app['engines'][engine]['index']['type'],
                 loop)
 
 def run_app(loop, host, port, path=None):
-    config = configparser.ConfigParser()
-    config.read('server.cfg')
+    config = yaml.load(open('config.yaml'))
 
     app = web.Application(client_max_size=1024*1024*4, loop=loop)
 
-    app['engines'] = OrderedDict()
-    for section in config.sections():
-        app['engines'][section] = dict(config[section])
-        
-        if 'message' in config[section]: logger.warn("%s: %s" % (section, config[section]['message']))
-        
-        engine_index_ranking = section.split(':', 1)
-        if len(engine_index_ranking) > 1:
-            app['engines'][section]['ranking_function'] = engine_index_ranking[1]
+    app['defaults'] = config.get('defaults', {})
+    app['engines'] = config.get('engines', [])
+    for engine in app['engines']:
+        if 'message' in app['engines'][engine]:
+            logger.warn("%s: %s" % (engine, app['engines'][engine]['message']))
+        set_dict_defaults(app['engines'][engine], app['defaults'])
 
-    app['db_location'] = config['DEFAULT'].get('db_location', 'localhost')
-    app['default_eval_location'] = config['DEFAULT'].get('eval_location', tempfile.gettempdir())
+    if not 'db' in app['defaults']: app['defaults']['db'] = {}
+    if not 'location' in app['defaults']['db']: app['defaults']['db'] = 'localhost'
+
+    if not 'eval' in app['defaults']: app['defaults']['eval'] = {}
+    if not 'location' in app['defaults']['eval']: app['defaults']['eval']['location'] = tempfile.gettempdir()
 
     aiohttp_jinja2.setup(
         app,
