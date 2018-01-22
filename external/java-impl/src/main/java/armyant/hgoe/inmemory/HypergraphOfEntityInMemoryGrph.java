@@ -784,10 +784,13 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
 
     @Override
     public ResultSet search(String query) throws IOException {
-        return search(query, RankingFunction.RANDOM_WALK_SCORE);
+        Map<String, String> params = new HashMap<>();
+        params.put("l", "3");
+        params.put("r", "10");
+        return search(query, RankingFunction.RANDOM_WALK_SCORE, params);
     }
 
-    public ResultSet search(String query, RankingFunction function) throws IOException {
+    public ResultSet search(String query, RankingFunction function, Map<String, String> params) throws IOException {
         trace.reset();
 
         List<String> tokens = analyze(query);
@@ -821,7 +824,9 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         ResultSet resultSet;
         switch (function) {
             case RANDOM_WALK_SCORE:
-                resultSet = randomWalkSearch(seedNodeIDs, seedNodeWeights, 3, 10);
+                resultSet = randomWalkSearch(
+                        seedNodeIDs, seedNodeWeights,
+                        Integer.valueOf(params.get("l")), Integer.valueOf(params.get("r")));
                 break;
             case ENTITY_WEIGHT:
             case JACCARD_SCORE:

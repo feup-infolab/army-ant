@@ -46,6 +46,13 @@ async def search(request):
     if ranking_function is None:
         ranking_function = request.app['engines'][engine].get('ranking', {}).get('default', {}).get('id')
 
+    ranking_params = {}
+    for k in request.GET.keys():
+        if k.startswith('ranking_param_'):
+            _, _, param_name = k.split('_')
+            param_value = request.GET.get(k)
+            ranking_params[param_name] = param_value
+
     debug = request.GET.get('debug', 'off')
 
     query = request.GET.get('query')
@@ -64,7 +71,7 @@ async def search(request):
                 request.app['engines'][engine]['index']['location'],
                 request.app['engines'][engine]['index']['type'],
                 loop)
-            engine_response = await index.search(query, offset, limit, ranking_function)
+            engine_response = await index.search(query, offset, limit, ranking_function, ranking_params)
 
             num_docs = len(engine_response['results'])
             if engine_response['numDocs']: num_docs = engine_response['numDocs']
@@ -106,6 +113,7 @@ async def search(request):
         response = {
             'engine': engine,
             'rankingFunction': ranking_function,
+            'rankingParams': ranking_params,
             'query': query,
             'debug': debug,
             'time': end_time - start_time,

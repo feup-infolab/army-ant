@@ -128,7 +128,17 @@
 <script type="text/javascript">
   (function() {
     var engines = {{ app['engines']|tojson }};
-    var rankingFunction = {% if rankingFunction %} '{{ rankingFunction }}' {% else %} null {% endif %};
+    var queryParams = getQueryStrings();
+    var rankingFunction = queryParams.ranking_function;
+    var rankingParams = {};
+
+    queryParamNames = Object.keys(queryParams);
+    for (var i=0; i < queryParamNames.length; i++) {
+      if (queryParamNames[i].startsWith('ranking_param_')) {
+        var parts = queryParamNames[i].split('_');
+        rankingParams[parts[2]] = +queryParams[queryParamNames[i]];
+      }
+    }
 
     function updateRankingFunctions() {
       var engine = $('#engine').val();
@@ -173,14 +183,25 @@
       $('#ranking-params').empty();
 
       for (var param in params) {
+        var $formGroup = $('<div>')
+          .addClass('form-group');
+
+        var $label = $('<label>')
+          .addClass('form-label')
+          .attr('for', 'ranking_param_' + param)
+          .text(param);
+
         var $select = $('<select>')
           .addClass('form-select')
           .attr('id', 'ranking-param-' + param)
           .attr('name', 'ranking_param_' + param);
 
+        $('<div>').addClass('col-1').append($label).appendTo($formGroup);
+        $('<div>').addClass('col-11').append($select).appendTo($formGroup);
+
         var $column = $('<div>')
           .addClass('column')
-          .append($select);
+          .append($formGroup);
 
         $('#ranking-params').append($column);
 
@@ -190,8 +211,12 @@
             .text(params[param][i]);
           $select.append($param);
 
-          if (defaultParams[param] && params[param][i] == defaultParams[param]) {
-              $param.attr('selected', 'selected');
+          if (rankingParams[param]) {
+            if(params[param][i] == rankingParams[param]) {
+                $param.attr('selected', 'selected');
+            }
+          } else if (params[param][i] == defaultParams[param]) {
+            $param.attr('selected', 'selected');
           }
         }
       }

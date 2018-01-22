@@ -98,7 +98,7 @@ class Index(object):
     async def index(self):
         raise ArmyAntException("Index not implemented for %s" % self.__class__.__name__)
 
-    async def search(self, query, offset, limit, ranking_function=None):
+    async def search(self, query, offset, limit, ranking_function=None, ranking_params=None):
         raise ArmyAntException("Search not implemented for %s" % self.__class__.__name__)
 
     async def load(self):
@@ -240,7 +240,7 @@ class GraphOfWord(GremlinServerIndex):
 
         await self.cluster.close()
 
-    async def search(self, query, offset, limit, ranking_function=None):
+    async def search(self, query, offset, limit, ranking_function=None, ranking_params=None):
         self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
         self.client = await self.cluster.connect()
 
@@ -316,7 +316,7 @@ class GraphOfEntity(GremlinServerIndex):
 
         await self.cluster.close()
 
-    async def search(self, query, offset, limit, ranking_function=None):
+    async def search(self, query, offset, limit, ranking_function=None, ranking_params=None):
         self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
         self.client = await self.cluster.connect()
 
@@ -720,7 +720,7 @@ class HypergraphOfEntity(JavaIndex):
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
-    async def search(self, query, offset, limit, ranking_function=None):
+    async def search(self, query, offset, limit, ranking_function=None, ranking_params=None):
         if ranking_function:
             try:
                 ranking_function = HypergraphOfEntity.RankingFunction[ranking_function]
@@ -733,6 +733,13 @@ class HypergraphOfEntity(JavaIndex):
         logger.info("Using '%s' as ranking function" % ranking_function.value)
         ranking_function = HypergraphOfEntity.JRankingFunction.valueOf(ranking_function.value)
 
+        if ranking_params:
+            logger.info("Using ranking parameters %s" % ranking_params)
+            j_ranking_params = jpype.java.util.HashMap()
+            for k, v in ranking_params.items():
+                j_ranking_params.put(k, v)
+            ranking_params = j_ranking_params
+
         results = []
         num_docs = 0
         trace = None
@@ -743,7 +750,7 @@ class HypergraphOfEntity(JavaIndex):
                 hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location)
                 HypergraphOfEntity.INSTANCES[self.index_location] = hgoe
             
-            results = hgoe.search(query, ranking_function)
+            results = hgoe.search(query, ranking_function, ranking_params)
             num_docs = results.getNumDocs()
             trace = results.getTrace()
             results = [Result(result.getDocID(), result.getScore())
@@ -797,7 +804,7 @@ class LuceneEngine(JavaIndex):
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
-    async def search(self, query, offset, limit, ranking_function=None):
+    async def search(self, query, offset, limit, ranking_function=None, ranking_params=None):
         if ranking_function:
             try:
                 ranking_function = LuceneEngine.RankingFunction[ranking_function]
