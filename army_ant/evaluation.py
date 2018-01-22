@@ -466,14 +466,14 @@ class EvaluationTask(object):
         return json.dumps(self.__dict__)
 
 class EvaluationTaskManager(object):
-    def __init__(self, db_location, default_eval_location):
+    def __init__(self, db_location, db_name, eval_location):
         self.tasks = []
         self.running = None
 
-        self.default_eval_location = default_eval_location
-        self.results_dirname = os.path.join(default_eval_location, 'results')
-        self.assessments_dirname = os.path.join(default_eval_location, 'assessments')
-        self.spool_dirname = os.path.join(default_eval_location, 'spool')
+        self.eval_location = eval_location
+        self.results_dirname = os.path.join(eval_location, 'results')
+        self.assessments_dirname = os.path.join(eval_location, 'assessments')
+        self.spool_dirname = os.path.join(eval_location, 'spool')
 
         db_location_parts = db_location.split(':')
         
@@ -509,8 +509,8 @@ class EvaluationTaskManager(object):
             if type(self.running) != LivingLabsEvaluator:
                 self.running.remove_output()
 
-        shutil.rmtree(os.path.join(self.default_eval_location, 'results', task_id), ignore_errors=True)
-        shutil.rmtree(os.path.join(self.default_eval_location, 'assessments', task_id), ignore_errors=True)
+        shutil.rmtree(os.path.join(self.eval_location, 'results', task_id), ignore_errors=True)
+        shutil.rmtree(os.path.join(self.eval_location, 'assessments', task_id), ignore_errors=True)
 
         return self.db['evaluation_tasks'].update_one(
             { '_id': ObjectId(task_id) },
@@ -624,8 +624,8 @@ class EvaluationTaskManager(object):
         with tempfile.TemporaryDirectory() as tmp_dir:
             out_dir = os.path.join(tmp_dir, task_id)
 
-            shutil.copytree(os.path.join(self.default_eval_location, 'assessments', task_id), out_dir)
-            shutil.copytree(os.path.join(self.default_eval_location, 'results', task_id), os.path.join(out_dir, 'results'))
+            shutil.copytree(os.path.join(self.eval_location, 'assessments', task_id), out_dir)
+            shutil.copytree(os.path.join(self.eval_location, 'results', task_id), os.path.join(out_dir, 'results'))
 
             with open(os.path.join(out_dir, "eval_metrics.csv"), 'w') as f:
                 writer = csv.writer(f)
@@ -730,7 +730,7 @@ class EvaluationTaskManager(object):
                         if task.eval_format == 'll-api':
                             e = Evaluator.factory(task, '%s::%s::%s' % (task.base_url, task.api_key, task.run_id))
                         else:
-                            e = Evaluator.factory(task, self.default_eval_location)
+                            e = Evaluator.factory(task, self.eval_location)
 
                         self.running = e
                         status = await e.run()

@@ -150,7 +150,8 @@ class CommandLineInterface(object):
 
         config = yaml.load(open('config.yaml'))
         db_location = config['default'].get('db', {}).get('location', 'localhost')
-        manager = EvaluationTaskManager(db_location, output_dir)
+        db_name = config['default'].get('db', {}).get('name', 'army_ant')
+        manager = EvaluationTaskManager(db_location, db_name, output_dir)
 
         manager.add_task(task)
         inserted_ids = manager.queue()

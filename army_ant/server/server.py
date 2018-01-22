@@ -42,9 +42,9 @@ async def search(request):
     engine = request.GET.get('engine')
     if engine is None: engine = list(request.app['engines'].keys())[0]
 
-    ranking_function = request.GET.get('ranking')
+    ranking_function = request.GET.get('ranking_function')
     if ranking_function is None:
-        ranking_function = request.app['engines'][engine]['ranking']['default']['id']
+        ranking_function = request.app['engines'][engine].get('ranking', {}).get('default', {}).get('id')
 
     debug = request.GET.get('debug', 'off')
 
@@ -105,6 +105,7 @@ async def search(request):
     else:
         response = {
             'engine': engine,
+            'rankingFunction': ranking_function,
             'query': query,
             'debug': debug,
             'time': end_time - start_time,
@@ -128,6 +129,7 @@ async def search(request):
 async def evaluation_get(request):
     manager = EvaluationTaskManager(
         request.app['defaults']['db']['location'],
+        request.app['defaults']['db']['name'],
         request.app['defaults']['eval']['location'])
     tasks = manager.get_tasks()
     metrics = set([])
@@ -139,6 +141,7 @@ async def evaluation_get(request):
 async def evaluation_delete(request):
     manager = EvaluationTaskManager(
         request.app['defaults']['db']['location'],
+        request.app['defaults']['db']['name'],
         request.app['defaults']['eval']['location'])
     task_id = request.GET.get('task_id')
 
@@ -152,6 +155,7 @@ async def evaluation_delete(request):
 async def evaluation_reset(request):
     manager = EvaluationTaskManager(
         request.app['defaults']['db']['location'],
+        request.app['defaults']['db']['name'],
         request.app['defaults']['eval']['location'])
     task_id = request.GET.get('task_id')
 
@@ -165,6 +169,7 @@ async def evaluation_reset(request):
 async def evaluation_rename(request):
     manager = EvaluationTaskManager(
         request.app['defaults']['db']['location'],
+        request.app['defaults']['db']['name'],
         request.app['defaults']['eval']['location'])
     task_id = request.GET.get('task_id')
     run_id = request.GET.get('run_id')
@@ -200,6 +205,7 @@ async def evaluation_post(request):
 
     manager = EvaluationTaskManager(
         request.app['defaults']['db']['location'],
+        request.app['defaults']['db']['name'],
         request.app['defaults']['eval']['location'])
 
     index_location = request.app['engines'][data['engine']]['index']['location']
@@ -242,6 +248,7 @@ async def evaluation_download(request):
 
     manager = EvaluationTaskManager(
         request.app['defaults']['db']['location'],
+        request.app['defaults']['db']['name'],
         request.app['defaults']['eval']['location'])
 
     try:
@@ -267,6 +274,7 @@ async def evaluation_results_archive(request):
 
     manager = EvaluationTaskManager(
         request.app['defaults']['db']['location'],
+        request.app['defaults']['db']['name'],
         request.app['defaults']['eval']['location'])
 
     try:
@@ -290,6 +298,7 @@ async def evaluation_results_ll_api(request):
 
     manager = EvaluationTaskManager(
         request.app['defaults']['db']['location'],
+        request.app['defaults']['db']['name'],
         request.app['defaults']['eval']['location'])
 
     data = manager.get_results_json(task_id)
@@ -315,6 +324,7 @@ async def start_background_tasks(app):
     logger.info("Starting background tasks")
     manager = EvaluationTaskManager(
         app['defaults']['db']['location'],
+        app['defaults']['db']['name'],
         app['defaults']['eval']['location'])
     app['evaluation_queue_listener'] = app.loop.create_task(manager.process())
 
