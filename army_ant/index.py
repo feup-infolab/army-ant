@@ -733,12 +733,12 @@ class HypergraphOfEntity(JavaIndex):
         logger.info("Using '%s' as ranking function" % ranking_function.value)
         ranking_function = HypergraphOfEntity.JRankingFunction.valueOf(ranking_function.value)
 
+        j_ranking_params = jpype.java.util.HashMap()
         if ranking_params:
             logger.info("Using ranking parameters %s" % ranking_params)
-            j_ranking_params = jpype.java.util.HashMap()
             for k, v in ranking_params.items():
                 j_ranking_params.put(k, v)
-            ranking_params = j_ranking_params
+        ranking_params = j_ranking_params
 
         results = []
         num_docs = 0

@@ -484,7 +484,7 @@ class EvaluationTaskManager(object):
             db_port = 27017
 
         self.client = MongoClient(db_location, db_port)
-        self.db = self.client['army_ant']
+        self.db = self.client[db_name]
 
         #self.db['evaluation_tasks'].create_index([
             #('topics_md5', pymongo.ASCENDING),

@@ -11,7 +11,9 @@ defaults:
 engines:
   gow-wikipedia:
     name: Wikipedia Data - Graph of Word
-    message: Don't forget to launch Gremlin Server with the "gow_wikipedia" graph configured (e.g., "bin/gremlin-server.sh gremlin-server-neo4j.yaml").
+    message: >-
+      Don't forget to launch Gremlin Server with the "gow_wikipedia" graph configured
+      (e.g., "bin/gremlin-server.sh gremlin-server-neo4j.yaml").
     db:
       name: gow_wikipedia
     index:
