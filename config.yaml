@@ -19,6 +19,16 @@ engines:
     index:
       type: gow
       location: localhost:8182/gow_wikipedia
+  gow-inex-10t-nl:
+    name: INEX 10T-NL - Graph of Word
+    message: >-
+      Don't forget to launch Gremlin Server with the "gow_inex_10t_nl" graph configured
+      (e.g., "bin/gremlin-server.sh gremlin-server-neo4j.yaml").
+    db:
+      name: gow_inex
+    index:
+      type: gow
+      location: localhost:8182/gow_inex_10t_nl
   hgoe-inex-dev:
     name: INEX Dev - Hypergraph-of-Entity
     db:

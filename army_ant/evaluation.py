@@ -663,14 +663,18 @@ class EvaluationTaskManager(object):
         with tempfile.TemporaryDirectory() as tmp_dir:
             out_dir = os.path.join(tmp_dir, task_id)
 
-            shutil.copytree(os.path.join(self.eval_location, 'assessments', task_id), out_dir)
-            shutil.copytree(os.path.join(self.eval_location, 'results', task_id), os.path.join(out_dir, 'results'))
+            shutil.copytree(os.path.join(self.eval_location, 'assessments', task_id), os.path.join(out_dir, 'evaluation_details'))
+            shutil.copytree(os.path.join(self.eval_location, 'results', task_id), os.path.join(out_dir, 'search_results'))
 
             with open(os.path.join(out_dir, "eval_metrics.csv"), 'w') as f:
                 writer = csv.writer(f)
-                writer.writerow(['metrics', 'value'])
-                for metric, value in task.results.items():
-                    writer.writerow([metric, value])
+                writer.writerow(sorted(task.ranking_params.keys()) + ['metrics', 'value'])
+                for params_id, results in task.results.items():
+                    for metric, value in results.items():
+                        params = OrderedDict(sorted(
+                            (tuple(p.split('_', 1)) for p in params_id.split('-')),
+                            key=lambda d: d[0]))
+                        writer.writerow(list(params.values()) + [metric, value])
 
             archive_filename = os.path.join(tmp_dir, '%s.zip' % task_id)
             with zipfile.ZipFile(archive_filename, 'w') as zipf:
