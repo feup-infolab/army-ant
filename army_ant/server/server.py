@@ -23,6 +23,12 @@ async def page_link(request):
         return request.url.with_query(query)
     return { 'page_link': _page_link }
 
+def params_id_to_str(params_id):
+    params = []
+    for p in params_id.split('-'):
+        params.append('%s=%s' % tuple(p.split('_', 1)))
+    return '(%s)' % ', '.join(params)
+
 def timestamp_to_date(timestamp):
     return datetime.fromtimestamp(int(round(timestamp / 1000)))
 
@@ -218,19 +224,26 @@ async def evaluation_post(request):
 
     index_location = request.app['engines'][data['engine']]['index']['location']
     index_type = request.app['engines'][data['engine']]['index']['type']
-    ranking_function = request.app['engines'][data['engine']].get('ranking', {}).get('default', {}).get('id')
+    ranking_function = data.get('ranking_function')
+    ranking_params = {}
+    
+    for k in set(data.keys()):
+        if k.startswith('ranking_param_'):
+            _, _, param_name = k.split('_', 2)
+            ranking_params[param_name] = data.getall(k)
 
     manager.add_task(EvaluationTask(
         index_location,
         index_type,
         data['eval-format'],
         ranking_function,
+        ranking_params,
         topics_filename,
         topics_path,
         assessments_filename,
         assessments_path,
-        data['base-url'],
-        data['api-key'],
+        data['base-url'] if data['base-url'].strip() != '' else None,
+        data['api-key'] if data['api-key'].strip() != '' else None,
         data['run-id']))
 
     error = None
@@ -382,7 +395,7 @@ def run_app(loop, host, port, path=None):
     aiohttp_jinja2.setup(
         app,
         loader=jinja2.FileSystemLoader('army_ant/server/templates'),
-        filters = { 'timestamp_to_date': timestamp_to_date },
+        filters = { 'timestamp_to_date': timestamp_to_date, 'params_id_to_str': params_id_to_str },
         context_processors=[page_link, aiohttp_jinja2.request_processor])
 
     app.router.add_get('/', home, name='home')

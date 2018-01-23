@@ -10,7 +10,7 @@
 {% block content %}
 <form class="form-horizontal">
   <div class="form-group">
-    <div class="column col-9">
+    <div class="column col-mr-auto">
       <!-- form input control -->
       <div class="input-group">
         <input class="form-input" type="text" id="query" name="query" placeholder="Search" value="{{ query if query }}" />
@@ -27,31 +27,7 @@
     </div>
   </div>
 
-  <div class="form-group">
-    <div class="column col-3">
-      <!-- form radio control -->
-      <select class="form-select" id="engine" name="engine">
-        {% for app_engine in app.engines %}
-        <option value="{{app_engine}}" {% if engine == app_engine %} selected="selected" {% endif %}>
-          {{app.engines[app_engine].name}}
-        </option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <div class="column col-3">
-      <!-- form radio control -->
-      <select class="form-select" id="ranking-function" name="ranking_function">
-        <!-- Dynamically loaded -->
-      </select>
-    </div>
-
-    <div class="column col-6">
-      <div id="ranking-params" class="columns">
-        <!-- Dynamically loaded -->
-      </div>
-    </div>
-  </div>
+  {% include 'search/engine.html' %}
 </form>
 
 {% if results|length > 0 %}
@@ -127,113 +103,6 @@
 
 <script type="text/javascript">
   (function() {
-    var engines = {{ app['engines']|tojson }};
-    var queryParams = getQueryStrings();
-    var rankingFunction = queryParams.ranking_function;
-    var rankingParams = {};
-
-    queryParamNames = Object.keys(queryParams);
-    for (var i=0; i < queryParamNames.length; i++) {
-      if (queryParamNames[i].startsWith('ranking_param_')) {
-        var parts = queryParamNames[i].split('_');
-        rankingParams[parts[2]] = +queryParams[queryParamNames[i]];
-      }
-    }
-
-    function updateRankingFunctions() {
-      var engine = $('#engine').val();
-      var defaultFunc = { 'id': 'default', 'name': 'Default'};
-      var funcs = [defaultFunc];
-
-      if (engines[engine].ranking) {
-        defaultFunc = engines[engine].ranking.default.id;
-        funcs = engines[engine].ranking.functions;
-      }
-
-      $('#ranking-function').empty();
-
-      for (var func in funcs) {
-        var $func = $('<option>')
-          .attr('value', func)
-          .text(funcs[func].name);
-
-        if (rankingFunction) {
-          if (func == rankingFunction) {
-            $func.attr('selected', 'selected');
-          }
-        } else if (func == defaultFunc) {
-          $func.attr('selected', 'selected');
-        }
-
-        $('#ranking-function').append($func);
-      }
-    }
-
-    function updateRankingParameters() {
-      var engine = $('#engine').val();
-      var rankingFunction = $('#ranking-function').val();
-      var defaultParams = {};
-      var params = [];
-
-      if (engines[engine].ranking) {
-        defaultParams = engines[engine].ranking.default.params;
-        params = engines[engine].ranking.functions[rankingFunction].params;
-      }
-
-      $('#ranking-params').empty();
-
-      for (var param in params) {
-        var $formGroup = $('<div>')
-          .addClass('form-group');
-
-        var $label = $('<label>')
-          .addClass('form-label')
-          .attr('for', 'ranking_param_' + param)
-          .text(param);
-
-        var $select = $('<select>')
-          .addClass('form-select')
-          .attr('id', 'ranking-param-' + param)
-          .attr('name', 'ranking_param_' + param);
-
-        $('<div>').addClass('col-1').append($label).appendTo($formGroup);
-        $('<div>').addClass('col-11').append($select).appendTo($formGroup);
-
-        var $column = $('<div>')
-          .addClass('column')
-          .append($formGroup);
-
-        $('#ranking-params').append($column);
-
-        for (var i=0; i < params[param].length; i++) {
-          var $param = $('<option>')
-            .attr('value', params[param][i])
-            .text(params[param][i]);
-          $select.append($param);
-
-          if (rankingParams[param]) {
-            if(params[param][i] == rankingParams[param]) {
-                $param.attr('selected', 'selected');
-            }
-          } else if (params[param][i] == defaultParams[param]) {
-            $param.attr('selected', 'selected');
-          }
-        }
-      }
-    }
-
-    updateRankingFunctions();
-    updateRankingParameters();
-
-    $(document).on('change', '#engine', function(e) {
-      updateRankingFunctions();
-      updateRankingParameters();
-    });
-
-    $(document).on('change', '#ranking-function', function(e) {
-      updateRankingParameters();
-    });
-
     document.getElementById("query").focus();
   })();
 </script>

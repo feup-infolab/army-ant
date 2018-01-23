@@ -9,6 +9,7 @@ import json, time, pymongo, asyncio, logging, csv, os, shutil, gzip
 import tempfile, zipfile, math, requests, requests_cache, pickle, itertools
 import pandas as pd
 import numpy as np
+from collections import OrderedDict
 from enum import IntEnum
 from lxml import etree
 from datetime import datetime
@@ -73,13 +74,12 @@ class INEXEvaluator(FilesystemEvaluator):
         self.loop = asyncio.get_event_loop()
         self.index = Index.open(self.task.index_location, self.task.index_type, self.loop)
 
-    def get_assessed_topic_ids(self):
-        topic_ids = set([])
-        with open(self.task.assessments_path, 'r') as f:
-            for line in f:
-                topic_id, _ = line.split(' ', 1)
-                topic_ids.add(topic_id)
-        return topic_ids
+    def ranking_params_to_params_id(self, ranking_params):
+        if ranking_params is None: return 'no_params'
+        return '-'.join([p[0] + '_' + str(p[1]) for p in ranking_params.items()])
+
+    def path_to_topic_id(self, path):
+        return os.path.basename(os.path.splitext(path)[0])
 
     def get_topic_assessments(self):
         logger.info("Loading topic assessments")
@@ -95,12 +95,18 @@ class INEXEvaluator(FilesystemEvaluator):
 
         return topic_doc_judgements
 
-    async def get_topic_results(self, filter=None):
+    async def get_topic_results(self, ranking_params=None, topic_filter=None):
         topic_doc_judgements = self.get_topic_assessments()
 
         topics = etree.parse(self.task.topics_path)
-        
-        self.stats['query_time'] = {}
+
+        params_id = self.ranking_params_to_params_id(ranking_params)
+
+        o_results_path = os.path.join(self.o_results_path, params_id)
+        if not os.path.exists(o_results_path): os.makedirs(o_results_path)
+
+        if not params_id in self.stats:
+            self.stats[params_id] = { 'query_time': {} }
 
         for topic in topics.xpath('//topic'):
             if self.interrupt:
@@ -109,7 +115,7 @@ class INEXEvaluator(FilesystemEvaluator):
 
             topic_id = get_first(topic.xpath('@id'))
 
-            if filter and not topic_id in filter:
+            if topic_filter and not topic_id in topic_filter:
                 logger.warning("Skipping topic '%s'" % topic_id)
                 continue
             
@@ -118,11 +124,11 @@ class INEXEvaluator(FilesystemEvaluator):
             logger.info("Obtaining results for query '%s' of topic '%s' using '%s' index at '%s'" % (
                 query, topic_id, self.task.index_type, self.task.index_location))
             start_time = time.time()
-            engine_response = await self.index.search(query, 0, 10000, self.task.ranking_function)
+            engine_response = await self.index.search(query, 0, 10000, self.task.ranking_function, ranking_params)
             end_time = int(round((time.time() - start_time) * 1000))
-            self.stats['query_time'][topic_id] = end_time
+            self.stats[params_id]['query_time'][topic_id] = end_time
 
-            with open(os.path.join(self.o_results_path, '%s.csv' % topic_id), 'w', newline='') as f:
+            with open(os.path.join(o_results_path, '%s.csv' % topic_id), 'w', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow(['rank', 'doc_id', 'relevant'])
                 for i, result in zip(range(1, len(engine_response['results'])+1), engine_response['results']):
@@ -130,26 +136,29 @@ class INEXEvaluator(FilesystemEvaluator):
                     relevant = topic_doc_judgements[topic_id][doc_id] > 0 if doc_id in topic_doc_judgements[topic_id] else False
                     writer.writerow([i, doc_id, relevant])
 
-        self.stats['total_query_time'] = sum([t for t in self.stats['query_time'].values()])
-        self.stats['avg_query_time'] = self.stats['total_query_time'] / len(self.stats['query_time'])
-
-    def path_to_topic_id(self, path):
-        return os.path.basename(os.path.splitext(path)[0])
+        self.stats[params_id]['total_query_time'] = sum([t for t in self.stats[params_id]['query_time'].values()])
+        self.stats[params_id]['avg_query_time'] = (
+            self.stats[params_id]['total_query_time'] / len(self.stats[params_id]['query_time']))
 
     def f_score(self, precision, recall, beta=1):
         if precision == 0 and recall == 0: return 0
         return (1 + beta**2) * (precision * recall) / ((beta**2 * precision) + recall)
     
-    def calculate_precision_recall(self):
+    def calculate_precision_recall(self, ranking_params=None):
         # topic_id -> doc_id -> num_relevant_chars
         topic_doc_judgements = self.get_topic_assessments()
 
-        result_files = [
-            os.path.join(self.o_results_path, f)
-            for f in os.listdir(self.o_results_path)
-            if os.path.isfile(os.path.join(self.o_results_path, f))]
+        params_id = self.ranking_params_to_params_id(ranking_params)
+        o_results_path = os.path.join(self.o_results_path, params_id)
 
-        o_eval_details_file = os.path.join(self.o_assessments_path, 'precision_recall_per_topic.csv')
+        result_files = [
+            os.path.join(o_results_path, f)
+            for f in os.listdir(o_results_path)
+            if os.path.isfile(os.path.join(o_results_path, f))]
+
+        o_eval_details_dir = os.path.join(self.o_assessments_path, params_id)
+        if not os.path.exists(o_eval_details_dir): os.makedirs(o_eval_details_dir)
+        o_eval_details_file = os.path.join(o_eval_details_dir, 'precision_recall_per_topic.csv')
 
         with open(o_eval_details_file, 'w') as ef:
             writer = csv.writer(ef)
@@ -211,26 +220,38 @@ class INEXEvaluator(FilesystemEvaluator):
 
                     writer.writerow([topic_id, tp, fp, tn, fn, precision, recall, f_0_5_score, f_1_score, f_2_score])
 
-            self.results['Micro Avg Prec'] = sum(tps) / (sum(tps) + sum(fps))
-            self.results['Micro Avg Rec'] = sum(tps) / (sum(tps) + sum(fns))
-            self.results['Macro Avg Prec'] = sum(precisions) / len(precisions)
-            self.results['Macro Avg Rec'] = sum(recalls) / len(recalls)
+            if not params_id in self.results: self.results[params_id] = {}
+            self.results[params_id]['Micro Avg Prec'] = sum(tps) / (sum(tps) + sum(fps))
+            self.results[params_id]['Micro Avg Rec'] = sum(tps) / (sum(tps) + sum(fns))
+            self.results[params_id]['Macro Avg Prec'] = sum(precisions) / len(precisions)
+            self.results[params_id]['Macro Avg Rec'] = sum(recalls) / len(recalls)
 
-            self.results['Micro Avg F0_5'] = self.f_score(self.results['Micro Avg Prec'], self.results['Micro Avg Rec'], beta=0.5)
-            self.results['Micro Avg F1'] = self.f_score(self.results['Micro Avg Prec'], self.results['Micro Avg Rec'], beta=1)
-            self.results['Micro Avg F2'] = self.f_score(self.results['Micro Avg Prec'], self.results['Micro Avg Rec'], beta=2)
+            self.results[params_id]['Micro Avg F0_5'] = self.f_score(
+                self.results[params_id]['Micro Avg Prec'], self.results[params_id]['Micro Avg Rec'], beta=0.5)
+            self.results[params_id]['Micro Avg F1'] = self.f_score(
+                self.results[params_id]['Micro Avg Prec'], self.results[params_id]['Micro Avg Rec'], beta=1)
+            self.results[params_id]['Micro Avg F2'] = self.f_score(
+                self.results[params_id]['Micro Avg Prec'], self.results[params_id]['Micro Avg Rec'], beta=2)
 
-            self.results['Macro Avg F0_5'] = self.f_score(self.results['Macro Avg Prec'], self.results['Macro Avg Rec'], beta=0.5)
-            self.results['Macro Avg F1'] = self.f_score(self.results['Macro Avg Prec'], self.results['Macro Avg Rec'], beta=1)
-            self.results['Macro Avg F2'] = self.f_score(self.results['Macro Avg Prec'], self.results['Macro Avg Rec'], beta=2)
+            self.results[params_id]['Macro Avg F0_5'] = self.f_score(
+                self.results[params_id]['Macro Avg Prec'], self.results[params_id]['Macro Avg Rec'], beta=0.5)
+            self.results[params_id]['Macro Avg F1'] = self.f_score(
+                self.results[params_id]['Macro Avg Prec'], self.results[params_id]['Macro Avg Rec'], beta=1)
+            self.results[params_id]['Macro Avg F2'] = self.f_score(
+                self.results[params_id]['Macro Avg Prec'], self.results[params_id]['Macro Avg Rec'], beta=2)
 
-    def calculate_precision_at_n(self, n=10):
+    def calculate_precision_at_n(self, n=10, ranking_params=None):
+        params_id = self.ranking_params_to_params_id(ranking_params)
+        o_results_path = os.path.join(self.o_results_path, params_id)
+
         result_files = [
-            os.path.join(self.o_results_path, f)
-            for f in os.listdir(self.o_results_path)
-            if os.path.isfile(os.path.join(self.o_results_path, f))]
+            os.path.join(o_results_path, f)
+            for f in os.listdir(o_results_path)
+            if os.path.isfile(os.path.join(o_results_path, f))]
 
-        o_eval_details_file = os.path.join(self.o_assessments_path, 'p_at_%d-precision_at_%d_per_topic.csv' % (n, n))
+        o_eval_details_dir = os.path.join(self.o_assessments_path, params_id)
+        if not os.path.exists(o_eval_details_dir): os.makedirs(o_eval_details_dir)
+        o_eval_details_file = os.path.join(o_eval_details_dir, 'p_at_%d-precision_at_%d_per_topic.csv' % (n, n))
 
         with open(o_eval_details_file, 'w') as ef:
             writer = csv.writer(ef)
@@ -250,15 +271,21 @@ class INEXEvaluator(FilesystemEvaluator):
                     precisions_at_n.append(precision_at_n)
                     writer.writerow([topic_id, precision_at_n])
 
-            self.results['P@%d' % n] = sum(precisions_at_n) / len(precisions_at_n)
+            if not params_id in self.results: self.results[params_id] = {}
+            self.results[params_id]['P@%d' % n] = sum(precisions_at_n) / len(precisions_at_n)
 
-    def calculate_mean_average_precision(self):
+    def calculate_mean_average_precision(self, ranking_params=None):
+        params_id = self.ranking_params_to_params_id(ranking_params)
+        o_results_path = os.path.join(self.o_results_path, params_id)
+
         result_files = [
-            os.path.join(self.o_results_path, f)
-            for f in os.listdir(self.o_results_path)
-            if os.path.isfile(os.path.join(self.o_results_path, f))]
+            os.path.join(o_results_path, f)
+            for f in os.listdir(o_results_path)
+            if os.path.isfile(os.path.join(o_results_path, f))]
 
-        o_eval_details_file = os.path.join(self.o_assessments_path, 'map_average_precision_per_topic.csv')
+        o_eval_details_dir = os.path.join(self.o_assessments_path, params_id)
+        if not os.path.exists(o_eval_details_dir): os.makedirs(o_eval_details_dir)
+        o_eval_details_file = os.path.join(o_eval_details_dir, 'map_average_precision_per_topic.csv')
 
         with open(o_eval_details_file, 'w') as ef:
             writer = csv.writer(ef)
@@ -284,13 +311,17 @@ class INEXEvaluator(FilesystemEvaluator):
                     avg_precisions.append(avg_precision)
                     writer.writerow([topic_id, avg_precision])
 
-            self.results['MAP'] = sum(avg_precisions) / len(avg_precisions)
+            if not params_id in self.results: self.results[params_id] = {}
+            self.results[params_id]['MAP'] = sum(avg_precisions) / len(avg_precisions)
 
-    def calculate_normalized_discounted_cumulative_gain_at_p(self, p=10):
+    def calculate_normalized_discounted_cumulative_gain_at_p(self, p=10, ranking_params=None):
+        params_id = self.ranking_params_to_params_id(ranking_params)
+        o_results_path = os.path.join(self.o_results_path, params_id)
+
         result_files = [
-            os.path.join(self.o_results_path, f)
-            for f in os.listdir(self.o_results_path)
-            if os.path.isfile(os.path.join(self.o_results_path, f))]
+            os.path.join(o_results_path, f)
+            for f in os.listdir(o_results_path)
+            if os.path.isfile(os.path.join(o_results_path, f))]
 
         ndcgs = []
         for result_file in result_files:
@@ -317,19 +348,25 @@ class INEXEvaluator(FilesystemEvaluator):
                 ndcg = 0.0 if len(dcg_parcels) == 0 else sum(dcg_parcels) / len(idcg_parcels)
                 ndcgs.append(ndcg)
 
-        self.results['NDCG@%d' % p] = 0.0 if len(ndcgs) == 0 else sum(ndcgs) / len(ndcgs)
+        if not params_id in self.results: self.results[params_id] = {}
+        self.results[params_id]['NDCG@%d' % p] = 0.0 if len(ndcgs) == 0 else sum(ndcgs) / len(ndcgs)
 
     async def run(self):
-        assessed_topic_ids = self.get_assessed_topic_ids()
-        await self.get_topic_results(assessed_topic_ids)
-        self.calculate_precision_recall()
-        self.calculate_precision_at_n(n=10)
-        self.calculate_precision_at_n(n=100)
-        self.calculate_precision_at_n(n=1000)
-        self.calculate_mean_average_precision()
-        self.calculate_normalized_discounted_cumulative_gain_at_p(p=10)
-        self.calculate_normalized_discounted_cumulative_gain_at_p(p=100)
-        self.calculate_normalized_discounted_cumulative_gain_at_p(p=1000)
+        sorted_ranking_params = OrderedDict(sorted(self.task.ranking_params.items(), key=lambda d: d[0]))
+        keys = list(sorted_ranking_params.keys())
+        values = list(sorted_ranking_params.values())
+
+        for param_values in itertools.product(*values):
+            ranking_params = dict(zip(keys, param_values))
+            await self.get_topic_results(ranking_params=ranking_params)
+            self.calculate_precision_recall(ranking_params=ranking_params)
+            self.calculate_precision_at_n(n=10, ranking_params=ranking_params)
+            self.calculate_precision_at_n(n=100, ranking_params=ranking_params)
+            self.calculate_precision_at_n(n=1000, ranking_params=ranking_params)
+            self.calculate_mean_average_precision(ranking_params=ranking_params)
+            self.calculate_normalized_discounted_cumulative_gain_at_p(p=10, ranking_params=ranking_params)
+            self.calculate_normalized_discounted_cumulative_gain_at_p(p=100, ranking_params=ranking_params)
+            self.calculate_normalized_discounted_cumulative_gain_at_p(p=1000, ranking_params=ranking_params)
 
 class LivingLabsEvaluator(Evaluator):
     def __init__(self, task, eval_location):
@@ -418,7 +455,8 @@ class LivingLabsEvaluator(Evaluator):
                     with open(pickle_path, 'rb') as f:
                         results = pickle.load(f)
                 else:
-                    engine_response = await self.index.search(query['qstr'], 0, 10000, self.task.ranking_function)
+                    engine_response = await self.index.search(
+                        query['qstr'], 0, 10000, self.task.ranking_function, self.task.ranking_params)
                     results = engine_response['results']
                     with open(pickle_path, 'wb') as f:
                         pickle.dump(results, f)
@@ -439,7 +477,7 @@ class EvaluationTaskStatus(IntEnum):
     ERROR = 5
 
 class EvaluationTask(object):
-    def __init__(self, index_location, index_type, eval_format, ranking_function=None,
+    def __init__(self, index_location, index_type, eval_format, ranking_function=None, ranking_params=None,
                  topics_filename=None, topics_path=None, assessments_filename=None, assessments_path=None,
                  base_url=None, api_key=None, run_id=None, status=EvaluationTaskStatus.WAITING,
                  topics_md5=None, assessments_md5=None, time=None, _id=None, results=None, stats=None):
@@ -447,6 +485,7 @@ class EvaluationTask(object):
         self.index_type = index_type
         self.eval_format = eval_format
         self.ranking_function = ranking_function
+        self.ranking_params = ranking_params
         self.topics_filename = topics_filename
         self.topics_path = topics_path
         self.topics_md5 = topics_md5 or (md5(topics_path) if topics_path else None)

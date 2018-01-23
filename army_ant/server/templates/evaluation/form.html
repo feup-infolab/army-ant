@@ -1,68 +1,58 @@
-<form method="post" accept-charset="utf-8" enctype="multipart/form-data">
-  <div class="columns">
+<form class="form-horizontal" method="post" accept-charset="utf-8" enctype="multipart/form-data">
+  <div class="form-group">
+    <div class="col-1">
+      <label class="form-label label-sm" for="eval-format">Evaluator</label>
+    </div>
     <div class="column">
-      <div class="form-group">
-        <label class="form-label" for="eval-format">Evaluator Format</label>
-        <select class="form-select" id="eval-format" name="eval-format">
-          <option value="inex">INEX</option>
-          <option value="ll-api">Living Labs API</option>
-        </select>
-      </div>
+      <select class="form-select select-sm" id="eval-format" name="eval-format">
+        <option value="inex">INEX</option>
+        <option value="ll-api">Living Labs API</option>
+      </select>
     </div>
 
+    <div class="col-1">
+      <label class="form-label label-sm" for="run-id">Run ID</label>
+    </div>
     <div class="column">
-      <div class="form-group">
-        <label class="form-label" for="engine">Search Engine</label>
-        <select class="form-select" id="engine" name="engine">
-          {% for app_engine in app.engines %}
-          <option value="{{app_engine}}">{{ app.engines[app_engine].name }}</option>
-          {% endfor %}
-        </select>
-      </div>
+      <input class="form-input input-sm" type="text" id="run-id" name="run-id" value="" placeholder="Dataset - retrieval model - ranking function">
     </div>
   </div>
 
-  <div id="inex-block" class="columns dynamic-block">
-    <div class="column col-6">
-      <div class="form-group">
-        <label class="form-label" for="topics">Topics</label>
-        <input class="form-input" type="file" id="topics" name="topics" value="">
-      </div>
+  <div id="inex-block" class="form-group dynamic-block">
+    <div class="col-1">
+      <label class="form-label label-sm" for="topics">Topics</label>
     </div>
-    <div class="column col-6">
-      <div class="form-group">
-        <label class="form-label" for="assessments">Assessments</label>
-        <input class="form-input" type="file" id="assessments" name="assessments" value="">
-      </div>
+    <div class="column">
+      <input class="form-input input-sm" type="file" id="topics" name="topics" value="">
     </div>
-    <div class="column col-12">
-      <div class="form-group">
-        <label class="form-label" for="run-id">Run ID</label>
-        <input class="form-input input-tall" type="text" id="run-id" name="run-id" value="" placeholder="Dataset - retrieval model - ranking function">
-      </div>
+
+    <div class="col-1">
+      <label class="form-label label-sm" for="assessments">Qrels</label>
+    </div>
+    <div class="column">
+      <input class="form-input input-sm" type="file" id="assessments" name="assessments" value="">
     </div>
   </div>
 
-  <div id="ll-api-block" class="columns dynamic-block d-hide">
-    <div class="column col-6">
-      <div class="form-group">
-        <label class="form-label" for="base-url">Base URL</label>
-        <input class="form-input input-tall" type="text" id="base-url" name="base-url" value="" placeholder="http://api.trec-open-search.org">
-      </div>
+  <div id="ll-api-block" class="form-group dynamic-block d-hide">
+    <div class="col-1">
+      <label class="form-label label-sm" for="base-url">Base URL</label>
     </div>
-    <div class="column col-6">
-      <div class="form-group">
-        <label class="form-label" for="api-key">API Key</label>
-        <input class="form-input input-tall" type="text" id="api-key" name="api-key" value="" placeholder="JDJ43JH43JH43JHH-JDSJH4J3H4J0JHJ3">
-      </div>
+    <div class="column">
+      <input class="form-input input-sm" type="text" id="base-url" name="base-url" value="" placeholder="http://api.trec-open-search.org">
     </div>
-    <div class="column col-12">
-      <div class="form-group">
-        <label class="form-label" for="run-id">Run ID</label>
-        <input class="form-input input-tall" type="text" id="run-id" name="run-id" value="" placeholder="Dataset - retrieval model - ranking function">
-      </div>
+
+    <div class="col-1">
+      <label class="form-label label-sm" for="api-key">API Key</label>
+    </div>
+    <div class="column">
+      <input class="form-input input-sm" type="text" id="api-key" name="api-key" value="" placeholder="JDJ43JH43JH43JHH-JDSJH4J3H4J0JHJ3">
     </div>
   </div>
+
+  {% with is_evaluation=True %}
+  {% include 'search/engine.html' %}
+  {% endwith %}
 
   <br>
 
@@ -71,3 +61,24 @@
     <button class="btn" type="reset">Clear form</button>
   </div>
 </form>
+
+<script type="text/javascript">
+  (function() {
+    $(document).on('change', '#eval-format', function(e) {
+      var evalFormat = $(this).val();
+      $('.dynamic-block').addClass('d-hide');
+      $('#' + evalFormat + '-block').removeClass('d-hide');
+      if (evalFormat == 'll-api') {
+        $('#ranking-params select')
+          .css('height', null)
+          .removeAttr('multiple');
+      } else {
+        $('#ranking-params select')
+          .css('height', '8em')
+          .attr('multiple', 'multiple');
+        $('#ranking-params option')
+          .prop('selected', true)
+      }
+    });
+  })();
+</script>

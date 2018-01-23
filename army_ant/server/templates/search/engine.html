@@ -1,0 +1,162 @@
+<div class="form-group">
+  {% if is_evaluation %}
+  <div class="col-1">
+    <label class="form-label label-sm" for="engine">Engine</label>
+  </div>
+  {% endif %}
+
+  <div class="column {% if is_evaluation %} col-5 {% else %} col-6 {% endif %}">
+    <div class="columns">
+      <div class="column">
+        <!-- form radio control -->
+        <select class="form-select select-sm" id="engine" name="engine">
+          {% for app_engine in app.engines %}
+          <option value="{{app_engine}}" {% if engine == app_engine %} selected="selected" {% endif %}>
+            {{app.engines[app_engine].name}}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="column d-hide">
+        <!-- form radio control -->
+        <select class="form-select select-sm" id="ranking-function" name="ranking_function">
+          <!-- Dynamically loaded -->
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="column">
+    <div id="ranking-params" class="columns">
+      <!-- Dynamically loaded -->
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+  (function() {
+    var engines = {{ app['engines']|tojson }};
+    var queryParams = getQueryStrings();
+    var rankingFunction = queryParams.ranking_function;
+    var rankingParams = {};
+
+    queryParamNames = Object.keys(queryParams);
+    for (var i=0; i < queryParamNames.length; i++) {
+      if (queryParamNames[i].startsWith('ranking_param_')) {
+        var parts = queryParamNames[i].split('_');
+        rankingParams[parts[2]] = +queryParams[queryParamNames[i]];
+      }
+    }
+
+    function updateRankingFunctions() {
+      var engine = $('#engine').val();
+      var defaultFunc = { 'id': 'default', 'name': 'Default'};
+      var funcs = [];
+
+      if (engines[engine].ranking) {
+        defaultFunc = engines[engine].ranking.default.id;
+        funcs = engines[engine].ranking.functions;
+      }
+
+      $('#ranking-function').empty();
+
+      if (Object.keys(funcs).length > 0) {
+        $('#ranking-function').parent('.column').removeClass('d-hide');
+
+        for (var func in funcs) {
+          var $func = $('<option>')
+            .attr('value', func)
+            .text(funcs[func].name);
+
+          if (rankingFunction) {
+            if (func == rankingFunction) {
+              $func.attr('selected', 'selected');
+            }
+          } else if (func == defaultFunc) {
+            $func.attr('selected', 'selected');
+          }
+
+          $('#ranking-function').append($func);
+        }
+      } else {
+        $('#ranking-function').parent('.column').addClass('d-hide');
+      }
+    }
+
+    function updateRankingParameters() {
+      var engine = $('#engine').val();
+      var rankingFunction = $('#ranking-function').val();
+      var defaultParams = {};
+      var params = [];
+
+      if (engines[engine].ranking) {
+        defaultParams = engines[engine].ranking.default.params;
+        if (engines[engine].ranking.functions[rankingFunction]) {
+          params = engines[engine].ranking.functions[rankingFunction].params;
+        }
+      }
+
+      $('#ranking-params').empty();
+
+      for (var param in params) {
+        var $formGroup = $('<div>')
+          .addClass('form-group');
+
+        var $label = $('<label>')
+          .addClass('form-label label-sm')
+          .attr('for', 'ranking_param_' + param)
+          .text(param);
+
+        var $select = $('<select>')
+          .addClass('form-select select-sm')
+          {% if is_evaluation %}
+          .attr('multiple', 'multiple')
+          .css('height', '8em')
+          {% endif %}
+          .attr('id', 'ranking-param-' + param)
+          .attr('name', 'ranking_param_' + param);
+
+        $('<div>').addClass('col-1').append($label).appendTo($formGroup);
+        $('<div>').addClass('col-11').append($select).appendTo($formGroup);
+
+        var $column = $('<div>')
+          .addClass('column')
+          .append($formGroup);
+
+        $('#ranking-params').append($column);
+
+        for (var i=0; i < params[param].length; i++) {
+          var $param = $('<option>')
+            .attr('value', params[param][i])
+            .text(params[param][i]);
+          $select.append($param);
+
+          {% if is_evaluation %}
+          $param.attr('selected', 'selected');
+          {% else %}
+          if (rankingParams[param]) {
+            if(params[param][i] == rankingParams[param]) {
+                $param.attr('selected', 'selected');
+            }
+          } else if (params[param][i] == defaultParams[param]) {
+            $param.attr('selected', 'selected');
+          }
+          {% endif %}
+        }
+      }
+    }
+
+    updateRankingFunctions();
+    updateRankingParameters();
+
+    $(document).on('change', '#engine', function(e) {
+      updateRankingFunctions();
+      updateRankingParameters();
+    });
+
+    $(document).on('change', '#ranking-function', function(e) {
+      updateRankingParameters();
+    });
+  })();
+</script>

@@ -308,12 +308,6 @@
       toggleDetails($task);
     });
 
-    $(document).on('change', '#eval-format', function(e) {
-      var evalFormat = $(this).val();
-      $('.dynamic-block').addClass('d-hide');
-      $('#' + evalFormat + '-block').removeClass('d-hide');
-    });
-
     function toggleDetails($task) {
       var taskFormat = $task.data('format');
       var $detail = $task.find('.detail');

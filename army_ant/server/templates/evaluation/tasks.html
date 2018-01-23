@@ -81,20 +81,66 @@
       </tr>
       {% endif %}
 
-      {% if task.stats %}
-      {% if task.stats.total_query_time %}
+      {% if task.ranking_params %}
       <tr>
-        <th>Total Query Time</th>
-        <td>{{ task.stats.total_query_time / 1000 }}s</td>
+        <th>Ranking Parameters</th>
+        <td>
+          {% for k, v in task.ranking_params.items() %}
+          {{ k }} = {{ v|replace("'", "") }}
+          {% if not loop.last %} <br> {% endif %}
+          {% endfor %}
+        </td>
       </tr>
       {% endif %}
 
-      {% if task.stats.avg_query_time %}
+      {% if task.stats and task.stats|length > 0 %}
+      <tr>
+        <th>Total Query Time</th>
+        <td>
+          <div class="columns">
+            <div class="column">
+              <table class="table table-sm table-simple">
+                {% for params_id in task.stats %}
+                {% if task.stats[params_id].total_query_time %}
+                <tr>
+                  <th>{{ params_id|params_id_to_str }}</th>
+                  <td>{{ task.stats[params_id].total_query_time / 1000 }}s</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+              </table>
+            </div>
+
+            <div class="column">
+              <!-- TODO mini-barchart -->
+            </div>
+          </div>
+        </td>
+      </tr>
+
       <tr>
         <th>Average Query Time</th>
-        <td>{{ task.stats.avg_query_time / 1000 }}s</td>
+        <td>
+          <div class="columns">
+            <div class="column">
+              <table class="table table-sm table-simple">
+                {% for params_id in task.stats %}
+                {% if task.stats[params_id].avg_query_time %}
+                <tr>
+                  <th>{{ params_id|params_id_to_str }}</th>
+                  <td>{{ task.stats[params_id].avg_query_time / 1000 }}s</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+              </table>
+            </div>
+
+            <div class="column">
+              <!-- TODO mini-barchart -->
+            </div>
+          </div>
+        </td>
       </tr>
-      {% endif %}
       {% endif %}
 
       {% if task.eval_format == "inex" %}
@@ -137,8 +183,10 @@
         </thead>
         <tbody>
           <tr>
-            {% for metric in task.results %}
-            <td>{{ task.results[metric]|round(6) }}</td>
+            {% for params_id, results in task.results.items() %}
+            {% for metric in results %}
+            <td>{{ params_id }}:{{ results[metric]|round(6) }}</td>
+            {% endfor %}
             {% endfor %}
           </tr>
         </tbody>
