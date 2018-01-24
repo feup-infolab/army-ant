@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Collection;
+import java.util.Map;
 
 /**
  * Created by jldevezas on 2017-12-19.
@@ -90,11 +91,12 @@ public class LuceneEngine extends Engine {
 
     @Override
     public ResultSet search(String query, int offset, int limit) throws Exception {
-        return search(query, offset, limit, RankingFunction.TF_IDF);
+        return search(query, offset, limit, RankingFunction.TF_IDF, null);
     }
 
-    public ResultSet search(String query, int offset, int limit, RankingFunction rankingFunction)
-            throws IOException, ParseException {
+    public ResultSet search(String query, int offset, int limit,
+                            RankingFunction rankingFunction, Map<String, String> params)
+            throws IOException, ParseException, ClassNotFoundException, IllegalAccessException, InstantiationException {
         IndexReader reader = DirectoryReader.open(directory);
         IndexSearcher searcher = new IndexSearcher(reader);
 
@@ -103,10 +105,31 @@ public class LuceneEngine extends Engine {
                 searcher.setSimilarity(new ClassicSimilarity());
                 break;
             case BM25:
-                searcher.setSimilarity(new BM25Similarity());
+                searcher.setSimilarity(new BM25Similarity(
+                        Float.parseFloat(params.get("k1")),
+                        Float.parseFloat(params.get("b"))));
                 break;
-            case DFR_BE_L_H1:
-                searcher.setSimilarity(new DFRSimilarity(new BasicModelBE(), new AfterEffectL(), new NormalizationH1()));
+            case DFR:
+                BasicModel basicModel = (BasicModel) Class.forName("org.apache.lucene.search.similarities.BasicModel" +
+                                                                   params.get("BM")).newInstance();
+
+                AfterEffect afterEffect;
+                if (params.get("AE").equals("Disabled")) {
+                    afterEffect = new AfterEffect.NoAfterEffect();
+                } else {
+                    afterEffect = (AfterEffect) Class.forName("org.apache.lucene.search.similarities.AfterEffect" +
+                                                              params.get("AE")).newInstance();
+                }
+
+                Normalization normalization;
+                if (params.get("N").equals("Disabled")) {
+                    normalization = new Normalization.NoNormalization();
+                } else {
+                    normalization = (Normalization) Class.forName("org.apache.lucene.search.similarities.Normalization" +
+                                                                  params.get("N")).newInstance();
+                }
+
+                searcher.setSimilarity(new DFRSimilarity(basicModel, afterEffect, normalization));
                 break;
             default:
                 searcher.setSimilarity(new ClassicSimilarity());
@@ -139,6 +162,6 @@ public class LuceneEngine extends Engine {
     public enum RankingFunction {
         TF_IDF,
         BM25,
-        DFR_BE_L_H1
+        DFR
     }
 }

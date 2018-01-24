@@ -117,8 +117,8 @@
           .attr('id', 'ranking-param-' + param)
           .attr('name', 'ranking_param_' + param);
 
-        $('<div>').addClass('col-1').append($label).appendTo($formGroup);
-        $('<div>').addClass('col-11').append($select).appendTo($formGroup);
+        $('<div>').addClass('col-2').append($label).appendTo($formGroup);
+        $('<div>').addClass('col-10').append($select).appendTo($formGroup);
 
         var $column = $('<div>')
           .addClass('column')
@@ -139,7 +139,7 @@
             if(params[param][i] == rankingParams[param]) {
                 $param.attr('selected', 'selected');
             }
-          } else if (params[param][i] == defaultParams[param]) {
+          } else if (defaultParams && defaultParams[param] && params[param][i] == defaultParams[param]) {
             $param.attr('selected', 'selected');
           }
           {% endif %}

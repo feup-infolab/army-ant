@@ -764,7 +764,7 @@ class LuceneEngine(JavaIndex):
     class RankingFunction(Enum):
         tf_idf = 'TF_IDF'
         bm25 = 'BM25'
-        dfr_be_l_h1 = 'DFR_BE_L_H1'
+        dfr = 'DFR'
 
     JLuceneEngine = JavaIndex.armyant.lucene.LuceneEngine
     JRankingFunction = JClass("armyant.lucene.LuceneEngine$RankingFunction")
@@ -817,6 +817,13 @@ class LuceneEngine(JavaIndex):
         logger.info("Using '%s' as ranking function" % ranking_function.value)
         ranking_function = LuceneEngine.JRankingFunction.valueOf(ranking_function.value)
 
+        j_ranking_params = jpype.java.util.HashMap()
+        if ranking_params:
+            logger.info("Using ranking parameters %s" % ranking_params)
+            for k, v in ranking_params.items():
+                j_ranking_params.put(k, v)
+        ranking_params = j_ranking_params
+
         results = []
         num_docs = 0
         trace = None
@@ -827,7 +834,7 @@ class LuceneEngine(JavaIndex):
                 lucene = LuceneEngine.JLuceneEngine(self.index_location)
                 LuceneEngine.INSTANCES[self.index_location] = lucene
             
-            results = lucene.search(query, offset, limit, ranking_function)
+            results = lucene.search(query, offset, limit, ranking_function, ranking_params)
             num_docs = results.getNumDocs()
             trace = results.getTrace()
             results = [Result(result.getDocID(), result.getScore())
