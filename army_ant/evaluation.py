@@ -21,7 +21,7 @@ from urllib.parse import urljoin
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import HTTPError
 from army_ant.index import Index
-from army_ant.util import md5, get_first, zipdir, safe_div
+from army_ant.util import md5, get_first, zipdir, safe_div, ranking_params_to_params_id, params_id_to_str
 from army_ant.exception import ArmyAntException
 
 logger = logging.getLogger(__name__)
@@ -74,10 +74,6 @@ class INEXEvaluator(FilesystemEvaluator):
         self.loop = asyncio.get_event_loop()
         self.index = Index.open(self.task.index_location, self.task.index_type, self.loop)
 
-    def ranking_params_to_params_id(self, ranking_params):
-        if ranking_params is None or len(ranking_params) < 1: return 'no_params'
-        return '-'.join([p[0] + '_' + str(p[1]) for p in ranking_params.items()])
-
     def path_to_topic_id(self, path):
         return os.path.basename(os.path.splitext(path)[0])
 
@@ -100,13 +96,13 @@ class INEXEvaluator(FilesystemEvaluator):
 
         topics = etree.parse(self.task.topics_path)
 
-        params_id = self.ranking_params_to_params_id(ranking_params)
+        params_id = ranking_params_to_params_id(ranking_params)
 
         o_results_path = os.path.join(self.o_results_path, params_id)
         if not os.path.exists(o_results_path): os.makedirs(o_results_path)
 
         if not params_id in self.stats:
-            self.stats[params_id] = { 'query_time': {} }
+            self.stats[params_id] = { 'ranking_params': ranking_params, 'query_time': {} }
 
         for topic in topics.xpath('//topic'):
             if self.interrupt:
@@ -148,7 +144,7 @@ class INEXEvaluator(FilesystemEvaluator):
         # topic_id -> doc_id -> num_relevant_chars
         topic_doc_judgements = self.get_topic_assessments()
 
-        params_id = self.ranking_params_to_params_id(ranking_params)
+        params_id = ranking_params_to_params_id(ranking_params)
         o_results_path = os.path.join(self.o_results_path, params_id)
 
         result_files = [
@@ -220,28 +216,34 @@ class INEXEvaluator(FilesystemEvaluator):
 
                     writer.writerow([topic_id, tp, fp, tn, fn, precision, recall, f_0_5_score, f_1_score, f_2_score])
 
-            if not params_id in self.results: self.results[params_id] = {}
-            self.results[params_id]['Micro Avg Prec'] = safe_div(sum(tps), sum(tps) + sum(fps))
-            self.results[params_id]['Micro Avg Rec'] = safe_div(sum(tps), sum(tps) + sum(fns))
-            self.results[params_id]['Macro Avg Prec'] = safe_div(sum(precisions), len(precisions))
-            self.results[params_id]['Macro Avg Rec'] = safe_div(sum(recalls), len(recalls))
+            if not params_id in self.results: self.results[params_id] = { 'ranking_params': ranking_params, 'metrics': {} }
+            self.results[params_id]['metrics']['Micro Avg Prec'] = safe_div(sum(tps), sum(tps) + sum(fps))
+            self.results[params_id]['metrics']['Micro Avg Rec'] = safe_div(sum(tps), sum(tps) + sum(fns))
+            self.results[params_id]['metrics']['Macro Avg Prec'] = safe_div(sum(precisions), len(precisions))
+            self.results[params_id]['metrics']['Macro Avg Rec'] = safe_div(sum(recalls), len(recalls))
 
-            self.results[params_id]['Micro Avg F0_5'] = self.f_score(
-                self.results[params_id]['Micro Avg Prec'], self.results[params_id]['Micro Avg Rec'], beta=0.5)
-            self.results[params_id]['Micro Avg F1'] = self.f_score(
-                self.results[params_id]['Micro Avg Prec'], self.results[params_id]['Micro Avg Rec'], beta=1)
-            self.results[params_id]['Micro Avg F2'] = self.f_score(
-                self.results[params_id]['Micro Avg Prec'], self.results[params_id]['Micro Avg Rec'], beta=2)
+            self.results[params_id]['metrics']['Micro Avg F0_5'] = self.f_score(
+                self.results[params_id]['metrics']['Micro Avg Prec'],
+                self.results[params_id]['metrics']['Micro Avg Rec'], beta=0.5)
+            self.results[params_id]['metrics']['Micro Avg F1'] = self.f_score(
+                self.results[params_id]['metrics']['Micro Avg Prec'],
+                self.results[params_id]['metrics']['Micro Avg Rec'], beta=1)
+            self.results[params_id]['metrics']['Micro Avg F2'] = self.f_score(
+                self.results[params_id]['metrics']['Micro Avg Prec'],
+                self.results[params_id]['metrics']['Micro Avg Rec'], beta=2)
 
-            self.results[params_id]['Macro Avg F0_5'] = self.f_score(
-                self.results[params_id]['Macro Avg Prec'], self.results[params_id]['Macro Avg Rec'], beta=0.5)
-            self.results[params_id]['Macro Avg F1'] = self.f_score(
-                self.results[params_id]['Macro Avg Prec'], self.results[params_id]['Macro Avg Rec'], beta=1)
-            self.results[params_id]['Macro Avg F2'] = self.f_score(
-                self.results[params_id]['Macro Avg Prec'], self.results[params_id]['Macro Avg Rec'], beta=2)
+            self.results[params_id]['metrics']['Macro Avg F0_5'] = self.f_score(
+                self.results[params_id]['metrics']['Macro Avg Prec'],
+                self.results[params_id]['metrics']['Macro Avg Rec'], beta=0.5)
+            self.results[params_id]['metrics']['Macro Avg F1'] = self.f_score(
+                self.results[params_id]['metrics']['Macro Avg Prec'],
+                self.results[params_id]['metrics']['Macro Avg Rec'], beta=1)
+            self.results[params_id]['metrics']['Macro Avg F2'] = self.f_score(
+                self.results[params_id]['metrics']['Macro Avg Prec'],
+                self.results[params_id]['metrics']['Macro Avg Rec'], beta=2)
 
     def calculate_precision_at_n(self, n=10, ranking_params=None):
-        params_id = self.ranking_params_to_params_id(ranking_params)
+        params_id = ranking_params_to_params_id(ranking_params)
         o_results_path = os.path.join(self.o_results_path, params_id)
 
         result_files = [
@@ -271,11 +273,11 @@ class INEXEvaluator(FilesystemEvaluator):
                     precisions_at_n.append(precision_at_n)
                     writer.writerow([topic_id, precision_at_n])
 
-            if not params_id in self.results: self.results[params_id] = {}
-            self.results[params_id]['P@%d' % n] = safe_div(sum(precisions_at_n), len(precisions_at_n))
+            if not params_id in self.results: self.results[params_id] = { 'ranking_params': ranking_params, 'metrics': {} }
+            self.results[params_id]['metrics']['P@%d' % n] = safe_div(sum(precisions_at_n), len(precisions_at_n))
 
     def calculate_mean_average_precision(self, ranking_params=None):
-        params_id = self.ranking_params_to_params_id(ranking_params)
+        params_id = ranking_params_to_params_id(ranking_params)
         o_results_path = os.path.join(self.o_results_path, params_id)
 
         result_files = [
@@ -311,11 +313,11 @@ class INEXEvaluator(FilesystemEvaluator):
                     avg_precisions.append(avg_precision)
                     writer.writerow([topic_id, avg_precision])
 
-            if not params_id in self.results: self.results[params_id] = {}
-            self.results[params_id]['MAP'] = safe_div(sum(avg_precisions), len(avg_precisions))
+            if not params_id in self.results: self.results[params_id] = { 'ranking_params': ranking_params, 'metrics': {} }
+            self.results[params_id]['metrics']['MAP'] = safe_div(sum(avg_precisions), len(avg_precisions))
 
     def calculate_normalized_discounted_cumulative_gain_at_p(self, p=10, ranking_params=None):
-        params_id = self.ranking_params_to_params_id(ranking_params)
+        params_id = ranking_params_to_params_id(ranking_params)
         o_results_path = os.path.join(self.o_results_path, params_id)
 
         result_files = [
@@ -348,8 +350,8 @@ class INEXEvaluator(FilesystemEvaluator):
                 ndcg = safe_div(sum(dcg_parcels), len(idcg_parcels))
                 ndcgs.append(ndcg)
 
-        if not params_id in self.results: self.results[params_id] = {}
-        self.results[params_id]['NDCG@%d' % p] = safe_div(sum(ndcgs), len(ndcgs))
+        if not params_id in self.results: self.results[params_id] = { 'ranking_params': ranking_params, 'metrics': {} }
+        self.results[params_id]['metrics']['NDCG@%d' % p] = safe_div(sum(ndcgs), len(ndcgs))
 
     async def run_with_params(self, ranking_params=None):
         await self.get_topic_results(ranking_params=ranking_params)
@@ -636,15 +638,19 @@ class EvaluationTaskManager(object):
 
             for task in tasks:
                 task = EvaluationTask(**task)
-                values = []
-                if 'Run ID' in columns: values.append(task.run_id)
-                if 'Type' in columns: values.append(task.index_type)
-                if 'Location' in columns: values.append(task.index_location)
-                values.extend([
-                    task.results[metric] if metric in task.results and task.results[metric] != '' else np.nan
-                    for metric in metrics
-                ])
-                df = df.append(pd.DataFrame([values], columns=columns))
+                for result in task.results.values():
+                    values = []
+                    if 'Run ID' in columns: values.append(task.run_id)
+                    if 'Parameters' in columns:
+                        params_id = ranking_params_to_params_id(result['ranking_params'])
+                        values.append(params_id_to_str(params_id))
+                    if 'Type' in columns: values.append(task.index_type)
+                    if 'Location' in columns: values.append(task.index_location)
+                    values.extend([
+                        result['metrics'][metric] if metric in result['metrics'] and result['metrics'][metric] != '' else np.nan
+                        for metric in metrics
+                    ])
+                    df = df.append(pd.DataFrame([values], columns=columns))
 
             float_format = "%%.%df" % decimals
             if fmt == 'csv':
@@ -656,6 +662,7 @@ class EvaluationTaskManager(object):
                     index=False,
                     float_format=float_format,
                     border=0,
+                    justify='left',
                     classes='table table-sm table-scroll table-striped').encode('utf-8'))
 
             yield tmp_file

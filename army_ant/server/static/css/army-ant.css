@@ -79,7 +79,7 @@ code {
   font-size: 0.8em;
 }
 .table.table-sm th, .table.table-sm td {
-  padding: 0.5em 0;
+  padding: 0.5em 0.5em 0.5em 0;
 }
 
 .table.table-simple tr {

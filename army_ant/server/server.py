@@ -9,7 +9,7 @@ from aiohttp.client_exceptions import ClientOSError
 from army_ant.index import Index, Result
 from army_ant.database import Database
 from army_ant.evaluation import EvaluationTask, EvaluationTaskManager
-from army_ant.util import set_dict_defaults
+from army_ant.util import set_dict_defaults, params_id_to_str
 from army_ant.exception import ArmyAntException
 
 logger = logging.getLogger(__name__)
@@ -22,13 +22,6 @@ async def page_link(request):
         query['offset'] = offset
         return request.url.with_query(query)
     return { 'page_link': _page_link }
-
-def params_id_to_str(params_id):
-    if params_id == 'no_params': return "No parameters"
-    params = []
-    for p in params_id.split('-'):
-        params.append('%s=%s' % tuple(p.split('_', 1)))
-    return '(%s)' % ', '.join(params)
 
 def timestamp_to_date(timestamp):
     return datetime.fromtimestamp(int(round(timestamp / 1000)))
@@ -150,7 +143,8 @@ async def evaluation_get(request):
     metrics = set([])
     for task in tasks:
         if hasattr(task, 'results'):
-            metrics = metrics.union([metric for metric in task.results.keys()])
+            first_item_metrics = next(iter(task.results.values()))["metrics"].keys()
+            metrics = metrics.union([metric for metric in first_item_metrics])
     return { 'tasks': tasks, 'metrics': sorted(metrics) }
 
 async def evaluation_delete(request):

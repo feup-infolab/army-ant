@@ -185,18 +185,37 @@
     <div class="d-hide detail">
       <table class="table table-scroll table-sm">
         <thead>
-          {% for metric in task.results %}
+          {% if task.results %}
+          {% set result = task.results.values()|first %}
+
+          {% if result.ranking_params %}
+          {% for param_name in result.ranking_params.keys() %}
+          <th>{{ param_name }}</th>
+          {% endfor %}
+          {% endif %}
+
+          {% if result.metrics %}
+          {% for metric in result.metrics.keys() %}
           <th>{{ metric }}</th>
           {% endfor %}
+          {% endif %}
+
+          {% endif %}
         </thead>
         <tbody>
+          {% for params_id, results in task.results.items() %}
           <tr>
-            {% for params_id, results in task.results.items() %}
-            {% for metric in results %}
-            <td>{{ params_id }}:{{ results[metric]|round(6) }}</td>
+            {% if results.ranking_params %}
+            {% for param_value in results.ranking_params.values() %}
+            <th>{{ param_value }}</th>
             {% endfor %}
+            {% endif %}
+
+            {% for metric in results.metrics %}
+            <td>{{ results.metrics[metric]|round(6) }}</td>
             {% endfor %}
           </tr>
+          {% endfor %}
         </tbody>
       </table>
     </div>

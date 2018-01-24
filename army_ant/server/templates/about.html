@@ -2,13 +2,41 @@
 {% block title %}About{% endblock %}
 
 {% block content %}
-<div class="columns">
-  <div class="column">
-    <header>
-      <h3>About</h3>
-    </header>
+  <h3>About</h3>
 
-    <p>TODO: explain how to use Army ANT.</p>
-  </div>
-</div>
+  <p>Army ANT was created by <a href="http://josedevezas.com">José Devezas</a>, as part of his PhD in "Graph-Based Entity-Oriented Search". The goal was to provide a platform where testing novel search approaches would be quick and easy, by minimizing implementation requirements through code reusing.</p>
+
+  <p>For example, if you just want to test a custom ranking function using Lucene, why go through all the work of pre-processing a collection, iterating over it and indexing the documents all over again, just to test that one ranking function? With Army ANT, you can reuse available readers to iterate over documents in supported collections (or implement your own, but just once, and then the community can also reuse it).</p>
+
+  <p>Another advantage of Army ANT is that it provides out-of-the-box evaluation, letting you test multiple ranking functions per representation model, as well as define parameter configurations to help you determine which values result in the best effectiveness.</p>
+
+
+  <h3>Getting Started</h3>
+
+  <p>For the time being, you can refer to Chapter 2 of the technical report I wrote for MAP-i's Scientific Activities, for documentation about Army ANT: <a href="http://hdl.handle.net/10216/110181" rel="nofollow">Army ANT: A Workbench for Innovation in Entity-Oriented Search</a>.</p>
+
+  <p>
+    <span class="label label-warning">TODO: explain how to install and use Army ANT with current implementations.</span>
+    <span class="label label-warning">TODO: explain how to implement a basic engine (show class headers with stub functions).</span>
+  </p>
+
+
+  <h3>License</h3>
+  <p>All source code is freely available under a standard <a href="https://opensource.org/licenses/BSD-3-Clause" rel="nofollow">BSD 3-Clause license</a>.</p>
+  <p>Copyright (c) 2018, FEUP InfoLab (<a href="http://infolab.fe.up.pt" rel="nofollow">http://infolab.fe.up.pt</a>)</p>
+  <p>All rights reserved.</p>
+  <p>Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:</p>
+  <ol>
+    <li>
+      Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+    </li>
+    <li>
+      Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+    </li>
+    <li>
+      Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+    </li>
+  </ol>
+  <p>THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</p>
+
 {% endblock %}
