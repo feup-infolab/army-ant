@@ -24,6 +24,7 @@ async def page_link(request):
     return { 'page_link': _page_link }
 
 def params_id_to_str(params_id):
+    if params_id == 'no_params': return "No parameters"
     params = []
     for p in params_id.split('-'):
         params.append('%s=%s' % tuple(p.split('_', 1)))
@@ -77,7 +78,7 @@ async def search(request):
                 request.app['engines'][engine]['index']['location'],
                 request.app['engines'][engine]['index']['type'],
                 loop)
-            engine_response = await index.search(query, offset, limit, ranking_function, ranking_params)
+            engine_response = await index.search(query, offset, limit, ranking_function, ranking_params or None)
 
             num_docs = len(engine_response['results'])
             if engine_response['numDocs']: num_docs = engine_response['numDocs']
@@ -225,8 +226,8 @@ async def evaluation_post(request):
     index_location = request.app['engines'][data['engine']]['index']['location']
     index_type = request.app['engines'][data['engine']]['index']['type']
     ranking_function = data.get('ranking_function')
+
     ranking_params = {}
-    
     for k in set(data.keys()):
         if k.startswith('ranking_param_'):
             _, _, param_name = k.split('_', 2)
@@ -237,7 +238,7 @@ async def evaluation_post(request):
         index_type,
         data['eval-format'],
         ranking_function,
-        ranking_params,
+        ranking_params or None,
         topics_filename,
         topics_path,
         assessments_filename,

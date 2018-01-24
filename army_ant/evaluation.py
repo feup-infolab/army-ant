@@ -21,7 +21,7 @@ from urllib.parse import urljoin
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import HTTPError
 from army_ant.index import Index
-from army_ant.util import md5, get_first, zipdir
+from army_ant.util import md5, get_first, zipdir, safe_div
 from army_ant.exception import ArmyAntException
 
 logger = logging.getLogger(__name__)
@@ -64,8 +64,8 @@ class FilesystemEvaluator(Evaluator):
             raise ArmyAntException("Assessments directory '%s' already exists" % self.o_assessments_path)
 
     def remove_output(self):
-        shutil.rmtree(self.o_results_path)
-        shutil.rmtree(self.o_assessments_path)
+        shutil.rmtree(self.o_results_path, ignore_errors=True)
+        shutil.rmtree(self.o_assessments_path, ignore_errors=True)
 
 class INEXEvaluator(FilesystemEvaluator):
     def __init__(self, task, eval_location):
@@ -75,7 +75,7 @@ class INEXEvaluator(FilesystemEvaluator):
         self.index = Index.open(self.task.index_location, self.task.index_type, self.loop)
 
     def ranking_params_to_params_id(self, ranking_params):
-        if ranking_params is None: return 'no_params'
+        if ranking_params is None or len(ranking_params) < 1: return 'no_params'
         return '-'.join([p[0] + '_' + str(p[1]) for p in ranking_params.items()])
 
     def path_to_topic_id(self, path):
@@ -142,7 +142,7 @@ class INEXEvaluator(FilesystemEvaluator):
 
     def f_score(self, precision, recall, beta=1):
         if precision == 0 and recall == 0: return 0
-        return (1 + beta**2) * (precision * recall) / ((beta**2 * precision) + recall)
+        return safe_div((1 + beta**2) * (precision * recall), (beta**2 * precision) + recall)
     
     def calculate_precision_recall(self, ranking_params=None):
         # topic_id -> doc_id -> num_relevant_chars
@@ -203,10 +203,10 @@ class INEXEvaluator(FilesystemEvaluator):
 
                     logger.debug("%s - TP(%d) + FP(%d) + TN(%d) + FN(%d) = %d" % (topic_id, tp, fp, tn, fn, tp+fp+tn+fn))
 
-                    precision = tp / (tp + fp) if tp + fp > 0 else 0
+                    precision = safe_div(tp, tp + fp)
                     precisions.append(precision)
 
-                    recall = tp / (tp + fn) if tp + fn > 0 else 0
+                    recall = safe_div(tp, tp + fn)
                     recalls.append(recall)
 
                     f_0_5_score = self.f_score(precision, recall, beta=0.5)
@@ -221,10 +221,10 @@ class INEXEvaluator(FilesystemEvaluator):
                     writer.writerow([topic_id, tp, fp, tn, fn, precision, recall, f_0_5_score, f_1_score, f_2_score])
 
             if not params_id in self.results: self.results[params_id] = {}
-            self.results[params_id]['Micro Avg Prec'] = sum(tps) / (sum(tps) + sum(fps))
-            self.results[params_id]['Micro Avg Rec'] = sum(tps) / (sum(tps) + sum(fns))
-            self.results[params_id]['Macro Avg Prec'] = sum(precisions) / len(precisions)
-            self.results[params_id]['Macro Avg Rec'] = sum(recalls) / len(recalls)
+            self.results[params_id]['Micro Avg Prec'] = safe_div(sum(tps), sum(tps) + sum(fps))
+            self.results[params_id]['Micro Avg Rec'] = safe_div(sum(tps), sum(tps) + sum(fns))
+            self.results[params_id]['Macro Avg Prec'] = safe_div(sum(precisions), len(precisions))
+            self.results[params_id]['Macro Avg Rec'] = safe_div(sum(recalls), len(recalls))
 
             self.results[params_id]['Micro Avg F0_5'] = self.f_score(
                 self.results[params_id]['Micro Avg Prec'], self.results[params_id]['Micro Avg Rec'], beta=0.5)
@@ -272,7 +272,7 @@ class INEXEvaluator(FilesystemEvaluator):
                     writer.writerow([topic_id, precision_at_n])
 
             if not params_id in self.results: self.results[params_id] = {}
-            self.results[params_id]['P@%d' % n] = sum(precisions_at_n) / len(precisions_at_n)
+            self.results[params_id]['P@%d' % n] = safe_div(sum(precisions_at_n), len(precisions_at_n))
 
     def calculate_mean_average_precision(self, ranking_params=None):
         params_id = self.ranking_params_to_params_id(ranking_params)
@@ -304,15 +304,15 @@ class INEXEvaluator(FilesystemEvaluator):
 
                     for i in range(1, len(results)+1):
                         rel = results[0:i]
-                        p = sum(rel) / len(rel)
+                        p = safe_div(sum(rel), len(rel))
                         precisions.append(p)
 
-                    avg_precision = 0.0 if len(precisions) == 0 else sum(precisions) / len(precisions)
+                    avg_precision = safe_div(sum(precisions), len(precisions))
                     avg_precisions.append(avg_precision)
                     writer.writerow([topic_id, avg_precision])
 
             if not params_id in self.results: self.results[params_id] = {}
-            self.results[params_id]['MAP'] = sum(avg_precisions) / len(avg_precisions)
+            self.results[params_id]['MAP'] = safe_div(sum(avg_precisions), len(avg_precisions))
 
     def calculate_normalized_discounted_cumulative_gain_at_p(self, p=10, ranking_params=None):
         params_id = self.ranking_params_to_params_id(ranking_params)
@@ -345,28 +345,34 @@ class INEXEvaluator(FilesystemEvaluator):
                     idcg_p = (2**rel - 1) / math.log2(i + 1)
                     idcg_parcels.append(idcg_p)
 
-                ndcg = 0.0 if len(dcg_parcels) == 0 else sum(dcg_parcels) / len(idcg_parcels)
+                ndcg = safe_div(sum(dcg_parcels), len(idcg_parcels))
                 ndcgs.append(ndcg)
 
         if not params_id in self.results: self.results[params_id] = {}
-        self.results[params_id]['NDCG@%d' % p] = 0.0 if len(ndcgs) == 0 else sum(ndcgs) / len(ndcgs)
+        self.results[params_id]['NDCG@%d' % p] = safe_div(sum(ndcgs), len(ndcgs))
+
+    async def run_with_params(self, ranking_params=None):
+        await self.get_topic_results(ranking_params=ranking_params)
+        self.calculate_precision_recall(ranking_params=ranking_params)
+        self.calculate_precision_at_n(n=10, ranking_params=ranking_params)
+        self.calculate_precision_at_n(n=100, ranking_params=ranking_params)
+        self.calculate_precision_at_n(n=1000, ranking_params=ranking_params)
+        self.calculate_mean_average_precision(ranking_params=ranking_params)
+        self.calculate_normalized_discounted_cumulative_gain_at_p(p=10, ranking_params=ranking_params)
+        self.calculate_normalized_discounted_cumulative_gain_at_p(p=100, ranking_params=ranking_params)
+        self.calculate_normalized_discounted_cumulative_gain_at_p(p=1000, ranking_params=ranking_params)
 
     async def run(self):
-        sorted_ranking_params = OrderedDict(sorted(self.task.ranking_params.items(), key=lambda d: d[0]))
-        keys = list(sorted_ranking_params.keys())
-        values = list(sorted_ranking_params.values())
+        if self.task.ranking_params:
+            sorted_ranking_params = OrderedDict(sorted(self.task.ranking_params.items(), key=lambda d: d[0]))
+            keys = list(sorted_ranking_params.keys())
+            values = list(sorted_ranking_params.values())
 
-        for param_values in itertools.product(*values):
-            ranking_params = dict(zip(keys, param_values))
-            await self.get_topic_results(ranking_params=ranking_params)
-            self.calculate_precision_recall(ranking_params=ranking_params)
-            self.calculate_precision_at_n(n=10, ranking_params=ranking_params)
-            self.calculate_precision_at_n(n=100, ranking_params=ranking_params)
-            self.calculate_precision_at_n(n=1000, ranking_params=ranking_params)
-            self.calculate_mean_average_precision(ranking_params=ranking_params)
-            self.calculate_normalized_discounted_cumulative_gain_at_p(p=10, ranking_params=ranking_params)
-            self.calculate_normalized_discounted_cumulative_gain_at_p(p=100, ranking_params=ranking_params)
-            self.calculate_normalized_discounted_cumulative_gain_at_p(p=1000, ranking_params=ranking_params)
+            for param_values in itertools.product(*values):
+                ranking_params = dict(zip(keys, param_values))
+                await self.run_with_params(ranking_params)
+        else:
+            await self.run_with_params()
 
 class LivingLabsEvaluator(Evaluator):
     def __init__(self, task, eval_location):

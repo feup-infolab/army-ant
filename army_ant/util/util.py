@@ -54,3 +54,7 @@ def set_dict_defaults(d, defaults):
             set_dict_defaults(d.setdefault(k, {}), v)
         else:
             d.setdefault(k, v)
+
+def safe_div(n, d):
+    if d == 0: return 0
+    return n / d

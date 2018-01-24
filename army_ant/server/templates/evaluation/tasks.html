@@ -97,6 +97,9 @@
       <tr>
         <th>Total Query Time</th>
         <td>
+          {% if 'no_params' in task.stats %}
+          {{ task.stats["no_params"].total_query_time / 1000 }}s
+          {% else %}
           <div class="columns">
             <div class="column">
               <table class="table table-sm table-simple">
@@ -114,6 +117,7 @@
             <div class="column">
               <!-- TODO mini-barchart -->
             </div>
+            {% endif %}
           </div>
         </td>
       </tr>
@@ -121,6 +125,9 @@
       <tr>
         <th>Average Query Time</th>
         <td>
+          {% if 'no_params' in task.stats %}
+          {{ task.stats["no_params"].avg_query_time / 1000 }}s
+          {% else %}
           <div class="columns">
             <div class="column">
               <table class="table table-sm table-simple">
@@ -138,6 +145,7 @@
             <div class="column">
               <!-- TODO mini-barchart -->
             </div>
+            {% endif %}
           </div>
         </td>
       </tr>
