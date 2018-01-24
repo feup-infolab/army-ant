@@ -102,7 +102,7 @@
           {% else %}
           <div class="columns">
             <div class="column">
-              <table class="table table-sm table-simple">
+              <table class="table table-sm table-simple values-per-param">
                 {% for params_id in task.stats %}
                 {% if task.stats[params_id].total_query_time %}
                 <tr>
@@ -114,8 +114,10 @@
               </table>
             </div>
 
-            <div class="column">
-              <!-- TODO mini-barchart -->
+            <div class="column col-7">
+              <div class="total-query-time-chart">
+                <!-- Dynamically loaded -->
+              </div>
             </div>
             {% endif %}
           </div>
@@ -130,7 +132,7 @@
           {% else %}
           <div class="columns">
             <div class="column">
-              <table class="table table-sm table-simple">
+              <table class="table table-sm table-simple values-per-param">
                 {% for params_id in task.stats %}
                 {% if task.stats[params_id].avg_query_time %}
                 <tr>
@@ -142,8 +144,10 @@
               </table>
             </div>
 
-            <div class="column">
-              <!-- TODO mini-barchart -->
+            <div class="column col-7">
+              <div class="avg-query-time-chart">
+                <!-- Dynamically loaded -->
+              </div>
             </div>
             {% endif %}
           </div>
@@ -256,3 +260,42 @@
   </div>
 </div>
 {% endfor %}
+
+<script type="text/javascript">
+  (function() {
+    var tasks = {{ tasks }};
+    for (var i=0; i < tasks.length; i++) {
+      let $task = $('[data-id="' + tasks[i]._id + '"]');
+      let $totalQueryTimeChart = $task.find('.total-query-time-chart').first()[0];
+      let $avgQueryTimeChart = $task.find('.avg-query-time-chart').first()[0];
+
+      if ($totalQueryTimeChart) {
+        let xData = Object.keys(tasks[i].stats).map(function(key) {
+          return '(' + key.replace(/_/g, '=').replace(/-/g, ', ') + ')';
+        });
+
+        let yDataTotalQueryTime = Object.keys(tasks[i].stats).map(function(key) {
+          return tasks[i].stats[key].total_query_time / 1000;
+        });
+
+        let yDataAvgQueryTime = Object.keys(tasks[i].stats).map(function(key) {
+          return tasks[i].stats[key].avg_query_time / 1000;
+        });
+
+        let dataTotalQueryTime = [
+          ['Parameters'].concat(xData),
+          ['Total Query Time (s)'].concat(yDataTotalQueryTime)
+        ];
+        let chartTotalQueryTime = new BarChart(dataTotalQueryTime, $totalQueryTimeChart);
+        chartTotalQueryTime.render();
+
+        let dataAvgQueryTime = [
+          ['Parameters'].concat(xData),
+          ['Avg. Query Time (s)'].concat(yDataAvgQueryTime)
+        ];
+        let chartAvgQueryTime = new BarChart(dataAvgQueryTime, $avgQueryTimeChart);
+        chartAvgQueryTime.render();
+      }
+    }
+  })();
+</script>

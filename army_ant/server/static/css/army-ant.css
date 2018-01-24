@@ -96,8 +96,11 @@ code {
 .eval {
   margin-top: 1em;
 }
-.eval .table.metadata th {
+.eval .table.metadata > * > tr > th {
   width: 15em;
+}
+.eval .table.values-per-param > * > tr > th {
+  width: 10em;
 }
 
 .detail .table tr {
