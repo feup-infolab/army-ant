@@ -250,7 +250,7 @@
         let $totalQueryTimeChart = $task.find('.total-query-time-chart').first()[0];
         let $avgQueryTimeChart = $task.find('.avg-query-time-chart').first()[0];
 
-        if ($totalQueryTimeChart) {
+        if ($totalQueryTimeChart && $avgQueryTimeChart) {
           let xData = Object.keys(tasks[i].stats).map(function(key) {
             return '(' + key.replace(/_/g, '=').replace(/-/g, ', ').replace(/﹒/g, '.') + ')';
           });
@@ -280,7 +280,41 @@
       }
     }
 
+    function renderDetailsChart() {
+      var tasks = {{ tasks }};
+      for (var i=0; i < tasks.length; i++) {
+        if (Object.keys(tasks[i].results).length < 2) continue;
+
+        let $task = $('[data-id="' + tasks[i]._id + '"]');
+        let $detailsChart = $task.find('.details-chart').first()[0];
+
+        if ($detailsChart) {
+          let xData = Object.keys(tasks[i].results).map(function(key) {
+            return '(' + key.replace(/_/g, '=').replace(/-/g, ', ').replace(/﹒/g, '.') + ')';
+          });
+
+          let yDataPerMetric = {};
+          for (var key in tasks[i].results) {
+            for (var metric in tasks[i].results[key]['metrics']) {
+              if (!yDataPerMetric[metric]) yDataPerMetric[metric] = [];
+              yDataPerMetric[metric].push(tasks[i].results[key]['metrics'][metric]);
+            }
+          }
+
+          let yData = [];
+          for (var metric in yDataPerMetric) {
+            yData.push([metric].concat(yDataPerMetric[metric]));
+          }
+
+          let data = [['Parameters'].concat(xData)].concat(yData);
+          let chart = new LineChart(data, $detailsChart);
+          chart.render(['MAP', 'P@10', 'NDCG@10']);
+        }
+      }
+    }
+
     renderQueryTimeCharts();
+    renderDetailsChart();
   })();
 </script>
 

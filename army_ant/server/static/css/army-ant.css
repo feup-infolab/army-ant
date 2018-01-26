@@ -183,3 +183,7 @@ dl dl {
 #trace-export-btn {
   float: right;
 }
+
+.c3-line {
+  stroke-width: 2px;
+}

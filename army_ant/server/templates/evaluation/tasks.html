@@ -100,7 +100,7 @@
           {% if 'no_params' in task.stats %}
           {{ task.stats["no_params"].total_query_time / 1000 }}s
           {% else %}
-          <div class="chart total-query-time-chart">
+          <div class="total-query-time-chart">
             <!-- Dynamically loaded -->
           </div>
           {% endif %}
@@ -113,7 +113,7 @@
           {% if 'no_params' in task.stats %}
           {{ task.stats["no_params"].avg_query_time / 1000 }}s
           {% else %}
-          <div class="chart avg-query-time-chart">
+          <div class="avg-query-time-chart">
             <!-- Dynamically loaded -->
           </div>
           {% endif %}
@@ -153,41 +153,53 @@
     <!-- START DETAIL -->
     {% if task.status == 3 and task.results %}
     <div class="d-hide detail">
-      <table class="table table-scroll table-sm">
-        <thead>
-          {% if task.results %}
-          {% set result = task.results.values()|first %}
+      <div class="columns">
+        <div class="column">
+          <table class="table table-scroll table-sm">
+            <thead>
+              {% if task.results %}
+              {% set result = task.results.values()|first %}
 
-          {% if result.ranking_params %}
-          {% for param_name in result.ranking_params.keys() %}
-          <th>{{ param_name }}</th>
-          {% endfor %}
-          {% endif %}
+              {% if result.ranking_params %}
+              {% for param_name in result.ranking_params.keys() %}
+              <th>{{ param_name }}</th>
+              {% endfor %}
+              {% endif %}
 
-          {% if result.metrics %}
-          {% for metric in result.metrics.keys() %}
-          <th>{{ metric }}</th>
-          {% endfor %}
-          {% endif %}
+              {% if result.metrics %}
+              {% for metric in result.metrics.keys() %}
+              <th>{{ metric }}</th>
+              {% endfor %}
+              {% endif %}
 
-          {% endif %}
-        </thead>
-        <tbody>
-          {% for params_id, results in task.results.items() %}
-          <tr>
-            {% if results.ranking_params %}
-            {% for param_value in results.ranking_params.values() %}
-            <th>{{ param_value }}</th>
-            {% endfor %}
-            {% endif %}
+              {% endif %}
+            </thead>
+            <tbody>
+              {% for params_id, results in task.results.items() %}
+              <tr>
+                {% if results.ranking_params %}
+                {% for param_value in results.ranking_params.values() %}
+                <th>{{ param_value }}</th>
+                {% endfor %}
+                {% endif %}
 
-            {% for metric in results.metrics %}
-            <td>{{ results.metrics[metric]|round(6) }}</td>
-            {% endfor %}
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+                {% for metric in results.metrics %}
+                <td>{{ results.metrics[metric]|round(6) }}</td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="columns">
+        <div class="column">
+          <div class="details-chart">
+            <!-- Dynamically loaded -->
+          </div>
+        </div>
+      </div>
     </div>
     {% elif task.status == 4 and task.eval_format == 'll-api' %}
     <div class="d-hide detail ll-api-results">
