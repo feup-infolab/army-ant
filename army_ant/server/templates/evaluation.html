@@ -242,6 +242,45 @@
       $detail.find('.loading').removeClass('d-hide');
       $detail.find('.outcome').html('');
     }
+
+    function renderQueryTimeCharts() {
+      var tasks = {{ tasks }};
+      for (var i=0; i < tasks.length; i++) {
+        let $task = $('[data-id="' + tasks[i]._id + '"]');
+        let $totalQueryTimeChart = $task.find('.total-query-time-chart').first()[0];
+        let $avgQueryTimeChart = $task.find('.avg-query-time-chart').first()[0];
+
+        if ($totalQueryTimeChart) {
+          let xData = Object.keys(tasks[i].stats).map(function(key) {
+            return '(' + key.replace(/_/g, '=').replace(/-/g, ', ').replace(/﹒/g, '.') + ')';
+          });
+
+          let yDataTotalQueryTime = Object.keys(tasks[i].stats).map(function(key) {
+            return tasks[i].stats[key].total_query_time / 1000;
+          });
+
+          let yDataAvgQueryTime = Object.keys(tasks[i].stats).map(function(key) {
+            return tasks[i].stats[key].avg_query_time / 1000;
+          });
+
+          let dataTotalQueryTime = [
+            ['Parameters'].concat(xData),
+            ['Total Query Time (s)'].concat(yDataTotalQueryTime)
+          ];
+          let chartTotalQueryTime = new BarChart(dataTotalQueryTime, $totalQueryTimeChart);
+          chartTotalQueryTime.render();
+
+          let dataAvgQueryTime = [
+            ['Parameters'].concat(xData),
+            ['Avg. Query Time (s)'].concat(yDataAvgQueryTime)
+          ];
+          let chartAvgQueryTime = new BarChart(dataAvgQueryTime, $avgQueryTimeChart);
+          chartAvgQueryTime.render();
+        }
+      }
+    }
+
+    renderQueryTimeCharts();
   })();
 </script>
 

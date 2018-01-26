@@ -21,7 +21,8 @@ from urllib.parse import urljoin
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import HTTPError
 from army_ant.index import Index
-from army_ant.util import md5, get_first, zipdir, safe_div, ranking_params_to_params_id, params_id_to_str
+from army_ant.util import md5, get_first, zipdir, safe_div
+from army_ant.util import ranking_params_to_params_id, params_id_to_str, params_id_to_ranking_params
 from army_ant.exception import ArmyAntException
 
 logger = logging.getLogger(__name__)
@@ -81,6 +82,9 @@ class INEXEvaluator(FilesystemEvaluator):
         logger.info("Loading topic assessments")
 
         topic_doc_judgements = {}
+
+        if not os.path.exists(self.task.assessments_path):
+            raise ArmyAntException("Topic assessments file not found: %s" % self.task.assessments_path)
 
         with open(self.task.assessments_path, 'r') as f:
             for line in f:
@@ -681,13 +685,24 @@ class EvaluationTaskManager(object):
 
             with open(os.path.join(out_dir, "eval_metrics.csv"), 'w') as f:
                 writer = csv.writer(f)
-                writer.writerow(sorted(task.ranking_params.keys()) + ['metrics', 'value'])
+                writer.writerow(sorted(task.ranking_params.keys()) + ['metric', 'value'])
                 for params_id, results in task.results.items():
-                    for metric, value in results.items():
+                    for metric, value in results['metrics'].items():
                         params = OrderedDict(sorted(
-                            (tuple(p.split('_', 1)) for p in params_id.split('-')),
+                            params_id_to_ranking_params(params_id),
                             key=lambda d: d[0]))
                         writer.writerow(list(params.values()) + [metric, value])
+
+            with open(os.path.join(out_dir, "eval_stats.csv"), 'w') as f:
+                writer = csv.writer(f)
+                writer.writerow(sorted(task.ranking_params.keys()) + ['stat', 'value'])
+                for params_id, stats in task.stats.items():
+                    for stat, value in stats.items():
+                        if type(value) is not dict and type(value) is not list:
+                            params = OrderedDict(sorted(
+                                params_id_to_ranking_params(params_id),
+                                key=lambda d: d[0]))
+                            writer.writerow(list(params.values()) + [stat, value])
 
             archive_filename = os.path.join(tmp_dir, '%s.zip' % task_id)
             with zipfile.ZipFile(archive_filename, 'w') as zipf:

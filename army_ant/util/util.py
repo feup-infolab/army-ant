@@ -59,13 +59,34 @@ def safe_div(n, d):
     if d == 0: return 0
     return n / d
 
+def typed_value(v):
+    if v == 'True': return True
+    if v == 'False': return False
+
+    try:
+        return int(v)
+    except ValueError:
+        try:
+            return float(v)
+        except ValueError:
+            return v
+
 def ranking_params_to_params_id(ranking_params):
     if ranking_params is None or len(ranking_params) < 1: return 'no_params'
-    return '-'.join([p[0] + '_' + str(p[1]) for p in ranking_params.items()])
+    return '-'.join([p[0] + '_' + str(p[1]).replace('.', '﹒') for p in ranking_params.items()])
 
 def params_id_to_str(params_id):
     if params_id == 'no_params': return "No parameters"
     params = []
     for p in params_id.split('-'):
-        params.append('%s=%s' % tuple(p.split('_', 1)))
+        params.append(('%s=%s' % tuple(p.split('_', 1))).replace('﹒', '.'))
     return '(%s)' % ', '.join(params)
+
+def params_id_to_ranking_params(s):
+    if s == 'no_params': return []
+    ranking_params = []
+    for p in s.split('-'):
+        parts = p.replace('﹒', '.').split('_', 1)
+        parts[1] = typed_value(parts[1])
+        ranking_params.append(tuple(parts))
+    return ranking_params

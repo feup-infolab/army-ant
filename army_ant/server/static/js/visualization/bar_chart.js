@@ -4,12 +4,15 @@ function BarChart(data, selector) {
 }
 
 BarChart.prototype.render = function() {
+  $(this.selector).css('height', ((this.data[0].length-1) * 30) + 'px');
+
   this.chart = c3.generate({
     bindto: this.selector,
     data: {
       x: this.data[0][0],
       columns: this.data,
-      type: 'bar'
+      type: 'bar',
+      labels: true
     },
     axis: {
       x: {
@@ -18,27 +21,21 @@ BarChart.prototype.render = function() {
       y: {
         tick: {
           count: 3,
-          format: d3.format('.1f')
+          format: d3.format('.3f')
         }
-      }
-    },
-    bar: {
-      width: {
-        ratio: 0.3
-      }
+      },
+      rotated: true
     },
     color: {
       pattern: ['#5755d9', '#32b643', '#ffb700', '#e85600']
     },
     padding: {
       top: 5,
+      right: 50,
       bottom: -10
     },
     legend: {
       show: false
-    },
-    size: {
-      height: 110
     }
   });
 }
