@@ -76,6 +76,34 @@ engines:
             l: [1, 2, 3, 4, 5, 6]
             r: [10, 100, 250, 500, 750, 1000]
 
+  lucene-inex-10t-nl:
+    name: INEX 10T-NL - Lucene
+    db:
+      name: lucene_inex
+    index:
+      type: lucene
+      location: /opt/army-ant/data/inex-10t-nl/lucene
+    ranking:
+      default:
+        id: tf_idf
+        #params:
+          #k1: 1.2
+          #b: 0.75
+      functions:
+        tf_idf:
+          name: TF-IDF
+        bm25:
+          name: BM25
+          params:
+            k1: [1, 1.2, 1.8]
+            b: [0.5, 0.75, 1]
+        dfr:
+          name: DFR
+          params:
+            BM: [BE, G, P, D, In, Ine, IF]
+            AE: [L, B, Disabled]
+            N: [H1, H2, H3, Z, Disabled]
+
   hgoe-inex-30t-nl:
     name: INEX 30T-NL - Hypergraph of Entity
     db:
@@ -122,7 +150,7 @@ engines:
             l: [1, 2, 3, 4, 5, 6]
             r: [10, 100, 250, 500, 750, 1000]
 
-  lucene-inex-dev:tf_idf:
+  lucene-inex-dev:
     name: INEX Dev - Lucene
     db:
       name: lucene_inex
