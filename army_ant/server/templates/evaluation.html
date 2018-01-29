@@ -267,14 +267,14 @@
             ['Parameters'].concat(xData),
             ['Total Query Time (s)'].concat(yDataTotalQueryTime)
           ];
-          let chartTotalQueryTime = new BarChart(dataTotalQueryTime, $totalQueryTimeChart);
+          let chartTotalQueryTime = new EfficiencyChart(dataTotalQueryTime, $totalQueryTimeChart);
           chartTotalQueryTime.render();
 
           let dataAvgQueryTime = [
             ['Parameters'].concat(xData),
             ['Avg. Query Time (s)'].concat(yDataAvgQueryTime)
           ];
-          let chartAvgQueryTime = new BarChart(dataAvgQueryTime, $avgQueryTimeChart);
+          let chartAvgQueryTime = new EfficiencyChart(dataAvgQueryTime, $avgQueryTimeChart);
           chartAvgQueryTime.render();
         }
       }
@@ -307,7 +307,7 @@
           }
 
           let data = [['Parameters'].concat(xData)].concat(yData);
-          let chart = new LineChart(data, $detailsChart);
+          let chart = new EffectivenessChart(data, $detailsChart);
           chart.render(['MAP', 'P@10', 'NDCG@10']);
         }
       }

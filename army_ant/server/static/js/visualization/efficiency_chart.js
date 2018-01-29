@@ -1,9 +1,9 @@
-function BarChart(data, selector) {
+function EfficiencyChart(data, selector) {
   this.data = data;
   this.selector = selector;
 }
 
-BarChart.prototype.render = function() {
+EfficiencyChart.prototype.render = function() {
   $(this.selector).css('height', ((this.data[0].length-1) * 30) + 'px');
 
   var config = {
