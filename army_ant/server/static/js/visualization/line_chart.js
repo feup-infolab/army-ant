@@ -3,7 +3,17 @@ function LineChart(data, selector) {
   this.selector = selector;
 }
 
+LineChart.prototype.getPalette = function(n) {
+  var scale = d3.scale.ordinal().range(['#5755d9', '#32b643', '#ffb700', '#e85600']);
+  var palette = [];
+  for (var i=0; i < n; i++) {
+    palette.push(scale(i));
+  }
+}
+
 LineChart.prototype.render = function(activeLengend) {
+  var palette = this.getPalette(this.data.length-1);
+
   var config = {
     bindto: this.selector,
     data: {
@@ -23,7 +33,7 @@ LineChart.prototype.render = function(activeLengend) {
       }
     },
     color: {
-      pattern: ['#5755d9', '#32b643', '#ffb700', '#e85600']
+      pattern: palette
     },
     padding: {
       top: 50,

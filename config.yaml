@@ -132,9 +132,9 @@ engines:
     ranking:
       default:
         id: tf_idf
-        params:
-          k1: 1.2
-          b: 0.75
+        #params:
+          #k1: 1.2
+          #b: 0.75
       functions:
         tf_idf:
           name: TF-IDF
