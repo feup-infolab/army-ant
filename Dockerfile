@@ -5,14 +5,6 @@ ENV user army-ant
 # Replace shell with bash so we can source files for nvm
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 
-# Prepare working directory
-RUN useradd -m ${user}
-WORKDIR /home/${user}
-COPY . $HOME
-COPY config/docker/config.yaml $HOME
-COPY config/docker/opt/army-ant /opt/army-ant
-ENV HOME /home/${user}
-
 # Install system dependencies
 RUN echo deb http://deb.debian.org/debian/ jessie-backports main >> /etc/apt/sources.list
 RUN apt-get update
@@ -24,7 +16,13 @@ RUN apt-get update
 RUN apt-get -y install mongodb-org
 RUN apt-get -y autoclean
 
+# Prepare working directory
+RUN useradd -m ${user}
+WORKDIR /home/${user}
+ENV HOME /home/${user}
+
 # Install nvm, node and dependencies
+COPY package.json $HOME
 ENV NVM_DIR /usr/local/nvm
 ENV NODE_VERSION 4.4.7
 RUN curl --silent -o- https://raw.githubusercontent.com/creationix/nvm/v0.31.4/install.sh | bash
@@ -37,12 +35,19 @@ ENV PATH $NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
 RUN npm install
 
 # Install python and dependencies
+COPY .python-version $HOME
 ENV PYENV_ROOT $HOME/.pyenv
 ENV PATH $PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH
 RUN git clone git://github.com/yyuu/pyenv.git .pyenv
 RUN pyenv install
 RUN pyenv rehash
+COPY requirements.txt $HOME
 RUN pip install -r requirements.txt
+
+# Copy remaining files
+COPY . $HOME
+COPY config/docker/config.yaml $HOME
+COPY config/docker/opt/army-ant /opt/army-ant
 
 # Start server
 CMD mongod --fork --config /etc/mongod.conf && python army-ant.py server --port=8080
