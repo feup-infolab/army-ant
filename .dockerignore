@@ -1,0 +1,5 @@
+output/
+experiments/
+node_modules/
+resources/
+test.py
