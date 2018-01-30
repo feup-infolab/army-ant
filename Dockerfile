@@ -10,7 +10,7 @@ RUN useradd -m ${user}
 WORKDIR /home/${user}
 COPY . $HOME
 COPY config/docker/config.yaml $HOME
-COPY config/docker/opt/army-ant /opt
+COPY config/docker/opt/army-ant /opt/army-ant
 ENV HOME /home/${user}
 
 # Install system dependencies

@@ -526,9 +526,9 @@ class EvaluationTaskManager(object):
         self.assessments_dirname = os.path.join(eval_location, 'assessments')
         self.spool_dirname = os.path.join(eval_location, 'spool')
 
-        os.makedirs(self.results_dirname, exists_ok=True)
-        os.makedirs(self.assessments_dirname, exists_ok=True)
-        os.makedirs(self.spool_dirname, exists_ok=True)
+        os.makedirs(self.results_dirname, exist_ok=True)
+        os.makedirs(self.assessments_dirname, exist_ok=True)
+        os.makedirs(self.spool_dirname, exist_ok=True)
 
         db_location_parts = db_location.split(':')
         
