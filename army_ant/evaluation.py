@@ -5,7 +5,7 @@
 # José Devezas <joseluisdevezas@gmail.com>
 # 2017-05-19
 
-import json, time, pymongo, asyncio, logging, csv, os, shutil, gzip
+import json, time, pymongo, asyncio, logging, csv, os, shutil, gzip, os
 import tempfile, zipfile, math, requests, requests_cache, pickle, itertools
 import pandas as pd
 import numpy as np
@@ -525,6 +525,10 @@ class EvaluationTaskManager(object):
         self.results_dirname = os.path.join(eval_location, 'results')
         self.assessments_dirname = os.path.join(eval_location, 'assessments')
         self.spool_dirname = os.path.join(eval_location, 'spool')
+
+        os.makedirs(self.results_dirname, exists_ok=True)
+        os.makedirs(self.assessments_dirname, exists_ok=True)
+        os.makedirs(self.spool_dirname, exists_ok=True)
 
         db_location_parts = db_location.split(':')
         

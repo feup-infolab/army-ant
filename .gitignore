@@ -7,9 +7,6 @@
 # Node
 node_modules/
 
-# Army ANT
-*_cache.sqlite
-
 # IntelliJ
 *.iml
 .idea/
@@ -36,3 +33,7 @@ buildNumber.properties
 
 # Logs
 hs_err_*.log
+
+# Army ANT
+*_cache.sqlite
+config/docker/opt/army-ant
