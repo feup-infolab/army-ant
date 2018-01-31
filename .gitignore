@@ -37,3 +37,4 @@ hs_err_*.log
 # Army ANT
 *_cache.sqlite
 config/docker/opt/army-ant
+config/docker/mongodb-dump*

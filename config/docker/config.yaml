@@ -12,7 +12,7 @@ engines:
   hgoe-inex-3t-nl:
     name: INEX 3T-NL - Hypergraph-of-Entity
     db:
-      name: hgoe_inex
+      name: inex
     index:
       type: hgoe
       location: /opt/army-ant/data/inex-3t-nl/hypergraph-of-entity
@@ -22,7 +22,7 @@ engines:
         id: random_walk
         params:
           l: 3
-          r: 100
+          r: 10
       functions:
         jaccard:
           name: Jaccard Score
@@ -35,7 +35,7 @@ engines:
   lucene-inex-3t-nl:
     name: INEX 3T-NL - Lucene
     db:
-      name: lucene_inex
+      name: inex
     index:
       type: lucene
       location: /opt/army-ant/data/inex-3t-nl/lucene
