@@ -14,7 +14,7 @@ $ time ./army-ant.py index \
 
 ...
 
-./army-ant.py index  --source-reader=inex_dir  --index-type=lucene   77.77s user 1.40s system 104% cpu 1:15.63 total
+77.77s user 1.40s system 104% cpu 1:15.63 total
 ```
 
 We also create an index based on the  `HypergraphOfEntity`. Since it's for the same collection, there is no need to set `db-name` in order to, once again, store the documents metadata in MongoDB (the default database). We run:
@@ -28,7 +28,7 @@ $ time ./army-ant.py index \
 
 ...
 
-./army-ant.py index  --source-reader=inex_dir  --index-type=hgoe  75.60s user 9.44s system 128% cpu 1:06.19 total
+75.60s user 9.44s system 128% cpu 1:06.19 total
 ```
 
 # Retrieving images for Wikipedia collections
