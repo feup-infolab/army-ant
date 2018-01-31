@@ -50,6 +50,6 @@ COPY config/docker/config.yaml $HOME
 COPY config/docker/opt/army-ant /opt/army-ant
 
 # Start server
-CMD mongod --fork --config /etc/mongod.conf && python army-ant.py server --port=8080
+CMD mongod --fork --config /etc/mongod.conf && python -u army-ant.py server --host=0.0.0.0 --port=8080
 
 EXPOSE 8080
