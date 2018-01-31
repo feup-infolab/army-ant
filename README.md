@@ -4,6 +4,8 @@ For the time being, you can refer to Chapter 2 of the technical report I wrote f
 
 As an information retrieval researcher, defining an engine in Army ANT (i.e., implementing an `index()` and `search()` methods) will give you direct access to a web interface with the following features. You can check [Army ANT's sequence diagram](resources/army_ant-sequence_diagram.pdf) to better understand what a typical workflow looks like.
 
+You can also check [](EXAMPLES.md) for command line examples for `index` and `extras`, as well as [](DOCKER.md) for information about the demo instance and how to install it using Docker.
+
 
 **Basic search interface:**
 
