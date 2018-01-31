@@ -11,7 +11,7 @@ Currently, we provide a basic image to experiment with Army ANT, for version 0.3
     * BasicModel: BM = [BE, G, P, D, In, Ine, IF]
     * AfterEffect: AE = [L, B, Disabled]
     * Normalization: N = [H1, H2, H3, Z, Disabled]
-* Engine: Hypergraph-of-Entity
+* Hypergraph-of-Entity
   * Random Walk Score
     * Length: l = [1, 2, 3, 4, 5, 6]
     * Repeats: r = [10, 100, 250, 500, 750, 1000]
