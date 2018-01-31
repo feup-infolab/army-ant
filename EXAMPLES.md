@@ -19,6 +19,13 @@ $ time ./army-ant.py index --source-path=/opt/army-ant/collections/inex-2009-3t-
 
 ...
 
-
+./army-ant.py index  --source-reader=inex_dir  --index-type=hgoe  75.60s user 9.44s system 128% cpu 1:06.19 total
 ```
 
+# Retrieving images for Wikipedia collections
+
+Since this is a Wikipedia collection and there is a `metadata.url` field in the MongoDB object for each document, we can use the `fetch-wikipedia-images` function from the  `extras` command to find the first figure from the corresponding Wikipedia page, so that we can display it in the web interface when searching. The URL to the original image is stored in the `img_url` metadata attribute. We do this by running:
+
+```bash
+$ ./army-ant.py extras fetch-wikipedia-images --db-name=inex
+```
