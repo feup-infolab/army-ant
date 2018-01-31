@@ -9,29 +9,6 @@ defaults:
     memory: 5120
 
 engines:
-  hgoe-inex-3t-nl:
-    name: INEX 3T-NL - Hypergraph-of-Entity
-    db:
-      name: inex
-    index:
-      type: hgoe
-      location: /opt/army-ant/data/inex-3t-nl/hypergraph-of-entity
-      preload: true
-    ranking:
-      default:
-        id: random_walk
-        params:
-          l: 3
-          r: 10
-      functions:
-        jaccard:
-          name: Jaccard Score
-        random_walk:
-          name: Random Walk Score
-          params:
-            l: [1, 2, 3, 4, 5, 6]
-            r: [10, 100, 250, 500, 750, 1000]
-
   lucene-inex-3t-nl:
     name: INEX 3T-NL - Lucene
     db:
@@ -56,3 +33,26 @@ engines:
             BM: [BE, G, P, D, In, Ine, IF]
             AE: [L, B, Disabled]
             N: [H1, H2, H3, Z, Disabled]
+
+  hgoe-inex-3t-nl:
+    name: INEX 3T-NL - Hypergraph-of-Entity
+    db:
+      name: inex
+    index:
+      type: hgoe
+      location: /opt/army-ant/data/inex-3t-nl/hypergraph-of-entity
+      preload: true
+    ranking:
+      default:
+        id: random_walk
+        params:
+          l: 3
+          r: 10
+      functions:
+        jaccard:
+          name: Jaccard Score
+        random_walk:
+          name: Random Walk Score
+          params:
+            l: [1, 2, 3, 4, 5, 6]
+            r: [10, 100, 250, 500, 750, 1000]

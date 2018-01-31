@@ -97,8 +97,10 @@
       <tr>
         <th>Total Query Time</th>
         <td>
-          {% if 'no_params' in task.stats %}
-          {{ task.stats["no_params"].total_query_time / 1000 }}s
+          {% if task.stats|length < 2 %}
+          {% for stat in task.stats.values() %}
+          {{ stat['total_query_time'] / 1000 }}s
+          {% endfor %}
           {% else %}
           <div class="total-query-time-chart">
             <!-- Dynamically loaded -->
@@ -110,8 +112,10 @@
       <tr>
         <th>Average Query Time</th>
         <td>
-          {% if 'no_params' in task.stats %}
-          {{ task.stats["no_params"].avg_query_time / 1000 }}s
+          {% if task.stats|length < 2 %}
+          {% for stat in task.stats.values() %}
+          {{ stat['avg_query_time'] / 1000 }}s
+          {% endfor %}
           {% else %}
           <div class="avg-query-time-chart">
             <!-- Dynamically loaded -->

@@ -31,20 +31,16 @@
 {% include 'evaluation/download.html' %}
 
 {% if tasks|length > 0 %}
-
 {% include 'evaluation/tasks.html' %}
+{% endif %}
 
-{% else %}
-
-<div class="empty">
+<div id="empty-tasks" class="empty {% if tasks|length > 0 %} d-hide {% endif %}">
   <div class="empty-icon">
     <i class="icon icon-2x icon-menu"></i>
   </div>
   <h4 class="empty-title">No evaluation tasks found</h4>
   <p class="empty-subtitle">Try to launch your own using the formulary above.</p>
 </div>
-
-{% endif %}
 
 <script type="text/javascript">
   (function() {
@@ -160,6 +156,9 @@
           type: 'DELETE',
           success: function(data, status, xhr) {
             $task.remove();
+            if ($('.eval').length < 1) {
+              $('#empty-tasks').removeClass('d-hide');
+            }
           },
           error: function(xhr, errorType, error) {
             var json = $.parseJSON(xhr.response);
