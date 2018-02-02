@@ -31,8 +31,7 @@ COPY config/docker/opt/army-ant /opt/army-ant
 RUN rm -rf config
 
 # Start the server
-ENTRYPOINT python -u
-CMD army-ant.py server --host=${host} --port=${port}
+CMD python -u army-ant.py server --host=${host} --port=${port}
 
 # Expose the configured port
 EXPOSE ${port}
