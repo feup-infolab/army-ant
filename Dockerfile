@@ -49,7 +49,6 @@ ENV mongo_cmd mongod --fork --config /etc/mongod.conf
 ENV mongo_dump mongodb-dump-inex_3t_nl
 COPY config/docker/${mongo_dump} $HOME/${mongo_dump}
 RUN rm -rf $HOME/${mongo_dump}/.gitkeep
-#RUN ${mongo_cmd} --syncdelay 5 && mongorestore ${mongo_dump} && sleep 10
 RUN ${mongo_cmd} && mongorestore ${mongo_dump} && sync
 
 # Copy remaining files
