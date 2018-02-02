@@ -9,6 +9,7 @@ ENV port 8080
 RUN apk add --no-cache -U nodejs-npm git python3 libpq libxml2 libxslt openblas openjdk8-jre
 RUN apk add --no-cache --virtual .build-deps gcc g++ python3-dev musl-dev postgresql-dev libxml2-dev libxslt-dev openblas-dev
 
+# Create a directory to put stuff
 RUN mkdir army-ant
 WORKDIR army-ant
 
