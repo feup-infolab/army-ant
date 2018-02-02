@@ -1,7 +1,7 @@
 defaults:
   db:
-    location: localhost
-    name: army_ant_test
+    location: mongo
+    name: army_ant
     type: mongo
   eval:
     location: /opt/army-ant/eval
