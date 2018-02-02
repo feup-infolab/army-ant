@@ -9,7 +9,7 @@ import logging, string, asyncio, pymongo, re, json, psycopg2, os, jpype, itertoo
 from enum import Enum
 from jpype import *
 from aiogremlin import Cluster
-#from aiogremlin.gremlin_python.structure.graph import Vertex
+from aiohttp.client_exceptions import ClientOSError, ClientConnectorError
 from threading import RLock
 from concurrent.futures import ThreadPoolExecutor
 from nltk import word_tokenize
@@ -241,7 +241,11 @@ class GraphOfWord(GremlinServerIndex):
         await self.cluster.close()
 
     async def search(self, query, offset, limit, ranking_function=None, ranking_params=None):
-        self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
+        try:
+            self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
+        except ClientConnectorError as e:
+            raise ArmyAntException("Could not connect to Gremlin Server on %s:%s" % (self.index_host, self.index_port))
+
         self.client = await self.cluster.connect()
 
         query_tokens = self.analyze(query)
@@ -317,7 +321,11 @@ class GraphOfEntity(GremlinServerIndex):
         await self.cluster.close()
 
     async def search(self, query, offset, limit, ranking_function=None, ranking_params=None):
-        self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
+        try:
+            self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
+        except ClientConnectorError as e:
+            raise ArmyAntException("Could not connect to Gremlin Server on %s:%s" % (self.index_host, self.index_port))
+
         self.client = await self.cluster.connect()
 
         query_tokens = self.analyze(query)

@@ -337,17 +337,23 @@ async def about(request):
     pass
 
 async def start_background_tasks(app):
-    logger.info("Starting background tasks")
-    manager = EvaluationTaskManager(
-        app['defaults']['db']['location'],
-        app['defaults']['db']['name'],
-        app['defaults']['eval']['location'])
-    app['evaluation_queue_listener'] = app.loop.create_task(manager.process())
+    try:
+        logger.info("Starting background tasks")
+        manager = EvaluationTaskManager(
+            app['defaults']['db']['location'],
+            app['defaults']['db']['name'],
+            app['defaults']['eval']['location'])
+        app['evaluation_queue_listener'] = app.loop.create_task(manager.process())
+    except ArmyAntException as e:
+        logger.error(e)
 
 async def cleanup_background_tasks(app):
-    logger.info("Stopping background tasks")
-    app['evaluation_queue_listener'].cancel()
-    await app['evaluation_queue_listener']
+    if 'evaluation_queue_listener' in app:
+        logger.info("Stopping background tasks")
+        app['evaluation_queue_listener'].cancel()
+        await app['evaluation_queue_listener']
+    else:
+        logger.error("No background tasks to stop")
 
 async def shutdown_jvm(app):
     logger.info("Shutting down JVM")
@@ -369,10 +375,18 @@ async def preload_engines(app):
                 app['engines'][engine]['index']['type'],
                 loop)
 
+@web.middleware
+async def error_middleware(request, handler):
+    try:
+        return await handler(request)
+    except ArmyAntException as e:
+        response = { 'error': str(e) }
+        return aiohttp_jinja2.render_template('error.html', request, response)
+
 def run_app(loop, host, port, path=None):
     config = yaml.load(open('config.yaml'))
 
-    app = web.Application(client_max_size=1024*1024*4, loop=loop)
+    app = web.Application(client_max_size=1024*1024*4, middlewares=[error_middleware], loop=loop)
 
     app['defaults'] = config.get('defaults', {})
     app['engines'] = config.get('engines', [])

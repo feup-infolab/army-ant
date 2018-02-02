@@ -7,6 +7,7 @@
 
 import logging, pymongo
 from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure
 from army_ant.exception import ArmyAntException
 
 logger = logging.getLogger(__name__)
@@ -42,7 +43,11 @@ class MongoDatabase(Database):
         else:
             db_port = 27017
 
-        self.client = MongoClient(db_location, db_port)
+        try:
+            self.client = MongoClient(db_location, db_port)
+        except ConnectionFailure as e:
+            raise ArmyAntException("Could not connect to MongoDB instance on %s:%s" % (db_location, db_port))
+
         self.db = self.client[self.db_name]
 
     async def store(self, index):

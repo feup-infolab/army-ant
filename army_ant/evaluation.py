@@ -15,7 +15,7 @@ from lxml import etree
 from datetime import datetime
 from contextlib import contextmanager
 from pymongo import MongoClient
-from pymongo.errors import DuplicateKeyError
+from pymongo.errors import DuplicateKeyError, ConnectionFailure
 from bson.objectid import ObjectId
 from urllib.parse import urljoin
 from requests.auth import HTTPBasicAuth
@@ -538,7 +538,11 @@ class EvaluationTaskManager(object):
         else:
             db_port = 27017
 
-        self.client = MongoClient(db_location, db_port)
+        try:
+            self.client = MongoClient(db_location, db_port)
+        except ConnectionFailure as e:
+            raise ArmyAntException("Could not connect to MongoDB instance on %s:%s" % (db_location, db_port))
+
         self.db = self.client[db_name]
 
         #self.db['evaluation_tasks'].create_index([
