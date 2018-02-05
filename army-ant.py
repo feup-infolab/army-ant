@@ -87,32 +87,46 @@ class CommandLineInterface(object):
         except ArmyAntException as e:
             logger.error(e)
 
-    def search(self, query, offset=0, limit=10, index_location='localhost', index_type='gow',
-               db_location='localhost', db_name=None, db_type='mongo'):
+    def search(self, query=None, offset=0, limit=10, index_location='localhost', index_type='gow',
+               db_location='localhost', db_name=None, db_type='mongo', shell=False):
+        if query is None and not shell:
+            logger.error("Must either use --query or --shell")
+            return
+
         try:
             loop = asyncio.get_event_loop()
-            try:
-                index = Index.open(index_location, index_type, loop)
-                response = loop.run_until_complete(index.search(query, offset, limit))
+            while True:
+                try:
+                    if shell:
+                        loop.run_until_complete(Index.preload(index_location, index_type, loop))
+                        query = input('query> ')
+                        if query.startswith('/q'): break
 
-                if db_location and db_name and db_type:
-                    db = Database.factory(db_location, db_name, db_type, loop)
-                    metadata = loop.run_until_complete(db.retrieve(response['results']))
-                else:
-                    metadata = []
-                
-                for (result, i) in zip(response['results'], range(offset, offset+limit)):
-                    print("===> %3d %7.2f %s" % (i+1, result['score'], result['docID']))
-                    doc_id = result['docID']
-                    if doc_id in metadata:
-                        for item in metadata[doc_id].items():
-                            print("\t%10s: %s" % item)
-                        print()
-            finally:
-                loop.run_until_complete(loop.shutdown_asyncgens())
-                loop.close()
-        except ArmyAntException as e:
-            logger.error(e)
+                    index = Index.open(index_location, index_type, loop)
+                    response = loop.run_until_complete(index.search(query, offset, limit))
+
+                    if db_location and db_name and db_type:
+                        db = Database.factory(db_location, db_name, db_type, loop)
+                        metadata = loop.run_until_complete(db.retrieve(response['results']))
+                    else:
+                        metadata = []
+                    
+                    for (result, i) in zip(response['results'], range(offset, offset+limit)):
+                        print("===> %3d %7.2f %s" % (i+1, result['score'], result['docID']))
+                        doc_id = result['docID']
+                        if doc_id in metadata:
+                            for item in metadata[doc_id].items():
+                                print("\t%10s: %s" % item)
+                            print()
+                except ArmyAntException as e:
+                    logger.error(e)
+                except EOFError:
+                    break
+
+                if not shell: break
+        finally:
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.close()
 
     def evaluation(self, index_location, index_type, eval_format, topics_filename=None, assessments_filename=None,
                    base_url=None, api_key=None, run_id=None, output_dir='/opt/army-ant/eval'):

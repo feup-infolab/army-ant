@@ -2,8 +2,8 @@ package armyant.hgoe.inmemory;
 
 import armyant.hgoe.HypergraphOfEntityTest;
 import armyant.hgoe.exceptions.HypergraphException;
-import armyant.hgoe.structures.Result;
-import armyant.hgoe.structures.ResultSet;
+import armyant.structures.Result;
+import armyant.structures.ResultSet;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
@@ -12,11 +12,11 @@ import java.io.IOException;
  * Created by jldevezas on 2017-10-23.
  */
 @Test
-public class HypergraphOfEntityInMemoryGrphTest extends HypergraphOfEntityTest {
+public class HypergraphOfEntityInMemoryTest extends HypergraphOfEntityTest {
     private String dbPath = "/tmp/hgoe-inmemory";
 
     public void testPrints() throws HypergraphException {
-        HypergraphOfEntityInMemoryGrph hgoe = new HypergraphOfEntityInMemoryGrph(dbPath);
+        HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory(dbPath);
 
         System.out.println("====> Statistics");
         hgoe.printStatistics();
@@ -38,7 +38,8 @@ public class HypergraphOfEntityInMemoryGrphTest extends HypergraphOfEntityTest {
     }
 
     public void testIndex() throws IOException, HypergraphException {
-        HypergraphOfEntityInMemoryGrph hgoe = new HypergraphOfEntityInMemoryGrph(dbPath, true);
+        HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory(
+                dbPath, HypergraphOfEntityInMemory.Version.BASIC, true);
         hgoe.index(document1);
         hgoe.index(document2);
         hgoe.index(document3);
@@ -47,12 +48,12 @@ public class HypergraphOfEntityInMemoryGrphTest extends HypergraphOfEntityTest {
     }
 
     public void testSearch() throws IOException, HypergraphException {
-        HypergraphOfEntityInMemoryGrph hgoe = new HypergraphOfEntityInMemoryGrph(dbPath);
+        HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory(dbPath);
 
         //ResultSet resultSet = hgoe.search("web search system");
         //ResultSet resultSet = hgoe.search("Monuments of India");
         //ResultSet resultSet = hgoe.search("Poirot");
-        ResultSet resultSet = hgoe.search("national park");
+        ResultSet resultSet = hgoe.search("national park", 0, 1000);
         //ResultSet resultSet = hgoe.search("viking");
         //ResultSet resultSet = hgoe.search("viking ship");
 
@@ -63,7 +64,7 @@ public class HypergraphOfEntityInMemoryGrphTest extends HypergraphOfEntityTest {
     }
 
     public void testTrace() throws IOException, HypergraphException {
-        HypergraphOfEntityInMemoryGrph hgoe = new HypergraphOfEntityInMemoryGrph(dbPath);
+        HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory(dbPath);
 
         //ResultSet resultSet = hgoe.search("web search system");
         //ResultSet resultSet = hgoe.search("Monuments of India");
@@ -71,7 +72,7 @@ public class HypergraphOfEntityInMemoryGrphTest extends HypergraphOfEntityTest {
         //ResultSet resultSet = hgoe.search("national park");
         //ResultSet resultSet = hgoe.search("viking");
         //ResultSet resultSet = hgoe.search("viking ship");
-        ResultSet resultSet = hgoe.search("doom");
+        ResultSet resultSet = hgoe.search("doom", 0, 1000);
 
         resultSet.getTrace().toASCII();
     }

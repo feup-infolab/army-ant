@@ -1,6 +1,6 @@
 package armyant.hgoe.inmemory;
 
-import armyant.hgoe.HypergraphOfEntity;
+import armyant.Engine;
 import armyant.hgoe.exceptions.HypergraphException;
 import armyant.hgoe.inmemory.edges.ContainedInEdge;
 import armyant.hgoe.inmemory.edges.DocumentEdge;
@@ -10,10 +10,10 @@ import armyant.hgoe.inmemory.nodes.DocumentNode;
 import armyant.hgoe.inmemory.nodes.EntityNode;
 import armyant.hgoe.inmemory.nodes.Node;
 import armyant.hgoe.inmemory.nodes.TermNode;
-import armyant.hgoe.structures.Document;
-import armyant.hgoe.structures.Result;
-import armyant.hgoe.structures.ResultSet;
-import armyant.hgoe.structures.Trace;
+import armyant.structures.Document;
+import armyant.structures.Result;
+import armyant.structures.ResultSet;
+import armyant.structures.Trace;
 import grph.algo.AllPaths;
 import grph.algo.ConnectedComponentsAlgorithm;
 import grph.in_memory.InMemoryGrph;
@@ -38,26 +38,13 @@ import java.util.stream.Collectors;
 /**
  * Created by jldevezas on 2017-10-23.
  */
-public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
-    private static final Logger logger = LoggerFactory.getLogger(HypergraphOfEntityInMemoryGrph.class);
+public class HypergraphOfEntityInMemory extends Engine {
+    private static final Logger logger = LoggerFactory.getLogger(HypergraphOfEntityInMemory.class);
     private static final int SEARCH_MAX_DISTANCE = 2;
     private static final int MAX_PATHS_PER_PAIR = 1000;
 
-    // Default
-    /*private static final int WALK_LENGTH = 3;
-    private static final int WALK_REPEATS = 10;*/
-
-    // Increase repeats
-    /*private static final int WALK_LENGTH = 3;
-    private static final int WALK_REPEATS = 10000;*/
-
-    // Increase length
-    /*private static final int WALK_LENGTH = 10;
-    private static final int WALK_REPEATS = 10;*/
-
-    // Increase length and repeats
-    /*private static final int WALK_LENGTH = 10;
-    private static final int WALK_REPEATS = 10000;*/
+    private static final int DEFAULT_WALK_LENGTH = 3;
+    private static final int DEFAULT_WALK_REPEATS = 10;
 
     private static final float PROBABILITY_THRESHOLD = 0.005f;
     private static final XoRoShiRo128PlusRandom RNG = new XoRoShiRo128PlusRandom();
@@ -77,6 +64,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         kryo.register(HashMap.class, nodeEdgeIndexSerializer);
     }*/
 
+    private Version version;
     private File directory;
     private InMemoryGrph graph;
     private BidiMap<Node, Integer> nodeIndex;
@@ -88,12 +76,14 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
     private long totalTime;
     private float avgTimePerDocument;
 
-    public HypergraphOfEntityInMemoryGrph(String path) throws HypergraphException {
-        this(path, false);
+    public HypergraphOfEntityInMemory(String path) throws HypergraphException {
+        this(path, Version.BASIC, false);
     }
 
-    public HypergraphOfEntityInMemoryGrph(String path, boolean overwrite) throws HypergraphException {
+    public HypergraphOfEntityInMemory(String path, Version version, boolean overwrite) throws HypergraphException {
         super();
+
+        this.version = version;
 
         this.directory = new File(path);
         if (directory.exists()) {
@@ -169,11 +159,11 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         DocumentNode documentNode = new DocumentNode(document.getDocID());
         int sourceDocumentNodeID = getOrCreateNode(documentNode);
         synchronized (this) {
-            graph.addToDirectedHyperEdgeHead(edgeID, sourceDocumentNodeID);
+            graph.addToDirectedHyperEdgeTail(edgeID, sourceDocumentNodeID);
         }
 
         Set<Integer> targetEntityNodeIDs = indexEntities(document);
-        addNodesToHyperEdgeTail(edgeID, targetEntityNodeIDs);
+        addNodesToHyperEdgeHead(edgeID, targetEntityNodeIDs);
 
         List<String> tokens = analyze(document.getText());
         if (tokens.isEmpty()) return;
@@ -182,7 +172,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
             TermNode termNode = new TermNode(token);
             return getOrCreateNode(termNode);
         }).collect(Collectors.toSet());
-        addNodesToHyperEdgeTail(edgeID, targetTermNodeIDs);
+        addNodesToHyperEdgeHead(edgeID, targetTermNodeIDs);
     }
 
     private Set<Integer> indexEntities(Document document) {
@@ -200,13 +190,13 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
             RelatedToEdge relatedToEdge = new RelatedToEdge();
             int edgeID = createEdge(relatedToEdge);
             synchronized (this) {
-                graph.addToDirectedHyperEdgeHead(edgeID, sourceEntityNodeID);
+                graph.addToDirectedHyperEdgeTail(edgeID, sourceEntityNodeID);
             }
 
             for (EntityNode node : entry.getValue()) {
                 int targetEntityNodeID = getOrCreateNode(node);
                 synchronized (this) {
-                    graph.addToDirectedHyperEdgeTail(edgeID, targetEntityNodeID);
+                    graph.addToDirectedHyperEdgeHead(edgeID, targetEntityNodeID);
                 }
                 nodes.add(targetEntityNodeID);
             }
@@ -244,10 +234,15 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
 
                 ContainedInEdge containedInEdge = new ContainedInEdge();
                 int edgeID = createEdge(containedInEdge);
-                addNodesToHyperEdgeHead(edgeID, termNodes);
-                graph.addToDirectedHyperEdgeTail(edgeID, entityNodeID);
+                addNodesToHyperEdgeTail(edgeID, termNodes);
+                graph.addToDirectedHyperEdgeHead(edgeID, entityNodeID);
             }
         }
+    }
+
+    private void linkSynonyms() {
+        logger.info("TODO: Creating links between synonyms");
+        // TODO
     }
 
     private void createReachabilityIndex() {
@@ -264,11 +259,14 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
     @Override
     public void postProcessing() {
         linkTextAndKnowledge();
+        if (this.version == Version.BASIC_SYN) {
+            linkSynonyms();
+        }
         createReachabilityIndex();
     }
 
     @Override
-    public void indexCorpus(Collection<Document> corpus) throws IOException {
+    public void indexCorpus(Collection<Document> corpus) {
         corpus.parallelStream().forEach(document -> {
             try {
                 index(document);
@@ -415,7 +413,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
                 if (edge instanceof DocumentEdge)
                     continue; // for now ignore document co-occurrence relation to imitate GoE
                 // XXX Not sure about this, since these hyperedges are directed.
-                for (int nodeID : graph.getDirectedHyperEdgeTail(edgeID)) {
+                for (int nodeID : graph.getDirectedHyperEdgeHead(edgeID)) {
                     Node node = nodeIndex.getKey(nodeID);
                     if (node instanceof EntityNode) {
                         localSeedNodes.add(nodeID);
@@ -452,8 +450,8 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
                 })
                 .flatMap(edgeID -> {
                     IntSet nodeIDs = new LucIntHashSet();
-                    nodeIDs.addAll(graph.getDirectedHyperEdgeHead(edgeID));
                     nodeIDs.addAll(graph.getDirectedHyperEdgeTail(edgeID));
+                    nodeIDs.addAll(graph.getDirectedHyperEdgeHead(edgeID));
                     return nodeIDs.stream().filter(nodeID -> !nodeID.equals(sourceNodeID));
                 })
                 .collect(Collectors.toSet()));
@@ -534,7 +532,7 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         IntSet edgeIDs = graph.getEdgesIncidentTo(nodeID);
         int randomEdgeID = getRandom(edgeIDs);
 
-        IntSet nodeIDs = graph.getDirectedHyperEdgeTail(randomEdgeID);
+        IntSet nodeIDs = graph.getDirectedHyperEdgeHead(randomEdgeID);
         int randomNodeID = getRandom(nodeIDs);
 
         path.extend(randomEdgeID, randomNodeID);
@@ -783,14 +781,14 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
     }
 
     @Override
-    public ResultSet search(String query) throws IOException {
+    public ResultSet search(String query, int offset, int limit) throws IOException {
         Map<String, String> params = new HashMap<>();
-        params.put("l", "3");
-        params.put("r", "10");
-        return search(query, RankingFunction.RANDOM_WALK_SCORE, params);
+        params.put("l", String.valueOf(DEFAULT_WALK_LENGTH));
+        params.put("r", String.valueOf(DEFAULT_WALK_REPEATS));
+        return search(query, offset, limit, RankingFunction.RANDOM_WALK_SCORE, params);
     }
 
-    public ResultSet search(String query, RankingFunction function, Map<String, String> params) throws IOException {
+    public ResultSet search(String query, int offset, int limit, RankingFunction function, Map<String, String> params) throws IOException {
         trace.reset();
 
         List<String> tokens = analyze(query);
@@ -826,7 +824,8 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
             case RANDOM_WALK_SCORE:
                 resultSet = randomWalkSearch(
                         seedNodeIDs, seedNodeWeights,
-                        Integer.valueOf(params.get("l")), Integer.valueOf(params.get("r")));
+                        Integer.valueOf(params.getOrDefault("l", String.valueOf(DEFAULT_WALK_LENGTH))),
+                        Integer.valueOf(params.getOrDefault("r", String.valueOf(DEFAULT_WALK_REPEATS))));
                 break;
             case ENTITY_WEIGHT:
             case JACCARD_SCORE:
@@ -871,11 +870,11 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
 
     public void printEdges() {
         for (int edgeID : graph.getEdges()) {
-            IntSet head = graph.getDirectedHyperEdgeHead(edgeID);
             IntSet tail = graph.getDirectedHyperEdgeTail(edgeID);
+            IntSet head = graph.getDirectedHyperEdgeHead(edgeID);
             Edge edge = edgeIndex.getKey(edgeID);
             System.out.println(String.format(
-                    "%d\t[%s] %s -> %s", edgeID, edge.getClass().getSimpleName(), head, tail));
+                    "%d\t[%s] %s -> %s", edgeID, edge.getClass().getSimpleName(), tail, head));
         }
     }
 
@@ -888,5 +887,10 @@ public class HypergraphOfEntityInMemoryGrph extends HypergraphOfEntity {
         ENTITY_WEIGHT,
         JACCARD_SCORE,
         RANDOM_WALK_SCORE
+    }
+
+    public enum Version {
+        BASIC,
+        BASIC_SYN
     }
 }

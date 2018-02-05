@@ -42,8 +42,13 @@ class Index(object):
             return GraphOfWordCSV(reader, index_location, loop)
         elif index_type == 'goe_csv':
             return GraphOfEntityCSV(reader, index_location, loop)
-        elif index_type == 'hgoe':
-            return HypergraphOfEntity(reader, index_location, loop)
+        elif index_type == 'hgoe' or index_type.startswith('hgoe:'):
+            index_type_parts = index_type.split(':', 1)
+            if len(index_type_parts) < 2 or index_type_parts[1].strip() == '':
+                index_version = 'basic'
+            else:
+                index_version = index_type_parts[1]
+            return HypergraphOfEntity(reader, index_location, index_version, loop)
         elif index_type == 'lucene':
             return LuceneEngine(reader, index_location, loop)
         else:
@@ -68,8 +73,13 @@ class Index(object):
             return GraphOfEntityCSV(None, index_location, loop)
         elif index_type == 'gremlin':
             return GremlinServerIndex(None, index_location, loop)
-        elif index_type == 'hgoe':
-            return HypergraphOfEntity(None, index_location, loop)
+        elif index_type == 'hgoe' or index_type.startswith('hgoe:'):
+            index_type_parts = index_type.split(':', 1)
+            if len(index_type_parts) < 2 or index_type_parts[1].strip() == '':
+                index_version = 'basic'
+            else:
+                index_version = index_type_parts[1]
+            return HypergraphOfEntity(None, index_location, index_version, loop)
         elif index_type == 'lucene':
             return LuceneEngine(None, index_location, loop)
         else:
@@ -102,7 +112,7 @@ class Index(object):
         raise ArmyAntException("Search not implemented for %s" % self.__class__.__name__)
 
     async def load(self):
-        raise ArmyAntException("Load not implemented for %s" % self.__class__.__name__)
+        pass
 
 class Result(object):
     def __init__(self, doc_id, score, components=None):
@@ -655,7 +665,8 @@ def handler(signum, frame): raise KeyboardInterrupt
 
 class JavaIndex(Index):
     BLOCK_SIZE = 5000
-    CLASSPATH = 'external/java-impl/target/java-impl-0.1-SNAPSHOT-jar-with-dependencies.jar'
+    VERSION = '0.2-SNAPSHOT'
+    CLASSPATH = 'external/java-impl/target/java-impl-%s-jar-with-dependencies.jar' % VERSION
     INSTANCES = {}
 
     config = configparser.ConfigParser()
@@ -676,15 +687,22 @@ class JavaIndex(Index):
     JTriple = armyant.structures.Triple
 
 class HypergraphOfEntity(JavaIndex):
+    class Version(Enum):
+        basic = 'BASIC'
+        basic_syn = 'BASIC_SYN'
+
     class RankingFunction(Enum):
         entity_weight = 'ENTITY_WEIGHT'
         jaccard = 'JACCARD_SCORE'
         random_walk = 'RANDOM_WALK_SCORE'
 
-    JDocument = JavaIndex.armyant.hgoe.structures.Document
-    JTriple = JavaIndex.armyant.hgoe.structures.Triple
-    JHypergraphOfEntityInMemory = JavaIndex.armyant.hgoe.inmemory.HypergraphOfEntityInMemoryGrph
-    JRankingFunction = JClass("armyant.hgoe.inmemory.HypergraphOfEntityInMemoryGrph$RankingFunction")
+    JHypergraphOfEntityInMemory = JavaIndex.armyant.hgoe.inmemory.HypergraphOfEntityInMemory
+    JVersion = JClass("armyant.hgoe.inmemory.HypergraphOfEntityInMemory$Version")
+    JRankingFunction = JClass("armyant.hgoe.inmemory.HypergraphOfEntityInMemory$RankingFunction")
+
+    def __init__(self, reader, index_location, index_version, loop):
+        super().__init__(reader, index_location, loop)
+        self.index_version = HypergraphOfEntity.Version[index_version]
 
     async def load(self):
         if self.index_location in JavaIndex.INSTANCES:
@@ -694,7 +712,8 @@ class HypergraphOfEntity(JavaIndex):
 
     async def index(self):
         try:
-            hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location, True)
+            version = HypergraphOfEntity.JVersion.valueOf(self.index_version.value)
+            hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location, version, True)
             
             corpus = []
             for doc in self.reader:
@@ -707,7 +726,7 @@ class HypergraphOfEntity(JavaIndex):
                     logger.info("%d documents preloaded" % len(corpus))
 
                 if len(corpus) >= HypergraphOfEntity.BLOCK_SIZE:
-                    logger.info("Indexing batch of %d documents" % len(corpus))
+                    logger.info("Indexing batch of %d documents using %s" % (len(corpus), self.index_version.value))
                     hgoe.indexCorpus(java.util.Arrays.asList(corpus))
                     corpus = []
 
@@ -719,7 +738,7 @@ class HypergraphOfEntity(JavaIndex):
                     })
 
             if len(corpus) > 0:
-                logger.info("Indexing batch of %d documents" % len(corpus))
+                logger.info("Indexing batch of %d documents using %s" % (len(corpus), self.index_version.value))
                 hgoe.indexCorpus(java.util.Arrays.asList(corpus))
 
             hgoe.postProcessing()
@@ -758,7 +777,7 @@ class HypergraphOfEntity(JavaIndex):
                 hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location)
                 HypergraphOfEntity.INSTANCES[self.index_location] = hgoe
             
-            results = hgoe.search(query, ranking_function, ranking_params)
+            results = hgoe.search(query, offset, limit, ranking_function, ranking_params)
             num_docs = results.getNumDocs()
             trace = results.getTrace()
             results = [Result(result.getDocID(), result.getScore())

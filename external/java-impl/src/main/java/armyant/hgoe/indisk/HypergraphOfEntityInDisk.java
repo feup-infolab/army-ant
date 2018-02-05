@@ -1,6 +1,6 @@
 package armyant.hgoe.indisk;
 
-import armyant.hgoe.HypergraphOfEntity;
+import armyant.Engine;
 import armyant.hgoe.indisk.edges.ContainedInEdge;
 import armyant.hgoe.indisk.edges.DocumentEdge;
 import armyant.hgoe.indisk.edges.Edge;
@@ -10,9 +10,9 @@ import armyant.hgoe.indisk.nodes.EntityNode;
 import armyant.hgoe.indisk.nodes.Node;
 import armyant.hgoe.indisk.nodes.TermNode;
 import armyant.hgoe.indisk.traversals.AllPaths;
-import armyant.hgoe.structures.Document;
-import armyant.hgoe.structures.Result;
-import armyant.hgoe.structures.ResultSet;
+import armyant.structures.Document;
+import armyant.structures.Result;
+import armyant.structures.ResultSet;
 import org.apache.commons.collections4.map.LRUMap;
 import org.hypergraphdb.*;
 import org.hypergraphdb.algorithms.HGALGenerator;
@@ -34,7 +34,7 @@ import static org.hypergraphdb.HGQuery.hg.*;
 /**
  * Created by jldevezas on 2017-10-23.
  */
-public class HypergraphOfEntityInDisk extends HypergraphOfEntity {
+public class HypergraphOfEntityInDisk extends Engine {
     private static final Logger logger = LoggerFactory.getLogger(HypergraphOfEntityInDisk.class);
     private static final Integer SEARCH_MAX_DISTANCE = 2;
 
@@ -382,7 +382,7 @@ public class HypergraphOfEntityInDisk extends HypergraphOfEntity {
     }
 
     @Override
-    public ResultSet search(String query) throws IOException {
+    public ResultSet search(String query, int offset, int limit) throws IOException {
         ResultSet resultSet = new ResultSet();
 
         List<String> tokens = analyze(query);

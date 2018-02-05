@@ -52,7 +52,7 @@ public class LuceneEngine extends Engine {
     }
 
     public void open() throws Exception {
-        logger.info("Opening for indexing");
+        logger.info("Opening {} for indexing", this.path);
         IndexWriterConfig writerConfig = new IndexWriterConfig(analyzer);
         writer = new IndexWriter(directory, writerConfig);
     }

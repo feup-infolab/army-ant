@@ -1,7 +1,7 @@
 package armyant.hgoe;
 
-import armyant.hgoe.structures.Document;
-import armyant.hgoe.structures.Triple;
+import armyant.structures.Document;
+import armyant.structures.Triple;
 import grph.path.ArrayListPath;
 import grph.path.Path;
 import org.testng.annotations.Test;

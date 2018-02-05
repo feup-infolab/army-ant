@@ -1,7 +1,7 @@
 package armyant.hgoe.inmemory.nodes;
 
 import armyant.hgoe.inmemory.Rankable;
-import armyant.hgoe.structures.Document;
+import armyant.structures.Document;
 
 /**
  * Created by jldevezas on 2017-10-24.
