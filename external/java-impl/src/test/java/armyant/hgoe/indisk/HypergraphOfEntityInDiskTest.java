@@ -1,8 +1,8 @@
 package armyant.hgoe.indisk;
 
 import armyant.hgoe.HypergraphOfEntityTest;
-import armyant.hgoe.structures.Result;
-import armyant.hgoe.structures.ResultSet;
+import armyant.structures.Result;
+import armyant.structures.ResultSet;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
@@ -51,7 +51,7 @@ public class HypergraphOfEntityInDiskTest extends HypergraphOfEntityTest {
 
         //ResultSet resultSet = hgoe.search("web search system");
         //ResultSet resultSet = hgoe.search("Monuments of India");
-        ResultSet resultSet = hgoe.search("Poirot");
+        ResultSet resultSet = hgoe.search("Poirot", 0, 1000);
         //ResultSet resultSet = hgoe.search("national park");
 
         for (ResultSet it = resultSet; it.hasNext(); ) {

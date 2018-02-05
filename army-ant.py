@@ -88,19 +88,18 @@ class CommandLineInterface(object):
             logger.error(e)
 
     def search(self, query=None, offset=0, limit=10, index_location='localhost', index_type='gow',
-               db_location='localhost', db_name=None, db_type='mongo', shell=False):
-        if query is None and not shell:
-            logger.error("Must either use --query or --shell")
+               db_location='localhost', db_name=None, db_type='mongo', interactive=False):
+        if query is None and not interactive:
+            logger.error("Must either use --query or --interactive")
             return
 
         try:
             loop = asyncio.get_event_loop()
             while True:
                 try:
-                    if shell:
-                        loop.run_until_complete(Index.preload(index_location, index_type, loop))
+                    if interactive:
                         query = input('query> ')
-                        if query.startswith('/q'): break
+                        if query.startswith('\q'): break
 
                     index = Index.open(index_location, index_type, loop)
                     response = loop.run_until_complete(index.search(query, offset, limit))
@@ -121,9 +120,10 @@ class CommandLineInterface(object):
                 except ArmyAntException as e:
                     logger.error(e)
                 except EOFError:
+                    print("\\q")
                     break
 
-                if not shell: break
+                if not interactive: break
         finally:
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()

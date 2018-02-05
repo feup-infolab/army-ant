@@ -1,5 +1,6 @@
 package armyant.hgoe.structures;
 
+import armyant.structures.Trace;
 import org.testng.annotations.Test;
 
 /**

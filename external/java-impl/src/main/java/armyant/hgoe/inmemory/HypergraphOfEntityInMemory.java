@@ -2,10 +2,7 @@ package armyant.hgoe.inmemory;
 
 import armyant.Engine;
 import armyant.hgoe.exceptions.HypergraphException;
-import armyant.hgoe.inmemory.edges.ContainedInEdge;
-import armyant.hgoe.inmemory.edges.DocumentEdge;
-import armyant.hgoe.inmemory.edges.Edge;
-import armyant.hgoe.inmemory.edges.RelatedToEdge;
+import armyant.hgoe.inmemory.edges.*;
 import armyant.hgoe.inmemory.nodes.DocumentNode;
 import armyant.hgoe.inmemory.nodes.EntityNode;
 import armyant.hgoe.inmemory.nodes.Node;
@@ -14,6 +11,10 @@ import armyant.structures.Document;
 import armyant.structures.Result;
 import armyant.structures.ResultSet;
 import armyant.structures.Trace;
+import edu.mit.jwi.IRAMDictionary;
+import edu.mit.jwi.RAMDictionary;
+import edu.mit.jwi.data.ILoadPolicy;
+import edu.mit.jwi.item.*;
 import grph.algo.AllPaths;
 import grph.algo.ConnectedComponentsAlgorithm;
 import grph.in_memory.InMemoryGrph;
@@ -241,8 +242,41 @@ public class HypergraphOfEntityInMemory extends Engine {
     }
 
     private void linkSynonyms() {
-        logger.info("TODO: Creating links between synonyms");
-        // TODO
+        logger.info("Creating links between synonyms");
+        try {
+            IRAMDictionary dict = new RAMDictionary(new File("/usr/share/wordnet"), ILoadPolicy.NO_LOAD);
+            dict.open();
+
+            for (int nodeID : graph.getVertices()) {
+                Node node = nodeIndex.getKey(nodeID);
+                if (node instanceof TermNode) {
+                    IIndexWord idxWord = dict.getIndexWord(node.getName(), POS.NOUN);
+                    if (idxWord != null) {
+                        IWordID wordID = idxWord.getWordIDs().get(0);
+                        IWord word = dict.getWord(wordID);
+                        ISynset synset = word.getSynset();
+
+                        for (IWord w : synset.getWords()) {
+                            Set<String> syns = new HashSet<>(Arrays.asList(w.getLemma().toLowerCase().split("_")));
+                            if (syns.size() > 1) {
+                                SynonymEdge synonymEdge = new SynonymEdge();
+                                int edgeID = createEdge(synonymEdge);
+                                graph.addToDirectedHyperEdgeTail(edgeID, nodeIndex.get(node));
+                                for (String syn : syns) {
+                                    Node synNode = new TermNode(syn);
+                                    int synNodeID = getOrCreateNode(synNode);
+                                    graph.addToDirectedHyperEdgeHead(edgeID, synNodeID);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            dict.close();
+        } catch (IOException e) {
+            logger.error(e.getMessage(), e);
+        }
     }
 
     private void createReachabilityIndex() {
@@ -395,6 +429,10 @@ public class HypergraphOfEntityInMemory extends Engine {
         return termNodes;
     }
 
+    public boolean containsNode(Node node) {
+        return nodeIndex.containsKey(node);
+    }
+
     private IntSet getSeedNodeIDs(IntSet queryTermNodeIDs) {
         IntSet seedNodes = new LucIntHashSet();
 
@@ -533,6 +571,7 @@ public class HypergraphOfEntityInMemory extends Engine {
         int randomEdgeID = getRandom(edgeIDs);
 
         IntSet nodeIDs = graph.getDirectedHyperEdgeHead(randomEdgeID);
+        //nodeIDs.addAll(graph.getDirectedHyperEdgeTail(randomEdgeID));
         int randomNodeID = getRandom(nodeIDs);
 
         path.extend(randomEdgeID, randomNodeID);

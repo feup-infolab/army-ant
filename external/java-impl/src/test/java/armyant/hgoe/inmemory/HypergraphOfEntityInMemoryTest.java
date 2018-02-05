@@ -2,6 +2,7 @@ package armyant.hgoe.inmemory;
 
 import armyant.hgoe.HypergraphOfEntityTest;
 import armyant.hgoe.exceptions.HypergraphException;
+import armyant.hgoe.inmemory.nodes.TermNode;
 import armyant.structures.Result;
 import armyant.structures.ResultSet;
 import org.testng.annotations.Test;
@@ -75,5 +76,14 @@ public class HypergraphOfEntityInMemoryTest extends HypergraphOfEntityTest {
         ResultSet resultSet = hgoe.search("doom", 0, 1000);
 
         resultSet.getTrace().toASCII();
+    }
+
+    public void testContainsNode() throws HypergraphException {
+        HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory(dbPath);
+        String[] terms = { "ca", "calif.", "drug" };
+        for (String term: terms) {
+            System.out.println(term + ": " + hgoe.containsNode(new TermNode(term)));
+        }
+
     }
 }
