@@ -1,6 +1,6 @@
 # Docker image
 
-Currently, we provide a basic image to experiment with Army ANT, for version 0.3-rc3. This image comes prepackaged with two indexes for a small subset of the INEX 2009 Wikipedia Collection. This subset, INEX 2009 3T-NL covers 3 topics (3T) and all the documents mentioned in the relevance judgments for these topics, excluding linked files (NL; i.e., no links). The instance includes the following engines, ranking functions and configurable parameters:
+Currently, we provide a [basic image](https://hub.docker.com/r/jldevezas/army-ant/tags/) to experiment with Army ANT 0.3. This image comes prepackaged with two indexes for a small subset of the INEX 2009 Wikipedia Collection. This subset, INEX 2009 3T-NL covers 3 topics (3T) and all the documents mentioned in the relevance judgments for these topics, excluding linked files (NL; i.e., no links). The instance includes the following engines, ranking functions and configurable parameters:
 
 * Lucene
   * TF-IDF
@@ -17,11 +17,10 @@ Currently, we provide a basic image to experiment with Army ANT, for version 0.3
     * Repeats: r = [10, 100, 250, 500, 750, 1000]
   * Jaccard Score
 
-## Installation instructions
+## Evaluation Files
 
-The current version is quite large. We will fix this later, by using `docker-composer` to use separate containers for Python, NodeJS, MongoDB and Army ANT server.
+In order to experiment with the evaluation module, you will first need to download the INEX 2009 3T-NL subset, attached to [release 0.3](https://github.com/feup-infolab/army-ant/releases/tag/0.3), thus obtaining the `topics/2010-topics.xml`, with the test queries, and the `assessments/2010/inex2010.qrels` with the relevance judgments.
 
-```bash
-$ docker pull jldevezas/army-ant:0.3-rc3
-$ docker run -p 8080:8080 jldevezas/army-ant:0.3-rc3
-```
+## Installation
+
+In order to install Army ANT, please follow the instructions in [army-ant-install](https://github.com/feup-infolab/army-ant-install). Running Army ANT will require a MongoDB docker instance in the same network on the default port.
