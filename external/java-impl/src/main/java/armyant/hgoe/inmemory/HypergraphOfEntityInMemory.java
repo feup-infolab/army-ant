@@ -65,7 +65,7 @@ public class HypergraphOfEntityInMemory extends Engine {
         kryo.register(HashMap.class, nodeEdgeIndexSerializer);
     }*/
 
-    private Version version;
+    private List<Feature> features;
     private File directory;
     private InMemoryGrph graph;
     private BidiMap<Node, Integer> nodeIndex;
@@ -78,13 +78,13 @@ public class HypergraphOfEntityInMemory extends Engine {
     private float avgTimePerDocument;
 
     public HypergraphOfEntityInMemory(String path) throws HypergraphException {
-        this(path, Version.BASIC, false);
+        this(path, new ArrayList<>(), false);
     }
 
-    public HypergraphOfEntityInMemory(String path, Version version, boolean overwrite) throws HypergraphException {
+    public HypergraphOfEntityInMemory(String path, List<Feature> features, boolean overwrite) throws HypergraphException {
         super();
 
-        this.version = version;
+        this.features = features;
 
         this.directory = new File(path);
         if (directory.exists()) {
@@ -293,9 +293,7 @@ public class HypergraphOfEntityInMemory extends Engine {
     @Override
     public void postProcessing() {
         linkTextAndKnowledge();
-        if (this.version == Version.BASIC_SYN) {
-            linkSynonyms();
-        }
+        if (features.contains(Feature.SYNONYMS)) linkSynonyms();
         createReachabilityIndex();
     }
 
@@ -928,8 +926,7 @@ public class HypergraphOfEntityInMemory extends Engine {
         RANDOM_WALK_SCORE
     }
 
-    public enum Version {
-        BASIC,
-        BASIC_SYN
+    public enum Feature {
+        SYNONYMS
     }
 }

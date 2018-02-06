@@ -8,6 +8,7 @@ import armyant.structures.ResultSet;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 /**
  * Created by jldevezas on 2017-10-23.
@@ -40,7 +41,7 @@ public class HypergraphOfEntityInMemoryTest extends HypergraphOfEntityTest {
 
     public void testIndex() throws IOException, HypergraphException {
         HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory(
-                dbPath, HypergraphOfEntityInMemory.Version.BASIC, true);
+                dbPath, new ArrayList<>(), true);
         hgoe.index(document1);
         hgoe.index(document2);
         hgoe.index(document3);

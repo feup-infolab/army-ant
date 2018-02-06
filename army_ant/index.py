@@ -5,21 +5,28 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import logging, string, asyncio, pymongo, re, json, psycopg2, os, jpype, itertools, json, signal, configparser
+import configparser
+import itertools
+import jpype
+import json
+import logging
+import os
+import psycopg2
+import re
+import signal
 from enum import Enum
-from jpype import *
+
 from aiogremlin import Cluster
-from aiohttp.client_exceptions import ClientOSError, ClientConnectorError
-from threading import RLock
-from concurrent.futures import ThreadPoolExecutor
-from nltk import word_tokenize
-from nltk.corpus import stopwords, wordnet as wn
+from aiohttp.client_exceptions import ClientConnectorError
+from jpype import *
+
+from army_ant.exception import ArmyAntException
 from army_ant.reader import Document, Entity
 from army_ant.text import analyze
 from army_ant.util import load_gremlin_script, load_sql_script
-from army_ant.exception import ArmyAntException
 
 logger = logging.getLogger(__name__)
+
 
 class Index(object):
     PRELOADED = {}
@@ -42,13 +49,9 @@ class Index(object):
             return GraphOfWordCSV(reader, index_location, loop)
         elif index_type == 'goe_csv':
             return GraphOfEntityCSV(reader, index_location, loop)
-        elif index_type == 'hgoe' or index_type.startswith('hgoe:'):
-            index_type_parts = index_type.split(':', 1)
-            if len(index_type_parts) < 2 or index_type_parts[1].strip() == '':
-                index_version = 'basic'
-            else:
-                index_version = index_type_parts[1]
-            return HypergraphOfEntity(reader, index_location, index_version, loop)
+        elif index_type.startswith('hgoe'):
+            index_features = index_type.split(':')[1:]
+            return HypergraphOfEntity(reader, index_location, index_features, loop)
         elif index_type == 'lucene':
             return LuceneEngine(reader, index_location, loop)
         else:
@@ -73,13 +76,9 @@ class Index(object):
             return GraphOfEntityCSV(None, index_location, loop)
         elif index_type == 'gremlin':
             return GremlinServerIndex(None, index_location, loop)
-        elif index_type == 'hgoe' or index_type.startswith('hgoe:'):
-            index_type_parts = index_type.split(':', 1)
-            if len(index_type_parts) < 2 or index_type_parts[1].strip() == '':
-                index_version = 'basic'
-            else:
-                index_version = index_type_parts[1]
-            return HypergraphOfEntity(None, index_location, index_version, loop)
+        elif index_type.startswith('hgoe'):
+            index_features = index_type.split(':')[1:]
+            return HypergraphOfEntity(None, index_location, index_features, loop)
         elif index_type == 'lucene':
             return LuceneEngine(None, index_location, loop)
         else:
@@ -94,17 +93,19 @@ class Index(object):
 
     @staticmethod
     async def no_store(index):
-        async for doc in index: pass
+        async for _ in index: pass
 
     def __init__(self, reader, index_location, loop):
         self.reader = reader
         self.index_location = index_location
         self.loop = loop
 
-    def analyze(self, text):
+    @staticmethod
+    def analyze(text):
         return analyze(text)
 
     """Indexes the documents and yields documents to store in the database."""
+
     async def index(self):
         raise ArmyAntException("Index not implemented for %s" % self.__class__.__name__)
 
@@ -113,6 +114,7 @@ class Index(object):
 
     async def load(self):
         pass
+
 
 class Result(object):
     def __init__(self, doc_id, score, components=None):
@@ -146,6 +148,7 @@ class Result(object):
         return """{ "docID": %s, "score": %f, "has_components": %s }""" % (
             self.doc_id, self.score, ("true" if self.components else "false"))
 
+
 class ResultSet(object):
     def __init__(self, results, num_docs, trace=None, trace_ascii=None):
         self.results = results
@@ -172,6 +175,7 @@ class ResultSet(object):
                 key == 'trace' and self.trace or
                 key == 'traceASCII' and self.trace_ascii)
 
+
 class ServiceIndex(Index):
     def __init__(self, reader, index_location, loop):
         super().__init__(reader, index_location, loop)
@@ -188,6 +192,7 @@ class ServiceIndex(Index):
         else:
             self.index_host = index_location_parts[0]
             self.index_port = 8182
+
 
 class GremlinServerIndex(ServiceIndex):
     def __init__(self, reader, index_location, loop):
@@ -212,9 +217,9 @@ class GremlinServerIndex(ServiceIndex):
                 'data': data
             })
         results = await result_set.all()
-        return results[0] if len (results) > 0 else None
+        return results[0] if len(results) > 0 else None
 
-    async def to_edge_list(use_names=False):
+    async def to_edge_list(self, use_names=False):
         result_set = await self.client.submit(
             ('g = %s.traversal()\n' % self.graph)
             + load_gremlin_script('convert_to_edge_list'), {
@@ -223,11 +228,12 @@ class GremlinServerIndex(ServiceIndex):
         async for edge in result_set:
             yield edge
 
+
 class GraphOfWord(GremlinServerIndex):
     def __init__(self, reader, index_location, loop, window_size=3):
         super().__init__(reader, index_location, loop)
         self.window_size = 3
-    
+
     async def index(self):
         self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
         self.client = await self.cluster.connect()
@@ -236,13 +242,13 @@ class GraphOfWord(GremlinServerIndex):
             logger.info("Indexing %s" % doc.doc_id)
             logger.debug(doc.text)
 
-            tokens = self.analyze(doc.text)
+            tokens = GraphOfWord.analyze(doc.text)
 
-            for i in range(len(tokens)-self.window_size):
+            for i in range(len(tokens) - self.window_size):
                 for j in range(1, self.window_size + 1):
-                    logger.debug("%s -> %s" % (tokens[i], tokens[i+j]))
+                    logger.debug("%s -> %s" % (tokens[i], tokens[i + j]))
                     source_vertex = await self.get_or_create_vertex(tokens[i])
-                    target_vertex = await self.get_or_create_vertex(tokens[i+j])
+                    target_vertex = await self.get_or_create_vertex(tokens[i + j])
                     edge = await self.get_or_create_edge(
                         source_vertex, target_vertex, data={'doc_id': doc.doc_id})
 
@@ -258,7 +264,7 @@ class GraphOfWord(GremlinServerIndex):
 
         self.client = await self.cluster.connect()
 
-        query_tokens = self.analyze(query)
+        query_tokens = GraphOfWord.analyze(query)
 
         result_set = await self.client.submit(
             ('g = %s.traversal()\n' % self.graph)
@@ -272,6 +278,7 @@ class GraphOfWord(GremlinServerIndex):
 
         return results
 
+
 class GraphOfEntity(GremlinServerIndex):
     async def index(self):
         self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
@@ -284,20 +291,22 @@ class GraphOfEntity(GremlinServerIndex):
             # Load entities and relations (knowledge base)
             for (e1, rel, e2) in doc.triples:
                 logger.debug("%s -[%s]-> %s" % (e1.label, rel, e2.label))
-                source_vertex = await self.get_or_create_vertex(e1.label, data={'doc_id': doc.doc_id, 'url': e1.url, 'type': 'entity'})
+                source_vertex = await self.get_or_create_vertex(e1.label, data={'doc_id': doc.doc_id, 'url': e1.url,
+                                                                                'type': 'entity'})
                 target_vertex = await self.get_or_create_vertex(e2.label, data={'url': e2.url, 'type': 'entity'})
                 edge = await self.get_or_create_edge(source_vertex, target_vertex, edge_type=rel)
-                yield Document(doc_id = doc.doc_id, metadata = { 'url': e1.url, 'name': e1.label })
-                #yield Document(doc_id = e2.url, metadata = { 'url': e2.url, 'name': e2.label }) # We're only indexing what has a doc_id
+                yield Document(doc_id=doc.doc_id, metadata={'url': e1.url, 'name': e1.label})
+                # yield Document(doc_id = e2.url, metadata = { 'url': e2.url, 'name': e2.label }) # We're only
+                # indexing what has a doc_id
 
-            tokens = self.analyze(doc.text)
+            tokens = GraphOfEntity.analyze(doc.text)
 
-            for i in range(len(tokens)-1):
+            for i in range(len(tokens) - 1):
                 # Load words, linking by sequential co-occurrence
-                logger.debug("%s -[before]-> %s" % (tokens[i], tokens[i+1]))
+                logger.debug("%s -[before]-> %s" % (tokens[i], tokens[i + 1]))
                 source_vertex = await self.get_or_create_vertex(tokens[i], data={'type': 'term'})
-                target_vertex = await self.get_or_create_vertex(tokens[i+1], data={'type': 'term'})
-                edge = await self.get_or_create_edge(source_vertex, target_vertex, data={'doc_id': doc.doc_id})
+                target_vertex = await self.get_or_create_vertex(tokens[i + 1], data={'type': 'term'})
+                await self.get_or_create_edge(source_vertex, target_vertex, data={'doc_id': doc.doc_id})
 
             doc_entity_labels = set([])
             for e1, _, e2 in doc.triples:
@@ -308,13 +317,13 @@ class GraphOfEntity(GremlinServerIndex):
             for token in set(tokens):
                 # Load word synonyms, linking to original term
 
-                #syns = set([ss.name().split('.')[0].replace('_', ' ') for ss in wn.synsets(token)])
-                #syns = syns.difference(token)
+                # syns = set([ss.name().split('.')[0].replace('_', ' ') for ss in wn.synsets(token)])
+                # syns = syns.difference(token)
 
-                #for syn in syns:
-                    #logger.debug("%s -[synonym]-> %s" % (token, syn))
-                    #syn_vertex = await self.get_or_create_vertex(syn, data={'type': 'term'})
-                    #edge = await self.get_or_create_edge(source_vertex, syn_vertex, edge_type='synonym')
+                # for syn in syns:
+                # logger.debug("%s -[synonym]-> %s" % (token, syn))
+                # syn_vertex = await self.get_or_create_vertex(syn, data={'type': 'term'})
+                # edge = await self.get_or_create_edge(source_vertex, syn_vertex, edge_type='synonym')
 
                 # Load word-entity occurrence
 
@@ -324,9 +333,9 @@ class GraphOfEntity(GremlinServerIndex):
                     if re.search(r'\b%s\b' % re.escape(token), entity_label):
                         logger.debug("%s -[contained_in]-> %s" % (token, entity_label))
                         entity_vertex = await self.get_or_create_vertex(entity_label, data={'type': 'entity'})
-                        edge = await self.get_or_create_edge(source_vertex, entity_vertex, edge_type='contained_in')
+                        await self.get_or_create_edge(source_vertex, entity_vertex, edge_type='contained_in')
 
-            #yield doc
+                        # yield doc
 
         await self.cluster.close()
 
@@ -338,7 +347,7 @@ class GraphOfEntity(GremlinServerIndex):
 
         self.client = await self.cluster.connect()
 
-        query_tokens = self.analyze(query)
+        query_tokens = GraphOfEntity.analyze(query)
 
         result_set = await self.client.submit(
             ('g = %s.traversal()\n' % self.graph)
@@ -352,6 +361,7 @@ class GraphOfEntity(GremlinServerIndex):
 
         return results
 
+
 # Used for composition within *Batch graphs
 class PostgreSQLGraph(object):
     def create_postgres_schema(self, conn):
@@ -359,26 +369,28 @@ class PostgreSQLGraph(object):
         c.execute("DROP TABLE IF EXISTS nodes")
         c.execute("DROP TABLE IF EXISTS edges")
         c.execute("CREATE TABLE nodes (node_id BIGINT, label TEXT, attributes JSONB)")
-        c.execute("CREATE TABLE edges (edge_id BIGINT, label TEXT, attributes JSONB, source_node_id BIGINT, target_node_id BIGINT)")
+        c.execute(
+            "CREATE TABLE edges (edge_id BIGINT, label TEXT, attributes JSONB, source_node_id BIGINT, target_node_id BIGINT)")
         conn.commit()
 
     def create_vertex_postgres(self, conn, vertex_id, label, attributes):
         c = conn.cursor()
         properties = {}
         for k, v in attributes.items():
-            properties[k] = [{ 'id': self.next_property_id, 'value': v }]
+            properties[k] = [{'id': self.next_property_id, 'value': v}]
             self.next_property_id += 1
         c.execute("INSERT INTO nodes VALUES (%s, %s, %s)", (vertex_id, label, json.dumps(properties)))
 
     def create_edge_postgres(self, conn, edge_id, label, source_vertex_id, target_vertex_id, attributes={}):
         c = conn.cursor()
-        c.execute("INSERT INTO edges VALUES (%s, %s, %s, %s, %s)", (edge_id, label, json.dumps(attributes), source_vertex_id, target_vertex_id))
-    
+        c.execute("INSERT INTO edges VALUES (%s, %s, %s, %s, %s)",
+                  (edge_id, label, json.dumps(attributes), source_vertex_id, target_vertex_id))
+
     def update_vertex_attribute(self, conn, vertex_id, attr_name, attr_value):
         c = conn.cursor()
         c.execute(
             "UPDATE nodes SET attributes = jsonb_set(attributes, '{%s}', '[{\"id\": %s, \"value\": \"%s\"}]', true) WHERE node_id = %%s" % (
-                attr_name, self.next_property_id, attr_value), (vertex_id, ))
+                attr_name, self.next_property_id, attr_value), (vertex_id,))
         self.next_property_id += 1
 
     def load_to_postgres(self, conn, doc):
@@ -392,7 +404,7 @@ class PostgreSQLGraph(object):
             c.execute(load_sql_script('to_graphson'))
 
             for row in c:
-                node = { 'id': row[0], 'label': row[1] }
+                node = {'id': row[0], 'label': row[1]}
                 if row[2]: node['properties'] = row[2]
                 if row[3]: node['outE'] = row[3]
                 if row[4]: node['inE'] = row[4]
@@ -428,13 +440,14 @@ class PostgreSQLGraph(object):
         conn.commit()
 
         if not pgonly: self.postgres_to_graphson(conn, '/tmp/graph.json')
-        
+
         conn.close()
 
         if not pgonly: await self.load_to_gremlin_server('/tmp/graph.json')
-        #yield None
+        # yield None
 
-class GraphOfWordBatch(PostgreSQLGraph,GraphOfWord):
+
+class GraphOfWordBatch(PostgreSQLGraph, GraphOfWord):
     def get_or_create_term_vertex(self, conn, token):
         if token in self.vertex_cache:
             vertex_id = self.vertex_cache[token]
@@ -442,31 +455,33 @@ class GraphOfWordBatch(PostgreSQLGraph,GraphOfWord):
             vertex_id = self.next_vertex_id
             self.vertex_cache[token] = vertex_id
             self.next_vertex_id += 1
-            self.create_vertex_postgres(conn, vertex_id, 'term', { 'name': token })
+            self.create_vertex_postgres(conn, vertex_id, 'term', {'name': token})
 
         return vertex_id
 
     def load_to_postgres(self, conn, doc):
-        tokens = self.analyze(doc.text)
+        tokens = GraphOfWordBatch.analyze(doc.text)
 
-        for i in range(len(tokens)-self.window_size):
+        for i in range(len(tokens) - self.window_size):
             for j in range(1, self.window_size + 1):
                 source_vertex_id = self.get_or_create_term_vertex(conn, tokens[i])
-                target_vertex_id = self.get_or_create_term_vertex(conn, tokens[i+j])
+                target_vertex_id = self.get_or_create_term_vertex(conn, tokens[i + j])
 
-                logger.debug("%s (%d) -> %s (%s)" % (tokens[i], source_vertex_id, tokens[i+j], target_vertex_id))
-                self.create_edge_postgres(conn, self.next_edge_id, 'in_window_of', source_vertex_id, target_vertex_id, { 'doc_id': doc.doc_id })
+                logger.debug("%s (%d) -> %s (%s)" % (tokens[i], source_vertex_id, tokens[i + j], target_vertex_id))
+                self.create_edge_postgres(conn, self.next_edge_id, 'in_window_of', source_vertex_id, target_vertex_id,
+                                          {'doc_id': doc.doc_id})
                 self.next_edge_id += 1
 
         conn.commit()
 
         yield doc
 
-class GraphOfEntityBatch(PostgreSQLGraph,GraphOfEntity):
+
+class GraphOfEntityBatch(PostgreSQLGraph, GraphOfEntity):
     def __init__(self, reader, index_location, loop):
         super().__init__(reader, index_location, loop)
         self.vertices_with_doc_id = set([])
-    
+
     def get_or_create_entity_vertex(self, conn, entity, doc_id=None):
         cache_key = 'entity::%s' % entity.label
 
@@ -480,15 +495,15 @@ class GraphOfEntityBatch(PostgreSQLGraph,GraphOfEntity):
             self.vertex_cache[cache_key] = vertex_id
             self.next_vertex_id += 1
 
-            data = { 'type': 'entity', 'name': entity.label }
+            data = {'type': 'entity', 'name': entity.label}
 
             if entity.url:
                 data['url'] = entity.url
-            
+
             if doc_id:
                 data['doc_id'] = doc_id
                 self.vertices_with_doc_id.add(vertex_id)
-            
+
             self.create_vertex_postgres(conn, vertex_id, 'entity', data)
 
         return vertex_id
@@ -502,7 +517,7 @@ class GraphOfEntityBatch(PostgreSQLGraph,GraphOfEntity):
             vertex_id = self.next_vertex_id
             self.vertex_cache[cache_key] = vertex_id
             self.next_vertex_id += 1
-            self.create_vertex_postgres(conn, vertex_id, 'term', { 'type': 'term', 'name': term })
+            self.create_vertex_postgres(conn, vertex_id, 'term', {'type': 'term', 'name': term})
 
         return vertex_id
 
@@ -514,18 +529,21 @@ class GraphOfEntityBatch(PostgreSQLGraph,GraphOfEntity):
             target_vertex_id = self.get_or_create_entity_vertex(conn, e2)
             self.create_edge_postgres(conn, self.next_edge_id, 'related_to', source_vertex_id, target_vertex_id)
             self.next_edge_id += 1
-            metadata = { 'name': e1.label }
+            metadata = {'name': e1.label}
             if e1.url: metadata['url'] = e1.url
-            #yield Document(doc_id = doc.doc_id, metadata = metadata) # We're only indexing what has a doc_id / XXX this was wrong, because entities never have a doc_id, unless they come from a doc, so just return doc, right?
+            # yield Document(doc_id = doc.doc_id, metadata = metadata) # We're only indexing what has a doc_id / XXX
+            # this was wrong, because entities never have a doc_id, unless they come from a doc, so just return doc,
+            # right?
 
-        tokens = self.analyze(doc.text)
+        tokens = GraphOfEntityBatch.analyze(doc.text)
 
-        for i in range(len(tokens)-1):
+        for i in range(len(tokens) - 1):
             # Load words, linking by sequential co-occurrence
-            logger.debug("%s -[before]-> %s" % (tokens[i], tokens[i+1]))
+            logger.debug("%s -[before]-> %s" % (tokens[i], tokens[i + 1]))
             source_vertex_id = self.get_or_create_term_vertex(conn, tokens[i])
-            target_vertex_id = self.get_or_create_term_vertex(conn, tokens[i+1])
-            self.create_edge_postgres(conn, self.next_edge_id, 'before', source_vertex_id, target_vertex_id, {'doc_id': doc.doc_id})
+            target_vertex_id = self.get_or_create_term_vertex(conn, tokens[i + 1])
+            self.create_edge_postgres(conn, self.next_edge_id, 'before', source_vertex_id, target_vertex_id,
+                                      {'doc_id': doc.doc_id})
             self.next_edge_id += 1
 
         doc_entity_labels = set([])
@@ -541,11 +559,13 @@ class GraphOfEntityBatch(PostgreSQLGraph,GraphOfEntity):
                 if re.search(r'\b%s\b' % re.escape(token), entity_label):
                     logger.debug("%s -[contained_in]-> %s" % (token, entity_label))
                     entity_vertex_id = self.get_or_create_entity_vertex(conn, Entity(entity_label))
-                    self.create_edge_postgres(conn, self.next_edge_id, 'contained_in', source_vertex_id, entity_vertex_id)
+                    self.create_edge_postgres(conn, self.next_edge_id, 'contained_in', source_vertex_id,
+                                              entity_vertex_id)
 
         conn.commit()
 
         yield doc
+
 
 class GraphOfWordCSV(GraphOfWordBatch):
     async def index(self):
@@ -559,7 +579,7 @@ class GraphOfWordCSV(GraphOfWordBatch):
 
         conn = psycopg2.connect("dbname='army_ant' user='army_ant' host='localhost'")
         c = conn.cursor()
-        
+
         logging.info("Creating term nodes CSV file")
         with open(os.path.join(self.index_location, 'term-nodes.csv'), 'w') as f:
             c.copy_expert("""
@@ -574,6 +594,7 @@ class GraphOfWordCSV(GraphOfWordBatch):
             TO STDOUT WITH CSV HEADER
             """, f)
 
+
 class GraphOfEntityCSV(GraphOfEntityBatch):
     async def index(self):
         if os.path.exists(self.index_location):
@@ -586,7 +607,7 @@ class GraphOfEntityCSV(GraphOfEntityBatch):
 
         conn = psycopg2.connect("dbname='army_ant' user='army_ant' host='localhost'")
         c = conn.cursor()
-        
+
         logging.info("Creating term nodes CSV file")
         with open(os.path.join(self.index_location, 'term-nodes.csv'), 'w') as f:
             c.copy_expert("""
@@ -661,7 +682,9 @@ class GraphOfEntityCSV(GraphOfEntityBatch):
             TO STDOUT WITH CSV HEADER
             """, f)
 
+
 def handler(signum, frame): raise KeyboardInterrupt
+
 
 class JavaIndex(Index):
     BLOCK_SIZE = 5000
@@ -686,10 +709,10 @@ class JavaIndex(Index):
     JDocument = armyant.structures.Document
     JTriple = armyant.structures.Triple
 
+
 class HypergraphOfEntity(JavaIndex):
-    class Version(Enum):
-        basic = 'BASIC'
-        basic_syn = 'BASIC_SYN'
+    class Feature(Enum):
+        syns = 'SYNONYMS'
 
     class RankingFunction(Enum):
         entity_weight = 'ENTITY_WEIGHT'
@@ -697,12 +720,12 @@ class HypergraphOfEntity(JavaIndex):
         random_walk = 'RANDOM_WALK_SCORE'
 
     JHypergraphOfEntityInMemory = JavaIndex.armyant.hgoe.inmemory.HypergraphOfEntityInMemory
-    JVersion = JClass("armyant.hgoe.inmemory.HypergraphOfEntityInMemory$Version")
+    JFeature = JClass("armyant.hgoe.inmemory.HypergraphOfEntityInMemory$Feature")
     JRankingFunction = JClass("armyant.hgoe.inmemory.HypergraphOfEntityInMemory$RankingFunction")
 
-    def __init__(self, reader, index_location, index_version, loop):
+    def __init__(self, reader, index_location, index_features, loop):
         super().__init__(reader, index_location, loop)
-        self.index_version = HypergraphOfEntity.Version[index_version]
+        self.index_features = [HypergraphOfEntity.Feature[index_feature] for index_feature in index_features]
 
     async def load(self):
         if self.index_location in JavaIndex.INSTANCES:
@@ -712,9 +735,12 @@ class HypergraphOfEntity(JavaIndex):
 
     async def index(self):
         try:
-            version = HypergraphOfEntity.JVersion.valueOf(self.index_version.value)
-            hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location, version, True)
-            
+            index_features_str = ':'.join([index_feature.value for index_feature in self.index_features])
+            features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value) for index_feature in
+                        self.index_features]
+            hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(
+                self.index_location, java.util.Arrays.asList(features), True)
+
             corpus = []
             for doc in self.reader:
                 logger.debug("Preloading document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
@@ -726,19 +752,19 @@ class HypergraphOfEntity(JavaIndex):
                     logger.info("%d documents preloaded" % len(corpus))
 
                 if len(corpus) >= HypergraphOfEntity.BLOCK_SIZE:
-                    logger.info("Indexing batch of %d documents using %s" % (len(corpus), self.index_version.value))
+                    logger.info("Indexing batch of %d documents using %s" % (len(corpus), index_features_str))
                     hgoe.indexCorpus(java.util.Arrays.asList(corpus))
                     corpus = []
 
                 yield Document(
-                    doc_id = doc.doc_id,
-                    metadata = {
+                    doc_id=doc.doc_id,
+                    metadata={
                         'url': doc.metadata.get('url'),
                         'name': doc.metadata.get('name')
                     })
 
             if len(corpus) > 0:
-                logger.info("Indexing batch of %d documents using %s" % (len(corpus), self.index_version.value))
+                logger.info("Indexing batch of %d documents using %s" % (len(corpus), index_features_str))
                 hgoe.indexCorpus(java.util.Arrays.asList(corpus))
 
             hgoe.postProcessing()
@@ -776,16 +802,17 @@ class HypergraphOfEntity(JavaIndex):
             else:
                 hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location)
                 HypergraphOfEntity.INSTANCES[self.index_location] = hgoe
-            
+
             results = hgoe.search(query, offset, limit, ranking_function, ranking_params)
             num_docs = results.getNumDocs()
             trace = results.getTrace()
             results = [Result(result.getDocID(), result.getScore())
-                       for result in itertools.islice(results, offset, offset+limit)]
+                       for result in itertools.islice(results, offset, offset + limit)]
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
         return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()), trace_ascii=trace.toASCII())
+
 
 class LuceneEngine(JavaIndex):
     class RankingFunction(Enum):
@@ -800,7 +827,7 @@ class LuceneEngine(JavaIndex):
         try:
             lucene = LuceneEngine.JLuceneEngine(self.index_location)
             lucene.open()
-            
+
             corpus = []
             for doc in self.reader:
                 logger.debug("Preloading document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
@@ -817,8 +844,8 @@ class LuceneEngine(JavaIndex):
                     corpus = []
 
                 yield Document(
-                    doc_id = doc.doc_id,
-                    metadata = {
+                    doc_id=doc.doc_id,
+                    metadata={
                         'url': doc.metadata.get('url'),
                         'name': doc.metadata.get('name')
                     })
@@ -860,12 +887,12 @@ class LuceneEngine(JavaIndex):
             else:
                 lucene = LuceneEngine.JLuceneEngine(self.index_location)
                 LuceneEngine.INSTANCES[self.index_location] = lucene
-            
+
             results = lucene.search(query, offset, limit, ranking_function, ranking_params)
             num_docs = results.getNumDocs()
             trace = results.getTrace()
             results = [Result(result.getDocID(), result.getScore())
-                       for result in itertools.islice(results, offset, offset+limit)]
+                       for result in itertools.islice(results, offset, offset + limit)]
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
