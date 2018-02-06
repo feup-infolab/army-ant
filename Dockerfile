@@ -29,6 +29,12 @@ RUN apk --purge del .build-deps
 RUN ln -s /usr/bin/python3 /usr/local/bin/python
 ENV LD_LIBRARY_PATH /usr/lib/jvm/java-1.8-openjdk/jre/lib/amd64/server
 
+# Download and install WordNet 3.0
+RUN wget http://wordnetcode.princeton.edu/3.0/WNdb-3.0.tar.gz
+RUN tar xvzf WNdb-3.0.tar.gz
+RUN mv dict /usr/share/wordnet
+RUN rm -f WNdb-3.0.tar.gz
+
 # Copy code, configuration and data
 COPY . .
 COPY config/docker/config.yaml .
