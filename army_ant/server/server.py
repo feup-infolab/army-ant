@@ -1,18 +1,27 @@
-import aiohttp, aiohttp_jinja2, jinja2, asyncio, math, time, tempfile, os, json, logging, yaml
-from jpype import *
 from datetime import datetime
-from jpype import *
-from datetime import datetime
-from collections import OrderedDict
+
+import aiohttp_jinja2
+import asyncio
+import jinja2
+import json
+import logging
+import math
+import os
+import tempfile
+import time
+import yaml
 from aiohttp import web
 from aiohttp.client_exceptions import ClientOSError
-from army_ant.index import Index, Result
+from jpype import *
+
 from army_ant.database import Database
 from army_ant.evaluation import EvaluationTask, EvaluationTaskManager
-from army_ant.util import set_dict_defaults, params_id_to_str
 from army_ant.exception import ArmyAntException
+from army_ant.index import Index, Result
+from army_ant.util import set_dict_defaults, params_id_to_str
 
 logger = logging.getLogger(__name__)
+
 
 async def page_link(request):
     def _page_link(page, limit):
@@ -21,19 +30,24 @@ async def page_link(request):
         if offset < 0: offset = 0
         query['offset'] = offset
         return request.url.with_query(query)
-    return { 'page_link': _page_link }
+
+    return {'page_link': _page_link}
+
 
 def timestamp_to_date(timestamp):
     return datetime.fromtimestamp(int(round(timestamp / 1000)))
+
 
 def serialize_json(obj):
     if isinstance(obj, Result):
         return obj.__dict__
     return obj
 
+
 @aiohttp_jinja2.template('home.html')
 async def home(request):
     pass
+
 
 @aiohttp_jinja2.template('search.html')
 async def search(request):
@@ -81,9 +95,9 @@ async def search(request):
             if 'traceASCII' in engine_response: trace_ascii = engine_response['traceASCII']
 
             results = engine_response['results']
-            page = int((offset+limit) / limit)
+            page = int((offset + limit) / limit)
             pages = math.ceil(num_docs / limit)
-            
+
             db = Database.factory(
                 request.app['engines'][engine]['db']['location'],
                 request.app['engines'][engine]['db']['name'],
@@ -130,9 +144,10 @@ async def search(request):
 
     fmt = request.GET.get('format', 'html')
     if fmt == 'json':
-        return web.json_response(response, dumps = lambda obj: json.dumps(obj, default=serialize_json))
+        return web.json_response(response, dumps=lambda obj: json.dumps(obj, default=serialize_json))
     else:
         return response
+
 
 async def evaluation_get(request):
     manager = EvaluationTaskManager(
@@ -145,7 +160,8 @@ async def evaluation_get(request):
         if hasattr(task, 'results'):
             first_item_metrics = next(iter(task.results.values()))["metrics"].keys()
             metrics = metrics.union([metric for metric in first_item_metrics])
-    return { 'tasks': tasks, 'metrics': sorted(metrics) }
+    return {'tasks': tasks, 'metrics': sorted(metrics)}
+
 
 async def evaluation_delete(request):
     manager = EvaluationTaskManager(
@@ -158,8 +174,9 @@ async def evaluation_delete(request):
     if task_id: success = manager.del_task(task_id)
 
     if success:
-        return web.json_response({ 'success': "Deleted task with task_id = %s." % task_id })
-    return web.json_response({ 'error': "Could not delete task with task_id = %s." % task_id }, status=404)
+        return web.json_response({'success': "Deleted task with task_id = %s." % task_id})
+    return web.json_response({'error': "Could not delete task with task_id = %s." % task_id}, status=404)
+
 
 async def evaluation_reset(request):
     manager = EvaluationTaskManager(
@@ -172,8 +189,10 @@ async def evaluation_reset(request):
     if task_id: success = manager.reset_task(task_id)
 
     if success:
-        return web.json_response({ 'success': "Reset task with task_id = %s to WAITING status." % task_id })
-    return web.json_response({ 'error': "Could not reset task with task_id = %s to WAITING status." % task_id }, status=404)
+        return web.json_response({'success': "Reset task with task_id = %s to WAITING status." % task_id})
+    return web.json_response({'error': "Could not reset task with task_id = %s to WAITING status." % task_id},
+                             status=404)
+
 
 async def evaluation_rename(request):
     manager = EvaluationTaskManager(
@@ -186,8 +205,9 @@ async def evaluation_rename(request):
     success = False
     if task_id and run_id: success = manager.rename_task(task_id, run_id)
 
-    if success: return web.json_response({ 'success': "Renamed Run ID of task %s to '%s'." % (task_id, run_id) })
-    return web.json_response({ 'error': "Could not rename Run ID of task %s to '%s'." % (task_id, run_id) }, status=404)
+    if success: return web.json_response({'success': "Renamed Run ID of task %s to '%s'." % (task_id, run_id)})
+    return web.json_response({'error': "Could not rename Run ID of task %s to '%s'." % (task_id, run_id)}, status=404)
+
 
 async def evaluation_post(request):
     data = await request.post()
@@ -252,6 +272,7 @@ async def evaluation_post(request):
 
     return response
 
+
 async def evaluation_download(request):
     headers = request.GET.get('headers')
     metrics = request.GET.get('metrics')
@@ -283,7 +304,8 @@ async def evaluation_download(request):
             return response
     except FileNotFoundError:
         return web.HTTPNotFound()
- 
+
+
 async def evaluation_results_archive(request):
     task_id = request.GET.get('task_id')
     if task_id is None: return web.HTTPNotFound()
@@ -295,7 +317,7 @@ async def evaluation_results_archive(request):
 
     try:
         with manager.get_results_archive(task_id) as archive_filename:
-            response = web.StreamResponse(headers={ 'Content-Disposition': 'attachment; filename="%s.zip"' % task_id })
+            response = web.StreamResponse(headers={'Content-Disposition': 'attachment; filename="%s.zip"' % task_id})
             await response.prepare(request)
 
             with open(archive_filename, 'rb') as f:
@@ -306,7 +328,8 @@ async def evaluation_results_archive(request):
             return response
     except FileNotFoundError:
         return web.HTTPNotFound()
- 
+
+
 @aiohttp_jinja2.template('ll_api_outcome.html')
 async def evaluation_results_ll_api(request):
     task_id = request.GET.get('task_id')
@@ -322,7 +345,8 @@ async def evaluation_results_ll_api(request):
     fmt = request.GET.get('fmt', 'json')
     if fmt == 'html': return data
     return web.json_response(data)
- 
+
+
 @aiohttp_jinja2.template('evaluation.html')
 async def evaluation(request):
     if request.method == 'GET':
@@ -332,9 +356,11 @@ async def evaluation(request):
     elif request.method == 'DELETE':
         return await evaluation_delete(request)
 
+
 @aiohttp_jinja2.template('about.html')
 async def about(request):
     pass
+
 
 async def start_background_tasks(app):
     try:
@@ -347,6 +373,7 @@ async def start_background_tasks(app):
     except ArmyAntException as e:
         logger.error(e)
 
+
 async def cleanup_background_tasks(app):
     if 'evaluation_queue_listener' in app:
         logger.info("Stopping background tasks")
@@ -355,9 +382,11 @@ async def cleanup_background_tasks(app):
     else:
         logger.error("No background tasks to stop")
 
+
 async def shutdown_jvm(app):
     logger.info("Shutting down JVM")
     if isJVMStarted(): shutdownJVM()
+
 
 async def preload_engines(app):
     logger.info("Preloading engines")
@@ -375,24 +404,26 @@ async def preload_engines(app):
                 app['engines'][engine]['index']['type'],
                 loop)
 
+
 @web.middleware
 async def error_middleware(request, handler):
     try:
         return await handler(request)
     except ArmyAntException as e:
-        response = { 'error': str(e) }
+        response = {'error': str(e)}
         return aiohttp_jinja2.render_template('error.html', request, response)
+
 
 def run_app(loop, host, port, path=None):
     config = yaml.load(open('config.yaml'))
 
-    app = web.Application(client_max_size=1024*1024*4, middlewares=[error_middleware], loop=loop)
+    app = web.Application(client_max_size=1024 * 1024 * 4, middlewares=[error_middleware], loop=loop)
 
     app['defaults'] = config.get('defaults', {})
     app['engines'] = config.get('engines', [])
     for engine in app['engines']:
         if 'message' in app['engines'][engine]:
-            logger.warn("%s: %s" % (engine, app['engines'][engine]['message']))
+            logger.warning("%s: %s" % (engine, app['engines'][engine]['message']))
         set_dict_defaults(app['engines'][engine], app['defaults'])
 
     if not 'db' in app['defaults']: app['defaults']['db'] = {}
@@ -404,7 +435,7 @@ def run_app(loop, host, port, path=None):
     aiohttp_jinja2.setup(
         app,
         loader=jinja2.FileSystemLoader('army_ant/server/templates'),
-        filters = { 'timestamp_to_date': timestamp_to_date, 'params_id_to_str': params_id_to_str },
+        filters={'timestamp_to_date': timestamp_to_date, 'params_id_to_str': params_id_to_str},
         context_processors=[page_link, aiohttp_jinja2.request_processor])
 
     app.router.add_get('/', home, name='home')
@@ -431,4 +462,3 @@ def run_app(loop, host, port, path=None):
         web.run_app(app, path=path)
     else:
         web.run_app(app, host=host, port=port)
-

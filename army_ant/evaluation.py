@@ -5,27 +5,43 @@
 # José Devezas <joseluisdevezas@gmail.com>
 # 2017-05-19
 
-import json, time, pymongo, asyncio, logging, csv, os, shutil, gzip, os
-import tempfile, zipfile, math, requests, requests_cache, pickle, itertools
-import pandas as pd
-import numpy as np
+import asyncio
+import csv
+import itertools
+import json
+import logging
+import math
+import os
+import pickle
+import shutil
+import tempfile
+import time
+import zipfile
 from collections import OrderedDict
-from enum import IntEnum
-from lxml import etree
-from datetime import datetime
 from contextlib import contextmanager
+from datetime import datetime
+from enum import IntEnum
+from urllib.parse import urljoin
+
+import numpy as np
+import pandas as pd
+import pymongo
+import requests
+import requests_cache
+from bson.objectid import ObjectId
+from lxml import etree
 from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError, ConnectionFailure
-from bson.objectid import ObjectId
-from urllib.parse import urljoin
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import HTTPError
+
+from army_ant.exception import ArmyAntException
 from army_ant.index import Index
 from army_ant.util import md5, get_first, zipdir, safe_div
 from army_ant.util import ranking_params_to_params_id, params_id_to_str, params_id_to_ranking_params
-from army_ant.exception import ArmyAntException
 
 logger = logging.getLogger(__name__)
+
 
 class Evaluator(object):
     @staticmethod
@@ -47,13 +63,14 @@ class Evaluator(object):
     async def run(self):
         raise ArmyAntException("Unsupported evaluator format %s" % eval_format)
 
+
 class FilesystemEvaluator(Evaluator):
     def __init__(self, task, eval_location):
         super().__init__(task, eval_location)
 
         self.o_results_path = os.path.join(eval_location, 'results', task._id)
         self.o_assessments_path = os.path.join(eval_location, 'assessments', task._id)
-        
+
         try:
             os.makedirs(self.o_results_path)
         except FileExistsError:
@@ -67,6 +84,7 @@ class FilesystemEvaluator(Evaluator):
     def remove_output(self):
         shutil.rmtree(self.o_results_path, ignore_errors=True)
         shutil.rmtree(self.o_assessments_path, ignore_errors=True)
+
 
 class INEXEvaluator(FilesystemEvaluator):
     def __init__(self, task, eval_location):
@@ -106,11 +124,11 @@ class INEXEvaluator(FilesystemEvaluator):
         if not os.path.exists(o_results_path): os.makedirs(o_results_path)
 
         if not params_id in self.stats:
-            self.stats[params_id] = { 'ranking_params': ranking_params, 'query_time': {} }
+            self.stats[params_id] = {'ranking_params': ranking_params, 'query_time': {}}
 
         for topic in topics.xpath('//topic'):
             if self.interrupt:
-                logger.warn("Evaluation task was interruped")
+                logger.warning("Evaluation task was interruped")
                 break
 
             topic_id = get_first(topic.xpath('@id'))
@@ -118,9 +136,9 @@ class INEXEvaluator(FilesystemEvaluator):
             if topic_filter and not topic_id in topic_filter:
                 logger.warning("Skipping topic '%s'" % topic_id)
                 continue
-            
+
             query = get_first(topic.xpath('title/text()'))
-            
+
             logger.info("Obtaining results for query '%s' of topic '%s' using '%s' index at '%s'" % (
                 query, topic_id, self.task.index_type, self.task.index_location))
             start_time = time.time()
@@ -131,9 +149,10 @@ class INEXEvaluator(FilesystemEvaluator):
             with open(os.path.join(o_results_path, '%s.csv' % topic_id), 'w', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow(['rank', 'doc_id', 'relevant'])
-                for i, result in zip(range(1, len(engine_response['results'])+1), engine_response['results']):
+                for i, result in zip(range(1, len(engine_response['results']) + 1), engine_response['results']):
                     doc_id = result['docID']
-                    relevant = topic_doc_judgements[topic_id][doc_id] > 0 if doc_id in topic_doc_judgements[topic_id] else False
+                    relevant = topic_doc_judgements[topic_id][doc_id] > 0 if doc_id in topic_doc_judgements[
+                        topic_id] else False
                     writer.writerow([i, doc_id, relevant])
 
         self.stats[params_id]['total_query_time'] = sum([t for t in self.stats[params_id]['query_time'].values()])
@@ -142,8 +161,8 @@ class INEXEvaluator(FilesystemEvaluator):
 
     def f_score(self, precision, recall, beta=1):
         if precision == 0 and recall == 0: return 0
-        return safe_div((1 + beta**2) * (precision * recall), (beta**2 * precision) + recall)
-    
+        return safe_div((1 + beta ** 2) * (precision * recall), (beta ** 2 * precision) + recall)
+
     def calculate_precision_recall(self, ranking_params=None):
         # topic_id -> doc_id -> num_relevant_chars
         topic_doc_judgements = self.get_topic_assessments()
@@ -201,7 +220,8 @@ class INEXEvaluator(FilesystemEvaluator):
                     tns.append(tn)
                     fns.append(fn)
 
-                    logger.debug("%s - TP(%d) + FP(%d) + TN(%d) + FN(%d) = %d" % (topic_id, tp, fp, tn, fn, tp+fp+tn+fn))
+                    logger.debug(
+                        "%s - TP(%d) + FP(%d) + TN(%d) + FN(%d) = %d" % (topic_id, tp, fp, tn, fn, tp + fp + tn + fn))
 
                     precision = safe_div(tp, tp + fp)
                     precisions.append(precision)
@@ -220,7 +240,8 @@ class INEXEvaluator(FilesystemEvaluator):
 
                     writer.writerow([topic_id, tp, fp, tn, fn, precision, recall, f_0_5_score, f_1_score, f_2_score])
 
-            if not params_id in self.results: self.results[params_id] = { 'ranking_params': ranking_params, 'metrics': {} }
+            if not params_id in self.results: self.results[params_id] = {'ranking_params': ranking_params,
+                                                                         'metrics': {}}
             self.results[params_id]['metrics']['Micro Avg Prec'] = safe_div(sum(tps), sum(tps) + sum(fps))
             self.results[params_id]['metrics']['Micro Avg Rec'] = safe_div(sum(tps), sum(tps) + sum(fns))
             self.results[params_id]['metrics']['Macro Avg Prec'] = safe_div(sum(precisions), len(precisions))
@@ -277,7 +298,8 @@ class INEXEvaluator(FilesystemEvaluator):
                     precisions_at_n.append(precision_at_n)
                     writer.writerow([topic_id, precision_at_n])
 
-            if not params_id in self.results: self.results[params_id] = { 'ranking_params': ranking_params, 'metrics': {} }
+            if not params_id in self.results: self.results[params_id] = {'ranking_params': ranking_params,
+                                                                         'metrics': {}}
             self.results[params_id]['metrics']['P@%d' % n] = safe_div(sum(precisions_at_n), len(precisions_at_n))
 
     def calculate_mean_average_precision(self, ranking_params=None):
@@ -308,7 +330,7 @@ class INEXEvaluator(FilesystemEvaluator):
                     for row in reader:
                         results.append(row['relevant'] == 'True')
 
-                    for i in range(1, len(results)+1):
+                    for i in range(1, len(results) + 1):
                         rel = results[0:i]
                         p = safe_div(sum(rel), len(rel))
                         precisions.append(p)
@@ -317,7 +339,8 @@ class INEXEvaluator(FilesystemEvaluator):
                     avg_precisions.append(avg_precision)
                     writer.writerow([topic_id, avg_precision])
 
-            if not params_id in self.results: self.results[params_id] = { 'ranking_params': ranking_params, 'metrics': {} }
+            if not params_id in self.results: self.results[params_id] = {'ranking_params': ranking_params,
+                                                                         'metrics': {}}
             self.results[params_id]['metrics']['MAP'] = safe_div(sum(avg_precisions), len(avg_precisions))
 
     def calculate_normalized_discounted_cumulative_gain_at_p(self, p=10, ranking_params=None):
@@ -342,19 +365,19 @@ class INEXEvaluator(FilesystemEvaluator):
                     results.append(row['relevant'] == 'True')
 
                 for i in range(1, min(len(results), p) + 1):
-                    rel = results[i-1]
+                    rel = results[i - 1]
                     dcg_p = rel / math.log2(i + 1)
                     dcg_parcels.append(dcg_p)
 
-                for i in range(1, len(results)+1):
-                    rel = results[i-1]
-                    idcg_p = (2**rel - 1) / math.log2(i + 1)
+                for i in range(1, len(results) + 1):
+                    rel = results[i - 1]
+                    idcg_p = (2 ** rel - 1) / math.log2(i + 1)
                     idcg_parcels.append(idcg_p)
 
                 ndcg = safe_div(sum(dcg_parcels), len(idcg_parcels))
                 ndcgs.append(ndcg)
 
-        if not params_id in self.results: self.results[params_id] = { 'ranking_params': ranking_params, 'metrics': {} }
+        if not params_id in self.results: self.results[params_id] = {'ranking_params': ranking_params, 'metrics': {}}
         self.results[params_id]['metrics']['NDCG@%d' % p] = safe_div(sum(ndcgs), len(ndcgs))
 
     async def run_with_params(self, ranking_params=None):
@@ -380,6 +403,7 @@ class INEXEvaluator(FilesystemEvaluator):
         else:
             await self.run_with_params()
 
+
 class LivingLabsEvaluator(Evaluator):
     def __init__(self, task, eval_location):
         super().__init__(task, eval_location)
@@ -390,7 +414,7 @@ class LivingLabsEvaluator(Evaluator):
 
         self.base_url = urljoin(base_url, 'api/v2/participant/')
         self.auth = HTTPBasicAuth(api_key, '')
-        self.headers = { 'Content-Type': 'application/json' }
+        self.headers = {'Content-Type': 'application/json'}
 
         requests_cache.install_cache('living_labs_cache', expire_after=10800)
 
@@ -409,7 +433,7 @@ class LivingLabsEvaluator(Evaluator):
         if r.status_code != requests.codes.ok:
             r.raise_for_status()
         queries = r.json()['queries']
-        
+
         if qtype: queries = list(filter(lambda q: q['type'] == qtype, queries))
         if qfilter: queries = list(filter(lambda q: q['qid'] in qfilter, queries))
 
@@ -422,12 +446,12 @@ class LivingLabsEvaluator(Evaluator):
         if r.status_code != requests.codes.ok:
             r.raise_for_status()
         doc_ids = [doc['docid'] for doc in r.json()['doclist']]
-        
+
         return set(doc_ids)
 
     def put_run(self, qid, runid, results):
         logging.info("Submitting Living Labs run for qid=%s and runid=%s" % (qid, runid))
-        
+
         must_have_doc_ids = self.get_doclist_doc_ids(qid)
 
         # this first verification is required because an empty results variable is returned as a dictionary instead of a list
@@ -438,7 +462,8 @@ class LivingLabsEvaluator(Evaluator):
             doc_ids = [result['docID'] for result in results]
             missing_doc_ids = must_have_doc_ids.difference(doc_ids)
             if len(missing_doc_ids) > 0:
-                logging.warn("Adding %d missing results with zero score out of %d must have results" % (len(missing_doc_ids), len(must_have_doc_ids)))
+                logging.warn("Adding %d missing results with zero score out of %d must have results" % (
+                len(missing_doc_ids), len(must_have_doc_ids)))
                 results.extend([{'docID': doc_id} for doc_id in missing_doc_ids])
         data = {
             'qid': qid,
@@ -446,9 +471,10 @@ class LivingLabsEvaluator(Evaluator):
             'doclist': [{'docid': result['docID']} for result in results]
         }
 
-        r = requests.put(urljoin(self.base_url, 'run/%s' % qid), data=json.dumps(data), headers=self.headers, auth=self.auth)
+        r = requests.put(urljoin(self.base_url, 'run/%s' % qid), data=json.dumps(data), headers=self.headers,
+                         auth=self.auth)
         if r.status_code == requests.codes.conflict:
-            logger.warn("Run for qid=%s and runid=%s already exists, ignoring" % (qid, runid))
+            logger.warning("Run for qid=%s and runid=%s already exists, ignoring" % (qid, runid))
         else:
             r.raise_for_status()
 
@@ -457,7 +483,7 @@ class LivingLabsEvaluator(Evaluator):
         try:
             for query in queries:
                 if self.interrupt:
-                    logger.warn("Evaluation task was interrupted")
+                    logger.warning("Evaluation task was interrupted")
                     break
 
                 logging.info("Searching for %s (qid=%s)" % (query['qstr'], query['qid']))
@@ -481,12 +507,14 @@ class LivingLabsEvaluator(Evaluator):
             logger.error(e)
             return EvaluationTaskStatus.ERROR
 
+
 class EvaluationTaskStatus(IntEnum):
     WAITING = 1
     RUNNING = 2
     DONE = 3
     SUBMITTED = 4
     ERROR = 5
+
 
 class EvaluationTask(object):
     def __init__(self, index_location, index_type, eval_format, ranking_function=None, ranking_params=None,
@@ -516,6 +544,7 @@ class EvaluationTask(object):
     def __repr__(self):
         return json.dumps(self.__dict__)
 
+
 class EvaluationTaskManager(object):
     def __init__(self, db_location, db_name, eval_location):
         self.tasks = []
@@ -531,7 +560,7 @@ class EvaluationTaskManager(object):
         os.makedirs(self.spool_dirname, exist_ok=True)
 
         db_location_parts = db_location.split(':')
-        
+
         if len(db_location_parts) > 1:
             db_location = db_location_parts[0]
             db_port = int(db_location_parts[1])
@@ -545,19 +574,19 @@ class EvaluationTaskManager(object):
 
         self.db = self.client[db_name]
 
-        #self.db['evaluation_tasks'].create_index([
-            #('topics_md5', pymongo.ASCENDING),
-            #('assessments_md5', pymongo.ASCENDING),
-            #('index_location', pymongo.ASCENDING),
-            #('index_type', pymongo.ASCENDING)
-        #], unique=True)
+        # self.db['evaluation_tasks'].create_index([
+        # ('topics_md5', pymongo.ASCENDING),
+        # ('assessments_md5', pymongo.ASCENDING),
+        # ('index_location', pymongo.ASCENDING),
+        # ('index_type', pymongo.ASCENDING)
+        # ], unique=True)
         self.db['evaluation_tasks'].create_index('run_id', unique=True)
 
     def add_task(self, task):
         self.tasks.append(task)
 
     def del_task(self, task_id):
-        result = self.db['evaluation_tasks'].delete_one({ '_id': ObjectId(task_id) }).deleted_count > 0
+        result = self.db['evaluation_tasks'].delete_one({'_id': ObjectId(task_id)}).deleted_count > 0
         self.clean_spool()
         self.clean_results_and_assessments()
         return result
@@ -572,15 +601,15 @@ class EvaluationTaskManager(object):
         shutil.rmtree(os.path.join(self.eval_location, 'assessments', task_id), ignore_errors=True)
 
         return self.db['evaluation_tasks'].update_one(
-            { '_id': ObjectId(task_id) },
-            { '$set': { 'status': 1 } }).matched_count > 0
+            {'_id': ObjectId(task_id)},
+            {'$set': {'status': 1}}).matched_count > 0
 
     def rename_task(self, task_id, run_id):
         task = self.db['evaluation_tasks'].find_one(ObjectId(task_id))
         if task['eval_format'] == 'll-api': return False
         return self.db['evaluation_tasks'].update_one(
-            { '_id': ObjectId(task_id) },
-            { '$set': { 'run_id': run_id } }).matched_count > 0
+            {'_id': ObjectId(task_id)},
+            {'$set': {'run_id': run_id}}).matched_count > 0
 
     def get_tasks(self):
         tasks = []
@@ -589,19 +618,19 @@ class EvaluationTaskManager(object):
         return tasks
 
     def get_waiting_task(self, task_id=None):
-        query = { 'status': 1 }
+        query = {'status': 1}
         if task_id: query['_id'] = task_id
 
         task = self.db['evaluation_tasks'].find_one_and_update(
-            query, { '$set': { 'status': 2 } },
+            query, {'$set': {'status': 2}},
             sort=[('time', pymongo.ASCENDING)])
         if task: return EvaluationTask(**task)
 
     def reset_running_tasks(self):
         logger.warning("Resetting running tasks to the WAITING status")
         self.db['evaluation_tasks'].update_many(
-            { 'status': 2 },
-            { '$set': { 'status': 1 } })
+            {'status': 2},
+            {'$set': {'status': 1}})
         if type(self.running) != LivingLabsEvaluator and self.running:
             self.running.remove_output()
 
@@ -625,22 +654,22 @@ class EvaluationTaskManager(object):
 
         if run_id_error:
             raise ArmyAntException("Tasks without a Run ID are not accepted")
-        
+
         return inserted_ids
 
     def save(self, task, results, stats=None):
         self.db['evaluation_tasks'].update_one(
-            { '_id': ObjectId(task._id) },
-            { '$set': { 'status': EvaluationTaskStatus.DONE, 'results': results, 'stats': stats } })
+            {'_id': ObjectId(task._id)},
+            {'$set': {'status': EvaluationTaskStatus.DONE, 'results': results, 'stats': stats}})
 
     def set_status(self, task, status):
         self.db['evaluation_tasks'].update_one(
-            { '_id': ObjectId(task._id) },
-            { '$set': { 'status': status } })
+            {'_id': ObjectId(task._id)},
+            {'$set': {'status': status}})
 
     @contextmanager
     def get_results_summary(self, headers, metrics, decimals, fmt):
-        tasks = list(self.db['evaluation_tasks'].find({ 'results': { '$exists': 1 } }))
+        tasks = list(self.db['evaluation_tasks'].find({'results': {'$exists': 1}}))
         if len(tasks) < 1: return
 
         with tempfile.NamedTemporaryFile() as tmp_file:
@@ -659,7 +688,8 @@ class EvaluationTaskManager(object):
                     if 'Type' in columns: values.append(task.index_type)
                     if 'Location' in columns: values.append(task.index_location)
                     values.extend([
-                        result['metrics'][metric] if metric in result['metrics'] and result['metrics'][metric] != '' else np.nan
+                        result['metrics'][metric] if metric in result['metrics'] and result['metrics'][
+                                                                                         metric] != '' else np.nan
                         for metric in metrics
                     ])
                     df = df.append(pd.DataFrame([values], columns=columns))
@@ -681,15 +711,17 @@ class EvaluationTaskManager(object):
 
     @contextmanager
     def get_results_archive(self, task_id):
-        task = self.db['evaluation_tasks'].find_one({ '_id': ObjectId(task_id) })
+        task = self.db['evaluation_tasks'].find_one({'_id': ObjectId(task_id)})
         if task is None: return
 
         task = EvaluationTask(**task)
         with tempfile.TemporaryDirectory() as tmp_dir:
             out_dir = os.path.join(tmp_dir, task_id)
 
-            shutil.copytree(os.path.join(self.eval_location, 'assessments', task_id), os.path.join(out_dir, 'evaluation_details'))
-            shutil.copytree(os.path.join(self.eval_location, 'results', task_id), os.path.join(out_dir, 'search_results'))
+            shutil.copytree(os.path.join(self.eval_location, 'assessments', task_id),
+                            os.path.join(out_dir, 'evaluation_details'))
+            shutil.copytree(os.path.join(self.eval_location, 'results', task_id),
+                            os.path.join(out_dir, 'search_results'))
 
             with open(os.path.join(out_dir, "eval_metrics.csv"), 'w') as f:
                 writer = csv.writer(f)
@@ -719,7 +751,7 @@ class EvaluationTaskManager(object):
             yield archive_filename
 
     def get_results_json(self, task_id):
-        task = self.db['evaluation_tasks'].find_one({ '_id': ObjectId(task_id) })
+        task = self.db['evaluation_tasks'].find_one({'_id': ObjectId(task_id)})
         if task is None: return
 
         task = EvaluationTask(**task)
@@ -727,44 +759,44 @@ class EvaluationTaskManager(object):
         if task.eval_format == 'll-api':
             url = urljoin(task.base_url, 'api/v2/participant/outcome')
             auth = HTTPBasicAuth(task.api_key, '')
-            headers = { 'Content-Type': 'application/json' }
+            headers = {'Content-Type': 'application/json'}
             r = requests.get(url, headers=headers, auth=auth)
             return r.json()
-            #return {
-                #"outcomes": [
-                    #{
-                        #"impressions": 181, 
-                        #"losses": 1, 
-                        #"outcome": 0.5, 
-                        #"qid": "all", 
-                        #"site_id": "ssoar", 
-                        #"test_period": {
-                            #"end": "Sat, 15 Jul 2017 00:00:00 -0000", 
-                            #"name": "TREC OpenSearch 2017 trial round", 
-                            #"start": "Sat, 01 Jul 2017 00:00:00 -0000"
-                        #}, 
-                        #"ties": 179, 
-                        #"type": "test", 
-                        #"wins": 1
-                    #}, 
-                    #{
-                        #"impressions": 59, 
-                        #"losses": 13, 
-                        #"outcome": 0.23529411764705882, 
-                        #"qid": "all", 
-                        #"site_id": "ssoar", 
-                        #"test_period": None, 
-                        #"ties": 42, 
-                        #"type": "train", 
-                        #"wins": 4
-                    #}
-                #]
-            #}
-        
+            # return {
+            # "outcomes": [
+            # {
+            # "impressions": 181,
+            # "losses": 1,
+            # "outcome": 0.5,
+            # "qid": "all",
+            # "site_id": "ssoar",
+            # "test_period": {
+            # "end": "Sat, 15 Jul 2017 00:00:00 -0000",
+            # "name": "TREC OpenSearch 2017 trial round",
+            # "start": "Sat, 01 Jul 2017 00:00:00 -0000"
+            # },
+            # "ties": 179,
+            # "type": "test",
+            # "wins": 1
+            # },
+            # {
+            # "impressions": 59,
+            # "losses": 13,
+            # "outcome": 0.23529411764705882,
+            # "qid": "all",
+            # "site_id": "ssoar",
+            # "test_period": None,
+            # "ties": 42,
+            # "type": "train",
+            # "wins": 4
+            # }
+            # ]
+            # }
+
         return {}
 
         HTTPBasicAuth
-        return { 'base_url': task.base_url, 'api_key': task.api_key }
+        return {'base_url': task.base_url, 'api_key': task.api_key}
 
     def clean_spool(self):
         valid_spool_filenames = set([])
@@ -772,11 +804,11 @@ class EvaluationTaskManager(object):
             if task['eval_format'] == 'inex':
                 valid_spool_filenames.add(os.path.basename(task['topics_path']))
                 valid_spool_filenames.add(os.path.basename(task['assessments_path']))
-        
+
         for filename in os.listdir(self.spool_dirname):
             path = os.path.join(self.spool_dirname, filename)
             if os.path.isfile(path) and not filename in valid_spool_filenames and (
-                filename.startswith('eval_assessments_') or filename.startswith('eval_topics_')):
+                        filename.startswith('eval_assessments_') or filename.startswith('eval_topics_')):
                 logger.warning("Removing unreferenced spool file '%s'" % path)
                 os.remove(path)
 
@@ -784,16 +816,18 @@ class EvaluationTaskManager(object):
         valid_output_dirnames = set([])
         for task in self.db['evaluation_tasks'].find():
             valid_output_dirnames.add(os.path.basename(str(task['_id'])))
-        
+
         for filename in os.listdir(self.results_dirname):
             path = os.path.join(self.results_dirname, filename)
-            if not filename in valid_output_dirnames and len(filename) == 24: # 24 is the MongoDB ObjectId default length
+            if not filename in valid_output_dirnames and len(
+                    filename) == 24:  # 24 is the MongoDB ObjectId default length
                 logger.warning("Removing unreferenced result directory '%s'" % path)
                 shutil.rmtree(path)
 
         for filename in os.listdir(self.assessments_dirname):
             path = os.path.join(self.assessments_dirname, filename)
-            if not filename in valid_output_dirnames and len(filename) == 24: # 24 is the MongoDB ObjectId default length
+            if not filename in valid_output_dirnames and len(
+                    filename) == 24:  # 24 is the MongoDB ObjectId default length
                 logger.warning("Removing unreferenced assessments directory '%s'" % path)
                 shutil.rmtree(path)
 

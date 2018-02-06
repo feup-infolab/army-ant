@@ -154,7 +154,7 @@ class INEXReader(Reader):
         if title_index:
             if type(title_index) is str:
                 logger.info("Using provided title index %s for %s" % (title_index, source_path))
-                self.title_index = shelve.open(title_index)
+                self.title_index = shelve.open(title_index, 'r')
             else:
                 logger.info("Using provided title index dictionary for %s" % source_path)
                 self.title_index = title_index
@@ -170,7 +170,7 @@ class INEXReader(Reader):
                         title = get_first(article.xpath('//header/title/text()'))
                         self.title_index[page_id] = title
                     except etree.XMLSyntaxError:
-                        logger.warn("Error parsing XML, skipping title indexing for %s" % member.name)
+                        logger.warning("Error parsing XML, skipping title indexing for %s" % member.name)
 
     def to_plain_text(self, bdy):
         return re.sub(r'\s+', ' ', ''.join(bdy.xpath('%s/text()' % self.doc_xpath)))
@@ -219,7 +219,7 @@ class INEXReader(Reader):
             try:
                 article = etree.parse(self.tar.extractfile(member), self.parser)
             except etree.XMLSyntaxError:
-                logger.warn("Error parsing XML, skipping %s in %s" % (member.name, self.source_path))
+                logger.warning("Error parsing XML, skipping %s in %s" % (member.name, self.source_path))
                 continue
 
             page_id = inex.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
@@ -227,8 +227,6 @@ class INEXReader(Reader):
 
             bdy = get_first(article.xpath('//bdy'))
             if bdy is None: continue
-
-            template = bdy.xpath('//template')
 
             url = self.to_wikipedia_entity(page_id, title).url
 
@@ -277,7 +275,7 @@ class INEXDirectoryReader(Reader):
                         title = get_first(article.xpath('//header/title/text()'))
                         title_index[page_id] = title
                     except etree.XMLSyntaxError:
-                        logger.warn(
+                        logger.warning(
                             "Error parsing XML, skipping title indexing for %s in %s" % (member.name, source_path))
 
         if type(title_index) is shelve.DbfilenameShelf: title_index.close()

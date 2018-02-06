@@ -5,12 +5,20 @@
 # José Devezas <joseluisdevezas@gmail.com>
 # 2017-07-20
 
-import logging, os, random, glob, tarfile, bz2
+import bz2
+import glob
+import logging
+import os
+import random
+import tarfile
+
 from lxml import etree
-from army_ant.util import inex, get_first
+
 from army_ant.exception import ArmyAntException
+from army_ant.util import inex, get_first
 
 logger = logging.getLogger(__name__)
+
 
 class INEXSampler(object):
     def __init__(self, qrels_input_path, qrels_output_path, topics_input_path, topics_output_path,
@@ -127,7 +135,8 @@ class INEXSampler(object):
                         bdy = get_first(article.xpath('//bdy'))
                         if bdy is None: continue
                         for link in bdy.xpath('//link'):
-                            target_doc_id = get_first(link.xpath('@xlink:href', namespaces = { 'xlink': 'http://www.w3.org/1999/xlink' }))
+                            target_doc_id = get_first(
+                                link.xpath('@xlink:href', namespaces={'xlink': 'http://www.w3.org/1999/xlink'}))
                             if target_doc_id is None: continue
                             target_doc_id = inex.xlink_to_page_id(target_doc_id)
                             target_doc_ids.add(target_doc_id)

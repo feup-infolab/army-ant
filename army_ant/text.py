@@ -5,12 +5,20 @@
 # José Devezas <joseluisdevezas@gmail.com>
 # 2017-07-20
 
-import string, collections, langdetect, nltk, logging, os, pickle
+import collections
+import logging
+import os
+import pickle
+import string
+
+import langdetect
+import nltk
 from langdetect.lang_detect_exception import LangDetectException
 from nltk import word_tokenize
-from nltk.corpus import stopwords, floresta, mac_morpho
+from nltk.corpus import stopwords, mac_morpho
 
 logger = logging.getLogger(__name__)
+
 
 def detect_language(text):
     try:
@@ -19,15 +27,17 @@ def detect_language(text):
         lang = 'en'
     return lang
 
+
 def analyze(text, remove_stopwords=True, remove_punctuation=True):
     tokens = word_tokenize(text.lower())
     try:
         lang = langdetect.detect(text)
     except:
-        logger.warn("Could not detect language, using 'en' by default")
+        logger.warning("Could not detect language, using 'en' by default")
         lang = 'en'
     tokens = filter_tokens(tokens, lang=lang, remove_stopwords=remove_stopwords, remove_punctuation=remove_punctuation)
     return tokens
+
 
 def filter_tokens(tokens, lang, remove_stopwords=True, remove_punctuation=True):
     filtered_tokens = []
@@ -52,8 +62,10 @@ def filter_tokens(tokens, lang, remove_stopwords=True, remove_punctuation=True):
 
     return filtered_tokens
 
+
 def bag_of_words(tokens):
     return collections.Counter(tokens).most_common()
+
 
 def split_sentences(text):
     lang = detect_language(text)
@@ -65,16 +77,19 @@ def split_sentences(text):
 
     return stokenizer.tokenize(text.strip())
 
+
 class EnglishPOSTagger(object):
     def tag(self, token):
         return nltk.pos_tag(token)
+
 
 def simplify_pos_tag(t, delimiter='+'):
     if delimiter in t:
         if delimiter == '-':
             return t[0:t.index(delimiter)]
-        return t[t.index(delimiter)+1:]
+        return t[t.index(delimiter) + 1:]
     return t
+
 
 def get_pos_tagger(model_path, lang='pt'):
     if os.path.isfile(model_path):
@@ -85,7 +100,7 @@ def get_pos_tagger(model_path, lang='pt'):
         if lang == 'pt':
             logger.info("Training and saving portuguese POS tagger to %s" % model_path)
             tagged_sentences = mac_morpho.tagged_sents()
-            tagged_sentences = [[(w.lower(), t) for (w,t) in s] for s in tagged_sentences if s]
+            tagged_sentences = [[(w.lower(), t) for (w, t) in s] for s in tagged_sentences if s]
             train = tagged_sentences
             tagger_default = nltk.DefaultTagger('N')
             tagger_unigram = nltk.UnigramTagger(train, backoff=tagger_default)
@@ -98,6 +113,7 @@ def get_pos_tagger(model_path, lang='pt'):
 
     return pos_tagger
 
+
 def remove_by_pos_tag(pos_tagger, tokens, tags):
     filtered_tokens = []
     tagged_tokens = pos_tagger.tag(tokens)
@@ -105,4 +121,3 @@ def remove_by_pos_tag(pos_tagger, tokens, tags):
         if not tag in tags:
             filtered_tokens.append(token)
     return filtered_tokens
-

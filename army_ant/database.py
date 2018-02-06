@@ -5,12 +5,15 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-17
 
-import logging, pymongo
+import logging
+
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
+
 from army_ant.exception import ArmyAntException
 
 logger = logging.getLogger(__name__)
+
 
 class Database(object):
     @staticmethod
@@ -31,12 +34,13 @@ class Database(object):
     async def retrieve(self, results):
         raise ArmyAntException("Retrieve not implemented for %s" % self.__class__.__name__)
 
+
 class MongoDatabase(Database):
     def __init__(self, db_location, db_name, loop):
         super().__init__(db_location, db_name, loop)
-        
+
         db_location_parts = db_location.split(':')
-        
+
         if len(db_location_parts) > 1:
             db_location = db_location_parts[0]
             db_port = int(db_location_parts[1])
@@ -55,15 +59,15 @@ class MongoDatabase(Database):
         async for doc in index:
             logger.debug("Storing metadata for %s" % doc.doc_id)
             self.db['documents'].update_one(
-                { 'doc_id': doc.doc_id },
-                { '$set': {'doc_id': doc.doc_id, 'metadata': doc.metadata } },
+                {'doc_id': doc.doc_id},
+                {'$set': {'doc_id': doc.doc_id, 'metadata': doc.metadata}},
                 upsert=True)
 
     async def retrieve(self, results=None):
         logger.info("Retrieving metadata for matching documents")
 
         metadata = {}
-        records = self.db['documents'].find({ 'doc_id': { '$in': [doc["docID"] for doc in results] } })
+        records = self.db['documents'].find({'doc_id': {'$in': [doc["docID"] for doc in results]}})
 
         for record in records:
             metadata[record['doc_id']] = record['metadata']
@@ -77,11 +81,11 @@ class MongoDatabase(Database):
 
     async def without_img_url(self):
         logger.info("Iterating over metadata for all documents without a URL")
-        for record in self.db['documents'].find({ 'metadata.img_url': { '$exists': False } }):
+        for record in self.db['documents'].find({'metadata.img_url': {'$exists': False}}):
             yield record
 
     async def set_metadata(self, doc_id, key, value):
         logger.info("Setting %s=%s for %s" % (key, value, doc_id))
         self.db['documents'].update_one(
-            { 'doc_id': doc_id },
-            { '$set': { 'metadata.%s' % key: value } })
+            {'doc_id': doc_id},
+            {'$set': {'metadata.%s' % key: value}})

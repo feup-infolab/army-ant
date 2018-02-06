@@ -5,14 +5,18 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-17
 
-import logging, pymongo, re, requests
-from requests.exceptions import RequestException
-from lxml import html
+import logging
+import re
+
+import requests
 from gensim.models import Word2Vec
-from army_ant.exception import ArmyAntException
+from lxml import html
+from requests.exceptions import RequestException
+
 from army_ant.database import Database
 
 logger = logging.getLogger(__name__)
+
 
 async def fetch_wikipedia_images(db_location, db_name, db_type, loop):
     db = Database.factory(db_location, db_name, db_type, loop)
@@ -21,7 +25,7 @@ async def fetch_wikipedia_images(db_location, db_name, db_type, loop):
             url = record['metadata']['url']
             match = re.match(r'http[s]?://[^.]+\.wikipedia\.org/(wiki/(.*)|\?curid=\d+)', url)
             if not match:
-                logger.warn("%s is not a Wikipedia URL, skipping" % url)
+                logger.warning("%s is not a Wikipedia URL, skipping" % url)
                 next
 
             try:
@@ -31,7 +35,8 @@ async def fetch_wikipedia_images(db_location, db_name, db_type, loop):
                 if len(img_url) > 0:
                     await db.set_metadata(record['doc_id'], 'img_url', img_url[0])
             except RequestException:
-                logger.warn("Could not obtain image from %s, skipping" % url)
+                logger.warning("Could not obtain image from %s, skipping" % url)
+
 
 def word2vec_knn(model_path, word, k):
     try:
@@ -40,6 +45,7 @@ def word2vec_knn(model_path, word, k):
         return model.wv.most_similar(positive=[word], topn=k)
     except KeyError:
         return
+
 
 def word2vec_sim(model_path, word1, word2):
     try:

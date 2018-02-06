@@ -729,7 +729,7 @@ class HypergraphOfEntity(JavaIndex):
 
     async def load(self):
         if self.index_location in JavaIndex.INSTANCES:
-            logger.warn("%s is already loaded, skipping" % self.index_location)
+            logger.warning("%s is already loaded, skipping" % self.index_location)
             return
         JavaIndex.INSTANCES[self.index_location] = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location)
 
