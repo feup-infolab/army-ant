@@ -242,7 +242,7 @@ public class HypergraphOfEntityInMemory extends Engine {
     }
 
     private void linkSynonyms() {
-        logger.info("Creating links between synonyms");
+        logger.info("Creating links between synonyms ({synonyms} -> source term)");
         try {
             IRAMDictionary dict = new RAMDictionary(new File("/usr/share/wordnet"), ILoadPolicy.NO_LOAD);
             dict.open();
@@ -261,11 +261,11 @@ public class HypergraphOfEntityInMemory extends Engine {
                             if (syns.size() > 1) {
                                 SynonymEdge synonymEdge = new SynonymEdge();
                                 int edgeID = createEdge(synonymEdge);
-                                graph.addToDirectedHyperEdgeTail(edgeID, nodeIndex.get(node));
+                                graph.addToDirectedHyperEdgeHead(edgeID, nodeIndex.get(node));
                                 for (String syn : syns) {
                                     Node synNode = new TermNode(syn);
                                     int synNodeID = getOrCreateNode(synNode);
-                                    graph.addToDirectedHyperEdgeHead(edgeID, synNodeID);
+                                    graph.addToDirectedHyperEdgeTail(edgeID, synNodeID);
                                 }
                             }
                         }

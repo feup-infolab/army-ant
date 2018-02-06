@@ -5,17 +5,25 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import fire, logging, asyncio, shutil, os, tempfile, yaml
-import networkx as nx
-from army_ant.exception import ArmyAntException
-from army_ant.reader import Reader
+import asyncio
+import logging
+import os
+import readline
+import shutil
+import tempfile
+
+import fire
+import yaml
+
 from army_ant.database import Database
-from army_ant.index import Index
-from army_ant.server import run_app
 from army_ant.evaluation import EvaluationTask, EvaluationTaskManager
-from army_ant.features import FeatureExtractor
-from army_ant.sampling import INEXSampler
+from army_ant.exception import ArmyAntException
 from army_ant.extras import fetch_wikipedia_images, word2vec_knn, word2vec_sim
+from army_ant.features import FeatureExtractor
+from army_ant.index import Index
+from army_ant.reader import Reader
+from army_ant.sampling import INEXSampler
+from army_ant.server import run_app
 
 logging.basicConfig(
     format='%(asctime)s army-ant: [%(name)s] %(levelname)s: %(message)s',
@@ -23,6 +31,7 @@ logging.basicConfig(
     level=logging.INFO)
 
 logger = logging.getLogger(__name__)
+
 
 class CommandLineInterfaceSampling(object):
     def inex(self, qrels_input_path, qrels_output_path, topics_input_path, topics_output_path,
@@ -34,6 +43,7 @@ class CommandLineInterfaceSampling(object):
             s.sample()
         except ArmyAntException as e:
             logger.error(e)
+
 
 class CommandLineInterfaceExtras(object):
     def fetch_wikipedia_images(self, db_name, db_location='localhost', db_type='mongo'):
@@ -62,6 +72,27 @@ class CommandLineInterfaceExtras(object):
             return
 
         print(word1, '~', word2, '=', sim)
+
+
+class SimpleCompleter(object):
+    def __init__(self, options):
+        self.options = sorted(options)
+
+    def complete(self, text, state):
+        response = None
+        if state == 0:
+            if text:
+                self.matches = [s for s in self.options if s and s.startswith(text)]
+            else:
+                self.matches = self.options[:]
+
+        try:
+            response = self.matches[state]
+        except IndexError:
+            response = None
+
+        return response
+
 
 class CommandLineInterface(object):
     def __init__(self):
@@ -93,13 +124,20 @@ class CommandLineInterface(object):
             logger.error("Must either use --query or --interactive")
             return
 
+        if interactive:
+            completer = SimpleCompleter([r'\quit'])
+            readline.parse_and_bind("tab: complete")
+            readline.set_completer(completer.complete)
+            readline.set_completer_delims(readline.get_completer_delims().replace('\\', ''))
+
         try:
             loop = asyncio.get_event_loop()
             while True:
                 try:
                     if interactive:
                         query = input('query> ')
-                        if query.startswith('\q'): break
+                        if query == r'\quit': break
+                        if query.strip() == '': continue
 
                     index = Index.open(index_location, index_type, loop)
                     response = loop.run_until_complete(index.search(query, offset, limit))
@@ -109,9 +147,9 @@ class CommandLineInterface(object):
                         metadata = loop.run_until_complete(db.retrieve(response['results']))
                     else:
                         metadata = []
-                    
-                    for (result, i) in zip(response['results'], range(offset, offset+limit)):
-                        print("===> %3d %7.2f %s" % (i+1, result['score'], result['docID']))
+
+                    for (result, i) in zip(response['results'], range(offset, offset + limit)):
+                        print("===> %3d %7.2f %s" % (i + 1, result['score'], result['docID']))
                         doc_id = result['docID']
                         if doc_id in metadata:
                             for item in metadata[doc_id].items():
@@ -119,8 +157,8 @@ class CommandLineInterface(object):
                             print()
                 except ArmyAntException as e:
                     logger.error(e)
-                except EOFError:
-                    print("\\q")
+                except (EOFError, KeyboardInterrupt):
+                    print("\\quit")
                     break
 
                 if not interactive: break
@@ -134,16 +172,19 @@ class CommandLineInterface(object):
             raise ArmyAntException("Must include the arguments --topics-filename and --assessments-filename")
 
         if eval_format == 'll-api' and (base_url is None or api_key is None or run_id is None):
-                raise ArmyAntException("Must include the arguments --base-url, --api-key and --run-id")
+            raise ArmyAntException("Must include the arguments --base-url, --api-key and --run-id")
 
         if eval_format == 'inex':
             spool_dir = os.path.join(output_dir, 'spool')
 
-            with open(topics_filename, 'rb') as fsrc, tempfile.NamedTemporaryFile(dir=spool_dir, prefix='eval_topics_', delete=False) as fdst:
+            with open(topics_filename, 'rb') as fsrc, tempfile.NamedTemporaryFile(dir=spool_dir, prefix='eval_topics_',
+                                                                                  delete=False) as fdst:
                 shutil.copyfileobj(fsrc, fdst)
                 topics_path = fdst.name
 
-            with open(assessments_filename, 'rb') as fsrc, tempfile.NamedTemporaryFile(dir=spool_dir, prefix='eval_assessments_', delete=False) as fdst:
+            with open(assessments_filename, 'rb') as fsrc, tempfile.NamedTemporaryFile(dir=spool_dir,
+                                                                                       prefix='eval_assessments_',
+                                                                                       delete=False) as fdst:
                 shutil.copyfileobj(fsrc, fdst)
                 assessments_path = fdst.name
         else:
@@ -190,6 +231,7 @@ class CommandLineInterface(object):
     def server(self, host='127.0.0.1', port=8080, path=None):
         loop = asyncio.get_event_loop()
         run_app(loop, host, port, path)
+
 
 if __name__ == '__main__':
     fire.Fire(CommandLineInterface)
