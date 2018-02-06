@@ -5,17 +5,30 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import tarfile, re, logging, os, requests, requests_cache, csv, glob, itertools, shelve, tempfile, shutil
-from lxml import etree
-from io import StringIO
-from bs4 import BeautifulSoup, SoupStrainer
+import csv
+import glob
+import itertools
+import logging
+import os
+import re
+import requests
+import requests_cache
+import shelve
+import shutil
+import tarfile
+import tempfile
 from urllib.parse import urljoin
+
+from bs4 import BeautifulSoup, SoupStrainer
+from lxml import etree
 from requests.auth import HTTPBasicAuth
-#from army_ant.index import Index
-from army_ant.util import inex, html_to_text, get_first
+
 from army_ant.exception import ArmyAntException
+# from army_ant.index import Index
+from army_ant.util import inex, html_to_text, get_first
 
 logger = logging.getLogger(__name__)
+
 
 class Reader(object):
     @staticmethod
@@ -30,8 +43,8 @@ class Reader(object):
             return LivingLabsReader(source_path, limit)
         elif source_reader == 'csv':
             return CSVReader(source_path)
-        elif source_reader == 'gremlin':
-            return GremlinReader(source_path)
+        # elif source_reader == 'gremlin':
+        #     return GremlinReader(source_path)
         else:
             raise ArmyAntException("Unsupported source reader %s" % source_reader)
 
@@ -44,8 +57,9 @@ class Reader(object):
     def __next__(self):
         raise ArmyAntException("Reader __next__ not implemented")
 
+
 class Document(object):
-    def __init__(self, doc_id, entity = None, text = None, triples = None, metadata = None):
+    def __init__(self, doc_id, entity=None, text=None, triples=None, metadata=None):
         self.doc_id = doc_id
         self.entity = entity
         self.text = text
@@ -66,6 +80,7 @@ class Document(object):
         return '-----------------\nDOC ID:\n%s\n\nTEXT:\n%s\n\nTRIPLES:\n%s\n\nMETADATA:\n%s\n-----------------\n' % (
             self.doc_id, self.text, triples, metadata)
 
+
 class Entity(object):
     def __init__(self, label, url=None):
         self.label = label
@@ -73,6 +88,7 @@ class Entity(object):
 
     def __repr__(self):
         return "(%s, %s)" % (self.label, self.url)
+
 
 class WikipediaDataReader(Reader):
     def __init__(self, source_path):
@@ -107,11 +123,11 @@ class WikipediaDataReader(Reader):
             line = line.decode('utf-8')
             if line == '\n':
                 return Document(
-                    doc_id = url,
-                    entity = entity,
-                    text = self.to_plain_text(html),
-                    triples = self.to_triples(entity, html),
-                    metadata = { 'url': url, 'name': entity })
+                    doc_id=url,
+                    entity=entity,
+                    text=self.to_plain_text(html),
+                    triples=self.to_triples(entity, html),
+                    metadata={'url': url, 'name': entity})
 
             elif line.startswith('url='):
                 match = re.search(r'url=(http://[^.]+\.wikipedia\.org/wiki/(.*))', line.strip())
@@ -123,7 +139,8 @@ class WikipediaDataReader(Reader):
                 html = html + line
 
         raise StopIteration
- 
+
+
 class INEXReader(Reader):
     def __init__(self, source_path, limit=None, title_index=None):
         super(INEXReader, self).__init__(source_path)
@@ -164,7 +181,7 @@ class INEXReader(Reader):
     def to_triples(self, page_id, title, bdy):
         triples = []
         for link in bdy.xpath('//link'):
-            related_id = get_first(link.xpath('@xlink:href', namespaces = { 'xlink': 'http://www.w3.org/1999/xlink' }))
+            related_id = get_first(link.xpath('@xlink:href', namespaces={'xlink': 'http://www.w3.org/1999/xlink'}))
             if related_id is None: continue
             related_id = inex.xlink_to_page_id(related_id)
 
@@ -216,22 +233,23 @@ class INEXReader(Reader):
             url = self.to_wikipedia_entity(page_id, title).url
 
             return Document(
-                doc_id = page_id,
-                entity = title,
-                text = self.to_plain_text(bdy),
-                triples = self.to_triples(page_id, title, bdy),
-                metadata = { 'url': url, 'name': title })
+                doc_id=page_id,
+                entity=title,
+                text=self.to_plain_text(bdy),
+                triples=self.to_triples(page_id, title, bdy),
+                metadata={'url': url, 'name': title})
 
         self.tar.close()
         if type(self.title_index) is shelve.DbfilenameShelf: self.title_index.close()
         raise StopIteration
+
 
 class INEXDirectoryReader(Reader):
     def __init__(self, source_path, use_memory=False):
         super(INEXDirectoryReader, self).__init__(source_path)
 
         self.use_memory = use_memory
-        
+
         file_paths = glob.glob(os.path.join(source_path, '*.tar.bz2'))
 
         parser = etree.XMLParser(remove_blank_text=True, resolve_entities=False)
@@ -259,11 +277,13 @@ class INEXDirectoryReader(Reader):
                         title = get_first(article.xpath('//header/title/text()'))
                         title_index[page_id] = title
                     except etree.XMLSyntaxError:
-                        logger.warn("Error parsing XML, skipping title indexing for %s in %s" % (member.name, source_path))
+                        logger.warn(
+                            "Error parsing XML, skipping title indexing for %s in %s" % (member.name, source_path))
 
         if type(title_index) is shelve.DbfilenameShelf: title_index.close()
 
-        logger.info("Finished indexing titles by doc_id for %d documents in all archives in %s" % (num_docs, source_path))
+        logger.info(
+            "Finished indexing titles by doc_id for %d documents in all archives in %s" % (num_docs, source_path))
 
         inex_iterators = [
             iter(INEXReader(file_path, title_index=title_index if use_memory else title_index_path))
@@ -280,16 +300,17 @@ class INEXDirectoryReader(Reader):
                 shutil.rmtree(self.tmp_dir)
             raise
 
+
 class LivingLabsReader(Reader):
     def __init__(self, source_path, limit=None):
         super(LivingLabsReader, self).__init__(source_path)
         self.limit = limit
 
         base_url, api_key = source_path.split('::')
-        
+
         self.base_url = urljoin(base_url, "/api/v2/participant/")
         self.api_key = api_key
-        self.headers = { 'Content-Type': 'application/json' }
+        self.headers = {'Content-Type': 'application/json'}
         self.auth = HTTPBasicAuth(api_key, '')
 
         requests_cache.install_cache('living_labs_cache', expire_after=10800)
@@ -318,7 +339,8 @@ class LivingLabsReader(Reader):
         text.extend([doc['content'][field] for field in content_fields])
         return '\n'.join(filter(lambda d: d is not None, text))
 
-    def to_triples(self, doc, content_fields=['author', 'language', 'issued', 'publisher', 'type', 'subject', 'description']):
+    def to_triples(self, doc,
+                   content_fields=['author', 'language', 'issued', 'publisher', 'type', 'subject', 'description']):
         triples = []
         for field in content_fields:
             if field in doc['content'] and doc['content'][field]:
@@ -333,14 +355,15 @@ class LivingLabsReader(Reader):
             doc = self.docs[self.idx]
             self.idx += 1
             return Document(
-                doc_id = doc['docid'],
-                text = self.to_text(doc),
-                triples = self.to_triples(doc))
+                doc_id=doc['docid'],
+                text=self.to_text(doc),
+                triples=self.to_triples(doc))
+
 
 class CSVReader(Reader):
     def __init__(self, source_path, doc_id_suffix=':doc_id', text_suffix=':text'):
         super(CSVReader, self).__init__(source_path)
-        
+
         self.reader = csv.DictReader(open(source_path, newline=''))
         self.doc_id_suffix = doc_id_suffix
         self.text_suffix = text_suffix
@@ -363,32 +386,32 @@ class CSVReader(Reader):
 
             text = '\n'.join(text)
 
-            return Document(doc_id = doc_id, text = text)
+            return Document(doc_id=doc_id, text=text)
 
         raise StopIteration
 
-# TODO should this be here? should we use a NullReader read the graph some other way?
-#class GremlinReader(Reader):
-    #def __init__(self, source_path):
-        #super(GremlinReader, self).__init__(source_path)
-        
-        #loop = asyncio.get_event_loop()
-        #self.index = Index.open(source_path, 'gremlin', loop)
-        #self.edge_list = self.index.to_edge_list(use_names=True)
+    # TODO should this be here? should we use a NullReader read the graph some other way?
+    # class GremlinReader(Reader):
+    # def __init__(self, source_path):
+    # super(GremlinReader, self).__init__(source_path)
 
-    #def __next__(self):
-        #for edge in self.edge_list:
-            #doc_id = None
-            #text = []
+    # loop = asyncio.get_event_loop()
+    # self.index = Index.open(source_path, 'gremlin', loop)
+    # self.edge_list = self.index.to_edge_list(use_names=True)
 
-            #for k in row.keys():
-                #if k.endswith(self.text_suffix):
-                    #text.append(row[k])
-                #elif k.endswith(self.doc_id_suffix):
-                    #doc_id = row[k]
+    # def __next__(self):
+    # for edge in self.edge_list:
+    # doc_id = None
+    # text = []
 
-            #text = '\n'.join(text)
+    # for k in row.keys():
+    # if k.endswith(self.text_suffix):
+    # text.append(row[k])
+    # elif k.endswith(self.doc_id_suffix):
+    # doc_id = row[k]
 
-            #return Document(doc_id = doc_id, text = text)
+    # text = '\n'.join(text)
 
-        #raise StopIteration
+    # return Document(doc_id = doc_id, text = text)
+
+    # raise StopIteration
