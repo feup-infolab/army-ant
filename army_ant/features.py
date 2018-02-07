@@ -8,9 +8,10 @@
 import logging
 import os
 
+import igraph
 import langdetect
-import networkx as nx
 from gensim.models import Word2Vec
+from langdetect.lang_detect_exception import LangDetectException
 from nltk import word_tokenize
 
 from army_ant.exception import ArmyAntException
@@ -54,7 +55,11 @@ class Word2VecSimilarityNetwork(FeatureExtractor):
             'pt': ['V', 'PCP', 'VAUX', 'PREP', 'CUR', 'NUM', 'PREP|+', 'NPROP', 'PROPESS', 'ART', 'KS', 'ADV'],
             'en': ['VB', 'VBP']}
         for doc in self.reader:
-            lang = langdetect.detect(doc.text)
+            try:
+                lang = langdetect.detect(doc.text)
+            except LangDetectException:
+                lang = 'en'
+
             if not lang in pos_taggers:
                 pos_taggers[lang] = get_pos_tagger('%s-%s.pickle' % (self.pos_tagger_model_path_basename, lang), lang)
 
@@ -72,13 +77,22 @@ class Word2VecSimilarityNetwork(FeatureExtractor):
 
     def build_similarity_network(self, threshold=0.5):
         logging.info("Building similarity network")
-        g = nx.Graph()
+
+        graph = {}
+
         for word in self.model.wv.vocab:
             sim_words = self.model.wv.most_similar(positive=[word], topn=2)
             for (sim_word, weight) in sim_words:
                 if weight <= threshold: continue
-                g.add_edge(word, sim_word)
-        nx.write_graphml(g, self.graph_path)
+                if not word in graph: graph[word] = {}
+                graph[word][sim_word] = weight
+
+        g = igraph.Graph(directed=False)
+        g.add_vertices(iter(graph.keys()))
+        edges = [(source, target) for source in graph.keys() for target in graph[source].keys()]
+        g.add_edges(edges)
+
+        g.write(self.graph_path, format='graphml')
         logger.info("Saved similarity network to %s" % self.graph_path)
 
     def extract(self):
