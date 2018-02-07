@@ -877,6 +877,139 @@ public class HypergraphOfEntityInMemory extends Engine {
         return resultSet;
     }
 
+    public Trace getSummary() {
+        Trace summary = new Trace("SUMMARY");
+
+        /***
+         * Nodes
+         */
+
+        summary.add("%10d nodes", graph.getNumberOfVertices());
+
+        summary.goDown();
+
+        Map<String, Integer> nodeCountPerType = new HashMap<>();
+        for (int nodeID : graph.getVertices()) {
+            nodeCountPerType.compute(
+                    nodeIndex.getKey(nodeID).getClass().getSimpleName(),
+                    (k, v) -> {
+                        if (v == null) v = 1;
+                        else v += 1;
+                        return v;
+                    });
+        }
+
+        for (Map.Entry<String, Integer> entry : nodeCountPerType.entrySet()) {
+            summary.add("%10d %s", entry.getValue(), entry.getKey());
+        }
+
+        summary.goUp();
+
+        /**
+         * Hyperedges
+         */
+
+        summary.add("%10d directed hyperedges", graph.getNumberOfDirectedHyperEdges());
+
+        summary.goDown();
+
+        Map<String, Integer> edgeCountPerType = new HashMap<>();
+        for (int edgeID : graph.getEdges()) {
+            edgeCountPerType.compute(
+                    edgeIndex.getKey(edgeID).getClass().getSimpleName(),
+                    (k, v) -> {
+                        if (v == null) v = 1;
+                        else v += 1;
+                        return v;
+                    });
+        }
+
+        for (Map.Entry<String, Integer> entry : edgeCountPerType.entrySet()) {
+            summary.add("%10d %s", entry.getValue(), entry.getKey());
+        }
+
+        return summary;
+    }
+
+    /**
+     * How many synonyms (i.e., terms in the tail of a SynonymEdge) link terms in two or more documents?
+     * How many distinct documents on average do synonym terms link?
+     *
+     * @return Synonym information trace.
+     */
+    public Trace getSynonymSummary() {
+        Trace synonyms = new Trace("SYNONYM SUMMARY");
+
+        Map<Integer, Set<Integer>> synToDocs = new HashMap<>();
+
+        // Iterate over all term nodes
+        for (int synTermNodeID : graph.getVertices()) {
+            Node synTermNode = nodeIndex.getKey(synTermNodeID);
+            if (synTermNode instanceof TermNode) {
+                // Iterate over all synonym hyperedges leaving term node (i.e., term node is a synonym)
+                for (int synEdgeID : graph.getOutEdges(synTermNodeID)) {
+                    Edge synEdge = edgeIndex.getKey(synEdgeID);
+                    if (synEdge instanceof SynonymEdge) {
+                        int termNodeID = graph.getDirectedHyperEdgeHead(synEdgeID).getGreatest();
+                        Node termNode = nodeIndex.getKey(termNodeID);
+
+                        if (termNode instanceof TermNode) {
+                            // Obtain term node document neighbors
+                            for (int docNodeID : graph.getInNeighbors(termNodeID)) {
+                                Node docNode = nodeIndex.getKey(docNodeID);
+                                if (docNode instanceof DocumentNode) {
+                                    synToDocs.computeIfAbsent(synTermNodeID, k ->
+                                            new HashSet<>(Collections.singletonList(docNodeID)));
+                                    synToDocs.computeIfPresent(synTermNodeID, (k, v) -> {
+                                        v.add(docNodeID);
+                                        return v;
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        long pathsBetweenDocs = synToDocs.entrySet().stream()
+                .filter(entry -> entry.getValue().size() > 1)
+                .count();
+
+        synonyms.add("%10d paths established between documents", pathsBetweenDocs);
+
+        IntSummaryStatistics statsLinkedDocsPerSyn = synToDocs.values().stream()
+                .mapToInt(docSet -> docSet.size())
+                .summaryStatistics();
+
+        synonyms.add("%10.2f documents linked on average per synonym", statsLinkedDocsPerSyn.getAverage());
+        synonyms.goDown();
+        synonyms.add("%10d minimum documents linked per synonym", statsLinkedDocsPerSyn.getMin());
+        synonyms.add("%10d maximum documents linked per synonym", statsLinkedDocsPerSyn.getMax());
+
+        return synonyms;
+    }
+
+    @Override
+    public void inspect(String feature) {
+        boolean valid = true;
+        Trace trace = null;
+        if (feature.equals("summary")) {
+            trace = getSummary();
+        } else if (feature.equals("synonym-summary")) {
+            trace = getSynonymSummary();
+        } else {
+            valid = false;
+        }
+
+        if (valid) {
+            System.out.println("\n================== Hypergraph-of-Entity ==================\n");
+            System.out.println(trace.toASCII());
+        } else {
+            logger.error("Invalid feature {}", feature);
+        }
+    }
+
     public void printStatistics() {
         long numNodes = graph.getNumberOfVertices();
         long numEdges = graph.getNumberOfEdges();
@@ -891,19 +1024,6 @@ public class HypergraphOfEntityInMemory extends Engine {
             System.out.println(String.format("%d\t%s - %s", nodeID, node.getName(), node.getClass().getSimpleName()));
         }
     }
-
-    /*public void printDepthFirst(String fromNodeName) {
-        HGHandle termNode = graph.findOne(and(typePlus(Node.class), eq("name", fromNodeName)));
-
-        HGDepthFirstTraversal traversal = new HGDepthFirstTraversal(termNode, new SimpleALGenerator(graph));
-
-        while (traversal.hasNext()) {
-            Pair<HGHandle, HGHandle> current = traversal.next();
-            HGLink l = graph.get(current.getFirst());
-            Node atom = graph.get(current.getSecond());
-            System.out.println("Visiting node " + atom + " pointed to by " + l);
-        }
-    }*/
 
     public void printEdges() {
         for (int edgeID : graph.getEdges()) {

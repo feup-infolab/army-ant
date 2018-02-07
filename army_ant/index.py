@@ -7,15 +7,15 @@
 
 import configparser
 import itertools
-import jpype
 import json
 import logging
 import os
-import psycopg2
 import re
 import signal
 from enum import Enum
 
+import jpype
+import psycopg2
 from aiogremlin import Cluster
 from aiohttp.client_exceptions import ClientConnectorError
 from jpype import *
@@ -104,6 +104,9 @@ class Index(object):
     def analyze(text):
         return analyze(text)
 
+    async def load(self):
+        pass
+
     """Indexes the documents and yields documents to store in the database."""
 
     async def index(self):
@@ -112,8 +115,8 @@ class Index(object):
     async def search(self, query, offset, limit, ranking_function=None, ranking_params=None):
         raise ArmyAntException("Search not implemented for %s" % self.__class__.__name__)
 
-    async def load(self):
-        pass
+    async def inspect(self, feature):
+        raise ArmyAntException("Inspect not implemented for %s" % self.__class__.__name__)
 
 
 class Result(object):
@@ -813,6 +816,17 @@ class HypergraphOfEntity(JavaIndex):
 
         return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()), trace_ascii=trace.toASCII())
 
+    async def inspect(self, feature):
+        try:
+            if self.index_location in HypergraphOfEntity.INSTANCES:
+                hgoe = HypergraphOfEntity.INSTANCES[self.index_location]
+            else:
+                hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location)
+                HypergraphOfEntity.INSTANCES[self.index_location] = hgoe
+
+            hgoe.inspect(feature)
+        except JavaException as e:
+            logger.error("Java Exception: %s" % e.stacktrace())
 
 class LuceneEngine(JavaIndex):
     class RankingFunction(Enum):

@@ -99,7 +99,7 @@ class CommandLineInterface(object):
         self.extras = CommandLineInterfaceExtras()
         self.sampling = CommandLineInterfaceSampling()
 
-    def index(self, source_path, source_reader, index_location='localhost', index_type='gow',
+    def index(self, source_path, source_reader, index_location, index_type,
               db_location='localhost', db_name=None, db_type='mongo', limit=None):
         try:
             reader = Reader.factory(source_path, source_reader, limit)
@@ -118,8 +118,8 @@ class CommandLineInterface(object):
         except ArmyAntException as e:
             logger.error(e)
 
-    def search(self, query=None, offset=0, limit=10, index_location='localhost', index_type='gow',
-               db_location='localhost', db_name=None, db_type='mongo', interactive=False):
+    def search(self, index_location, index_type, db_location='localhost', db_name=None, db_type='mongo',
+               query=None, offset=0, limit=10, interactive=False):
         if query is None and not interactive:
             logger.error("Must either use --query or --interactive")
             return
@@ -155,6 +155,39 @@ class CommandLineInterface(object):
                             for item in metadata[doc_id].items():
                                 print("\t%10s: %s" % item)
                             print()
+                except ArmyAntException as e:
+                    logger.error(e)
+                except (EOFError, KeyboardInterrupt):
+                    print("\\quit")
+                    break
+
+                if not interactive: break
+        finally:
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.close()
+
+    def inspect(self, index_location, index_type, feature=None, interactive=False):
+        if feature is None and not interactive:
+            logger.error("Must either use --feature or --interactive")
+            return
+
+        if interactive:
+            completer = SimpleCompleter([r'\quit', 'summary', 'synonym-summary'])
+            readline.parse_and_bind("tab: complete")
+            readline.set_completer(completer.complete)
+            readline.set_completer_delims(readline.get_completer_delims().replace('\\', ''))
+
+        try:
+            loop = asyncio.get_event_loop()
+            while True:
+                try:
+                    if interactive:
+                        feature = input('feature> ')
+                        if feature == r'\quit': break
+                        if feature.strip() == '': continue
+
+                    index = Index.open(index_location, index_type, loop)
+                    loop.run_until_complete(index.inspect(feature))
                 except ArmyAntException as e:
                     logger.error(e)
                 except (EOFError, KeyboardInterrupt):
