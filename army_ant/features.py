@@ -12,10 +12,10 @@ import igraph
 import langdetect
 from gensim.models import Word2Vec
 from langdetect.lang_detect_exception import LangDetectException
-from nltk import word_tokenize
 
 from army_ant.exception import ArmyAntException
-from army_ant.text import split_sentences, get_pos_tagger, remove_by_pos_tag, filter_tokens
+from army_ant.util.text import split_sentences, get_pos_tagger, remove_by_pos_tag, filter_tokens, slot_urls, \
+    normalize_text, slot_numbers, SLOT_PREFIX, tokenize, slot_time
 
 logger = logging.getLogger(__name__)
 
@@ -47,26 +47,60 @@ class Word2VecSimilarityNetwork(FeatureExtractor):
         self.graph_path = os.path.join(output_location, 'word2vec_simnet.graphml')
         self.pos_tagger_model_path_basename = os.path.join(output_location, 'pos_tagger')
 
+    def preprocess(self, text):
+        text = normalize_text(text)
+        text = slot_urls(text)
+        text = slot_time(text)
+        text = slot_numbers(text)
+        return text
+
     def build_sentence_dataset(self):
         logging.info("Extracting sentences from documents")
+
         self.sentences = []
+        self.vocabulary = set([])
         pos_taggers = {}
         filter_tags = {
             'pt': ['V', 'PCP', 'VAUX', 'PREP', 'CUR', 'NUM', 'PREP|+', 'NPROP', 'PROPESS', 'ART', 'KS', 'ADV'],
             'en': ['VB', 'VBP']}
+
+        doc_count = 0
         for doc in self.reader:
+            text = self.preprocess(doc.text)
+
             try:
-                lang = langdetect.detect(doc.text)
+                lang = langdetect.detect(text)
             except LangDetectException:
                 lang = 'en'
 
             if not lang in pos_taggers:
                 pos_taggers[lang] = get_pos_tagger('%s-%s.pickle' % (self.pos_tagger_model_path_basename, lang), lang)
 
-            for sentence in split_sentences(doc.text):
-                tokens = remove_by_pos_tag(pos_taggers[lang], word_tokenize(sentence),
-                                           tags=filter_tags.get(lang, filter_tags['en']))
-                self.sentences.append([token.lower() for token in filter_tokens(tokens, lang)])
+            for sentence in split_sentences(text):
+                tokens = remove_by_pos_tag(
+                    pos_taggers[lang], tokenize(sentence),
+                    tags=filter_tags.get(lang, filter_tags['en']))
+
+                tokenized_sentence = []
+
+                for token in filter_tokens(tokens, lang):
+                    if not token.startswith(SLOT_PREFIX):
+                        token = token.lower()
+
+                    if len(token) < 3: continue
+
+                    tokenized_sentence.append(token)
+                    self.vocabulary.add(token)
+
+                self.sentences.append(tokenized_sentence)
+
+            doc_count += 1
+            if doc_count % 100 == 0:
+                logger.info("%d documents preprocessed" % doc_count)
+
+        logger.info("Finished preprocessing %d documents" % doc_count)
+        logger.info("Vocabulary has size %d" % len(self.vocabulary))
+
         return self.sentences
 
     def train(self):

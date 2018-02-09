@@ -9,15 +9,41 @@ import collections
 import logging
 import os
 import pickle
+import re
 import string
 
 import langdetect
 import nltk
 from langdetect.lang_detect_exception import LangDetectException
-from nltk import word_tokenize
 from nltk.corpus import stopwords, mac_morpho
+from nltk.tokenize import WordPunctTokenizer
+from unidecode import unidecode
 
 logger = logging.getLogger(__name__)
+
+SLOT_PREFIX = 'SLOT_'
+
+url_regex = re.compile(r'http[s]?://[^\s]+')
+num_regex = re.compile(r'\d+')
+time_regex = re.compile(r'(\d{1,2}:\d{2}(:\d{2})?)|(\d{1,2}h(\d{2}(m|(m\d{1,2}s))?)?)|(\d{1,2}(pm|am|PM|AM))')
+
+tokenizer = WordPunctTokenizer()
+
+
+def normalize_text(text):
+    return unidecode(text)
+
+
+def slot_urls(text, prefix=SLOT_PREFIX):
+    return url_regex.sub('%sURL' % prefix, text)
+
+
+def slot_time(text, prefix=SLOT_PREFIX):
+    return time_regex.sub('%sTIME' % prefix, text)
+
+
+def slot_numbers(text, prefix=SLOT_PREFIX):
+    return num_regex.sub(' %sNUM ' % prefix, text)
 
 
 def detect_language(text):
@@ -28,8 +54,12 @@ def detect_language(text):
     return lang
 
 
+def tokenize(text):
+    return tokenizer.tokenize(text)
+
+
 def analyze(text, remove_stopwords=True, remove_punctuation=True):
-    tokens = word_tokenize(text.lower())
+    tokens = tokenize(text.lower())
     try:
         lang = langdetect.detect(text)
     except:
@@ -39,7 +69,7 @@ def analyze(text, remove_stopwords=True, remove_punctuation=True):
     return tokens
 
 
-def filter_tokens(tokens, lang, remove_stopwords=True, remove_punctuation=True):
+def filter_tokens(tokens, lang, remove_stopwords=True, remove_punctuation=True, skip_slots=True):
     filtered_tokens = []
     for token in tokens:
         if remove_stopwords:
@@ -51,6 +81,7 @@ def filter_tokens(tokens, lang, remove_stopwords=True, remove_punctuation=True):
             if token in sw: continue
 
         if remove_punctuation:
+            if skip_slots and token.startswith(SLOT_PREFIX): continue
             for ch in string.punctuation:
                 token = token.replace(ch, '')
 
@@ -100,7 +131,7 @@ def get_pos_tagger(model_path, lang='pt'):
         if lang == 'pt':
             logger.info("Training and saving portuguese POS tagger to %s" % model_path)
             tagged_sentences = mac_morpho.tagged_sents()
-            tagged_sentences = [[(w.lower(), t) for (w, t) in s] for s in tagged_sentences if s]
+            tagged_sentences = [[(w, t) for (w, t) in s] for s in tagged_sentences if s]
             train = tagged_sentences
             tagger_default = nltk.DefaultTagger('N')
             tagger_unigram = nltk.UnigramTagger(train, backoff=tagger_default)
@@ -108,7 +139,7 @@ def get_pos_tagger(model_path, lang='pt'):
             with open(model_path, "wb") as f:
                 pickle.dump(pos_tagger, f)
         else:
-            logger.info("Using default english POS tagger for '%s'" % lang)
+            logger.warning("Using default english POS tagger for '%s'" % lang)
             pos_tagger = EnglishPOSTagger()
 
     return pos_tagger

@@ -22,7 +22,7 @@ from jpype import *
 
 from army_ant.exception import ArmyAntException
 from army_ant.reader import Document, Entity
-from army_ant.text import analyze
+from army_ant.util.text import analyze
 from army_ant.util import load_gremlin_script, load_sql_script
 
 logger = logging.getLogger(__name__)

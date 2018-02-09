@@ -5,8 +5,11 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import os, logging, hashlib, zipfile
+import hashlib
+import os
+
 from bs4 import BeautifulSoup
+
 
 def html_to_text(html):
     soup = BeautifulSoup(html, "html5lib")
@@ -20,7 +23,7 @@ def html_to_text(html):
     chunks = [phrase.strip() for line in lines for phrase in line.split(' ')]
     text = ' '.join(chunk for chunk in chunks if chunk)
     
-    return text#.encode('utf-8')
+    return text
 
 def load_gremlin_script(script_name):
     with open(os.path.join('gremlin', script_name + '.groovy'), 'r') as f:
