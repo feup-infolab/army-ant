@@ -44,7 +44,7 @@ class Word2VecSimilarityNetwork(FeatureExtractor):
             os.mkdir(output_location)
 
         self.model_path = os.path.join(output_location, 'word2vec.model')
-        self.graph_path = os.path.join(output_location, 'word2vec_simnet.graphml')
+        self.graph_path = os.path.join(output_location, 'word2vec_simnet.graphml.gz')
         self.pos_tagger_model_path_basename = os.path.join(output_location, 'pos_tagger')
 
     def preprocess(self, text):
@@ -103,19 +103,33 @@ class Word2VecSimilarityNetwork(FeatureExtractor):
 
         return self.sentences
 
-    def train(self):
+    def train(self, size=100, window=5, min_count=2, max_vocab_size=None):
+        """
+        :param size: vector of length `size`, per word.
+        :param window: the number of words that form a "context".
+        :param min_count: words that appear less than `min_count` times will be ignored.
+        :param max_vocab_size: maximum vocabulary size (less frequent words will be removed).
+        """
         logging.info("Training word2vec model")
-        self.model = Word2Vec(self.sentences, size=100, window=5, min_count=2, workers=4)
+        self.model = Word2Vec(self.sentences, size=size, window=window, min_count=min_count,
+                              max_vocab_size=max_vocab_size, workers=4)
         self.model.save(self.model_path)
         logging.info("Saved model to %s" % self.model_path)
 
-    def build_similarity_network(self, threshold=0.5):
+    def build_similarity_network(self, k=2, threshold=0.5):
+        """
+        Builds a similarity network based on embedding similarity, using `k` nearest neighbors to
+        establish adjacencies.
+
+        :param k: number of nearest neighbors per word.
+        :param threshold: minimum similarity to include the edge.
+        """
         logging.info("Building similarity network")
 
         graph = {}
 
         for word in self.model.wv.vocab:
-            sim_words = self.model.wv.most_similar(positive=[word], topn=2)
+            sim_words = self.model.wv.most_similar(positive=[word], topn=k)
             for (sim_word, weight) in sim_words:
                 if weight <= threshold: continue
                 if not word in graph: graph[word] = {}
@@ -126,7 +140,7 @@ class Word2VecSimilarityNetwork(FeatureExtractor):
         edges = [(source, target) for source in graph.keys() for target in graph[source].keys()]
         g.add_edges(edges)
 
-        g.write(self.graph_path, format='graphml')
+        g.write(self.graph_path, format='graphmlz')
         logger.info("Saved similarity network to %s" % self.graph_path)
 
     def extract(self):
