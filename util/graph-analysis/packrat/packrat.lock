@@ -1,0 +1,34 @@
+PackratFormat: 1.4
+PackratVersion: 0.4.8.1
+RVersion: 3.3.3
+Repos: BioCsoft=https://bioconductor.org/packages/3.3/bioc,
+    BioCann=https://bioconductor.org/packages/3.3/data/annotation,
+    BioCexp=https://bioconductor.org/packages/3.3/data/experiment,
+    BioCextra=https://bioconductor.org/packages/3.3/extra,
+    CRAN=https://cran.cnr.Berkeley.edu/
+
+Package: igraph
+Source: CRAN
+Version: 1.1.2
+Hash: 07d33f151f94269a4573d354104e81aa
+Requires: irlba, magrittr, pkgconfig
+
+Package: irlba
+Source: CRAN
+Version: 2.3.2
+Hash: 6fd331150b1d044e0ca9989a8e4bdc76
+
+Package: magrittr
+Source: CRAN
+Version: 1.5
+Hash: bdc4d48c3135e8f3b399536ddf160df4
+
+Package: packrat
+Source: CRAN
+Version: 0.4.8-1
+Hash: 6ad605ba7b4b476d84be6632393f5765
+
+Package: pkgconfig
+Source: CRAN
+Version: 2.0.1
+Hash: 0dda4a2654a22b36a715c2b0b6fbacac
