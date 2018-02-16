@@ -75,7 +75,11 @@ public class HypergraphOfEntityInMemory extends Engine {
     private float avgTimePerDocument;
 
     public HypergraphOfEntityInMemory(String path) throws HypergraphException {
-        this(path, new ArrayList<>(), false);
+        this(path, new ArrayList<>());
+    }
+
+    public HypergraphOfEntityInMemory(String path, List<Feature> features) throws HypergraphException {
+        this(path, features, false);
     }
 
     public HypergraphOfEntityInMemory(String path, List<Feature> features, boolean overwrite) throws HypergraphException {
@@ -1062,7 +1066,7 @@ public class HypergraphOfEntityInMemory extends Engine {
     public Trace getSynonymSummary() {
         Trace synonyms = new Trace("SYNONYM SUMMARY");
 
-        if (!hasFeature(Feature.SYNONYMS)) {
+        if (!features.contains(Feature.SYNONYMS)) {
             synonyms.add("Feature disabled in this index");
             return synonyms;
         }
@@ -1077,7 +1081,7 @@ public class HypergraphOfEntityInMemory extends Engine {
                 for (int synEdgeID : graph.getOutEdges(synTermNodeID)) {
                     Edge synEdge = edgeIndex.getKey(synEdgeID);
                     if (synEdge instanceof SynonymEdge) {
-                        int termNodeID = graph.getDirectedHyperEdgeHead(synEdgeID).getGreatest();
+                        int termNodeID = graph.getUndirectedHyperEdgeVertices(synEdgeID).getGreatest();
                         Node termNode = nodeIndex.getKey(termNodeID);
 
                         if (termNode instanceof TermNode) {

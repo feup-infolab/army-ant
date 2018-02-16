@@ -734,7 +734,10 @@ class HypergraphOfEntity(JavaIndex):
         if self.index_location in JavaIndex.INSTANCES:
             logger.warning("%s is already loaded, skipping" % self.index_location)
             return
-        JavaIndex.INSTANCES[self.index_location] = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location)
+        features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value) for index_feature in
+                    self.index_features]
+        JavaIndex.INSTANCES[self.index_location] = HypergraphOfEntity.JHypergraphOfEntityInMemory(
+            self.index_location, java.util.Arrays.asList(features))
 
     async def index(self):
         try:
@@ -803,7 +806,10 @@ class HypergraphOfEntity(JavaIndex):
             if self.index_location in HypergraphOfEntity.INSTANCES:
                 hgoe = HypergraphOfEntity.INSTANCES[self.index_location]
             else:
-                hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location)
+                features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value) for index_feature in
+                            self.index_features]
+                hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(
+                    self.index_location, java.util.Arrays.asList(features))
                 HypergraphOfEntity.INSTANCES[self.index_location] = hgoe
 
             results = hgoe.search(query, offset, limit, ranking_function, ranking_params)
@@ -821,7 +827,10 @@ class HypergraphOfEntity(JavaIndex):
             if self.index_location in HypergraphOfEntity.INSTANCES:
                 hgoe = HypergraphOfEntity.INSTANCES[self.index_location]
             else:
-                hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(self.index_location)
+                features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value) for index_feature in
+                            self.index_features]
+                hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(
+                    self.index_location, java.util.Arrays.asList(features))
                 HypergraphOfEntity.INSTANCES[self.index_location] = hgoe
 
             hgoe.inspect(feature)
