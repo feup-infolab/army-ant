@@ -1,7 +1,7 @@
 defaults:
   db:
     location: localhost
-    name: army_ant_test
+    name: army_ant
     type: mongo
   eval:
     location: /opt/army-ant/eval
@@ -15,7 +15,7 @@ engines:
       Don't forget to launch Gremlin Server with the "gow_wikipedia" graph
       configured (e.g., "bin/gremlin-server.sh gremlin-server-neo4j.yaml").
     db:
-      name: gow_wikipedia
+      name: wikipedia_data
     index:
       type: gow
       location: localhost:8182/gow_wikipedia
@@ -26,7 +26,7 @@ engines:
       Don't forget to launch Gremlin Server with the "goe_wikipedia" graph
       configured (e.g., "bin/gremlin-server.sh gremlin-server-neo4j.yaml").
     db:
-      name: goe_wikipedia
+      name: wikipedia_data
     index:
       type: goe
       location: localhost:8182/goe_wikipedia
@@ -37,7 +37,7 @@ engines:
       Don't forget to launch Gremlin Server with the "gow_inex_10t_nl" graph
       configured (e.g., "bin/gremlin-server.sh gremlin-server-neo4j.yaml").
     db:
-      name: gow_inex
+      name: aa_inex
     index:
       type: gow
       location: localhost:8182/gow_inex_10t_nl
@@ -48,7 +48,7 @@ engines:
       Don't forget to launch Gremlin Server with the "goe_inex_10t_nl" graph
       configured (e.g., "bin/gremlin-server.sh gremlin-server-neo4j.yaml").
     db:
-      name: goe_inex
+      name: aa_inex
     index:
       type: goe
       location: localhost:8182/goe_inex_10t_nl
@@ -56,7 +56,7 @@ engines:
   hgoe-inex-10t-nl:
     name: INEX 10T-NL - Hypergraph-of-Entity
     db:
-      name: hgoe_inex
+      name: aa_inex
     index:
       type: hgoe
       location: /opt/army-ant/data/inex-10t-nl/hypergraph-of-entity
@@ -79,7 +79,7 @@ engines:
   lucene-inex-10t-nl:
     name: INEX 10T-NL - Lucene
     db:
-      name: lucene_inex
+      name: aa_inex
     index:
       type: lucene
       location: /opt/army-ant/data/inex-10t-nl/lucene
@@ -107,7 +107,7 @@ engines:
   hgoe-inex-30t-nl:
     name: INEX 30T-NL - Hypergraph of Entity
     db:
-      name: hgoe_inex
+      name: aa_inex
     index:
       type: hgoe
       location: /opt/army-ant/data/inex-30t-nl/hypergraph-of-entity
@@ -130,7 +130,7 @@ engines:
   hgoe-inex-dev:
     name: INEX Dev - Hypergraph-of-Entity
     db:
-      name: hgoe_inex
+      name: aa_inex
     index:
       type: hgoe
       location: /opt/army-ant/data/inex-dev/hypergraph-of-entity
@@ -153,10 +153,84 @@ engines:
   lucene-inex-dev:
     name: INEX Dev - Lucene
     db:
-      name: lucene_inex
+      name: aa_inex
     index:
       type: lucene
       location: /opt/army-ant/data/inex-dev/lucene
+    ranking:
+      default:
+        id: tf_idf
+        #params:
+          #k1: 1.2
+          #b: 0.75
+      functions:
+        tf_idf:
+          name: TF-IDF
+        bm25:
+          name: BM25
+          params:
+            k1: [1, 1.2, 1.8]
+            b: [0.5, 0.75, 1]
+        dfr:
+          name: DFR
+          params:
+            BM: [BE, G, P, D, In, Ine, IF]
+            AE: [L, B, Disabled]
+            N: [H1, H2, H3, Z, Disabled]
+
+  hgoe-inex-3t-nl:
+    name: INEX 3T-NL - Hypergraph-of-Entity
+    db:
+      name: aa_inex
+    index:
+      type: hgoe
+      location: /opt/army-ant/data/inex-3t-nl/hgoe
+      preload: true
+    ranking:
+      default:
+        id: random_walk
+        params:
+          l: 3
+          r: 100
+      functions:
+        jaccard:
+          name: Jaccard Score
+        random_walk:
+          name: Random Walk Score
+          params:
+            l: [1, 2, 3, 4, 5, 6]
+            r: [10, 100, 250, 500, 750, 1000]
+
+  hgoe-syns-inex-3t-nl:
+    name: INEX 3T-NL - Hypergraph-of-Entity (Synonyms)
+    db:
+      name: aa_inex
+    index:
+      type: hgoe
+      location: /opt/army-ant/data/inex-3t-nl/hgoe-syns
+      preload: true
+    ranking:
+      default:
+        id: random_walk
+        params:
+          l: 3
+          r: 100
+      functions:
+        jaccard:
+          name: Jaccard Score
+        random_walk:
+          name: Random Walk Score
+          params:
+            l: [1, 2, 3, 4, 5, 6]
+            r: [10, 100, 250, 500, 750, 1000]
+
+  lucene-inex-3t-nl:
+    name: INEX 3T-NL - Lucene
+    db:
+      name: aa_inex
+    index:
+      type: lucene
+      location: /opt/army-ant/data/inex-3t-nl/lucene
     ranking:
       default:
         id: tf_idf
@@ -184,7 +258,7 @@ engines:
       Don't forget to launch Gremlin Server with the "gow_trec2017" graph configured
       (e.g., "gremlin-server-neo4j.yaml").
     db:
-      name: gow_trec2017
+      name: aa_ssoar
     index:
       type: gow_csv
       location: localhost:8182/gow_trec2017
@@ -195,7 +269,7 @@ engines:
       Don't forget to launch Gremlin Server with the "goe_trec2017" graph configured
       (e.g., "gremlin-server-neo4j.yaml").
     db:
-      name: goe_trec2017
+      name: aa_ssoar
     index:
       type: goe_csv
       location: localhost:8182/goe_trec2017

@@ -7,10 +7,7 @@ import armyant.hgoe.inmemory.nodes.DocumentNode;
 import armyant.hgoe.inmemory.nodes.EntityNode;
 import armyant.hgoe.inmemory.nodes.Node;
 import armyant.hgoe.inmemory.nodes.TermNode;
-import armyant.structures.Document;
-import armyant.structures.Result;
-import armyant.structures.ResultSet;
-import armyant.structures.Trace;
+import armyant.structures.*;
 import edu.mit.jwi.IRAMDictionary;
 import edu.mit.jwi.RAMDictionary;
 import edu.mit.jwi.data.ILoadPolicy;
@@ -118,6 +115,10 @@ public class HypergraphOfEntityInMemory extends Engine {
         }
     }
 
+    public boolean hasFeature(Feature feature) {
+        return features.contains(feature);
+    }
+
     private synchronized int getOrCreateNode(Node node) {
         if (nodeIndex.containsKey(node)) return nodeIndex.get(node);
         int nodeID = graph.addVertex();
@@ -125,16 +126,36 @@ public class HypergraphOfEntityInMemory extends Engine {
         return nodeID;
     }
 
-    private synchronized int createEdge(Edge edge) {
+    private synchronized int createDirectedEdge(Edge edge) {
+        return createEdge(edge, true);
+    }
+
+    private synchronized int createUndirectedEdge(Edge edge) {
+        return createEdge(edge, false);
+    }
+
+    private synchronized int createEdge(Edge edge, boolean directed) {
         int edgeID = graph.getNextEdgeAvailable();
-        graph.addDirectedHyperEdge(edgeID);
+        if (directed) {
+            graph.addDirectedHyperEdge(edgeID);
+        } else {
+            graph.addUndirectedHyperEdge(edgeID);
+        }
         edgeIndex.put(edge, edgeID);
         return edgeID;
     }
 
-    private synchronized int getOrCreateEdge(Edge edge) {
+    private synchronized int getOrCreateDirectedEdge(Edge edge) {
+        return getOrCreateEdge(edge, true);
+    }
+
+    private synchronized int getOrCreateUndirectedEdge(Edge edge) {
+        return getOrCreateEdge(edge, false);
+    }
+
+    private synchronized int getOrCreateEdge(Edge edge, boolean directed) {
         if (edgeIndex.containsKey(edge)) return edgeIndex.get(edge);
-        return createEdge(edge);
+        return createEdge(edge, directed);
     }
 
     private void addNodesToHyperEdgeHead(int edgeID, Set<Integer> nodeIDs) {
@@ -155,8 +176,9 @@ public class HypergraphOfEntityInMemory extends Engine {
 
     private void indexDocument(Document document) throws IOException {
         DocumentEdge documentEdge = new DocumentEdge(document.getDocID());
-        int edgeID = getOrCreateEdge(documentEdge);
+        int edgeID = getOrCreateDirectedEdge(documentEdge);
 
+        // TODO Consider changing directed to undirected hyperedge.
         DocumentNode documentNode = new DocumentNode(document.getDocID());
         int sourceDocumentNodeID = getOrCreateNode(documentNode);
         synchronized (this) {
@@ -176,7 +198,7 @@ public class HypergraphOfEntityInMemory extends Engine {
         addNodesToHyperEdgeHead(edgeID, targetTermNodeIDs);
     }
 
-    private Set<Integer> indexEntities(Document document) {
+    /*private Set<Integer> indexEntities(Document document) {
         Map<EntityNode, Set<EntityNode>> edges = document.getTriples().stream()
                 .collect(Collectors.groupingBy(
                         t -> new EntityNode(document, t.getSubject()),
@@ -189,7 +211,7 @@ public class HypergraphOfEntityInMemory extends Engine {
             nodes.add(sourceEntityNodeID);
 
             RelatedToEdge relatedToEdge = new RelatedToEdge();
-            int edgeID = createEdge(relatedToEdge);
+            int edgeID = createDirectedEdge(relatedToEdge);
             synchronized (this) {
                 graph.addToDirectedHyperEdgeTail(edgeID, sourceEntityNodeID);
             }
@@ -204,6 +226,30 @@ public class HypergraphOfEntityInMemory extends Engine {
         }
 
         return nodes;
+    }*/
+
+    private Set<Integer> indexEntities(Document document) {
+        Set<Node> nodes = new HashSet<>();
+
+        for (Triple triple : document.getTriples()) {
+            nodes.add(new EntityNode(document, triple.getSubject()));
+            nodes.add(new EntityNode(document, triple.getObject()));
+        }
+
+        Set<Integer> nodeIDs = new HashSet<>();
+
+        RelatedToEdge relatedToEdge = new RelatedToEdge();
+        int edgeID = createUndirectedEdge(relatedToEdge);
+
+        for (Node node : nodes) {
+            int entityNodeID = getOrCreateNode(node);
+            nodeIDs.add(entityNodeID);
+            synchronized (this) {
+                graph.addToUndirectedHyperEdge(edgeID, entityNodeID);
+            }
+        }
+
+        return nodeIDs;
     }
 
     private void linkTextAndKnowledge() {
@@ -234,14 +280,14 @@ public class HypergraphOfEntityInMemory extends Engine {
                 if (termNodes.isEmpty()) continue;
 
                 ContainedInEdge containedInEdge = new ContainedInEdge();
-                int edgeID = createEdge(containedInEdge);
+                int edgeID = createDirectedEdge(containedInEdge);
                 addNodesToHyperEdgeTail(edgeID, termNodes);
                 graph.addToDirectedHyperEdgeHead(edgeID, entityNodeID);
             }
         }
     }
 
-    private void linkSynonyms() {
+    /*private void linkSynonyms() {
         logger.info("Creating links between synonyms ({synonyms} -> source term)");
         try {
             IRAMDictionary dict = new RAMDictionary(new File("/usr/share/wordnet"), ILoadPolicy.NO_LOAD);
@@ -260,12 +306,50 @@ public class HypergraphOfEntityInMemory extends Engine {
                             Set<String> syns = new HashSet<>(Arrays.asList(w.getLemma().toLowerCase().split("_")));
                             if (syns.size() > 1) {
                                 SynonymEdge synonymEdge = new SynonymEdge();
-                                int edgeID = createEdge(synonymEdge);
+                                int edgeID = createDirectedEdge(synonymEdge);
                                 graph.addToDirectedHyperEdgeHead(edgeID, nodeIndex.get(node));
                                 for (String syn : syns) {
                                     Node synNode = new TermNode(syn);
                                     int synNodeID = getOrCreateNode(synNode);
                                     graph.addToDirectedHyperEdgeTail(edgeID, synNodeID);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            dict.close();
+        } catch (IOException e) {
+            logger.error(e.getMessage(), e);
+        }
+    }*/
+
+    private void linkSynonyms() {
+        logger.info("Creating links between synonyms ({synonyms})");
+        try {
+            IRAMDictionary dict = new RAMDictionary(new File("/usr/share/wordnet"), ILoadPolicy.NO_LOAD);
+            dict.open();
+
+            for (int nodeID : graph.getVertices()) {
+                Node node = nodeIndex.getKey(nodeID);
+                if (node instanceof TermNode) {
+                    IIndexWord idxWord = dict.getIndexWord(node.getName(), POS.NOUN);
+                    if (idxWord != null) {
+                        IWordID wordID = idxWord.getWordIDs().get(0);
+                        IWord word = dict.getWord(wordID);
+                        ISynset synset = word.getSynset();
+
+                        for (IWord w : synset.getWords()) {
+                            Set<String> syns = new HashSet<>(Arrays.asList(w.getLemma().toLowerCase().split("_")));
+                            if (syns.size() > 1) {
+                                SynonymEdge synonymEdge = new SynonymEdge();
+                                int edgeID = createUndirectedEdge(synonymEdge);
+                                graph.addToUndirectedHyperEdge(edgeID, nodeIndex.get(node));
+                                for (String syn : syns) {
+                                    Node synNode = new TermNode(syn);
+                                    int synNodeID = getOrCreateNode(synNode);
+                                    graph.addToUndirectedHyperEdge(edgeID, synNodeID);
                                 }
                             }
                         }
@@ -439,16 +523,16 @@ public class HypergraphOfEntityInMemory extends Engine {
 
             IntSet edgeIDs;
             if (graph.containsVertex(queryTermNode)) {
-                edgeIDs = graph.getEdgesIncidentTo(queryTermNode);
+                edgeIDs = graph.getOutEdges(queryTermNode);
             } else {
                 edgeIDs = new IntOpenHashSet();
             }
 
             for (int edgeID : edgeIDs) {
                 Edge edge = edgeIndex.getKey(edgeID);
-                if (edge instanceof DocumentEdge)
-                    continue; // for now ignore document co-occurrence relation to imitate GoE
-                // XXX Not sure about this, since these hyperedges are directed.
+
+                if (!(edge instanceof ContainedInEdge)) continue;
+
                 for (int nodeID : graph.getDirectedHyperEdgeHead(edgeID)) {
                     Node node = nodeIndex.getKey(nodeID);
                     if (node instanceof EntityNode) {
@@ -467,6 +551,7 @@ public class HypergraphOfEntityInMemory extends Engine {
         return seedNodes;
     }
 
+    // XXX HERE
     private double coverage(int entityNodeID, IntSet seedNodeIDs) {
         if (seedNodeIDs.isEmpty()) return 0d;
 
@@ -486,8 +571,11 @@ public class HypergraphOfEntityInMemory extends Engine {
                 })
                 .flatMap(edgeID -> {
                     IntSet nodeIDs = new LucIntHashSet();
-                    nodeIDs.addAll(graph.getDirectedHyperEdgeTail(edgeID));
-                    nodeIDs.addAll(graph.getDirectedHyperEdgeHead(edgeID));
+                    if (graph.isDirectedHyperEdge(edgeID)) {
+                        nodeIDs.addAll(graph.getVerticesIncidentToEdge(edgeID));
+                    } else {
+                        nodeIDs.addAll(graph.getUndirectedHyperEdgeVertices(edgeID));
+                    }
                     return nodeIDs.stream().filter(nodeID -> !nodeID.equals(sourceNodeID));
                 })
                 .collect(Collectors.toSet()));
@@ -565,11 +653,17 @@ public class HypergraphOfEntityInMemory extends Engine {
     private void randomStep(int nodeID, int remainingSteps, Path path) {
         if (remainingSteps == 0) return;
 
-        IntSet edgeIDs = graph.getEdgesIncidentTo(nodeID);
+        IntSet edgeIDs = graph.getOutEdges(nodeID);
         int randomEdgeID = getRandom(edgeIDs);
 
-        IntSet nodeIDs = graph.getDirectedHyperEdgeHead(randomEdgeID);
-        //nodeIDs.addAll(graph.getDirectedHyperEdgeTail(randomEdgeID));
+        IntSet nodeIDs = new LucIntHashSet();
+        if (graph.isDirectedHyperEdge(randomEdgeID)) {
+            nodeIDs.addAll(graph.getDirectedHyperEdgeHead(randomEdgeID));
+        } else {
+            nodeIDs.addAll(graph.getUndirectedHyperEdgeVertices(randomEdgeID));
+            nodeIDs.remove(nodeID);
+        }
+
         int randomNodeID = getRandom(nodeIDs);
 
         path.extend(randomEdgeID, randomNodeID);
@@ -597,7 +691,8 @@ public class HypergraphOfEntityInMemory extends Engine {
 
                 /*String messageRandomPath = Arrays.stream(randomPath.toVertexArray())
                         .mapToObj(nodeID -> nodeIndex.getKey(nodeID).toString())
-                        .collect(Collectors.joining(" -> "));
+                        .collect(Collectors.joining        //IntSet edgeIDs = graph.getEdgesIncidentTo(nodeID);
+(" -> "));
                 trace.add(messageRandomPath.replace("%", "%%"));
                 trace.goDown();*/
 
@@ -768,6 +863,7 @@ public class HypergraphOfEntityInMemory extends Engine {
         return (double) intersect.size() / union.size();
     }
 
+    // Neighborhood does not account for direction.
     public double jaccardScore(int entityNodeID, Map<Integer, Double> seedNodeWeights) {
         Map<Integer, Pair<IntSet, Double>> seedNeighborsWeights = new HashMap<>();
         for (Map.Entry<Integer, Double> entry : seedNodeWeights.entrySet()) {
@@ -909,13 +1005,17 @@ public class HypergraphOfEntityInMemory extends Engine {
          * Hyperedges
          */
 
-        summary.add("%10d directed hyperedges", graph.getNumberOfDirectedHyperEdges());
-
+        summary.add("%10d hyperedges", graph.getNumberOfUndirectedHyperEdges() + graph.getNumberOfDirectedHyperEdges());
         summary.goDown();
 
-        Map<String, Integer> edgeCountPerType = new HashMap<>();
+        summary.add("%10d directed hyperedges", graph.getNumberOfDirectedHyperEdges());
+        summary.goDown();
+
+        Map<String, Integer> directedEdgeCountPerType = new HashMap<>();
         for (int edgeID : graph.getEdges()) {
-            edgeCountPerType.compute(
+            if (!graph.isDirectedHyperEdge(edgeID)) continue;
+
+            directedEdgeCountPerType.compute(
                     edgeIndex.getKey(edgeID).getClass().getSimpleName(),
                     (k, v) -> {
                         if (v == null) v = 1;
@@ -924,7 +1024,29 @@ public class HypergraphOfEntityInMemory extends Engine {
                     });
         }
 
-        for (Map.Entry<String, Integer> entry : edgeCountPerType.entrySet()) {
+        for (Map.Entry<String, Integer> entry : directedEdgeCountPerType.entrySet()) {
+            summary.add("%10d %s", entry.getValue(), entry.getKey());
+        }
+
+        summary.goUp();
+
+        summary.add("%10d undirected hyperedges", graph.getNumberOfUndirectedHyperEdges());
+        summary.goDown();
+
+        Map<String, Integer> undirectedEdgeCountPerType = new HashMap<>();
+        for (int edgeID : graph.getEdges()) {
+            if (graph.isDirectedHyperEdge(edgeID)) continue;
+
+            undirectedEdgeCountPerType.compute(
+                    edgeIndex.getKey(edgeID).getClass().getSimpleName(),
+                    (k, v) -> {
+                        if (v == null) v = 1;
+                        else v += 1;
+                        return v;
+                    });
+        }
+
+        for (Map.Entry<String, Integer> entry : undirectedEdgeCountPerType.entrySet()) {
             summary.add("%10d %s", entry.getValue(), entry.getKey());
         }
 
@@ -939,6 +1061,11 @@ public class HypergraphOfEntityInMemory extends Engine {
      */
     public Trace getSynonymSummary() {
         Trace synonyms = new Trace("SYNONYM SUMMARY");
+
+        if (!hasFeature(Feature.SYNONYMS)) {
+            synonyms.add("Feature disabled in this index");
+            return synonyms;
+        }
 
         Map<Integer, Set<Integer>> synToDocs = new HashMap<>();
 
