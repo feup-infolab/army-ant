@@ -4,6 +4,12 @@ defaults:
     name: army_ant
     type: mongo
   eval:
+    metrics:
+      favorite:
+        - GMAP
+        - MAP
+        - NDCG@10
+        - P@10
     location: /opt/army-ant/eval
   jvm:
     memory: 5120

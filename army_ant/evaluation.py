@@ -342,6 +342,7 @@ class INEXEvaluator(FilesystemEvaluator):
             if not params_id in self.results: self.results[params_id] = {'ranking_params': ranking_params,
                                                                          'metrics': {}}
             self.results[params_id]['metrics']['MAP'] = safe_div(sum(avg_precisions), len(avg_precisions))
+            self.results[params_id]['metrics']['GMAP'] = math.sqrt(np.prod(avg_precisions))
 
     def calculate_normalized_discounted_cumulative_gain_at_p(self, p=10, ranking_params=None):
         params_id = ranking_params_to_params_id(ranking_params)

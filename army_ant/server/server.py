@@ -156,11 +156,12 @@ async def evaluation_get(request):
         request.app['defaults']['eval']['location'])
     tasks = manager.get_tasks()
     metrics = set([])
+    favorite_metrics = request.app['defaults']['eval']['metrics']['favorite']
     for task in tasks:
         if hasattr(task, 'results'):
             first_item_metrics = next(iter(task.results.values()))["metrics"].keys()
             metrics = metrics.union([metric for metric in first_item_metrics])
-    return {'tasks': tasks, 'metrics': sorted(metrics)}
+    return {'tasks': tasks, 'metrics': { 'all': sorted(metrics), 'favorite': favorite_metrics } }
 
 
 async def evaluation_delete(request):

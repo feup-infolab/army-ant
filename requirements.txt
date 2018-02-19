@@ -7,6 +7,7 @@ lxml==3.7.3
 psycopg2==2.7.1
 requests-cache==0.4.13
 gensim==2.2.0
+numpy==1.13.3
 langdetect==1.0.7
 python-igraph==0.7.1.post6
 JPype1==0.6.2

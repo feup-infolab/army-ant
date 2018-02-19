@@ -31,15 +31,15 @@
                 <i class="form-icon"></i> Toggle all
               </label>
             </div>
-            <button class="btn btn-sm select-classic-metrics-btn">Select Classic</button>
+            <button class="btn select-favorite-metrics-btn">Select Favorite</button>
           </div>
 
           <br>
 
-          {% set metrics_length = metrics|length %}
+          {% set metrics_length = metrics.all|length %}
           <div class="columns metrics">
             <div class="column">
-              {% for metric in metrics[0:(metrics_length//2)] %}
+              {% for metric in metrics.all[0:(metrics_length//2)] %}
               <div class="form-group">
                 <label class="form-checkbox">
                   <input class="toggle-metric-checkbox" type="checkbox" checked="checked" value="{{ metric }}">
@@ -50,7 +50,7 @@
             </div>
 
             <div class="column">
-              {% for metric in metrics[(metrics_length//2+1):metrics_length] %}
+              {% for metric in metrics.all[(metrics_length//2+1):metrics_length] %}
               <div class="form-group">
                 <label class="form-checkbox">
                   <input type="checkbox" checked="checked" value="{{ metric }}">
@@ -68,10 +68,13 @@
               <div class="form-group">
                 <label class="form-label" for="decimals-input">Decimals</label>
                 <div class="input-group">
-                  <input id="decimals-input" class="form-input input-sm" type="text" placeholder="Number of decimal places" value="4"
-                    style="max-width: 50%;">
-                  <button id="decimals-inc" class="btn btn-sm input-group-btn"><i class="icon icon-arrow-up"></i></button>
-                  <button id="decimals-dec" class="btn btn-sm input-group-btn"><i class="icon icon-arrow-down"></i></button>
+                  <input id="decimals-input" class="form-input input-sm" type="text"
+                         placeholder="Number of decimal places" value="4"
+                         style="max-width: 50%;">
+                  <button id="decimals-inc" class="btn btn-sm input-group-btn"><i class="icon icon-arrow-up"></i>
+                  </button>
+                  <button id="decimals-dec" class="btn btn-sm input-group-btn"><i class="icon icon-arrow-down"></i>
+                  </button>
                 </div>
               </div>
             </div>
@@ -112,13 +115,14 @@
 </div>
 
 <script type="text/javascript">
-  (function() {
+  (function () {
     function isInteger(n) {
       return !isNaN(parseInt(n)) && isFinite(n);
     }
 
     function addDecimalPlaces(n) {
-      var value = +$('#decimals-input').val();
+      var $decimals = $('#decimals-input');
+      var value = +$decimals.val();
       var nextValue = value;
 
       if (!isInteger(value)) {
@@ -131,17 +135,19 @@
           nextValue = 10;
         }
       }
-      $('#decimals-input').val(nextValue);
+      $decimals.val(nextValue);
     }
 
     var incTimeoutID = 0;
     var incIntervalID = 0;
-    $(document).on('mousedown mouseup', '#decimals-inc', function(e) {
+    $(document).on('mousedown mouseup', '#decimals-inc', function (e) {
       clearTimeout(incTimeoutID);
-      if (e.type == 'mousedown') {
+      if (e.type === 'mousedown') {
         addDecimalPlaces(1);
-        incTimeoutID = setTimeout(function() {
-          incIntervalID = setInterval(function() { addDecimalPlaces(1); }, 50);
+        incTimeoutID = setTimeout(function () {
+          incIntervalID = setInterval(function () {
+            addDecimalPlaces(1);
+          }, 50);
         }, 500);
       } else {
         clearTimeout(incIntervalID);
@@ -150,12 +156,14 @@
 
     var decTimeoutID = 0;
     var decIntervalID = 0;
-    $(document).on('mousedown mouseup', '#decimals-dec', function(e) {
+    $(document).on('mousedown mouseup', '#decimals-dec', function (e) {
       clearTimeout(decTimeoutID);
-      if (e.type == 'mousedown') {
+      if (e.type === 'mousedown') {
         addDecimalPlaces(-1);
-        decTimeoutID = setTimeout(function() {
-          decIntervalID = setInterval(function() { addDecimalPlaces(-1); }, 50);
+        decTimeoutID = setTimeout(function () {
+          decIntervalID = setInterval(function () {
+            addDecimalPlaces(-1);
+          }, 50);
         }, 500);
       } else {
         clearTimeout(decIntervalID);
@@ -164,16 +172,20 @@
 
     function downloadSummary($modal, format) {
       var headers = $modal.find('.headers input[type="checkbox"]:checked')
-        .map(function(index, item) { return $(item).val(); })
+        .map(function (index, item) {
+          return $(item).val();
+        })
         .toArray().join(',');
-  
+
       var metrics = $modal.find('.metrics input[type="checkbox"]:checked')
-        .map(function(index, item) { return $(item).val(); })
+        .map(function (index, item) {
+          return $(item).val();
+        })
         .toArray().join(',');
 
       var decimals = $modal.find('#decimals-input').val();
       if (!format) format = $modal.find('input[name="format"]:checked').val();
-      
+
       var downloadURL = $modal.data('download-url');
 
       var params = [];
@@ -185,9 +197,9 @@
         downloadURL += '?' + params.join('&');
       }
 
-      if (format == 'html') {
+      if (format === 'html') {
         $('#html-preview').append($('<i>').addClass('loading'));
-        $.get(downloadURL, function(html) {
+        $.get(downloadURL, function (html) {
           $('#html-preview').html(html);
         });
       } else {
@@ -195,25 +207,24 @@
       }
     }
 
-    $(document).on('click', '#download-btn', function(e) {
+    $(document).on('click', '#download-btn', function (e) {
       var $modal = $(this).parents('.modal.generate');
       $('#html-preview').empty();
       downloadSummary($modal);
     });
 
-    $(document).on('click', '#preview-btn', function(e) {
+    $(document).on('click', '#preview-btn', function (e) {
       var $modal = $(this).parents('.modal.generate');
       downloadSummary($modal, 'html');
     });
- 
-    $(document).on('change', '.toggle-metric-checkbox', function(e) {
-      console.log($('.toggle-metric-checkbox:checked').length);
-      if ($('.toggle-metric-checkbox:checked').length == 0) {
+
+    $(document).on('change', '.toggle-metric-checkbox', function (e) {
+      if ($('.toggle-metric-checkbox:checked').length === 0) {
         $('.toggle-all-metrics-checkbox').prop('checked', true);
       }
     });
 
-    $(document).on('change', '.toggle-all-metrics-checkbox', function(e) {
+    $(document).on('change', '.toggle-all-metrics-checkbox', function (e) {
       if ($(this).prop('checked')) {
         $(this).parents('.modal')
           .find('.metrics input[type="checkbox"]')
@@ -224,16 +235,16 @@
       }
     });
 
-    $(document).on('click', '.select-classic-metrics-btn', function(e) {
-      var metrics = ['MAP', 'P@10', 'NDCG@10'];
+    $(document).on('click', '.select-favorite-metrics-btn', function (e) {
+      var favoriteMetrics = {{ metrics.favorite }};
 
       $(this).parents('.modal')
         .find('.metrics input[type="checkbox"]')
         .prop('checked', false);
 
-      for (var i=0; i < metrics.length; i++) {
+      for (var i = 0; i < favoriteMetrics.length; i++) {
         $(this).parents('.modal')
-          .find('.metrics input[type="checkbox"][value="' + metrics[i] + '"]')
+          .find('.metrics input[type="checkbox"][value="' + favoriteMetrics[i] + '"]')
           .prop('checked', true);
       }
     });
