@@ -191,7 +191,7 @@ engines:
     index:
       type: hgoe
       location: /opt/army-ant/data/inex-3t-nl/hgoe
-      preload: true
+      preload: false
     ranking:
       default:
         id: random_walk
@@ -214,7 +214,7 @@ engines:
     index:
       type: hgoe
       location: /opt/army-ant/data/inex-3t-nl/hgoe-syns
-      preload: true
+      preload: false
     ranking:
       default:
         id: random_walk

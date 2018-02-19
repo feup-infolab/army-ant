@@ -157,7 +157,7 @@ class INEXEvaluator(FilesystemEvaluator):
 
         self.stats[params_id]['total_query_time'] = sum([t for t in self.stats[params_id]['query_time'].values()])
         self.stats[params_id]['avg_query_time'] = (
-            self.stats[params_id]['total_query_time'] / len(self.stats[params_id]['query_time']))
+                self.stats[params_id]['total_query_time'] / len(self.stats[params_id]['query_time']))
 
     def f_score(self, precision, recall, beta=1):
         if precision == 0 and recall == 0: return 0
@@ -464,7 +464,7 @@ class LivingLabsEvaluator(Evaluator):
             missing_doc_ids = must_have_doc_ids.difference(doc_ids)
             if len(missing_doc_ids) > 0:
                 logging.warn("Adding %d missing results with zero score out of %d must have results" % (
-                len(missing_doc_ids), len(must_have_doc_ids)))
+                    len(missing_doc_ids), len(must_have_doc_ids)))
                 results.extend([{'docID': doc_id} for doc_id in missing_doc_ids])
         data = {
             'qid': qid,
@@ -689,11 +689,13 @@ class EvaluationTaskManager(object):
                     if 'Type' in columns: values.append(task.index_type)
                     if 'Location' in columns: values.append(task.index_location)
                     values.extend([
-                        result['metrics'][metric] if metric in result['metrics'] and result['metrics'][
-                                                                                         metric] != '' else np.nan
+                        result['metrics'][metric]
+                        if metric in result['metrics'] and result['metrics'][metric] != '' else np.nan
                         for metric in metrics
                     ])
                     df = df.append(pd.DataFrame([values], columns=columns))
+
+            df.set_axis(axis=0, labels=range(len(df)), inplace=True)
 
             float_format = "%%.%df" % decimals
             if fmt == 'csv':
@@ -701,9 +703,14 @@ class EvaluationTaskManager(object):
             elif fmt == 'tex':
                 tmp_file.write(df.to_latex(index=False, float_format=float_format).encode('utf-8'))
             elif fmt == 'html':
+                for metric in metrics:
+                    if not metric in df: continue
+                    max_idx = df[metric].idxmax()
+                    df.loc[max_idx, metric] = '<b>%f</b>' % df[metric][max_idx]
                 tmp_file.write(df.to_html(
                     index=False,
-                    float_format=float_format,
+                    escape=False,
+                    #float_format=float_format,
                     border=0,
                     justify='left',
                     classes='table table-sm table-scroll table-striped').encode('utf-8'))
@@ -809,7 +816,7 @@ class EvaluationTaskManager(object):
         for filename in os.listdir(self.spool_dirname):
             path = os.path.join(self.spool_dirname, filename)
             if os.path.isfile(path) and not filename in valid_spool_filenames and (
-                        filename.startswith('eval_assessments_') or filename.startswith('eval_topics_')):
+                    filename.startswith('eval_assessments_') or filename.startswith('eval_topics_')):
                 logger.warning("Removing unreferenced spool file '%s'" % path)
                 os.remove(path)
 
