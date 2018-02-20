@@ -61,7 +61,7 @@ class Evaluator(object):
         self.start_date = datetime.now()
 
     async def run(self):
-        raise ArmyAntException("Unsupported evaluator format %s" % eval_format)
+        raise ArmyAntException("Unsupported evaluator format %s" % self.task.eval_format)
 
 
 class FilesystemEvaluator(Evaluator):
