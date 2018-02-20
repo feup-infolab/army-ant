@@ -697,20 +697,27 @@ class EvaluationTaskManager(object):
 
             df.set_axis(axis=0, labels=range(len(df)), inplace=True)
 
-            float_format = "%%.%df" % decimals
+            float_format_str = "%%.%df" % decimals
+            float_format = lambda v: (float_format_str % v) if type(v) in (np.float, np.float64, float) else str(v)
+
             if fmt == 'csv':
-                tmp_file.write(df.to_csv(index=False, float_format=float_format).encode('utf-8'))
+                tmp_file.write(df.to_csv(index=False, float_format=float_format_str).encode('utf-8'))
             elif fmt == 'tex':
-                tmp_file.write(df.to_latex(index=False, float_format=float_format).encode('utf-8'))
+                for metric in metrics:
+                    if not metric in df: continue
+                    max_idx = df[metric].idxmax()
+                    df.loc[max_idx, metric] = '{\\bf %s}' % float_format(df[metric][max_idx])
+                    df.loc[~df.index.isin([max_idx]), metric] = df.loc[~df.index.isin([max_idx]), metric].apply(float_format)
+                tmp_file.write(df.to_latex(index=False, escape=False).encode('utf-8'))
             elif fmt == 'html':
                 for metric in metrics:
                     if not metric in df: continue
                     max_idx = df[metric].idxmax()
-                    df.loc[max_idx, metric] = '<b>%f</b>' % df[metric][max_idx]
+                    df.loc[max_idx, metric] = '<b>%s</b>' % float_format(df[metric][max_idx])
+                    df.loc[~df.index.isin([max_idx]), metric] = df.loc[~df.index.isin([max_idx]), metric].apply(float_format)
                 tmp_file.write(df.to_html(
                     index=False,
                     escape=False,
-                    #float_format=float_format,
                     border=0,
                     justify='left',
                     classes='table table-sm table-scroll table-striped').encode('utf-8'))
