@@ -63,6 +63,7 @@ public class HypergraphOfEntityInMemory extends Engine {
     }*/
 
     private List<Feature> features;
+    private String featuresPath;
     private File directory;
     private InMemoryGrph graph;
     private BidiMap<Node, Integer> nodeIndex;
@@ -79,13 +80,18 @@ public class HypergraphOfEntityInMemory extends Engine {
     }
 
     public HypergraphOfEntityInMemory(String path, List<Feature> features) throws HypergraphException {
-        this(path, features, false);
+        this(path, features, null, false);
     }
 
-    public HypergraphOfEntityInMemory(String path, List<Feature> features, boolean overwrite) throws HypergraphException {
+    public HypergraphOfEntityInMemory(String path, List<Feature> features, String featuresPath) throws HypergraphException {
+        this(path, features, featuresPath, false);
+    }
+
+    public HypergraphOfEntityInMemory(String path, List<Feature> features, String featuresPath, boolean overwrite) throws HypergraphException {
         super();
 
         this.features = features;
+        this.featuresPath = featuresPath;
 
         this.directory = new File(path);
         if (directory.exists()) {
@@ -202,36 +208,6 @@ public class HypergraphOfEntityInMemory extends Engine {
         addNodesToHyperEdgeHead(edgeID, targetTermNodeIDs);
     }
 
-    /*private Set<Integer> indexEntities(Document document) {
-        Map<EntityNode, Set<EntityNode>> edges = document.getTriples().stream()
-                .collect(Collectors.groupingBy(
-                        t -> new EntityNode(document, t.getSubject()),
-                        Collectors.mapping(t -> new EntityNode(document, t.getObject()), Collectors.toSet())));
-
-        Set<Integer> nodes = new HashSet<>();
-
-        for (Map.Entry<EntityNode, Set<EntityNode>> entry : edges.entrySet()) {
-            int sourceEntityNodeID = getOrCreateNode(entry.getKey());
-            nodes.add(sourceEntityNodeID);
-
-            RelatedToEdge relatedToEdge = new RelatedToEdge();
-            int edgeID = createDirectedEdge(relatedToEdge);
-            synchronized (this) {
-                graph.addToDirectedHyperEdgeTail(edgeID, sourceEntityNodeID);
-            }
-
-            for (EntityNode node : entry.getValue()) {
-                int targetEntityNodeID = getOrCreateNode(node);
-                synchronized (this) {
-                    graph.addToDirectedHyperEdgeHead(edgeID, targetEntityNodeID);
-                }
-                nodes.add(targetEntityNodeID);
-            }
-        }
-
-        return nodes;
-    }*/
-
     private Set<Integer> indexEntities(Document document) {
         Set<Node> nodes = new HashSet<>();
 
@@ -291,44 +267,6 @@ public class HypergraphOfEntityInMemory extends Engine {
         }
     }
 
-    /*private void linkSynonyms() {
-        logger.info("Creating links between synonyms ({synonyms} -> source term)");
-        try {
-            IRAMDictionary dict = new RAMDictionary(new File("/usr/share/wordnet"), ILoadPolicy.NO_LOAD);
-            dict.open();
-
-            for (int nodeID : graph.getVertices()) {
-                Node node = nodeIndex.getKey(nodeID);
-                if (node instanceof TermNode) {
-                    IIndexWord idxWord = dict.getIndexWord(node.getName(), POS.NOUN);
-                    if (idxWord != null) {
-                        IWordID wordID = idxWord.getWordIDs().get(0);
-                        IWord word = dict.getWord(wordID);
-                        ISynset synset = word.getSynset();
-
-                        for (IWord w : synset.getWords()) {
-                            Set<String> syns = new HashSet<>(Arrays.asList(w.getLemma().toLowerCase().split("_")));
-                            if (syns.size() > 1) {
-                                SynonymEdge synonymEdge = new SynonymEdge();
-                                int edgeID = createDirectedEdge(synonymEdge);
-                                graph.addToDirectedHyperEdgeHead(edgeID, nodeIndex.get(node));
-                                for (String syn : syns) {
-                                    Node synNode = new TermNode(syn);
-                                    int synNodeID = getOrCreateNode(synNode);
-                                    graph.addToDirectedHyperEdgeTail(edgeID, synNodeID);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            dict.close();
-        } catch (IOException e) {
-            logger.error(e.getMessage(), e);
-        }
-    }*/
-
     private void linkSynonyms() {
         logger.info("Creating links between synonyms ({synonyms})");
         try {
@@ -367,6 +305,11 @@ public class HypergraphOfEntityInMemory extends Engine {
         }
     }
 
+    private void linkContextuallySimilarTerms() {
+        logger.info("Creating links between terms that are contextually similar ({terms})");
+        // TODO
+    }
+
     private void createReachabilityIndex() {
         logger.info("Computing connected components and creating reachability index");
         ConnectedComponentsAlgorithm connectedComponentsAlgorithm = new ConnectedComponentsAlgorithm();
@@ -382,6 +325,7 @@ public class HypergraphOfEntityInMemory extends Engine {
     public void postProcessing() {
         linkTextAndKnowledge();
         if (features.contains(Feature.SYNONYMS)) linkSynonyms();
+        if (features.contains(Feature.CONTEXT)) linkContextuallySimilarTerms();
         createReachabilityIndex();
     }
 
@@ -1178,6 +1122,7 @@ public class HypergraphOfEntityInMemory extends Engine {
     }
 
     public enum Feature {
-        SYNONYMS
+        SYNONYMS,
+        CONTEXT
     }
 }

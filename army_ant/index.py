@@ -60,7 +60,8 @@ class Index(object):
     @staticmethod
     def open(index_location, index_type, loop):
         key = Index.__preloaded_key__(index_location, index_type)
-        if key in Index.PRELOADED: return Index.PRELOADED[key]
+        if key in Index.PRELOADED:
+            return Index.PRELOADED[key]
 
         if index_type == 'gow':
             return GraphOfWord(None, index_location, loop)
@@ -107,9 +108,8 @@ class Index(object):
     async def load(self):
         pass
 
-    """Indexes the documents and yields documents to store in the database."""
-
-    async def index(self):
+    async def index(self, features_location=None):
+        """Indexes the documents and yields documents to store in the database."""
         raise ArmyAntException("Index not implemented for %s" % self.__class__.__name__)
 
     async def search(self, query, offset, limit, ranking_function=None, ranking_params=None):
@@ -235,9 +235,9 @@ class GremlinServerIndex(ServiceIndex):
 class GraphOfWord(GremlinServerIndex):
     def __init__(self, reader, index_location, loop, window_size=3):
         super().__init__(reader, index_location, loop)
-        self.window_size = 3
+        self.window_size = window_size
 
-    async def index(self):
+    async def index(self, features_location=None):
         self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
         self.client = await self.cluster.connect()
 
@@ -252,7 +252,7 @@ class GraphOfWord(GremlinServerIndex):
                     logger.debug("%s -> %s" % (tokens[i], tokens[i + j]))
                     source_vertex = await self.get_or_create_vertex(tokens[i])
                     target_vertex = await self.get_or_create_vertex(tokens[i + j])
-                    edge = await self.get_or_create_edge(
+                    await self.get_or_create_edge(
                         source_vertex, target_vertex, data={'doc_id': doc.doc_id})
 
             yield doc
@@ -283,7 +283,7 @@ class GraphOfWord(GremlinServerIndex):
 
 
 class GraphOfEntity(GremlinServerIndex):
-    async def index(self):
+    async def index(self, features_location=None):
         self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
         self.client = await self.cluster.connect()
 
@@ -425,7 +425,7 @@ class PostgreSQLGraph(object):
 
         await self.cluster.close()
 
-    async def index(self, pgonly=False):
+    async def index(self, features_location=None, pgonly=False):
         self.next_vertex_id = 1
         self.next_edge_id = 1
         self.next_property_id = 1
@@ -571,13 +571,13 @@ class GraphOfEntityBatch(PostgreSQLGraph, GraphOfEntity):
 
 
 class GraphOfWordCSV(GraphOfWordBatch):
-    async def index(self):
+    async def index(self, features_location=None, pgonly=True):
         if os.path.exists(self.index_location):
             raise ArmyAntException("%s already exists" % self.index_location)
 
         os.mkdir(self.index_location)
 
-        async for item in super().index(pgonly=True):
+        async for item in super().index(pgonly=pgonly):
             yield item
 
         conn = psycopg2.connect("dbname='army_ant' user='army_ant' host='localhost'")
@@ -599,13 +599,13 @@ class GraphOfWordCSV(GraphOfWordBatch):
 
 
 class GraphOfEntityCSV(GraphOfEntityBatch):
-    async def index(self):
+    async def index(self, features_location=None, pgonly=True):
         if os.path.exists(self.index_location):
             raise ArmyAntException("%s already exists" % self.index_location)
 
         os.mkdir(self.index_location)
 
-        async for item in super().index(pgonly=True):
+        async for item in super().index(pgonly=pgonly):
             yield item
 
         conn = psycopg2.connect("dbname='army_ant' user='army_ant' host='localhost'")
@@ -716,6 +716,7 @@ class JavaIndex(Index):
 class HypergraphOfEntity(JavaIndex):
     class Feature(Enum):
         syns = 'SYNONYMS'
+        context = 'CONTEXT'
 
     class RankingFunction(Enum):
         entity_weight = 'ENTITY_WEIGHT'
@@ -739,13 +740,20 @@ class HypergraphOfEntity(JavaIndex):
         JavaIndex.INSTANCES[self.index_location] = HypergraphOfEntity.JHypergraphOfEntityInMemory(
             self.index_location, java.util.Arrays.asList(features))
 
-    async def index(self):
+    async def index(self, features_location=None):
         try:
             index_features_str = ':'.join([index_feature.value for index_feature in self.index_features])
             features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value) for index_feature in
                         self.index_features]
+
+            if HypergraphOfEntity.Feature.context in self.index_features:
+                if features_location is None:
+                    raise ArmyAntException("Must provide a features_location pointing to a directory")
+                if not 'word2vec_simnet.graphml.gz' in os.listdir(features_location):
+                    raise ArmyAntException("Must provide a 'word2vec_simnet.graphml.gz' file within features directory")
+
             hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(
-                self.index_location, java.util.Arrays.asList(features), True)
+                self.index_location, java.util.Arrays.asList(features), features_location, True)
 
             corpus = []
             for doc in self.reader:
@@ -837,6 +845,7 @@ class HypergraphOfEntity(JavaIndex):
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
+
 class LuceneEngine(JavaIndex):
     class RankingFunction(Enum):
         tf_idf = 'TF_IDF'
@@ -846,7 +855,7 @@ class LuceneEngine(JavaIndex):
     JLuceneEngine = JavaIndex.armyant.lucene.LuceneEngine
     JRankingFunction = JClass("armyant.lucene.LuceneEngine$RankingFunction")
 
-    async def index(self):
+    async def index(self, features_location=None):
         try:
             lucene = LuceneEngine.JLuceneEngine(self.index_location)
             lucene.open()

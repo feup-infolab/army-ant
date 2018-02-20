@@ -99,7 +99,7 @@ class CommandLineInterface(object):
         self.extras = CommandLineInterfaceExtras()
         self.sampling = CommandLineInterfaceSampling()
 
-    def index(self, source_path, source_reader, index_location, index_type,
+    def index(self, source_path, source_reader, index_location, index_type, features_location=None,
               db_location='localhost', db_name=None, db_type='mongo', limit=None):
         try:
             reader = Reader.factory(source_path, source_reader, limit)
@@ -109,9 +109,9 @@ class CommandLineInterface(object):
                 index = Index.factory(reader, index_location, index_type, loop)
                 if db_location and db_name and db_type:
                     db = Database.factory(db_location, db_name, db_type, loop)
-                    loop.run_until_complete(db.store(index.index()))
+                    loop.run_until_complete(db.store(index.index(features_location=features_location)))
                 else:
-                    loop.run_until_complete(Index.no_store(index.index()))
+                    loop.run_until_complete(Index.no_store(index.index(features_location=features_location)))
             finally:
                 loop.run_until_complete(loop.shutdown_asyncgens())
                 loop.close()
