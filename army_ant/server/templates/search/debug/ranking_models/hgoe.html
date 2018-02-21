@@ -4,17 +4,31 @@
     The data is represted using a hypergraph with three types of nodes &mdash; <span class="label label-secondary">document node</span>; <span class="label label-secondary">term node</span>; <span class="label label-secondary">entity node</span> &mdash; and three types of hyperedges &mdash; <span class="label label-secondary">document edge</span>, linking all terms and entities mentioned in a document; <span class="label label-secondary">contained_in edge</span>, linking a set of term nodes to an entity node; <span class="label label-secondary">related_to edge</span>, linking an entity node to a set of related entity nodes.
   </dd>
 
+  Optionally, the index can be expanded with several features, including:
+
+  <dl>
+    <dt>Synonyms</dt>
+    <dd>
+
+    </dd>
+
+    <dt>Context</dt>
+    <dd>
+
+    </dd>
+  </dl>
+
   <dt>Ranking Model</dt>
   <dd>
     The ranking approach consists of mapping the query terms into the corresponding term nodes, when they exist. Then, we expand to adjacent entities, with a given confidence weight of it being a good representative of the query; whenever no linked entities exist, the term node is used instead, with maximal confidence weight. These nodes that represent the query in the hypergraph are called seed nodes. Several strategies are then implemented based on these seed nodes.
     
     <dl>
-      <dt>Random Walk</dt>
+      <dt>Random Walk Score</dt>
       <dd>
         Assuming a random walk of a given length $\ell$ and a given number of repeats $r$, we issue $r = {{ rankingParams['r'] }}$ random walks of length $\ell = {{ rankingParams['l'] }}$ from each seed node. The visits to each traversed node are accumulated per seed node, multiplied by the seed node confidence weight, and summed. This results in a non-determinist search process that improves effectiveness for higher values of $r$ and needs to tune $\ell$ based on the diameter of the hypergraph &mdash; for low values of $\ell$, there is not enough information, while values of $\ell$ that are too high will account for irrelevant information.
       </dd>
 
-      <dt>Jaccard</dt>
+      <dt>Jaccard Score</dt>
       <dd>
         Given the hypergraph nature of the representation, where hyperedges are sets of nodes, the <a href="https://en.wikipedia.org/wiki/Jaccard_index">Jaccard index</a> can be used as a structural similarity metric. We implement this by ranking each entity node based on the sum of the Jaccard indexes between the nodes incident to a rankable node and the nodes incident to each seed node, multiplied by the seed confidence weight.
       </dd>

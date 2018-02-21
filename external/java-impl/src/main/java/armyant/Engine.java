@@ -55,7 +55,7 @@ public abstract class Engine {
 
     public abstract void index(Document document) throws Exception;
     public void indexCorpus(Collection<Document> corpus) {}
-    public void postProcessing() { }
+    public void postProcessing() throws Exception { }
     public void inspect(String feature) { }
     public abstract ResultSet search(String query, int offset, int limit) throws Exception;
     public void close() throws Exception { }

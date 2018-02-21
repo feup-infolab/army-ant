@@ -1,4 +1,4 @@
-package armyant.hgoe.structures;
+package armyant.structures;
 
 import armyant.structures.Trace;
 import org.testng.annotations.Test;

@@ -5,8 +5,11 @@ import armyant.hgoe.exceptions.HypergraphException;
 import armyant.hgoe.inmemory.nodes.TermNode;
 import armyant.structures.Result;
 import armyant.structures.ResultSet;
+import grph.io.ParseException;
 import org.testng.annotations.Test;
+import org.xml.sax.SAXException;
 
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -39,9 +42,9 @@ public class HypergraphOfEntityInMemoryTest extends HypergraphOfEntityTest {
         //hgoe.printDepthFirst("web");
     }
 
-    public void testIndex() throws IOException, HypergraphException {
+    public void testIndex() throws Exception {
         HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory(
-                dbPath, new ArrayList<>(), true);
+                dbPath, new ArrayList<>(), null, true);
         hgoe.index(document1);
         hgoe.index(document2);
         hgoe.index(document3);

@@ -15,8 +15,8 @@ import edu.mit.jwi.item.*;
 import grph.algo.AllPaths;
 import grph.algo.ConnectedComponentsAlgorithm;
 import grph.in_memory.InMemoryGrph;
+import grph.io.ParseException;
 import grph.path.ArrayListPath;
-import grph.path.Path;
 import it.unimi.dsi.fastutil.ints.*;
 import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
 import org.ahocorasick.trie.Emit;
@@ -25,13 +25,22 @@ import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.tinkerpop.gremlin.structure.Direction;
+import org.apache.tinkerpop.gremlin.structure.Vertex;
+import org.apache.tinkerpop.gremlin.structure.io.IoCore;
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
+import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xml.sax.SAXException;
 import toools.collections.primitive.LucIntHashSet;
 
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.*;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPInputStream;
 
 /**
  * Created by jldevezas on 2017-10-23.
@@ -46,6 +55,8 @@ public class HypergraphOfEntityInMemory extends Engine {
 
     private static final float PROBABILITY_THRESHOLD = 0.005f;
     private static final XoRoShiRo128PlusRandom RNG = new XoRoShiRo128PlusRandom();
+
+    private static final String CONTEXT_FEATURES_FILENAME = "word2vec_simnet.graphml.gz";
 
     /*private static final Kryo kryo;
     private static final MapSerializer nodeEdgeIndexSerializer;
@@ -305,9 +316,48 @@ public class HypergraphOfEntityInMemory extends Engine {
         }
     }
 
-    private void linkContextuallySimilarTerms() {
+    public void linkContextuallySimilarTerms() throws IOException, ParseException, ParserConfigurationException, SAXException {
         logger.info("Creating links between terms that are contextually similar ({terms})");
-        // TODO
+
+        File simnetFile = Paths.get(featuresPath, CONTEXT_FEATURES_FILENAME).toFile();
+        File uncompressedSimnetFile = File.createTempFile("army_ant-word2vec_simnet-", ".graphml");
+        uncompressedSimnetFile.deleteOnExit();
+
+        try (GZIPInputStream input = new GZIPInputStream(new FileInputStream(simnetFile));
+             FileOutputStream output = new FileOutputStream(uncompressedSimnetFile)) {
+            byte[] buffer = new byte[4096];
+            int length;
+            while ((length = input.read(buffer)) > 0) {
+                output.write(buffer, 0, length);
+            }
+        }
+
+        logger.info("Loading word2vec simnet");
+        TinkerGraph simnet = TinkerGraph.open();
+        simnet.io(IoCore.graphml()).readGraph(uncompressedSimnetFile.toString());
+
+        simnet.vertices().forEachRemaining(v -> {
+            if (IteratorUtils.count(v.edges(Direction.BOTH, "edge")) < 1) return;
+
+            String term = (String) v.property("name").value();
+            Node termNode = new TermNode(term);
+
+            if (nodeIndex.containsKey(termNode)) {
+                ContextEdge contextEdge = new ContextEdge();
+                int edgeID = createUndirectedEdge(contextEdge);
+                this.graph.addToUndirectedHyperEdge(edgeID, nodeIndex.get(termNode));
+
+                v.edges(Direction.BOTH, "edge").forEachRemaining(e -> {
+                    Vertex source = e.bothVertices().next();
+                    Vertex target = e.bothVertices().next();
+                    Vertex other = source.property("name").value().equals(term) ? target : source;
+                    Node otherNode = new TermNode((String) other.property("name").value());
+                    if (nodeIndex.containsKey(otherNode)) {
+                        this.graph.addToUndirectedHyperEdge(edgeID, nodeIndex.get(otherNode));
+                    }
+                });
+            }
+        });
     }
 
     private void createReachabilityIndex() {
@@ -322,7 +372,7 @@ public class HypergraphOfEntityInMemory extends Engine {
     }
 
     @Override
-    public void postProcessing() {
+    public void postProcessing() throws Exception {
         linkTextAndKnowledge();
         if (features.contains(Feature.SYNONYMS)) linkSynonyms();
         if (features.contains(Feature.CONTEXT)) linkContextuallySimilarTerms();
@@ -561,7 +611,7 @@ public class HypergraphOfEntityInMemory extends Engine {
     // FIXME getShortestPath() does not seem to work with hyperedges.
     private double perSeedScoreDijkstra(int entityNodeID, int seedNodeID, double seedWeight) {
         double perSeedScore = 0d;
-        Path shortestPath = graph.getShortestPath(entityNodeID, seedNodeID);
+        grph.path.Path shortestPath = graph.getShortestPath(entityNodeID, seedNodeID);
         if (shortestPath != null) perSeedScore = seedWeight * 1d / (1 + shortestPath.getLength());
         return perSeedScore;
     }
@@ -570,13 +620,13 @@ public class HypergraphOfEntityInMemory extends Engine {
     private double perSeedScoreAllPaths(int entityNodeID, int seedNodeID, double seedWeight) {
         double perSeedScore = 0d;
 
-        List<Path> paths = AllPaths.compute(entityNodeID, graph, SEARCH_MAX_DISTANCE, MAX_PATHS_PER_PAIR, false)
+        List<grph.path.Path> paths = AllPaths.compute(entityNodeID, graph, SEARCH_MAX_DISTANCE, MAX_PATHS_PER_PAIR, false)
                 .stream()
                 .flatMap(Collection::stream)
                 .filter(path -> path.containsVertex(seedNodeID))
                 .collect(Collectors.toList());
 
-        for (Path path : paths) {
+        for (grph.path.Path path : paths) {
             perSeedScore += seedWeight * 1d / (1 + path.getLength());
         }
         perSeedScore /= 1 + paths.size();
@@ -591,14 +641,14 @@ public class HypergraphOfEntityInMemory extends Engine {
                 .findFirst().get();
     }
 
-    private Path randomWalk(int startNodeID, int length) {
-        Path path = new ArrayListPath();
+    private grph.path.Path randomWalk(int startNodeID, int length) {
+        grph.path.Path path = new ArrayListPath();
         path.extend(startNodeID);
         randomStep(startNodeID, length, path);
         return path;
     }
 
-    private void randomStep(int nodeID, int remainingSteps, Path path) {
+    private void randomStep(int nodeID, int remainingSteps, grph.path.Path path) {
         if (remainingSteps == 0) return;
 
         IntSet edgeIDs = graph.getOutEdges(nodeID);
@@ -635,7 +685,7 @@ public class HypergraphOfEntityInMemory extends Engine {
             trace.goDown();*/
 
             for (int i = 0; i < walk_repeats; i++) {
-                Path randomPath = randomWalk(seedNodeID, walk_length);
+                grph.path.Path randomPath = randomWalk(seedNodeID, walk_length);
 
                 /*String messageRandomPath = Arrays.stream(randomPath.toVertexArray())
                         .mapToObj(nodeID -> nodeIndex.getKey(nodeID).toString())
@@ -1007,35 +1057,41 @@ public class HypergraphOfEntityInMemory extends Engine {
      *
      * @return Synonym information trace.
      */
-    public Trace getSynonymSummary() {
-        Trace synonyms = new Trace("SYNONYM SUMMARY");
+    public Trace getSummaryByUndirectedEdgeType(Class nodeType, Class edgeType) {
+        assert nodeType == Node.class || nodeType == TermNode.class;
+        assert edgeType == SynonymEdge.class || edgeType == ContextEdge.class;
 
-        if (!features.contains(Feature.SYNONYMS)) {
-            synonyms.add("Feature disabled in this index");
-            return synonyms;
+        String edgeTypeStr = edgeType.getSimpleName().replace("Edge", "").toLowerCase();
+
+        Trace summary = new Trace(String.format("%s SUMMARY", edgeTypeStr.toUpperCase()));
+
+        if ((edgeType == SynonymEdge.class && !features.contains(Feature.SYNONYMS))
+            || (edgeType == ContextEdge.class && !features.contains(Feature.CONTEXT))) {
+            summary.add("Feature disabled in this index");
+            return summary;
         }
 
-        Map<Integer, Set<Integer>> synToDocs = new HashMap<>();
+        Map<Integer, Set<Integer>> baseToDocs = new HashMap<>();
 
         // Iterate over all term nodes
-        for (int synTermNodeID : graph.getVertices()) {
-            Node synTermNode = nodeIndex.getKey(synTermNodeID);
-            if (synTermNode instanceof TermNode) {
+        for (int baseTermNodeID : graph.getVertices()) {
+            Node baseTermNode = nodeIndex.getKey(baseTermNodeID);
+            if (baseTermNode instanceof TermNode) {
                 // Iterate over all synonym hyperedges leaving term node (i.e., term node is a synonym)
-                for (int synEdgeID : graph.getOutEdges(synTermNodeID)) {
-                    Edge synEdge = edgeIndex.getKey(synEdgeID);
-                    if (synEdge instanceof SynonymEdge) {
-                        int termNodeID = graph.getUndirectedHyperEdgeVertices(synEdgeID).getGreatest();
-                        Node termNode = nodeIndex.getKey(termNodeID);
+                for (int baseEdgeID : graph.getOutEdges(baseTermNodeID)) {
+                    Edge baseEdge = edgeIndex.getKey(baseEdgeID);
+                    if (edgeType.isInstance(baseEdge)) {
+                        int neighborNodeID = graph.getUndirectedHyperEdgeVertices(baseEdgeID).getGreatest();
+                        Node neighborNode = nodeIndex.getKey(neighborNodeID);
 
-                        if (termNode instanceof TermNode) {
+                        if (nodeType.isInstance(neighborNode)) {
                             // Obtain term node document neighbors
-                            for (int docNodeID : graph.getInNeighbors(termNodeID)) {
+                            for (int docNodeID : graph.getInNeighbors(neighborNodeID)) {
                                 Node docNode = nodeIndex.getKey(docNodeID);
                                 if (docNode instanceof DocumentNode) {
-                                    synToDocs.computeIfAbsent(synTermNodeID, k ->
+                                    baseToDocs.computeIfAbsent(baseTermNodeID, k ->
                                             new HashSet<>(Collections.singletonList(docNodeID)));
-                                    synToDocs.computeIfPresent(synTermNodeID, (k, v) -> {
+                                    baseToDocs.computeIfPresent(baseTermNodeID, (k, v) -> {
                                         v.add(docNodeID);
                                         return v;
                                     });
@@ -1047,22 +1103,22 @@ public class HypergraphOfEntityInMemory extends Engine {
             }
         }
 
-        long pathsBetweenDocs = synToDocs.entrySet().stream()
+        long pathsBetweenDocs = baseToDocs.entrySet().stream()
                 .filter(entry -> entry.getValue().size() > 1)
                 .count();
 
-        synonyms.add("%10d paths established between documents", pathsBetweenDocs);
+        summary.add("%10d paths established between documents", pathsBetweenDocs);
 
-        IntSummaryStatistics statsLinkedDocsPerSyn = synToDocs.values().stream()
-                .mapToInt(docSet -> docSet.size())
+        IntSummaryStatistics statsLinkedDocsPerEdgeType = baseToDocs.values().stream()
+                .mapToInt(Set::size)
                 .summaryStatistics();
 
-        synonyms.add("%10.2f documents linked on average per synonym", statsLinkedDocsPerSyn.getAverage());
-        synonyms.goDown();
-        synonyms.add("%10d minimum documents linked per synonym", statsLinkedDocsPerSyn.getMin());
-        synonyms.add("%10d maximum documents linked per synonym", statsLinkedDocsPerSyn.getMax());
+        summary.add("%10.2f documents linked on average per %s", statsLinkedDocsPerEdgeType.getAverage(), edgeTypeStr);
+        summary.goDown();
+        summary.add("%10d minimum documents linked per %s", statsLinkedDocsPerEdgeType.getMin(), edgeTypeStr);
+        summary.add("%10d maximum documents linked per %s", statsLinkedDocsPerEdgeType.getMax(), edgeTypeStr);
 
-        return synonyms;
+        return summary;
     }
 
     @Override
@@ -1072,7 +1128,9 @@ public class HypergraphOfEntityInMemory extends Engine {
         if (feature.equals("summary")) {
             trace = getSummary();
         } else if (feature.equals("synonym-summary")) {
-            trace = getSynonymSummary();
+            trace = getSummaryByUndirectedEdgeType(TermNode.class, SynonymEdge.class);
+        } else if (feature.equals("context-summary")) {
+            trace = getSummaryByUndirectedEdgeType(TermNode.class, ContextEdge.class);
         } else {
             valid = false;
         }

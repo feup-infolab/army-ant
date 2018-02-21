@@ -153,6 +153,10 @@ li.collapsibleListClosed {
   cursor: pointer;
 }
 
+.modal.modal-wide.active .modal-container, .modal.modal-wide:target .modal-container {
+  max-width: 960px !important;
+}
+
 .trace {
   font-size: 0.7rem;
 }

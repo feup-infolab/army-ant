@@ -1,4 +1,4 @@
-<div class="modal generate" data-download-url="{{ app.router['evaluation_download'].url_for() }}">
+<div class="modal modal-wide generate" data-download-url="{{ app.router['evaluation_download'].url_for() }}">
   <div class="modal-overlay"></div>
   <div class="modal-container">
     <div class="modal-header">
@@ -39,24 +39,46 @@
           {% set metrics_length = metrics.all|length %}
           <div class="columns metrics">
             <div class="column">
-              {% for metric in metrics.all[0:(metrics_length//2)] %}
-              <div class="form-group">
-                <label class="form-checkbox">
-                  <input class="toggle-metric-checkbox" type="checkbox" checked="checked" value="{{ metric }}">
-                  <i class="form-icon"></i> {{ metric }}
-                </label>
-              </div>
+              {% for metric in metrics.all[0:(metrics_length//4)] %}
+                <div class="form-group">
+                  <label class="form-checkbox">
+                    <input class="toggle-metric-checkbox" type="checkbox" checked="checked" value="{{ metric }}">
+                    <i class="form-icon"></i> {{ metric }}
+                  </label>
+                </div>
               {% endfor %}
             </div>
 
             <div class="column">
-              {% for metric in metrics.all[(metrics_length//2+1):metrics_length] %}
-              <div class="form-group">
-                <label class="form-checkbox">
-                  <input type="checkbox" checked="checked" value="{{ metric }}">
-                  <i class="form-icon"></i> {{ metric }}
-                </label>
-              </div>
+              {% for metric in metrics.all[(metrics_length//4):(metrics_length//4 * 2)] %}
+                <div class="form-group">
+                  <label class="form-checkbox">
+                    <input type="checkbox" checked="checked" value="{{ metric }}">
+                    <i class="form-icon"></i> {{ metric }}
+                  </label>
+                </div>
+              {% endfor %}
+            </div>
+
+            <div class="column">
+              {% for metric in metrics.all[(metrics_length//4 * 2):(metrics_length//4 * 3)] %}
+                <div class="form-group">
+                  <label class="form-checkbox">
+                    <input type="checkbox" checked="checked" value="{{ metric }}">
+                    <i class="form-icon"></i> {{ metric }}
+                  </label>
+                </div>
+              {% endfor %}
+            </div>
+
+            <div class="column">
+              {% for metric in metrics.all[(metrics_length//4 * 3):metrics_length] %}
+                <div class="form-group">
+                  <label class="form-checkbox">
+                    <input type="checkbox" checked="checked" value="{{ metric }}">
+                    <i class="form-icon"></i> {{ metric }}
+                  </label>
+                </div>
               {% endfor %}
             </div>
           </div>
