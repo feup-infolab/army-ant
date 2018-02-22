@@ -280,7 +280,7 @@ async def evaluation_download(request):
     if metrics is None: return web.HTTPNotFound()
 
     headers = headers.split(',') if headers else None
-    metrics = metrics.split(',')
+    metrics = metrics.split(',') if metrics else None
     decimals = int(request.GET.get('decimals', '4'))
     fmt = request.GET.get('fmt', 'csv')
 

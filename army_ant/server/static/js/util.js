@@ -7,14 +7,16 @@ function round(value, decimals) {
   return Number(Math.round(value+'e'+decimals)+'e-'+decimals);
 }
 
-function getQueryStrings() { 
-  var assoc  = {};
-  var decode = function (s) { return decodeURIComponent(s.replace(/\+/g, " ")); };
-  var queryString = location.search.substring(1); 
-  var keyValues = queryString.split('&'); 
+function getQueryStrings() {
+  let assoc = {};
+  const decode = function (s) {
+    return decodeURIComponent(s.replace(/\+/g, " "));
+  };
+  let queryString = location.search.substring(1);
+  let keyValues = queryString.split('&');
 
-  for(var i in keyValues) { 
-    var key = keyValues[i].split('=');
+  for(let i in keyValues) {
+    let key = keyValues[i].split('=');
     if (key.length > 1) {
       assoc[decode(key[0])] = decode(key[1]);
     }

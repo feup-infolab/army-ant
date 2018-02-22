@@ -42,7 +42,6 @@ from army_ant.util import ranking_params_to_params_id, params_id_to_str, params_
 
 logger = logging.getLogger(__name__)
 
-
 class Evaluator(object):
     @staticmethod
     def factory(task, eval_location):
@@ -674,20 +673,20 @@ class EvaluationTaskManager(object):
         if len(tasks) < 1: return
 
         with tempfile.NamedTemporaryFile() as tmp_file:
-            columns = headers if headers else []
-            columns.extend(metrics)
+            columns = headers[:] if headers else []
+            if metrics: columns.extend(metrics)
             df = pd.DataFrame(columns=columns)
 
             for task in tasks:
                 task = EvaluationTask(**task)
                 for result in task.results.values():
-                    values = []
-                    if 'Run ID' in columns: values.append(task.run_id)
+                    values = [None] * len(headers)
+                    if 'Run ID' in columns: values[columns.index('Run ID')] = task.run_id
+                    if 'Type' in columns: values[columns.index('Type')] = task.index_type
                     if 'Parameters' in columns:
                         params_id = ranking_params_to_params_id(result['ranking_params'])
-                        values.append(params_id_to_str(params_id))
-                    if 'Type' in columns: values.append(task.index_type)
-                    if 'Location' in columns: values.append(task.index_location)
+                        values[columns.index('Parameters')] = params_id_to_str(params_id)
+                    if 'Location' in columns: values[columns.index('Location')] = task.index_location
                     values.extend([
                         result['metrics'][metric]
                         if metric in result['metrics'] and result['metrics'][metric] != '' else np.nan

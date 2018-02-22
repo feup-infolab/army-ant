@@ -154,7 +154,11 @@ li.collapsibleListClosed {
 }
 
 .modal.modal-wide.active .modal-container, .modal.modal-wide:target .modal-container {
-  max-width: 960px !important;
+  max-width: 960px;
+}
+
+.modal.modal-wide.active .modal-container .modal-body {
+  max-height: 70vh;
 }
 
 .trace {

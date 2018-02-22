@@ -1,4 +1,4 @@
-<div class="modal modal-wide generate" data-download-url="{{ app.router['evaluation_download'].url_for() }}">
+<div class="modal modal-wide active generate" data-download-url="{{ app.router['evaluation_download'].url_for() }}">
   <div class="modal-overlay"></div>
   <div class="modal-container">
     <div class="modal-header">
@@ -38,49 +38,16 @@
 
           {% set metrics_length = metrics.all|length %}
           <div class="columns metrics">
-            <div class="column">
-              {% for metric in metrics.all[0:(metrics_length//4)] %}
+            {% for metric in metrics.all %}
+              <div class="column col-3">
                 <div class="form-group">
                   <label class="form-checkbox">
                     <input class="toggle-metric-checkbox" type="checkbox" checked="checked" value="{{ metric }}">
                     <i class="form-icon"></i> {{ metric }}
                   </label>
                 </div>
-              {% endfor %}
-            </div>
-
-            <div class="column">
-              {% for metric in metrics.all[(metrics_length//4):(metrics_length//4 * 2)] %}
-                <div class="form-group">
-                  <label class="form-checkbox">
-                    <input type="checkbox" checked="checked" value="{{ metric }}">
-                    <i class="form-icon"></i> {{ metric }}
-                  </label>
-                </div>
-              {% endfor %}
-            </div>
-
-            <div class="column">
-              {% for metric in metrics.all[(metrics_length//4 * 2):(metrics_length//4 * 3)] %}
-                <div class="form-group">
-                  <label class="form-checkbox">
-                    <input type="checkbox" checked="checked" value="{{ metric }}">
-                    <i class="form-icon"></i> {{ metric }}
-                  </label>
-                </div>
-              {% endfor %}
-            </div>
-
-            <div class="column">
-              {% for metric in metrics.all[(metrics_length//4 * 3):metrics_length] %}
-                <div class="form-group">
-                  <label class="form-checkbox">
-                    <input type="checkbox" checked="checked" value="{{ metric }}">
-                    <i class="form-icon"></i> {{ metric }}
-                  </label>
-                </div>
-              {% endfor %}
-            </div>
+              </div>
+            {% endfor %}
           </div>
 
           <br>
@@ -105,16 +72,16 @@
               <div class="form-group">
                 <label class="form-label">Columns</label>
                 <label class="form-checkbox">
-                  <input type="checkbox" checked="checked" value="Run ID">
+                  <input type="checkbox" value="Run ID">
                   <i class="form-icon"></i> Run ID
+                </label>
+                <label class="form-checkbox">
+                  <input type="checkbox" checked="checked" value="Type">
+                  <i class="form-icon"></i> Type
                 </label>
                 <label class="form-checkbox">
                   <input type="checkbox" checked="checked" value="Parameters">
                   <i class="form-icon"></i> Parameters
-                </label>
-                <label class="form-checkbox">
-                  <input type="checkbox" value="Type">
-                  <i class="form-icon"></i> Type
                 </label>
                 <label class="form-checkbox">
                   <input type="checkbox" value="Location">
@@ -124,7 +91,9 @@
             </div>
           </div>
 
-          <div id="html-preview"></div>
+          <div id="html-preview">
+            <!-- Dynamically generated -->
+          </div>
         </div>
       </div>
     </div>
@@ -143,9 +112,9 @@
     }
 
     function addDecimalPlaces(n) {
-      var $decimals = $('#decimals-input');
-      var value = +$decimals.val();
-      var nextValue = value;
+      let $decimals = $('#decimals-input');
+      let value = +$decimals.val();
+      let nextValue = value;
 
       if (!isInteger(value)) {
         nextValue = 4;
@@ -160,8 +129,8 @@
       $decimals.val(nextValue);
     }
 
-    var incTimeoutID = 0;
-    var incIntervalID = 0;
+    let incTimeoutID = 0;
+    let incIntervalID = 0;
     $(document).on('mousedown mouseup', '#decimals-inc', function (e) {
       clearTimeout(incTimeoutID);
       if (e.type === 'mousedown') {
@@ -176,8 +145,8 @@
       }
     });
 
-    var decTimeoutID = 0;
-    var decIntervalID = 0;
+    let decTimeoutID = 0;
+    let decIntervalID = 0;
     $(document).on('mousedown mouseup', '#decimals-dec', function (e) {
       clearTimeout(decTimeoutID);
       if (e.type === 'mousedown') {
@@ -193,24 +162,24 @@
     });
 
     function downloadSummary($modal, format) {
-      var headers = $modal.find('.headers input[type="checkbox"]:checked')
+      let headers = $modal.find('.headers input[type="checkbox"]:checked')
         .map(function (index, item) {
           return $(item).val();
         })
         .toArray().join(',');
 
-      var metrics = $modal.find('.metrics input[type="checkbox"]:checked')
+      let metrics = $modal.find('.metrics input[type="checkbox"]:checked')
         .map(function (index, item) {
           return $(item).val();
         })
         .toArray().join(',');
 
-      var decimals = $modal.find('#decimals-input').val();
+      let decimals = $modal.find('#decimals-input').val();
       if (!format) format = $modal.find('input[name="format"]:checked').val();
 
-      var downloadURL = $modal.data('download-url');
+      let downloadURL = $modal.data('download-url');
 
-      var params = [];
+      let params = [];
       if (headers) params.push('headers=' + headers);
       if (metrics) params.push('metrics=' + metrics);
       if (decimals) params.push('decimals=' + decimals);
@@ -230,13 +199,13 @@
     }
 
     $(document).on('click', '#download-btn', function (e) {
-      var $modal = $(this).parents('.modal.generate');
+      let $modal = $(this).parents('.modal.generate');
       $('#html-preview').empty();
       downloadSummary($modal);
     });
 
     $(document).on('click', '#preview-btn', function (e) {
-      var $modal = $(this).parents('.modal.generate');
+      let $modal = $(this).parents('.modal.generate');
       downloadSummary($modal, 'html');
     });
 
@@ -258,13 +227,13 @@
     });
 
     $(document).on('click', '.select-favorite-metrics-btn', function (e) {
-      var favoriteMetrics = {{ metrics.favorite }};
+      let favoriteMetrics = {{ metrics.favorite }};
 
       $(this).parents('.modal')
         .find('.metrics input[type="checkbox"]')
         .prop('checked', false);
 
-      for (var i = 0; i < favoriteMetrics.length; i++) {
+      for (let i = 0; i < favoriteMetrics.length; i++) {
         $(this).parents('.modal')
           .find('.metrics input[type="checkbox"][value="' + favoriteMetrics[i] + '"]')
           .prop('checked', true);
