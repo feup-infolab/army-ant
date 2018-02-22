@@ -101,6 +101,16 @@
         $(document).on('click', '.global-message .btn-clear', function(e) {
           $(this).parent('.global-message').addClass('d-hide');
         });
+
+        $(document).on('keypress', function(e) {
+          if (e.keyCode === 27) {
+            $('.modal.active').removeClass('active');
+          }
+        });
+
+        $(document).on('click', '.modal-overlay', function(e) {
+          $('.modal.active').removeClass('active');
+        });
       })();
     </script>
   </body>
