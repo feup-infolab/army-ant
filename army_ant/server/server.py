@@ -44,6 +44,18 @@ def serialize_json(obj):
     return obj
 
 
+def ranking_model_page_exists(index_type):
+    current_dir = os.path.dirname(__file__)
+    path = os.path.join(current_dir, 'templates/search/debug/ranking_models/%s.html' % index_type)
+    return os.path.exists(path)
+
+
+def collection_page_exists(dataset):
+    current_dir = os.path.dirname(__file__)
+    path = os.path.join(current_dir, 'templates/search/debug/collections/%s.html' % dataset)
+    return os.path.exists(path)
+
+
 @aiohttp_jinja2.template('home.html')
 async def home(request):
     pass
@@ -161,7 +173,7 @@ async def evaluation_get(request):
         if hasattr(task, 'results'):
             first_item_metrics = next(iter(task.results.values()))["metrics"].keys()
             metrics = metrics.union([metric for metric in first_item_metrics])
-    return {'tasks': tasks, 'metrics': { 'all': sorted(metrics), 'favorite': favorite_metrics } }
+    return {'tasks': tasks, 'metrics': {'all': sorted(metrics), 'favorite': favorite_metrics}}
 
 
 async def evaluation_delete(request):
@@ -436,7 +448,12 @@ def run_app(loop, host, port, path=None):
     aiohttp_jinja2.setup(
         app,
         loader=jinja2.FileSystemLoader('army_ant/server/templates'),
-        filters={'timestamp_to_date': timestamp_to_date, 'params_id_to_str': params_id_to_str},
+        filters={
+            'timestamp_to_date': timestamp_to_date,
+            'params_id_to_str': params_id_to_str,
+            'ranking_model_page_exists': ranking_model_page_exists,
+            'collection_page_exists': collection_page_exists
+        },
         context_processors=[page_link, aiohttp_jinja2.request_processor])
 
     app.router.add_get('/', home, name='home')

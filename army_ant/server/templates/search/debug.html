@@ -80,7 +80,7 @@
 
       <div id="score-explanation" class="tab-content container d-hide">
         <div class="column">
-          {% if index_type in ['gow', 'goe', 'hgoe'] %}
+          {% if index_type|ranking_model_page_exists %}
           {% include 'search/debug/ranking_models/%s.html' % index_type %}
           {% else %}
           <span class="label label-warning">There is no information about this model.</span>
@@ -91,7 +91,7 @@
       <div id="dataset" class="tab-content d-hide">
         <div class="container">
           <div class="column">
-            {% if dataset in ['wikipedia_data', 'inex'] %}
+            {% if dataset|collection_page_exists %}
             {% include 'search/debug/collections/%s.html' % dataset %}
             {% else %}
             <span class="label label-warning">There is no information about this collection.</span>
