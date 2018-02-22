@@ -68,6 +68,8 @@ async def search(request):
     engine = request.GET.get('engine')
     if engine is None: engine = list(request.app['engines'].keys())[0]
 
+    index_features = request.app['engines'][engine].get('features', [])
+
     ranking_function = request.GET.get('ranking_function')
     if ranking_function is None:
         ranking_function = request.app['engines'][engine].get('ranking', {}).get('default', {}).get('id')
@@ -130,6 +132,7 @@ async def search(request):
     if error:
         response = {
             'engine': engine,
+            'index_features': index_features,
             'query': query,
             'debug': debug,
             'time': end_time - start_time,
@@ -138,6 +141,7 @@ async def search(request):
     else:
         response = {
             'engine': engine,
+            'index_features': index_features,
             'rankingFunction': ranking_function,
             'rankingParams': ranking_params,
             'query': query,

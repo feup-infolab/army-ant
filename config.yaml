@@ -215,6 +215,8 @@ engines:
       type: hgoe:syns
       location: /opt/army-ant/data/inex-3t-nl/hgoe-syns
       preload: false
+    features:
+      - syns
     ranking:
       default:
         id: random_walk
@@ -238,6 +240,8 @@ engines:
       type: hgoe:context
       location: /opt/army-ant/data/inex-3t-nl/hgoe-context-52t-nl
       preload: false
+    features:
+      - context
     ranking:
       default:
         id: random_walk
@@ -261,6 +265,9 @@ engines:
       type: hgoe:syns:context
       location: /opt/army-ant/data/inex-3t-nl/hgoe-syns-context-52t-nl
       preload: false
+    features:
+      - context
+      - syns
     ranking:
       default:
         id: random_walk

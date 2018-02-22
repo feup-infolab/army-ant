@@ -1,41 +1,90 @@
 <dl>
   <dt>Representation Model</dt>
   <dd>
-    The data is represted using a hypergraph with three types of nodes &mdash; <span class="label label-secondary">document node</span>; <span class="label label-secondary">term node</span>; <span class="label label-secondary">entity node</span> &mdash; and three types of hyperedges &mdash; <span class="label label-secondary">document edge</span>, linking all terms and entities mentioned in a document; <span class="label label-secondary">contained_in edge</span>, linking a set of term nodes to an entity node; <span class="label label-secondary">related_to edge</span>, linking an entity node to a set of related entity nodes.
+    The data is represted using a hypergraph with three types of nodes &mdash;
+    <span class="label label-secondary">document node</span>;
+    <span class="label label-secondary">term node</span>; <span class="label label-secondary">entity node</span> &mdash;
+    and three types of hyperedges &mdash; <span class="label label-secondary">document edge</span> (directed), linking
+    the document to all terms and entities mentioned in a document;
+    <span class="label label-secondary">contained_in edge</span> (directed), linking a set of term nodes to an entity
+    node; <span class="label label-secondary">related_to edge</span> (undirected), linking an entity node to a set of
+    related entity nodes.
   </dd>
 
   Optionally, the index can be expanded with several features, including:
 
   <dl>
-    <dt>Synonyms</dt>
+    <dt>
+      Synonyms
+      {% if 'syns' in index_features %}
+        <small><span class="label text-sm label-rounded label-success">Enabled</span></small>
+      {% else %}
+        <small><span class="label label-sm label-rounded label-error">Disabled</span></small>
+      {% endif %}
+    </dt>
     <dd>
-
+      The synsets from WordNet are used to expand terms that are part of the corpus vocabulary, by adding an undirected
+      hyperedge <span class="label label-secondary">synonym edge</span>, linking sets of synonyms.
     </dd>
 
-    <dt>Context</dt>
+    <dt>
+      Context
+      {% if 'context' in index_features %}
+        <small><span class="label label-sm label-rounded label-success">Enabled</span></small>
+      {% else %}
+        <small><span class="label label-sm label-rounded label-error">Disabled</span></small>
+      {% endif %}
+    </dt>
     <dd>
+      <p>
+        We consider word context by extracting a word2vec simnet. We first obtain word embeddings of size 100 based on
+        sliding windows of length 5, using word2vec. We then use a $k$-NN approach to find the two nearest neighbors
+        based on the embeddings. We only create an edge between two neighboring words when the cosine similarity is over
+        0.5. We integrate the word2vec simnet (an unweighted, undirected graph) into the hypergraph-of-entity by adding
+        an undirected hyperedge <span class="label label-secondary">context edge</span>, linking each word to all of its
+        neighbors.
+      </p>
 
+      <p>
+        <mark>Under revision:</mark>
+        When Context is enabled with Synonyms, any word that is a synonym is also considered for establishing links to
+        its contextually similar words. We should test which is best: to create context edges only for vocabulary terms
+        or also for synonym terms.
+      </p>
     </dd>
   </dl>
 
   <dt>Ranking Model</dt>
   <dd>
-    The ranking approach consists of mapping the query terms into the corresponding term nodes, when they exist. Then, we expand to adjacent entities, with a given confidence weight of it being a good representative of the query; whenever no linked entities exist, the term node is used instead, with maximal confidence weight. These nodes that represent the query in the hypergraph are called seed nodes. Several strategies are then implemented based on these seed nodes.
-    
+    The ranking approach consists of mapping the query terms into the corresponding term nodes, when they exist. Then,
+    we expand to adjacent entities, with a given confidence weight of it being a good representative of the query;
+    whenever no linked entities exist, the term node is used instead, with maximal confidence weight. These nodes that
+    represent the query in the hypergraph are called seed nodes. Several strategies are then implemented based on these
+    seed nodes.
+
     <dl>
       <dt>Random Walk Score</dt>
       <dd>
-        Assuming a random walk of a given length $\ell$ and a given number of repeats $r$, we issue $r = {{ rankingParams['r'] }}$ random walks of length $\ell = {{ rankingParams['l'] }}$ from each seed node. The visits to each traversed node are accumulated per seed node, multiplied by the seed node confidence weight, and summed. This results in a non-determinist search process that improves effectiveness for higher values of $r$ and needs to tune $\ell$ based on the diameter of the hypergraph &mdash; for low values of $\ell$, there is not enough information, while values of $\ell$ that are too high will account for irrelevant information.
+        Assuming a random walk of a given length $\ell$ and a given number of repeats $r$, we issue $r
+        = {{ rankingParams['r'] }}$ random walks of length $\ell = {{ rankingParams['l'] }}$ from each seed node. The
+        visits to each traversed node are accumulated per seed node, multiplied by the seed node confidence weight, and
+        summed. This results in a non-determinist search process that improves effectiveness for higher values of $r$
+        and needs to tune $\ell$ based on the diameter of the hypergraph &mdash; for low values of $\ell$, there is not
+        enough information, while values of $\ell$ that are too high will account for irrelevant information.
       </dd>
 
       <dt>Jaccard Score</dt>
       <dd>
-        Given the hypergraph nature of the representation, where hyperedges are sets of nodes, the <a href="https://en.wikipedia.org/wiki/Jaccard_index">Jaccard index</a> can be used as a structural similarity metric. We implement this by ranking each entity node based on the sum of the Jaccard indexes between the nodes incident to a rankable node and the nodes incident to each seed node, multiplied by the seed confidence weight.
+        Given the hypergraph nature of the representation, where hyperedges are sets of nodes, the <a
+          href="https://en.wikipedia.org/wiki/Jaccard_index">Jaccard index</a> can be used as a structural similarity
+        metric. We implement this by ranking each entity node based on the sum of the Jaccard indexes between the nodes
+        incident to a rankable node and the nodes incident to each seed node, multiplied by the seed confidence weight.
       </dd>
 
       <dt>Entity Weight</dt>
       <dd>
-        Analogous to the entity weight implemented in the graph-of-entity. Implemented using either the original <code>ALL_PATHS</code> implementation or the <code>DIJKSTRA</code> shortest paths instead.
+        Analogous to the entity weight implemented in the graph-of-entity. Implemented using either the original <code>ALL_PATHS</code>
+        implementation or the <code>DIJKSTRA</code> shortest paths instead.
       </dd>
     </dl>
   </dd>
@@ -45,6 +94,6 @@
 
   <dt>Paper</dt>
   <dd>
-    <span class="label label-warning">TODO</span>
+    <span class="label label-rounded label-warning">TODO</span>
   </dd>
 </dl>
