@@ -42,6 +42,7 @@ from army_ant.util import ranking_params_to_params_id, params_id_to_str, params_
 
 logger = logging.getLogger(__name__)
 
+
 class Evaluator(object):
     @staticmethod
     def factory(task, eval_location):
@@ -341,7 +342,9 @@ class INEXEvaluator(FilesystemEvaluator):
             if not params_id in self.results: self.results[params_id] = {'ranking_params': ranking_params,
                                                                          'metrics': {}}
             self.results[params_id]['metrics']['MAP'] = safe_div(sum(avg_precisions), len(avg_precisions))
-            self.results[params_id]['metrics']['GMAP'] = math.sqrt(np.prod(avg_precisions))
+            # This is an approximation of np.prod(avg_precision)**(1/len(avg_precision)) that works with zero values.
+            self.results[params_id]['metrics']['GMAP'] = np.exp(
+                np.mean(np.log(np.array(avg_precisions) + 1e-20))) - 1e-20
 
     def calculate_normalized_discounted_cumulative_gain_at_p(self, p=10, ranking_params=None):
         params_id = ranking_params_to_params_id(ranking_params)
@@ -706,14 +709,16 @@ class EvaluationTaskManager(object):
                     if not metric in df: continue
                     max_idx = df[metric].idxmax()
                     df.loc[max_idx, metric] = '{\\bf %s}' % float_format(df[metric][max_idx])
-                    df.loc[~df.index.isin([max_idx]), metric] = df.loc[~df.index.isin([max_idx]), metric].apply(float_format)
+                    df.loc[~df.index.isin([max_idx]), metric] = df.loc[~df.index.isin([max_idx]), metric].apply(
+                        float_format)
                 tmp_file.write(df.to_latex(index=False, escape=False).encode('utf-8'))
             elif fmt == 'html':
                 for metric in metrics:
                     if not metric in df: continue
                     max_idx = df[metric].idxmax()
                     df.loc[max_idx, metric] = '<b>%s</b>' % float_format(df[metric][max_idx])
-                    df.loc[~df.index.isin([max_idx]), metric] = df.loc[~df.index.isin([max_idx]), metric].apply(float_format)
+                    df.loc[~df.index.isin([max_idx]), metric] = df.loc[~df.index.isin([max_idx]), metric].apply(
+                        float_format)
                 tmp_file.write(df.to_html(
                     index=False,
                     escape=False,

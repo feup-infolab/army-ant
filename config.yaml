@@ -283,6 +283,32 @@ engines:
             l: [1, 2, 3, 4, 5, 6]
             r: [10, 100, 250, 500, 750, 1000]
 
+  hgoe-context-52t-nl-syns-inex-3t-nl:
+    name: INEX 3T-NL - Hypergraph-of-Entity (Context 52T-NL; Synonyms)
+    db:
+      name: aa_inex
+    index:
+      type: hgoe:context:syns
+      location: /opt/army-ant/data/inex-3t-nl/hgoe-context-52t-nl-syns
+      preload: false
+    features:
+      - context
+      - syns
+    ranking:
+      default:
+        id: random_walk
+        params:
+          l: 3
+          r: 100
+      functions:
+        jaccard:
+          name: Jaccard Score
+        random_walk:
+          name: Random Walk Score
+          params:
+            l: [1, 2, 3, 4, 5, 6]
+            r: [10, 100, 250, 500, 750, 1000]
+
   lucene-inex-3t-nl:
     name: INEX 3T-NL - Lucene
     db:
