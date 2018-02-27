@@ -374,8 +374,18 @@ public class HypergraphOfEntityInMemory extends Engine {
     @Override
     public void postProcessing() throws Exception {
         linkTextAndKnowledge();
-        if (features.contains(Feature.SYNONYMS)) linkSynonyms();
-        if (features.contains(Feature.CONTEXT)) linkContextuallySimilarTerms();
+
+        for (Feature feature : features) {
+            switch (feature) {
+                case SYNONYMS:
+                    linkSynonyms();
+                    break;
+                case CONTEXT:
+                    linkContextuallySimilarTerms();
+                    break;
+            }
+        }
+
         createReachabilityIndex();
     }
 
