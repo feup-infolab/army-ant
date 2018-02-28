@@ -1,39 +1,46 @@
-# Let's keep it small with alpine
-FROM alpine
+# I would use Alpine, if I could compile igraph without glibc...
+FROM debian:stretch
 
 # Build configurations
 ENV host 0.0.0.0
 ENV port 8080
+ENV user army-ant
 
-# Install run and compile time dependencies
-RUN apk add --no-cache -U nodejs-npm git python3 libpq libxml2 libxslt openblas openjdk8-jre
-RUN apk add --no-cache --virtual .build-deps gcc g++ python3-dev musl-dev postgresql-dev libxml2-dev libxslt-dev openblas-dev make
+# Prepare working directory
+RUN useradd -m ${user}
+ENV HOME /home/${user}
+WORKDIR $HOME
 
-# Create a directory to put stuff
-RUN mkdir army-ant
-WORKDIR army-ant
+# Install system dependencies
+RUN echo deb http://deb.debian.org/debian/ jessie-backports main >> /etc/apt/sources.list
+RUN apt-get update
+RUN apt-get -y install build-essential gcc make curl git openjdk-8-jre gnupg libssl1.0.0 wordnet \
+    zlib1g-dev libbz2-dev libreadline-dev libssl-dev libsqlite3-dev libxml2-dev
 
-# Install node dependencies
+# Install node and dependencies
+RUN curl -sL https://deb.nodesource.com/setup_8.x | bash -
+RUN apt-get -y install nodejs
 COPY package.json .
 COPY package-lock.json .
 RUN npm install && npm cache clean --force
 
-# Install python dependencies
+# Install python and dependencies
+ENV PYENV_ROOT $HOME/.pyenv
+ENV PATH $PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH
+RUN git clone git://github.com/yyuu/pyenv.git $HOME/.pyenv
+COPY .python-version .
+RUN pyenv install
+RUN pyenv rehash
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Remove compile time dependencies
-RUN apk --purge del .build-deps
-
-# Link the right files to the right places
-RUN ln -s /usr/bin/python3 /usr/local/bin/python
-ENV LD_LIBRARY_PATH /usr/lib/jvm/java-1.8-openjdk/jre/lib/amd64/server
+#ENV LD_LIBRARY_PATH /usr/lib/jvm/java-1.8-openjdk/jre/lib/amd64/server
 
 # Download and install WordNet 3.0
-RUN wget http://wordnetcode.princeton.edu/3.0/WNdb-3.0.tar.gz
-RUN tar xvzf WNdb-3.0.tar.gz
-RUN mv dict /usr/share/wordnet
-RUN rm -f WNdb-3.0.tar.gz
+#RUN wget http://wordnetcode.princeton.edu/3.0/WNdb-3.0.tar.gz
+#RUN tar xvzf WNdb-3.0.tar.gz
+#RUN mv dict /usr/share/wordnet
+#RUN rm -f WNdb-3.0.tar.gz
 
 # Copy code, configuration and data
 COPY . .

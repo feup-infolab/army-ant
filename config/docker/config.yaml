@@ -4,6 +4,12 @@ defaults:
     name: army_ant
     type: mongo
   eval:
+    metrics:
+      favorite:
+        - GMAP
+        - MAP
+        - NDCG@10
+        - P@10
     location: /opt/army-ant/eval
   jvm:
     memory: 5120
@@ -40,7 +46,7 @@ engines:
       name: inex
     index:
       type: hgoe
-      location: /opt/army-ant/data/inex-3t-nl/hypergraph-of-entity
+      location: /opt/army-ant/data/inex-3t-nl/hgoe
       preload: true
     ranking:
       default:
