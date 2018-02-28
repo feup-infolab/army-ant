@@ -1217,31 +1217,6 @@ public class HypergraphOfEntityInMemory extends Engine {
         }
     }
 
-    public void printStatistics() {
-        long numNodes = graph.getNumberOfVertices();
-        long numEdges = graph.getNumberOfEdges();
-
-        System.out.println("Nodes: " + numNodes);
-        System.out.println("Edges: " + numEdges);
-    }
-
-    public void printNodes() {
-        for (int nodeID : graph.getVertices()) {
-            Node node = nodeIndex.getKey(nodeID);
-            System.out.println(String.format("%d\t%s - %s", nodeID, node.getName(), node.getClass().getSimpleName()));
-        }
-    }
-
-    public void printEdges() {
-        for (int edgeID : graph.getEdges()) {
-            IntSet tail = graph.getDirectedHyperEdgeTail(edgeID);
-            IntSet head = graph.getDirectedHyperEdgeHead(edgeID);
-            Edge edge = edgeIndex.getKey(edgeID);
-            System.out.println(String.format(
-                    "%d\t[%s] %s -> %s", edgeID, edge.getClass().getSimpleName(), tail, head));
-        }
-    }
-
     private enum PerSeedScoreMethod {
         DIJKSTA,
         ALL_PATHS
