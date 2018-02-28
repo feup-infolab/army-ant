@@ -172,7 +172,8 @@ class CommandLineInterface(object):
             return
 
         if interactive:
-            completer = SimpleCompleter([r'\quit', 'summary', 'synonym-summary', 'context-summary'])
+            completer = SimpleCompleter(
+                [r'\quit', 'summary', 'synonym-summary', 'context-summary', 'list-nodes', 'list-hyperedges'])
             readline.parse_and_bind("tab: complete")
             readline.set_completer(completer.complete)
             readline.set_completer_delims(readline.get_completer_delims().replace('\\', ''))

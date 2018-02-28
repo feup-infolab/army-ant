@@ -1131,6 +1131,66 @@ public class HypergraphOfEntityInMemory extends Engine {
         return summary;
     }
 
+    public Trace getNodeList() {
+        Trace summary = new Trace("Nodes");
+
+        Class[] nodeClasses = { DocumentNode.class, TermNode.class, EntityNode.class };
+
+        for (Class nodeClass : nodeClasses) {
+            summary.add(nodeClass.getSimpleName());
+            summary.goDown();
+
+            for (int nodeID : graph.getVertices()) {
+                Node node = nodeIndex.getKey(nodeID);
+                if (nodeClass.isInstance(node)) {
+                    summary.add("%10d %s", nodeID, node.getName());
+                }
+            }
+
+            summary.goUp();
+        }
+
+        return summary;
+    }
+
+    public Trace getHyperedgeList() {
+        Trace summary = new Trace("Hyperedges");
+
+        Class[] hyperedgeClasses = { DocumentEdge.class, RelatedToEdge.class, ContainedInEdge.class };
+
+        for (Class edgeClass : hyperedgeClasses) {
+            summary.add(edgeClass.getSimpleName());
+            summary.goDown();
+
+            for (int edgeID : graph.getEdges()) {
+                Edge edge = edgeIndex.getKey(edgeID);
+
+                if (edgeClass.isInstance(edge)) {
+                    if (graph.isDirectedHyperEdge(edgeID)) {
+                        Set<String> tail = graph.getDirectedHyperEdgeTail(edgeID).stream()
+                                .map(nodeID -> nodeIndex.getKey(nodeID).getName())
+                                .collect(Collectors.toSet());
+
+                        Set<String> head = graph.getDirectedHyperEdgeHead(edgeID).stream()
+                                .map(nodeID -> nodeIndex.getKey(nodeID).getName())
+                                .collect(Collectors.toSet());
+
+                        summary.add("%10d %s -> %s", edgeID, tail, head);
+                    } else {
+                        Set<String> nodes = graph.getUndirectedHyperEdgeVertices(edgeID).stream()
+                                .map(nodeID -> nodeIndex.getKey(nodeID).getName())
+                                .collect(Collectors.toSet());
+                        summary.add("%10d %s", edgeID, nodes);
+                    }
+                }
+            }
+
+            summary.goUp();
+        }
+
+        return summary;
+    }
+
     @Override
     public void inspect(String feature) {
         boolean valid = true;
@@ -1141,6 +1201,10 @@ public class HypergraphOfEntityInMemory extends Engine {
             trace = getSummaryByUndirectedEdgeType(TermNode.class, SynonymEdge.class);
         } else if (feature.equals("context-summary")) {
             trace = getSummaryByUndirectedEdgeType(TermNode.class, ContextEdge.class);
+        } else if (feature.equals("list-nodes")) {
+            trace = getNodeList();
+        } else if (feature.equals("list-hyperedges")) {
+            trace = getHyperedgeList();
         } else {
             valid = false;
         }
