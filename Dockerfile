@@ -24,11 +24,6 @@ COPY package.json .
 COPY package-lock.json .
 RUN npm install && npm cache clean --force
 
-# Build java implementation and clean maven dependencies
-COPY external/java-impl external/java-impl
-RUN cd external/java-impl && mvn assembly:single
-RUN rm -rf $HOME/.m2
-
 # Install python and dependencies
 ENV PYENV_ROOT $HOME/.pyenv
 ENV PATH $PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH
@@ -38,6 +33,11 @@ RUN pyenv install
 RUN pyenv rehash
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Build java implementation and clean maven dependencies
+COPY external/java-impl external/java-impl
+RUN cd external/java-impl && mvn assembly:single
+RUN rm -rf $HOME/.m2
 
 # Copy code, configuration and data
 COPY . .
