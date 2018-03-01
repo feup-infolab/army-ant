@@ -386,7 +386,9 @@ public class HypergraphOfEntityInMemory extends Engine {
             }
         }
 
-        createReachabilityIndex();
+        // FIXME Requires too much memory to compute, but since it's only used for entityWeight, I disabled it.
+        // TODO Consider deprecating or completely removing entityWeight from HGoE.
+        //createReachabilityIndex();
     }
 
     @Override
