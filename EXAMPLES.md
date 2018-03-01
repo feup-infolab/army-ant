@@ -38,3 +38,23 @@ Since this is a Wikipedia collection and there is a `metadata.url` field in the 
 ```bash
 $ ./army-ant.py extras fetch-wikipedia-images --db-name=inex
 ```
+
+# Running an analysis method
+
+For example, we implemented an analysis for a random walk stability test, using [Kendall's coefficient of concordance (Kendall W)](https://en.wikipedia.org/wiki/Kendall%27s_W). Each analysis has its own command line arguments. In particular, for `rw-stability`, we run it using:
+
+```bash
+$ time ./army-ant.py analysis rw-stability \
+    --index-location /opt/army-ant/data/inex-3t-nl/hgoe \
+    --index-type hgoe \
+    --rw-length=2,3,4 \
+    --rw-repeats=100,1000,10000 \
+    --topics-path /opt/army-ant/collections/inex-2009-3t-nl/topics/2010-topics.xml \
+    --repeats 100 \
+    --output-path /opt/army-ant/analysis/inex_3t_nl-hgoe-rw_stability \
+    --method kendall_w
+    
+...
+
+???
+```

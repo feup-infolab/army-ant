@@ -178,6 +178,9 @@ class ResultSet(object):
                 key == 'trace' and self.trace or
                 key == 'traceASCII' and self.trace_ascii)
 
+    def __repr__(self):
+        return "[ %s ]" % ', '.join([str(result) for result in self.results])
+
 
 class ServiceIndex(Index):
     def __init__(self, reader, index_location, loop):

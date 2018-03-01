@@ -15,6 +15,7 @@ import tempfile
 import fire
 import yaml
 
+from army_ant.analysis import random_walk_concordance_test
 from army_ant.database import Database
 from army_ant.evaluation import EvaluationTask, EvaluationTaskManager
 from army_ant.exception import ArmyAntException
@@ -31,6 +32,19 @@ logging.basicConfig(
     level=logging.INFO)
 
 logger = logging.getLogger(__name__)
+
+
+class CommandLineInterfaceAnalysis(object):
+    def rw_stability(self, index_location, index_type, rw_length, rw_repeats, topics_path, output_path, repeats=1000,
+                     method='kendall_w'):
+        loop = asyncio.get_event_loop()
+        try:
+            loop.run_until_complete(
+                random_walk_concordance_test(index_location, index_type, rw_length, rw_repeats, topics_path,
+                                             output_path, repeats, method, loop))
+        finally:
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.close()
 
 
 class CommandLineInterfaceSampling(object):
@@ -98,6 +112,7 @@ class CommandLineInterface(object):
     def __init__(self):
         self.extras = CommandLineInterfaceExtras()
         self.sampling = CommandLineInterfaceSampling()
+        self.analysis = CommandLineInterfaceAnalysis()
 
     def index(self, source_path, source_reader, index_location, index_type, features_location=None,
               db_location='localhost', db_name=None, db_type='mongo', limit=None):
