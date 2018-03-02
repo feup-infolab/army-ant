@@ -7,7 +7,9 @@
 
 import hashlib
 import os
+from enum import Enum
 
+import pandas as pd
 from bs4 import BeautifulSoup
 
 
@@ -135,3 +137,32 @@ def interval_str_to_int_values(s):
                 by = int(end_by[1])
                 int_values.extend(list(range(start, end + 1, by)))
     return sorted(set(int_values))
+
+
+class FillMethod(Enum):
+    ZERO = 0
+    INC_MAX = 1
+
+
+def fill_missing(pd_dfs, key, **kwargs):
+    result = []
+    all_keys = set([])
+
+    for df in pd_dfs:
+        all_keys = all_keys.union(df[key])
+
+    for df in pd_dfs:
+        missing_keys = all_keys.difference(df[key])
+        missing_df = pd.DataFrame([missing_keys], index=[key]).T
+
+        for k, v in kwargs.items():
+            if v == FillMethod.ZERO:
+                missing_df[k] = 0
+            elif v == FillMethod.INC_MAX:
+                df_inc_max = df[k].max() + 1
+                missing_df[k] = range(df_inc_max, df_inc_max + len(missing_keys))
+
+        df = df.append(missing_df)
+        result.append(df)
+
+    return result

@@ -159,6 +159,16 @@ class ResultSet(object):
         self.trace = trace
         self.trace_ascii = trace_ascii
 
+    def __len__(self):
+        return len(self.results)
+
+    def __iter__(self):
+        self.iter = iter(self.results)
+        return self.iter
+
+    def __next__(self):
+        return next(self.iter)
+
     # For compatibility with external implementations depending on dictionaries
     def __getitem__(self, key):
         if key == 'results':

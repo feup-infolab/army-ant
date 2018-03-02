@@ -39,6 +39,7 @@ from army_ant.exception import ArmyAntException
 from army_ant.index import Index
 from army_ant.util import md5, get_first, zipdir, safe_div
 from army_ant.util import ranking_params_to_params_id, params_id_to_str, params_id_to_ranking_params
+from army_ant.util.stats import gmean
 
 logger = logging.getLogger(__name__)
 
@@ -343,8 +344,7 @@ class INEXEvaluator(FilesystemEvaluator):
                                                                          'metrics': {}}
             self.results[params_id]['metrics']['MAP'] = safe_div(sum(avg_precisions), len(avg_precisions))
             # This is an approximation of np.prod(avg_precision)**(1/len(avg_precision)) that works with zero values.
-            self.results[params_id]['metrics']['GMAP'] = np.exp(
-                np.mean(np.log(np.array(avg_precisions) + 1e-20))) - 1e-20
+            self.results[params_id]['metrics']['GMAP'] = gmean(avg_precisions)
 
     def calculate_normalized_discounted_cumulative_gain_at_p(self, p=10, ranking_params=None):
         params_id = ranking_params_to_params_id(ranking_params)

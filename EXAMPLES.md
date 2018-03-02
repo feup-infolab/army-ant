@@ -50,11 +50,12 @@ $ time ./army-ant.py analysis rw-stability \
     --rw-length=2,3,4 \
     --rw-repeats=100,1000,10000 \
     --topics-path /opt/army-ant/collections/inex-2009-3t-nl/topics/2010-topics.xml \
+    --limit 1000 \
     --repeats 100 \
     --output-path /opt/army-ant/analysis/inex_3t_nl-hgoe-rw_stability \
     --method kendall_w
     
 ...
 
-???
+3391.45s user 15.46s system 227% cpu 24:55.95 total
 ```

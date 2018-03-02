@@ -35,13 +35,13 @@ logger = logging.getLogger(__name__)
 
 
 class CommandLineInterfaceAnalysis(object):
-    def rw_stability(self, index_location, index_type, rw_length, rw_repeats, topics_path, output_path, repeats=1000,
-                     method='kendall_w'):
+    def rw_stability(self, index_location, index_type, rw_length, rw_repeats, topics_path, output_path, limit=1000,
+                     repeats=100, method='kendall_w', force=False):
         loop = asyncio.get_event_loop()
         try:
             loop.run_until_complete(
                 random_walk_concordance_test(index_location, index_type, rw_length, rw_repeats, topics_path,
-                                             output_path, repeats, method, loop))
+                                             output_path, limit, repeats, method, force, loop))
         finally:
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()
