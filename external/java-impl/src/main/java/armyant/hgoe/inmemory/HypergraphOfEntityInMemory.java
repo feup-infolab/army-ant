@@ -664,6 +664,8 @@ public class HypergraphOfEntityInMemory extends Engine {
         if (remainingSteps == 0) return;
 
         IntSet edgeIDs = graph.getOutEdges(nodeID);
+        if (edgeIDs.isEmpty()) return;
+
         int randomEdgeID = getRandom(edgeIDs);
 
         IntSet nodeIDs = new LucIntHashSet();
