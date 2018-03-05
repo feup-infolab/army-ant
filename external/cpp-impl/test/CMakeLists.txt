@@ -1,3 +1,3 @@
-add_executable(armyant_test test_armyant.cpp)
-target_link_libraries (armyant_test armyant)
-add_test(hello_test armyant_test)
+add_executable(test_armyant test_armyant.cpp)
+target_link_libraries(test_armyant armyant)
+add_test(hello_test test_armyant.cpp)
