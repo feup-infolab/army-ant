@@ -3,10 +3,10 @@
 #include <boost/python.hpp>
 
 namespace {
-    BOOST_PYTHON_MODULE (armyant) {
+    BOOST_PYTHON_MODULE (army_ant_cpp) {
         using namespace boost::python;
 
         class_<HypergraphOfEntity>("HypergraphOfEntity", init<>())
-                .def("test", &HypergraphOfEntity::test);
+                .def("index", &HypergraphOfEntity::index);
     }
 }
