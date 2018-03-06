@@ -1,16 +1,12 @@
-#include "armyant.h"
-
-#include <iostream>
+#include "hypergraph_of_entity.h"
 
 #include <boost/python.hpp>
 
-BOOST_PYTHON_MODULE (armyant) {
-    using namespace boost::python;
+namespace {
+    BOOST_PYTHON_MODULE (armyant) {
+        using namespace boost::python;
 
-    class_<HypergraphOfEntity>("HypergraphOfEntity", init<>())
-            .def("hello", &HypergraphOfEntity::hello);
-}
-
-void HypergraphOfEntity::hello() {
-    std::cout << "Hello, World!" << std::endl;
+        class_<HypergraphOfEntity>("HypergraphOfEntity", init<>())
+                .def("test", &HypergraphOfEntity::test);
+    }
 }
