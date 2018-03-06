@@ -9,14 +9,16 @@ ExternalProject_Add(hypergraph
   TEST_COMMAND      ""
 )
 
-find_package(PythonLibs)
-find_package(Boost 1.66.0 COMPONENTS python3)
+set(BOOST_ROOT /usr/local)
+
+find_package(PythonLibs 3.6)
+find_package(Boost COMPONENTS python3)
 
 include_directories(${Boost_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIR})
 
 add_library(armyant SHARED armyant.cpp ../include/armyant.h)
-target_link_libraries(armyant ${Boost_LIBRARIES})
+target_link_libraries(armyant ${Boost_LIBRARIES} ${PYTHON_LIBRARIES})
 
 set_target_properties(armyant PROPERTIES SUFFIX .so)
 set_target_properties(armyant PROPERTIES PREFIX "")
