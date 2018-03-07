@@ -2,7 +2,7 @@
 // Created by jldevezas on 3/6/18.
 //
 
-#include <node/node.h>
+#include <hgoe/nodes/node.h>
 
 Node::Node() {
     Node::name = "";

@@ -7,17 +7,22 @@
 
 #include <string>
 #include <set>
-#include <node/node.h>
+#include <hgoe/nodes/node.h>
 #include <boost/python/object.hpp>
+#include <hgoe/edges/edge.h>
 
 class Hypergraph {
 private:
     std::set<Node> nodes;
+    std::set<Edge> edges;
 public:
-    void index(boost::python::object document);
     Node getOrCreateNode(Node node);
 
     const std::set<Node> &getNodes() const;
+
+    Edge createEdge(Edge edge);
+
+    const std::set<Edge> &getEdges() const;
 };
 
 #endif //ARMYANT_HYPERGRAPH_H

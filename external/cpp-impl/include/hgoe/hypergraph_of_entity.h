@@ -8,14 +8,20 @@
 #include <Hypergraph/model/Hypergraphe.hh>
 #include <iostream>
 #include <boost/python/object.hpp>
+#include <engine.h>
+#include <structures/document.h>
 
-class HypergraphOfEntity {
+namespace py = boost::python;
+
+class HypergraphOfEntity : Engine {
 private:
     std::string str;
 public:
     HypergraphOfEntity();
 
-    void index(boost::python::object document);
+    void pyIndex(py::object document);
+
+    void index(Document document);
 };
 
 #endif //ARMYANT_HYPERGRAPH_OF_ENTITY_H

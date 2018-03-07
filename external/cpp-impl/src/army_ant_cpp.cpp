@@ -1,4 +1,4 @@
-#include "hypergraph_of_entity.h"
+#include "hgoe/hypergraph_of_entity.h"
 
 #include <boost/python.hpp>
 
@@ -7,6 +7,6 @@ namespace {
         using namespace boost::python;
 
         class_<HypergraphOfEntity>("HypergraphOfEntity", init<>())
-                .def("index", &HypergraphOfEntity::index);
+                .def("pyIndex", &HypergraphOfEntity::pyIndex);
     }
 }
