@@ -7,3 +7,7 @@
 DocumentNode::DocumentNode(std::string docID) : Node(docID) {
 
 }
+
+NodeLabel DocumentNode::label() {
+    return NodeLabel::DOCUMENT;
+}

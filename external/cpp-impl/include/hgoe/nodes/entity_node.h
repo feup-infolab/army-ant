@@ -12,9 +12,11 @@ class EntityNode : public Node {
 private:
     Document *document;
 public:
-    EntityNode(std::string name);
+    explicit EntityNode(std::string name);
 
     EntityNode(Document *document, std::string name);
+
+    NodeLabel label() override;
 };
 
 #endif //ARMY_ANT_CPP_ENTITY_NODE_H

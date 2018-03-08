@@ -11,6 +11,8 @@
 class TermNode : public Node {
 public:
     TermNode(std::string name);
+
+    NodeLabel label() override;
 };
 
 #endif //ARMY_ANT_CPP_TERM_NODE_H

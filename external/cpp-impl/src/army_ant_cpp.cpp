@@ -7,6 +7,7 @@ namespace {
         using namespace boost::python;
 
         class_<HypergraphOfEntity>("HypergraphOfEntity", init<>())
-                .def("index", &HypergraphOfEntity::pyIndex);
+                .def("index", &HypergraphOfEntity::pyIndex)
+                .def("post_processing", &HypergraphOfEntity::postProcessing);
     }
 }

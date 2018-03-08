@@ -35,3 +35,7 @@ bool Node::operator<=(const Node &rhs) const {
 bool Node::operator>=(const Node &rhs) const {
     return !(*this < rhs);
 }
+
+NodeLabel Node::label() {
+    return NodeLabel::DEFAULT;
+}

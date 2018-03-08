@@ -19,12 +19,15 @@ namespace py = boost::python;
 
 class HypergraphOfEntity : Engine {
 private:
+    std::string path;
     Hypergraph hg;
-    std::chrono::duration<long, std::ratio<1, 10000000000>> totalTime;
-    std::chrono::duration<long, std::ratio<1, 10000000000>> avgTimePerDocument;
+    std::chrono::milliseconds totalTime;
+    float avgTimePerDocument;
     unsigned int counter;
 public:
     HypergraphOfEntity();
+
+    explicit HypergraphOfEntity(std::string path);
 
     void pyIndex(py::object document);
 
@@ -33,6 +36,8 @@ public:
     void indexDocument(Document document);
 
     std::set<Node> indexEntities(Document document);
+
+    void postProcessing();
 
     void linkTextAndKnowledge();
 };

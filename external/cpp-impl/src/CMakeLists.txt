@@ -1,7 +1,19 @@
-find_package(PythonLibs)
-find_package(Boost COMPONENTS python3 log)
+ExternalProject_Add(hattrie
+    GIT_REPOSITORY https://github.com/Tessil/hat-trie.git
+    GIT_TAG v0.3.0
+    SOURCE_DIR "${CMAKE_BINARY_DIR}/hat-trie-src"
+    BINARY_DIR ""
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    INSTALL_COMMAND ""
+    TEST_COMMAND "")
 
-include_directories(${Boost_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
+set(hattrie_INCLUDE_DIRS ${CMAKE_BINARY_DIR}/hat-trie-src)
+
+find_package(PythonLibs)
+find_package(Boost COMPONENTS python3 log serialization)
+
+include_directories(${Boost_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS} ${hattrie_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIR})
 
 set(SRC
@@ -14,7 +26,7 @@ set(SRC
     hgoe/nodes/document_node.cpp
     hgoe/nodes/term_node.cpp
     hgoe/edges/edge.cpp
-    hgoe/edges/document_edge.cpp hgoe/nodes/term_node.cpp hgoe/nodes/entity_node.cpp hgoe/edges/related_to_edge.cpp)
+    hgoe/edges/document_edge.cpp hgoe/nodes/term_node.cpp hgoe/nodes/entity_node.cpp hgoe/edges/related_to_edge.cpp structures/entity.cpp hgoe/edges/contained_in_edge.cpp)
 
 set(INCLUDE
     ../include/engine.h
@@ -28,7 +40,7 @@ set(INCLUDE
     ../include/hgoe/edges/edge.h
     ../include/hgoe/edges/contained_in_edge.h
     ../include/hgoe/edges/related_to_edge.h
-    ../include/hgoe/edges/document_edge.h)
+    ../include/hgoe/edges/document_edge.h ../include/structures/entity.h)
 
 add_library(army_ant_cpp SHARED ${SRC} ${INCLUDE})
 target_link_libraries(army_ant_cpp ${Boost_LIBRARIES} ${PYTHON_LIBRARIES})

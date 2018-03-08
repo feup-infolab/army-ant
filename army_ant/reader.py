@@ -77,8 +77,8 @@ class Document(object):
         else:
             metadata = '\n'.join([str((k, v)) for k, v in self.metadata.items()])
 
-        return '-----------------\nDOC ID:\n%s\n\nTEXT:\n%s\n\nTRIPLES:\n%s\n\nMETADATA:\n%s\n-----------------\n' % (
-            self.doc_id, self.text, triples, metadata)
+        return '-----------------\nDOC ID:\n%s\n\nENTITY:\n%s\n\nTEXT:\n%s\n\nTRIPLES:\n%s\n\nMETADATA:\n%s\n-----------------\n' % (
+            self.doc_id, self.entity, self.text, triples, metadata)
 
 
 class Entity(object):

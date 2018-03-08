@@ -10,6 +10,8 @@
 class DocumentNode : public Node {
 public:
     DocumentNode(std::string docID);
+
+    NodeLabel label() override;
 };
 
 #endif //ARMY_ANT_CPP_DOCUMENT_NODE_H

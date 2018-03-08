@@ -7,9 +7,20 @@
 
 #include <set>
 #include <hgoe/nodes/node.h>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
 
 class Edge {
 private:
+    friend class boost::serialization::access;
+
+    template<class Archive>
+    void serialize(Archive &ar, unsigned int version) {
+        ar & edgeID;
+        ar & tail;
+        ar & head;
+    };
+
     unsigned int edgeID;
     std::set<Node> tail;
     std::set<Node> head;
@@ -18,7 +29,7 @@ protected:
 public:
     Edge();
 
-    Edge(std::set <Node> nodes);
+    explicit Edge(std::set <Node> nodes);
 
     Edge(std::set<Node> tail, std::set<Node> head);
 

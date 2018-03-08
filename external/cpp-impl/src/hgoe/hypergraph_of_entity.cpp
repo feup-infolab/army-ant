@@ -5,25 +5,37 @@
 #define BOOST_LOG_DYN_LINK 1
 
 #include <chrono>
-#include <hgoe/hypergraph_of_entity.h>
-#include <hgoe/nodes/node.h>
-#include <hgoe/hypergraph.h>
+
 #include <boost/log/trivial.hpp>
 #include <boost/python/extract.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/python/list.hpp>
 #include <boost/python/tuple.hpp>
+#include <utility>
+#include <tsl/htrie_map.h>
+#include <tsl/htrie_set.h>
+
+#include <structures/document.h>
+#include <structures/entity.h>
+#include <hgoe/hypergraph_of_entity.h>
+#include <hgoe/nodes/node.h>
+#include <hgoe/hypergraph.h>
 #include <hgoe/edges/document_edge.h>
 #include <hgoe/nodes/term_node.h>
 #include <hgoe/nodes/document_node.h>
-#include <structures/document.h>
 #include <hgoe/nodes/entity_node.h>
 #include <hgoe/edges/related_to_edge.h>
+#include <hgoe/edges/contained_in_edge.h>
 
 namespace py = boost::python;
 
 HypergraphOfEntity::HypergraphOfEntity() {
+
+}
+
+HypergraphOfEntity::HypergraphOfEntity(std::string path) {
+    this->path = path;
     this->hg = Hypergraph();
     this->totalTime = std::chrono::duration<long>();
     this->counter = 0;
@@ -50,34 +62,42 @@ void HypergraphOfEntity::pyIndex(py::object document) {
         py::list pyTriplesList = py::extract<py::list>(document.attr("triples"));
         while (py::len(pyTriplesList) > 0) {
             py::tuple pyTriple = py::extract<py::tuple>(pyTriplesList.pop());
-            std::string subj = py::extract<std::string>(pyTriple[0]);
+
+            py::object pySubj = py::extract<py::object>(pyTriple[0]);
+            std::string subj = py::extract<std::string>(pySubj.attr("label"));
+
             std::string pred = py::extract<std::string>(pyTriple[1]);
-            std::string obj = py::extract<std::string>(pyTriple[2]);
+
+            py::object pyObj = py::extract<py::object>(pyTriple[2]);
+            std::string obj = py::extract<std::string>(pyObj.attr("label"));
+
             triples.push_back(triple {subj, pred, obj});
         }
     }
 
     Document doc = Document(docID, entity, text, triples);
-    std::cout << doc << std::endl;
+    //std::cout << doc << std::endl;
     index(doc);
 }
 
 void HypergraphOfEntity::index(Document document) {
-    auto startTime = std::chrono::high_resolution_clock::now();
+    auto startTime = std::chrono::system_clock::now().time_since_epoch();
 
-    indexDocument(document);
+    indexDocument(std::move(document));
 
-    auto time = std::chrono::high_resolution_clock::now() - startTime;
+    auto endTime = std::chrono::system_clock::now().time_since_epoch();
+    auto time = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
     this->totalTime += time;
 
     this->counter++;
-    avgTimePerDocument = counter > 1 ? (avgTimePerDocument * (counter - 1) + time) / counter : time;
+    avgTimePerDocument =
+            counter > 1 ? (avgTimePerDocument * (counter - 1) + time.count()) / (float) counter : (float) time.count();
 
     if (counter % 100 == 0) {
         BOOST_LOG_TRIVIAL(info)
-            << counter << "indexed documents in" << totalTime.count()
-            << '(' << avgTimePerDocument.count()
-            << "/doc, " << counter * 3600000 / totalTime.count() << " docs/h)";
+            << counter << " indexed documents in " << totalTime.count() << "ms "
+            << '(' << avgTimePerDocument << " ms/doc, "
+            << counter * 3600000 / totalTime.count() << " docs/h)";
     }
 }
 
@@ -112,37 +132,35 @@ std::set<Node> HypergraphOfEntity::indexEntities(Document document) {
 }
 
 void HypergraphOfEntity::linkTextAndKnowledge() {
-    /*logger.info("Building trie from term nodes");
-    Trie.TrieBuilder
-    trieBuilder = Trie.builder()
-            .ignoreOverlaps()
-            .ignoreCase()
-            .onlyWholeWords();
+    tsl::htrie_set<char> trie = tsl::htrie_set<char>();
 
-    for (int termNodeID : graph.getVertices()) {
-        Node termNode = nodeIndex.getKey(termNodeID);
-        if (termNode instanceof TermNode) {
-            trieBuilder.addKeyword(termNode.getName());
-        }
+    BOOST_LOG_TRIVIAL(info) << "Building trie from term nodes";
+
+    for (auto node : this->hg.getNodes()) {
+        trie.insert(node.getName());
     }
 
-    Trie trie = trieBuilder.build();
+    BOOST_LOG_TRIVIAL(info) << "Creating links between entity nodes and term nodes using trie";
+    for (auto entityNode : this->hg.getNodes()) {
+        if (entityNode.label() == NodeLabel::ENTITY) {
+            std::vector<std::string> tokens = analyze(entityNode.getName());
+            std::set<Node> termNodes = std::set<Node>();
+            for (auto token : tokens) {
+                if (trie.find(token) != trie.end()) {
+                    auto optTermNode = this->hg.findNode(TermNode(token));
+                    if (optTermNode != this->hg.endNode()) {
+                        termNodes.insert(*optTermNode);
+                    }
+                }
+            }
 
-    logger.info("Creating links between entity nodes and term nodes using trie");
-    for (int entityNodeID : graph.getVertices()) {
-        Node entityNode = nodeIndex.getKey(entityNodeID);
-        if (entityNode instanceof EntityNode) {
-            Collection <Emit> emits = trie.parseText(entityNode.getName());
-            Set <Integer> termNodes = emits.stream()
-                    .map(e->nodeIndex.get(new TermNode(e.getKeyword())))
-                    .collect(Collectors.toSet());
+            if (termNodes.empty()) continue;
 
-            if (termNodes.isEmpty()) continue;
-
-            ContainedInEdge containedInEdge = new ContainedInEdge();
-            int edgeID = createDirectedEdge(containedInEdge);
-            addNodesToHyperEdgeTail(edgeID, termNodes);
-            graph.addToDirectedHyperEdgeHead(edgeID, entityNodeID);
+            this->hg.createEdge(ContainedInEdge(termNodes, {entityNode}));
         }
-    }*/
+    }
+}
+
+void HypergraphOfEntity::postProcessing() {
+    linkTextAndKnowledge();
 }

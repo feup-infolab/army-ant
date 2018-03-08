@@ -7,3 +7,7 @@
 TermNode::TermNode(std::string name) : Node(name) {
 
 }
+
+NodeLabel TermNode::label() {
+    return NodeLabel::TERM;
+}

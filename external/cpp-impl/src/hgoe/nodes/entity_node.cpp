@@ -11,3 +11,7 @@ EntityNode::EntityNode(std::string name) : Node(std::move(name)) {
 EntityNode::EntityNode(Document *document, std::string name) : Node(std::move(name)) {
     this->document = document;
 }
+
+NodeLabel EntityNode::label() {
+    return NodeLabel::ENTITY;
+}

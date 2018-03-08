@@ -8,6 +8,6 @@
 int main (int argc, char **argv)
 {
     std::cout << "==> Testing HypergraphOfEntity" << std::endl;
-    HypergraphOfEntity hg = HypergraphOfEntity();
+    HypergraphOfEntity hg = HypergraphOfEntity("/tmp/hgoe.idx");
     return 0;
 }
