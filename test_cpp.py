@@ -14,7 +14,7 @@ from army_ant_cpp import HypergraphOfEntity;
 hg = HypergraphOfEntity()
 hg.index(Document(doc_id="1", entity="História1",
                   text="Era uma vez uma coisa que eu queria tokenizer, mas convenientemente."))
-hg.index(Document(doc_id="3", entity="História2", triples=[("a", "b", "c"), ("c", "e", "f")]))
+hg.index(Document(doc_id="2", entity="História2", triples=[("a", "b", "c"), ("c", "e", "f")]))
 hg.index(
     Document(doc_id="3", entity="História3", text="Era uma vez uma coisa que eu queria tokenizer, mas convenientemente.",
              triples=[("a", "b", "c"), ("c", "e", "f")]))

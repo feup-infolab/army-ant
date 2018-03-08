@@ -39,3 +39,31 @@ bool Edge::operator<=(const Edge &rhs) const {
 bool Edge::operator>=(const Edge &rhs) const {
     return !(*this < rhs);
 }
+
+unsigned int Edge::getEdgeID() const {
+    return edgeID;
+}
+
+void Edge::setEdgeID(unsigned int edgeID) {
+    Edge::edgeID = edgeID;
+}
+
+const std::set<Node> &Edge::getTail() const {
+    return tail;
+}
+
+void Edge::setTail(const std::set<Node> &tail) {
+    Edge::tail = tail;
+}
+
+const std::set<Node> &Edge::getHead() const {
+    return head;
+}
+
+void Edge::setHead(const std::set<Node> &head) {
+    Edge::head = head;
+}
+
+bool Edge::isDirected() {
+    return !this->head.empty();
+}

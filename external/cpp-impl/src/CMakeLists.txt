@@ -14,7 +14,7 @@ set(SRC
     hgoe/nodes/document_node.cpp
     hgoe/nodes/term_node.cpp
     hgoe/edges/edge.cpp
-    hgoe/edges/document_edge.cpp hgoe/nodes/term_node.cpp)
+    hgoe/edges/document_edge.cpp hgoe/nodes/term_node.cpp hgoe/nodes/entity_node.cpp hgoe/edges/related_to_edge.cpp)
 
 set(INCLUDE
     ../include/engine.h

@@ -12,7 +12,7 @@ class DocumentEdge : public Edge {
 private:
     std::string docID;
 public:
-    DocumentEdge(std::set<Node> tail, std::set<Node> head);
+    explicit DocumentEdge(std::set<Node> tail, std::set<Node> head);
 
     DocumentEdge(std::string docID, std::set<Node> tail, std::set<Node> head);
 

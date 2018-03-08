@@ -2,6 +2,8 @@
 // Created by jldevezas on 3/6/18.
 //
 
+#define BOOST_LOG_DYN_LINK 1
+
 #include <chrono>
 #include <hgoe/hypergraph_of_entity.h>
 #include <hgoe/nodes/node.h>
@@ -15,6 +17,9 @@
 #include <hgoe/edges/document_edge.h>
 #include <hgoe/nodes/term_node.h>
 #include <hgoe/nodes/document_node.h>
+#include <structures/document.h>
+#include <hgoe/nodes/entity_node.h>
+#include <hgoe/edges/related_to_edge.h>
 
 namespace py = boost::python;
 
@@ -30,13 +35,13 @@ void HypergraphOfEntity::pyIndex(py::object document) {
     py::object pyText = py::extract<py::object>(document.attr("text"));
     std::string text;
     if (!pyText.is_none()) {
-        text = py::extract<std::string>(document.attr("text"));
+        text = py::extract<std::string>(pyText);
     }
 
     py::object pyEntity = py::extract<py::object>(document.attr("entity"));
     std::string entity;
     if (!pyEntity.is_none()) {
-        entity = py::extract<std::string>(document.attr("entity"));
+        entity = py::extract<std::string>(pyEntity);
     }
 
     py::object pyTriples = py::extract<py::object>(document.attr("triples"));
@@ -48,11 +53,13 @@ void HypergraphOfEntity::pyIndex(py::object document) {
             std::string subj = py::extract<std::string>(pyTriple[0]);
             std::string pred = py::extract<std::string>(pyTriple[1]);
             std::string obj = py::extract<std::string>(pyTriple[2]);
-            triples.push_back(std::make_tuple(subj, pred, obj));
+            triples.push_back(triple { subj, pred, obj });
         }
     }
 
-    index(Document(docID, entity, text, triples));
+    Document doc = Document(docID, entity, text, triples);
+    std::cout << doc << std::endl;
+    index(doc);
 }
 
 void HypergraphOfEntity::index(Document document) {
@@ -60,17 +67,18 @@ void HypergraphOfEntity::index(Document document) {
 
     indexDocument(document);
 
-    auto endTime = std::chrono::high_resolution_clock::now();
-    /*this->totalTime += endTime - startTime;
+    auto time = std::chrono::high_resolution_clock::now() - startTime;
+    this->totalTime += time;
 
     this->counter++;
     avgTimePerDocument = counter > 1 ? (avgTimePerDocument * (counter - 1) + time) / counter : time;
 
     if (counter % 100 == 0) {
-        BOOST_LOG_TRIVIAL(info) << counter << "indexed documents in" << totalTime.count() << '('
-                                << avgTimePerDocument.count()
-                                << "/doc, " << counter * 3600000 / totalTime.count() << " docs/h)";
-    }*/
+        BOOST_LOG_TRIVIAL(info)
+            << counter << "indexed documents in" << totalTime.count()
+            << '(' << avgTimePerDocument.count()
+            << "/doc, " << counter * 3600000 / totalTime.count() << " docs/h)";
+    }
 }
 
 
@@ -91,29 +99,16 @@ void HypergraphOfEntity::indexDocument(Document document) {
 }
 
 std::set<Node> HypergraphOfEntity::indexEntities(Document document) {
-    /*Set <Node> nodes = new HashSet<>();
+    std::set<Node> nodes = std::set<Node>();
 
-    for (Triple triple : document.getTriples()) {
-        nodes.add(new EntityNode(document, triple.getSubject()));
-        nodes.add(new EntityNode(document, triple.getObject()));
+    for (auto triple : document.getTriples()) {
+        nodes.insert(this->hg.getOrCreateNode(EntityNode(&document, triple.subject)));
+        nodes.insert(this->hg.getOrCreateNode(EntityNode(&document, triple.object)));
     }
 
-    Set <Integer> nodeIDs = new HashSet<>();
+    this->hg.createEdge(RelatedToEdge(nodes));
 
-    RelatedToEdge relatedToEdge = new RelatedToEdge();
-    int edgeID = createUndirectedEdge(relatedToEdge);
-
-    for (Node node : nodes) {
-        int entityNodeID = getOrCreateNode(node);
-        nodeIDs.add(entityNodeID);
-        synchronized(this)
-        {
-            graph.addToUndirectedHyperEdge(edgeID, entityNodeID);
-        }
-    }
-
-    return nodeIDs;*/
-    return std::set<Node>();
+    return nodes;
 }
 
 /*void linkTextAndKnowledge() {

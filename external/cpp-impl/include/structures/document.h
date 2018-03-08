@@ -8,8 +8,13 @@
 #include <string>
 #include <tuple>
 #include <vector>
+#include <ostream>
 
-typedef std::tuple <std::string, std::string, std::string> triple;
+typedef struct {
+    std::string subject;
+    std::string predicate;
+    std::string object;
+} triple;
 
 class Document {
 private:
@@ -42,6 +47,8 @@ public:
     const std::vector<triple> &getTriples() const;
 
     void setTriples(const std::vector<triple> &triples);
+
+    friend std::ostream &operator<<(std::ostream &os, const Document &document);
 };
 
 #endif //ARMY_ANT_CPP_DOCUMENT_H

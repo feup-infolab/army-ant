@@ -29,6 +29,20 @@ public:
     bool operator<=(const Edge &rhs) const;
 
     bool operator>=(const Edge &rhs) const;
+
+    unsigned int getEdgeID() const;
+
+    void setEdgeID(unsigned int edgeID);
+
+    const std::set<Node> &getTail() const;
+
+    void setTail(const std::set<Node> &tail);
+
+    const std::set<Node> &getHead() const;
+
+    void setHead(const std::set<Node> &head);
+
+    bool isDirected();
 };
 
 #endif //ARMY_ANT_CPP_EDGE_H

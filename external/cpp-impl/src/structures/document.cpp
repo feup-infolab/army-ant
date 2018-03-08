@@ -10,7 +10,7 @@ Document::Document(std::string docID, std::string entity, std::string text, std:
 }
 
 Document::Document(float *score, std::string docID, std::string entity, std::string text, std::vector<triple> triples) {
-    *this->score = *score;
+    this->score = score;
     this->docID = docID;
     this->entity = entity;
     this->text = text;
@@ -55,4 +55,28 @@ const std::vector<triple> &Document::getTriples() const {
 
 void Document::setTriples(const std::vector<triple> &triples) {
     Document::triples = triples;
+}
+
+std::ostream &operator<<(std::ostream &os, const Document &document) {
+    os << "{ ";
+
+    if (document.score != nullptr) {
+        os << "score: " << *document.score << std::endl << "  ";
+    }
+
+    os << "docID: " << document.docID << std::endl
+       << "  entity: " << document.entity << std::endl
+       << "  text: " << document.text;
+
+    if (!document.triples.empty()) {
+        os << std::endl << "  triples: ";
+
+        for (auto t : document.triples) {
+            os << std::endl << "    (" << t.subject << ", " << t.predicate << ", " << t.object << ')';
+        }
+    }
+
+    os << " }" << std::endl;
+
+    return os;
 }
