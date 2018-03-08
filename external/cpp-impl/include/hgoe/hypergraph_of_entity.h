@@ -33,6 +33,8 @@ public:
     void indexDocument(Document document);
 
     std::set<Node> indexEntities(Document document);
+
+    void linkTextAndKnowledge();
 };
 
 #endif //ARMYANT_HYPERGRAPH_OF_ENTITY_H

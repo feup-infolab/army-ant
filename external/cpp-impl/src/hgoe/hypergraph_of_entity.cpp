@@ -53,7 +53,7 @@ void HypergraphOfEntity::pyIndex(py::object document) {
             std::string subj = py::extract<std::string>(pyTriple[0]);
             std::string pred = py::extract<std::string>(pyTriple[1]);
             std::string obj = py::extract<std::string>(pyTriple[2]);
-            triples.push_back(triple { subj, pred, obj });
+            triples.push_back(triple {subj, pred, obj});
         }
     }
 
@@ -111,8 +111,8 @@ std::set<Node> HypergraphOfEntity::indexEntities(Document document) {
     return nodes;
 }
 
-/*void linkTextAndKnowledge() {
-    logger.info("Building trie from term nodes");
+void HypergraphOfEntity::linkTextAndKnowledge() {
+    /*logger.info("Building trie from term nodes");
     Trie.TrieBuilder
     trieBuilder = Trie.builder()
             .ignoreOverlaps()
@@ -144,5 +144,5 @@ std::set<Node> HypergraphOfEntity::indexEntities(Document document) {
             addNodesToHyperEdgeTail(edgeID, termNodes);
             graph.addToDirectedHyperEdgeHead(edgeID, entityNodeID);
         }
-    }
-}*/
+    }*/
+}
