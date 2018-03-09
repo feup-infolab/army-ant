@@ -10,6 +10,7 @@
 #include <hgoe/nodes/node.h>
 #include <boost/python/object.hpp>
 #include <hgoe/edges/edge.h>
+#include <boost/serialization/access.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/serialization/set.hpp>
@@ -24,26 +25,27 @@ private:
         ar & edges;
     };
 
-    std::set<Node> nodes;
-    std::set<Edge> edges;
+    // FIXME estes sets precisam de um comparador por valor para isto tudo funcionar!
+    std::set<Node *> nodes;
+    std::set<Edge *> edges;
 public:
-    Node getOrCreateNode(Node node);
+    Node *getOrCreateNode(Node *node);
 
-    std::set<Node>::iterator findNode(Node node);
+    unsigned long nodeCount();
 
-    std::set<Node>::iterator beginNode();
+    unsigned long edgeCount();
 
-    std::set<Node>::iterator endNode();
+    const std::set<Node *> &getNodes() const;
 
-    const std::set<Node> &getNodes() const;
+    Edge* createEdge(Edge *edge);
 
-    Edge createEdge(Edge edge);
-
-    const std::set<Edge> &getEdges() const;
+    const std::set<Edge *> &getEdges() const;
 
     void save(std::string path);
 
     static Hypergraph load(std::string path);
 };
+
+BOOST_CLASS_EXPORT_KEY(Hypergraph)
 
 #endif //ARMYANT_HYPERGRAPH_H

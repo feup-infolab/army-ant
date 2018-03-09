@@ -4,12 +4,17 @@
 
 #include <hgoe/edges/document_edge.h>
 
-DocumentEdge::DocumentEdge(std::set<Node> tail, std::set<Node> head) : Edge(tail, head) {
+BOOST_CLASS_EXPORT_IMPLEMENT(DocumentEdge)
+
+DocumentEdge::DocumentEdge() = default;
+
+DocumentEdge::DocumentEdge(std::set<Node *> tail, std::set<Node *> head) : Edge(std::move(tail), std::move(head)) {
     this->docID = std::string();
 }
 
-DocumentEdge::DocumentEdge(std::string docID, std::set<Node> tail, std::set<Node> head) : Edge(tail, head) {
-    this->docID = docID;
+DocumentEdge::DocumentEdge(std::string docID, std::set<Node *> tail, std::set<Node *> head) :
+        Edge(std::move(tail), std::move(head)) {
+    this->docID = std::move(docID);
 }
 
 const std::string &DocumentEdge::getDocID() const {

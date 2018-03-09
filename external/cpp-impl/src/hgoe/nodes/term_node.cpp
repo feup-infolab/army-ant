@@ -4,6 +4,12 @@
 
 #include <hgoe/nodes/term_node.h>
 
+BOOST_CLASS_EXPORT_IMPLEMENT(TermNode)
+
+TermNode::TermNode() {
+
+}
+
 TermNode::TermNode(std::string name) : Node(name) {
 
 }

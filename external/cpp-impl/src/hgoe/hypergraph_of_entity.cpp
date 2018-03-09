@@ -5,6 +5,7 @@
 #define BOOST_LOG_DYN_LINK 1
 
 #include <chrono>
+#include <utility>
 
 #include <boost/log/trivial.hpp>
 #include <boost/python/extract.hpp>
@@ -12,7 +13,8 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/python/list.hpp>
 #include <boost/python/tuple.hpp>
-#include <utility>
+#include <boost/filesystem.hpp>
+
 #include <tsl/htrie_map.h>
 #include <tsl/htrie_set.h>
 
@@ -35,7 +37,8 @@ HypergraphOfEntity::HypergraphOfEntity() {
 }
 
 HypergraphOfEntity::HypergraphOfEntity(std::string path) {
-    this->path = path;
+    this->baseDirPath = boost::filesystem::path(path);
+    this->hgFilePath = this->baseDirPath / boost::filesystem::path("hypergraph.idx");
     this->hg = Hypergraph();
     this->totalTime = std::chrono::duration<long>();
     this->counter = 0;
@@ -103,30 +106,31 @@ void HypergraphOfEntity::index(Document document) {
 
 
 void HypergraphOfEntity::indexDocument(Document document) {
-    Node sourceDocumentNode = this->hg.getOrCreateNode(DocumentNode(document.getDocID()));
+    Node *sourceDocumentNode = this->hg.getOrCreateNode(new DocumentNode(document.getDocID()));
 
-    std::set<Node> targetNodes = indexEntities(document);
+    std::set<Node *> targetNodes = indexEntities(document);
 
     std::vector<std::string> tokens = analyze(document.getText());
     if (tokens.empty()) return;
 
     for (auto token : tokens) {
-        targetNodes.insert(this->hg.getOrCreateNode(TermNode(token)));
+        targetNodes.insert(this->hg.getOrCreateNode(new TermNode(token)));
     }
 
     // TODO Consider changing directed to undirected hyperedge.
-    this->hg.createEdge(DocumentEdge(document.getDocID(), {sourceDocumentNode}, targetNodes));
+    Edge *edge = new DocumentEdge(document.getDocID(), {sourceDocumentNode}, targetNodes);
+    this->hg.createEdge(edge);
 }
 
-std::set<Node> HypergraphOfEntity::indexEntities(Document document) {
-    std::set<Node> nodes = std::set<Node>();
+std::set<Node *> HypergraphOfEntity::indexEntities(Document document) {
+    std::set<Node *> nodes = std::set<Node *>();
 
     for (auto triple : document.getTriples()) {
-        nodes.insert(this->hg.getOrCreateNode(EntityNode(&document, triple.subject)));
-        nodes.insert(this->hg.getOrCreateNode(EntityNode(&document, triple.object)));
+        nodes.insert(this->hg.getOrCreateNode(new EntityNode(&document, triple.subject)));
+        nodes.insert(this->hg.getOrCreateNode(new EntityNode(&document, triple.object)));
     }
 
-    this->hg.createEdge(RelatedToEdge(nodes));
+    this->hg.createEdge(new RelatedToEdge(nodes));
 
     return nodes;
 }
@@ -137,18 +141,18 @@ void HypergraphOfEntity::linkTextAndKnowledge() {
     BOOST_LOG_TRIVIAL(info) << "Building trie from term nodes";
 
     for (auto node : this->hg.getNodes()) {
-        trie.insert(node.getName());
+        trie.insert(node->getName());
     }
 
     BOOST_LOG_TRIVIAL(info) << "Creating links between entity nodes and term nodes using trie";
     for (auto entityNode : this->hg.getNodes()) {
-        if (entityNode.label() == NodeLabel::ENTITY) {
-            std::vector<std::string> tokens = analyze(entityNode.getName());
-            std::set<Node> termNodes = std::set<Node>();
+        if (entityNode->label() == NodeLabel::ENTITY) {
+            std::vector<std::string> tokens = analyze(entityNode->getName());
+            std::set<Node *> termNodes = std::set<Node *>();
             for (auto token : tokens) {
                 if (trie.find(token) != trie.end()) {
-                    auto optTermNode = this->hg.findNode(TermNode(token));
-                    if (optTermNode != this->hg.endNode()) {
+                    auto optTermNode = this->hg.getNodes().find(new TermNode(token));
+                    if (optTermNode != this->hg.getNodes().end()) {
                         termNodes.insert(*optTermNode);
                     }
                 }
@@ -156,11 +160,20 @@ void HypergraphOfEntity::linkTextAndKnowledge() {
 
             if (termNodes.empty()) continue;
 
-            this->hg.createEdge(ContainedInEdge(termNodes, {entityNode}));
+            this->hg.createEdge(new ContainedInEdge(termNodes, {entityNode}));
         }
     }
 }
 
 void HypergraphOfEntity::postProcessing() {
     linkTextAndKnowledge();
+}
+
+void HypergraphOfEntity::save() {
+    boost::filesystem::create_directories(baseDirPath);
+    this->hg.save(baseDirPath.string());
+}
+
+void HypergraphOfEntity::load() {
+    this->hg = Hypergraph::load(baseDirPath.string());
 }

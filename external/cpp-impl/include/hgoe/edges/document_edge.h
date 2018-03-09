@@ -6,19 +6,34 @@
 #define ARMY_ANT_CPP_DOCUMENT_EDGE_H
 
 #include <string>
-#include "edge.h"
+#include <boost/serialization/base_object.hpp>
+#include <hgoe/edges/edge.h>
+#include <boost/serialization/string.hpp>
+#include <boost/serialization/export.hpp>
 
 class DocumentEdge : public Edge {
 private:
+    friend class boost::serialization::access;
+
+    template<class Archive>
+    void serialize(Archive &ar, unsigned int version) {
+        ar & boost::serialization::base_object<Edge>(*this);
+        ar & docID;
+    };
+
     std::string docID;
 public:
-    explicit DocumentEdge(std::set<Node> tail, std::set<Node> head);
+    DocumentEdge();
 
-    DocumentEdge(std::string docID, std::set<Node> tail, std::set<Node> head);
+    explicit DocumentEdge(std::set<Node *> tail, std::set<Node *> head);
+
+    DocumentEdge(std::string docID, std::set<Node *> tail, std::set<Node *> head);
 
     const std::string &getDocID() const;
 
     void setDocID(const std::string &docID);
 };
+
+BOOST_CLASS_EXPORT_KEY(DocumentEdge)
 
 #endif //ARMY_ANT_CPP_DOCUMENT_EDGE_H

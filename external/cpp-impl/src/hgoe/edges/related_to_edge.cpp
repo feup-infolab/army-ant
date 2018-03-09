@@ -4,6 +4,12 @@
 
 #include <hgoe/edges/related_to_edge.h>
 
-RelatedToEdge::RelatedToEdge(std::set<Node> nodes) : Edge(nodes) {
+BOOST_CLASS_EXPORT_IMPLEMENT(RelatedToEdge)
+
+RelatedToEdge::RelatedToEdge() {
+
+}
+
+RelatedToEdge::RelatedToEdge(std::set<Node *> nodes) : Edge(nodes) {
 
 }

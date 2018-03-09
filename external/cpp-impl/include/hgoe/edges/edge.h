@@ -9,6 +9,8 @@
 #include <hgoe/nodes/node.h>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
+#include <boost/serialization/set.hpp>
+#include <boost/serialization/export.hpp>
 
 class Edge {
 private:
@@ -22,16 +24,16 @@ private:
     };
 
     unsigned int edgeID;
-    std::set<Node> tail;
-    std::set<Node> head;
+    std::set<Node *> tail;
+    std::set<Node *> head;
 protected:
     static unsigned int nextEdgeID;
 public:
     Edge();
 
-    explicit Edge(std::set <Node> nodes);
+    explicit Edge(std::set <Node *> nodes);
 
-    Edge(std::set<Node> tail, std::set<Node> head);
+    Edge(std::set<Node *> tail, std::set<Node *> head);
 
     bool operator<(const Edge &rhs) const;
 
@@ -41,19 +43,30 @@ public:
 
     bool operator>=(const Edge &rhs) const;
 
+    bool operator==(const Edge &rhs) const;
+
+    bool operator!=(const Edge &rhs) const;
+
     unsigned int getEdgeID() const;
 
     void setEdgeID(unsigned int edgeID);
 
-    const std::set<Node> &getTail() const;
+    const std::set<Node *> &getTail() const;
 
-    void setTail(const std::set<Node> &tail);
+    void setTail(const std::set<Node *> &tail);
 
-    const std::set<Node> &getHead() const;
+    const std::set<Node *> &getHead() const;
 
-    void setHead(const std::set<Node> &head);
+    void setHead(const std::set<Node *> &head);
+
+    const std::set<Node *> &getNodes() const;
+
+    void setNodes(const std::set<Node *> &nodes);
 
     bool isDirected();
 };
+
+BOOST_SERIALIZATION_ASSUME_ABSTRACT(Edge)
+BOOST_CLASS_EXPORT_KEY(Edge)
 
 #endif //ARMY_ANT_CPP_EDGE_H

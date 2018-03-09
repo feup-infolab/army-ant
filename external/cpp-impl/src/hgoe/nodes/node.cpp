@@ -4,12 +4,17 @@
 
 #include <hgoe/nodes/node.h>
 
+BOOST_CLASS_EXPORT_IMPLEMENT(Node)
+
+unsigned int Node::nextNodeID = 0;
+
 Node::Node() {
-    Node::name = "";
+    Node::nodeID = nextNodeID++;
 }
 
 Node::Node(std::string name) {
-    Node::name = name;
+    Node::nodeID = nextNodeID++;
+    Node::name = std::move(name);
 }
 
 const std::string &Node::getName() const {
@@ -25,17 +30,25 @@ bool Node::operator<(const Node &rhs) const {
 }
 
 bool Node::operator>(const Node &rhs) const {
-    return rhs < *this;
+    return rhs.name < name;
 }
 
 bool Node::operator<=(const Node &rhs) const {
-    return !(rhs < *this);
+    return !(rhs.name < name);
 }
 
 bool Node::operator>=(const Node &rhs) const {
-    return !(*this < rhs);
+    return !(name < rhs.name);
 }
 
 NodeLabel Node::label() {
     return NodeLabel::DEFAULT;
+}
+
+unsigned int Node::getNodeID() const {
+    return nodeID;
+}
+
+void Node::setNodeID(unsigned int nodeID) {
+    Node::nodeID = nodeID;
 }

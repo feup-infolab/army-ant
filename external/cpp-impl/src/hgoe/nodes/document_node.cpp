@@ -4,9 +4,11 @@
 
 #include <hgoe/nodes/document_node.h>
 
-DocumentNode::DocumentNode(std::string docID) : Node(docID) {
+BOOST_CLASS_EXPORT_IMPLEMENT(DocumentNode)
 
-}
+DocumentNode::DocumentNode() = default;
+
+DocumentNode::DocumentNode(std::string name) : Node(std::move(name)) {}
 
 NodeLabel DocumentNode::label() {
     return NodeLabel::DOCUMENT;
