@@ -12,26 +12,26 @@ unsigned int Edge::nextEdgeID = 0;
 
 Edge::Edge() = default;
 
-Edge::Edge(std::set<Node *> nodes) : Edge(std::move(nodes), std::set<Node *>()) {
+Edge::Edge(std::set<Node *, NodeComp> nodes) : Edge(std::move(nodes), std::set<Node *, NodeComp>()) {
 
 }
 
-Edge::Edge(std::set<Node *> tail, std::set<Node *> head) {
+Edge::Edge(std::set<Node *, NodeComp> tail, std::set<Node *, NodeComp> head) {
     this->edgeID = nextEdgeID++;
     this->tail = std::move(tail);
     this->head = std::move(head);
 }
 
 bool Edge::operator<(const Edge &rhs) const {
-    if (tail < rhs.tail)
+    if (tail < rhs.tail && head < rhs.head)
         return true;
-    if (rhs.tail < tail)
-        return false;
-    return head < rhs.head;
+    return false;
 }
 
 bool Edge::operator>(const Edge &rhs) const {
-    return rhs < *this;
+    if (tail > rhs.tail && head > rhs.head)
+        return true;
+    return false;
 }
 
 bool Edge::operator<=(const Edge &rhs) const {
@@ -42,6 +42,15 @@ bool Edge::operator>=(const Edge &rhs) const {
     return !(*this < rhs);
 }
 
+/*bool Edge::operator==(const Edge &rhs) const {
+    return tail == rhs.tail &&
+           head == rhs.head;
+}
+
+bool Edge::operator!=(const Edge &rhs) const {
+    return !(rhs == *this);
+}*/
+
 unsigned int Edge::getEdgeID() const {
     return edgeID;
 }
@@ -50,39 +59,30 @@ void Edge::setEdgeID(unsigned int edgeID) {
     Edge::edgeID = edgeID;
 }
 
-const std::set<Node *> &Edge::getTail() const {
+const std::set<Node *, NodeComp> &Edge::getTail() const {
     return tail;
 }
 
-void Edge::setTail(const std::set<Node *> &tail) {
+void Edge::setTail(const std::set<Node *, NodeComp> &tail) {
     Edge::tail = tail;
 }
 
-const std::set<Node *> &Edge::getHead() const {
+const std::set<Node *, NodeComp> &Edge::getHead() const {
     return head;
 }
 
-void Edge::setHead(const std::set<Node *> &head) {
+void Edge::setHead(const std::set<Node *, NodeComp> &head) {
     Edge::head = head;
 }
 
-const std::set<Node *> &Edge::getNodes() const {
+const std::set<Node *, NodeComp> &Edge::getNodes() const {
     return getTail();
 }
 
-void Edge::setNodes(const std::set<Node *> &nodes) {
+void Edge::setNodes(const std::set<Node *, NodeComp> &nodes) {
     setTail(tail);
 }
 
 bool Edge::isDirected() {
     return !this->head.empty();
-}
-
-bool Edge::operator==(const Edge &rhs) const {
-    return tail == rhs.tail &&
-           head == rhs.head;
-}
-
-bool Edge::operator!=(const Edge &rhs) const {
-    return !(rhs == *this);
 }

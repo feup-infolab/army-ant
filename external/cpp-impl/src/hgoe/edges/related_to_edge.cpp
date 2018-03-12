@@ -10,6 +10,6 @@ RelatedToEdge::RelatedToEdge() {
 
 }
 
-RelatedToEdge::RelatedToEdge(std::set<Node *> nodes) : Edge(nodes) {
+RelatedToEdge::RelatedToEdge(std::set<Node *, NodeComp> nodes) : Edge(nodes) {
 
 }

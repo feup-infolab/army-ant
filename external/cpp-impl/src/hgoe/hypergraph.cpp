@@ -15,7 +15,7 @@ Node *Hypergraph::getOrCreateNode(Node *node) {
     return *nodes.find(node);
 }
 
-const std::set<Node *> &Hypergraph::getNodes() const {
+const std::set<Node *, NodeComp> &Hypergraph::getNodes() const {
     return nodes;
 }
 
@@ -24,7 +24,7 @@ Edge *Hypergraph::createEdge(Edge *edge) {
     return edge;
 }
 
-const std::set<Edge *> &Hypergraph::getEdges() const {
+const std::set<Edge *, EdgeComp> &Hypergraph::getEdges() const {
     return edges;
 }
 

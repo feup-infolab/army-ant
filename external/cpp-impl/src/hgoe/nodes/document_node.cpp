@@ -10,6 +10,6 @@ DocumentNode::DocumentNode() = default;
 
 DocumentNode::DocumentNode(std::string name) : Node(std::move(name)) {}
 
-NodeLabel DocumentNode::label() {
+NodeLabel DocumentNode::label() const {
     return NodeLabel::DOCUMENT;
 }

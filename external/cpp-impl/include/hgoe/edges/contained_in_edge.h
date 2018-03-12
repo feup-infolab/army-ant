@@ -20,7 +20,7 @@ private:
 public:
     ContainedInEdge();
 
-    explicit ContainedInEdge(std::set<Node *> tail, std::set<Node *> head);
+    explicit ContainedInEdge(std::set<Node *, NodeComp> tail, std::set<Node *, NodeComp> head);
 };
 
 BOOST_CLASS_EXPORT_KEY(ContainedInEdge)

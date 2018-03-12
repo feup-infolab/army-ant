@@ -27,7 +27,7 @@ public:
 
     EntityNode(Document *document, std::string name);
 
-    NodeLabel label() override;
+    NodeLabel label() const override;
 };
 
 BOOST_CLASS_EXPORT_KEY(EntityNode)

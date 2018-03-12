@@ -26,8 +26,8 @@ private:
     };
 
     // FIXME estes sets precisam de um comparador por valor para isto tudo funcionar!
-    std::set<Node *> nodes;
-    std::set<Edge *> edges;
+    std::set<Node *, NodeComp> nodes;
+    std::set<Edge *, EdgeComp> edges;
 public:
     Node *getOrCreateNode(Node *node);
 
@@ -35,11 +35,11 @@ public:
 
     unsigned long edgeCount();
 
-    const std::set<Node *> &getNodes() const;
+    const std::set<Node *, NodeComp> &getNodes() const;
 
     Edge* createEdge(Edge *edge);
 
-    const std::set<Edge *> &getEdges() const;
+    const std::set<Edge *, EdgeComp> &getEdges() const;
 
     void save(std::string path);
 

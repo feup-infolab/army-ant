@@ -23,7 +23,7 @@ public:
 
     explicit TermNode(std::string name);
 
-    NodeLabel label() override;
+    NodeLabel label() const override;
 };
 
 BOOST_CLASS_EXPORT_KEY(TermNode)

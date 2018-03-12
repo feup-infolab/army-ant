@@ -26,22 +26,30 @@ void Node::setName(const std::string &name) {
 }
 
 bool Node::operator<(const Node &rhs) const {
+    if (label() < rhs.label())
+        return true;
+    if (rhs.label() < label())
+        return false;
     return name < rhs.name;
 }
 
 bool Node::operator>(const Node &rhs) const {
+    if (label() > rhs.label())
+        return true;
+    if (rhs.label() > label())
+        return false;
     return rhs.name < name;
 }
 
 bool Node::operator<=(const Node &rhs) const {
-    return !(rhs.name < name);
+    return !(rhs < *this);
 }
 
 bool Node::operator>=(const Node &rhs) const {
-    return !(name < rhs.name);
+    return !(*this < rhs);
 }
 
-NodeLabel Node::label() {
+NodeLabel Node::label() const {
     return NodeLabel::DEFAULT;
 }
 

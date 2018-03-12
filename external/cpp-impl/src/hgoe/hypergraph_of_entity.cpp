@@ -108,7 +108,7 @@ void HypergraphOfEntity::index(Document document) {
 void HypergraphOfEntity::indexDocument(Document document) {
     Node *sourceDocumentNode = this->hg.getOrCreateNode(new DocumentNode(document.getDocID()));
 
-    std::set<Node *> targetNodes = indexEntities(document);
+    std::set<Node *, NodeComp> targetNodes = indexEntities(document);
 
     std::vector<std::string> tokens = analyze(document.getText());
     if (tokens.empty()) return;
@@ -122,8 +122,8 @@ void HypergraphOfEntity::indexDocument(Document document) {
     this->hg.createEdge(edge);
 }
 
-std::set<Node *> HypergraphOfEntity::indexEntities(Document document) {
-    std::set<Node *> nodes = std::set<Node *>();
+std::set<Node *, NodeComp> HypergraphOfEntity::indexEntities(Document document) {
+    std::set<Node *, NodeComp> nodes = std::set<Node *, NodeComp>();
 
     for (auto triple : document.getTriples()) {
         nodes.insert(this->hg.getOrCreateNode(new EntityNode(&document, triple.subject)));
@@ -148,7 +148,7 @@ void HypergraphOfEntity::linkTextAndKnowledge() {
     for (auto entityNode : this->hg.getNodes()) {
         if (entityNode->label() == NodeLabel::ENTITY) {
             std::vector<std::string> tokens = analyze(entityNode->getName());
-            std::set<Node *> termNodes = std::set<Node *>();
+            std::set<Node *, NodeComp> termNodes = std::set<Node *, NodeComp>();
             for (auto token : tokens) {
                 if (trie.find(token) != trie.end()) {
                     auto optTermNode = this->hg.getNodes().find(new TermNode(token));

@@ -45,7 +45,7 @@ public:
 
     void setNodeID(unsigned int nodeID);
 
-    virtual NodeLabel label()=0;
+    virtual NodeLabel label() const = 0;
 
     bool operator<(const Node &rhs) const;
 
@@ -54,6 +54,12 @@ public:
     bool operator<=(const Node &rhs) const;
 
     bool operator>=(const Node &rhs) const;
+};
+
+struct NodeComp {
+    bool operator()(const Node *lhs, const Node *rhs) const {
+        return *lhs < *rhs;
+    }
 };
 
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(Node)

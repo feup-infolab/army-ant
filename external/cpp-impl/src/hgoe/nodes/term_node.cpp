@@ -14,6 +14,6 @@ TermNode::TermNode(std::string name) : Node(name) {
 
 }
 
-NodeLabel TermNode::label() {
+NodeLabel TermNode::label() const {
     return NodeLabel::TERM;
 }

@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
     std::cout << "\tLoading from " << tmpPath << std::endl;
     Hypergraph hgLoad = Hypergraph::load(tmpPath.native());
 
-    const std::set<Node *> &nodes = hgLoad.getNodes();
+    const std::set<Node *, NodeComp> &nodes = hgLoad.getNodes();
 
     for (auto node : nodes) {
         if (node == new DocumentNode("n1")) {
@@ -39,14 +39,17 @@ int main(int argc, char **argv) {
         }
     }
 
-    //std::cout << (*nodes.find(new DocumentNode("n1")))->getName() << std::endl;
+    //std::cout << (*nodes.find(new EntityNode("n3")))->getName() << std::endl;
 
     if (nodes.find(new DocumentNode("n1")) == nodes.end()) return 1;
     if (nodes.find(new TermNode("n2")) == nodes.end()) return 1;
     if (nodes.find(new EntityNode("n3")) == nodes.end()) return 1;
 
-    const std::set<Edge *> &edges = hgLoad.getEdges();
-    if (hgLoad.getEdges().find(e1) == hgLoad.getEdges().end()) return 1;
+    const std::set<Edge *, EdgeComp> &edges = hgLoad.getEdges();
+    if (hgLoad.getEdges().find(new DocumentEdge(
+            {new DocumentNode("n1"), new TermNode("n2")},
+            {new EntityNode("n3")})) == hgLoad.getEdges().end())
+        return 1;
 
     return 0;
 

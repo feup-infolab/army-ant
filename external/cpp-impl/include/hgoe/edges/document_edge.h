@@ -25,9 +25,9 @@ private:
 public:
     DocumentEdge();
 
-    explicit DocumentEdge(std::set<Node *> tail, std::set<Node *> head);
+    explicit DocumentEdge(std::set<Node *, NodeComp> tail, std::set<Node *, NodeComp> head);
 
-    DocumentEdge(std::string docID, std::set<Node *> tail, std::set<Node *> head);
+    DocumentEdge(std::string docID, std::set<Node *, NodeComp> tail, std::set<Node *, NodeComp> head);
 
     const std::string &getDocID() const;
 

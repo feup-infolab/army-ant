@@ -18,6 +18,6 @@ EntityNode::EntityNode(Document *document, std::string name) : Node(std::move(na
     this->document = document;
 }
 
-NodeLabel EntityNode::label() {
+NodeLabel EntityNode::label() const {
     return NodeLabel::ENTITY;
 }
