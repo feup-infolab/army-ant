@@ -509,7 +509,7 @@ public class HypergraphOfEntityInMemory extends Engine {
     }
 
     private IntSet getQueryTermNodeIDs(List<String> terms) {
-        IntSet termNodes = new LucIntHashSet();
+        IntSet termNodes = new LucIntHashSet(10);
 
         for (String term : terms) {
             TermNode termNode = new TermNode(term);
@@ -526,10 +526,10 @@ public class HypergraphOfEntityInMemory extends Engine {
     }
 
     private IntSet getSeedNodeIDs(IntSet queryTermNodeIDs) {
-        IntSet seedNodes = new LucIntHashSet();
+        IntSet seedNodes = new LucIntHashSet(10);
 
         for (Integer queryTermNode : queryTermNodeIDs) {
-            IntSet localSeedNodes = new LucIntHashSet();
+            IntSet localSeedNodes = new LucIntHashSet(10);
 
             IntSet edgeIDs;
             if (graph.containsVertex(queryTermNode)) {
@@ -573,14 +573,14 @@ public class HypergraphOfEntityInMemory extends Engine {
 
     // TODO Can be improved with an edge index per edge type: Map<Class<? extends Edge>, Set<Integer>>
     private IntSet getUndirectedNeighborsPerEdgeType(int sourceNodeID, Class edgeType) {
-        IntSet result = new LucIntHashSet();
+        IntSet result = new LucIntHashSet(10);
         result.addAll(graph.getEdgesIncidentTo(sourceNodeID).stream()
                 .filter(edgeID -> {
                     Edge edge = edgeIndex.getKey(edgeID);
                     return edgeType.isInstance(edge);
                 })
                 .flatMap(edgeID -> {
-                    IntSet nodeIDs = new LucIntHashSet();
+                    IntSet nodeIDs = new LucIntHashSet(10);
                     if (graph.isDirectedHyperEdge(edgeID)) {
                         nodeIDs.addAll(graph.getVerticesIncidentToEdge(edgeID));
                     } else {
@@ -601,7 +601,7 @@ public class HypergraphOfEntityInMemory extends Engine {
 
         IntSet neighborIDs = getUndirectedNeighborsPerEdgeType(seedNodeID, ContainedInEdge.class);
 
-        IntSet linkedQueryTermNodes = new LucIntHashSet();
+        IntSet linkedQueryTermNodes = new LucIntHashSet(10);
         linkedQueryTermNodes.addAll(neighborIDs);
         linkedQueryTermNodes.retainAll(queryTermNodeIDs);
 
@@ -668,7 +668,7 @@ public class HypergraphOfEntityInMemory extends Engine {
         if (edgeIDs.isEmpty()) return;
         int randomEdgeID = getRandom(edgeIDs);
 
-        IntSet nodeIDs = new LucIntHashSet();
+        IntSet nodeIDs = new LucIntHashSet(10);
         if (graph.isDirectedHyperEdge(randomEdgeID)) {
             nodeIDs.addAll(graph.getDirectedHyperEdgeHead(randomEdgeID));
         } else {
