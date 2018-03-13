@@ -23,15 +23,11 @@ Edge::Edge(std::set<Node *, NodeComp> tail, std::set<Node *, NodeComp> head) {
 }
 
 bool Edge::operator<(const Edge &rhs) const {
-    if (tail < rhs.tail && head < rhs.head)
-        return true;
-    return false;
+    return tail < rhs.tail && head < rhs.head;
 }
 
 bool Edge::operator>(const Edge &rhs) const {
-    if (tail > rhs.tail && head > rhs.head)
-        return true;
-    return false;
+    return tail > rhs.tail && head > rhs.head;
 }
 
 bool Edge::operator<=(const Edge &rhs) const {
@@ -42,14 +38,13 @@ bool Edge::operator>=(const Edge &rhs) const {
     return !(*this < rhs);
 }
 
-/*bool Edge::operator==(const Edge &rhs) const {
-    return tail == rhs.tail &&
-           head == rhs.head;
+bool Edge::operator==(const Edge &rhs) const {
+    return tail == rhs.tail && head == rhs.head;
 }
 
 bool Edge::operator!=(const Edge &rhs) const {
     return !(rhs == *this);
-}*/
+}
 
 unsigned int Edge::getEdgeID() const {
     return edgeID;
@@ -85,4 +80,8 @@ void Edge::setNodes(const std::set<Node *, NodeComp> &nodes) {
 
 bool Edge::isDirected() {
     return !this->head.empty();
+}
+
+bool EdgeComp::operator()(const Edge *lhs, const Edge *rhs) const {
+    return *lhs < *rhs;
 }

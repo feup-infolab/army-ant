@@ -45,6 +45,9 @@ int main(int argc, char **argv) {
     if (nodes.find(new TermNode("n2")) == nodes.end()) return 1;
     if (nodes.find(new EntityNode("n3")) == nodes.end()) return 1;
 
+    std::cout << (std::set<Node *, NodeComp>({new DocumentNode("n1"), new TermNode("n2")}) ==
+                  std::set<Node *, NodeComp>({new DocumentNode("n1"), new TermNode("n2")})) << std::endl;
+
     const std::set<Edge *, EdgeComp> &edges = hgLoad.getEdges();
     if (hgLoad.getEdges().find(new DocumentEdge(
             {new DocumentNode("n1"), new TermNode("n2")},

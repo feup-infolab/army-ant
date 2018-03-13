@@ -26,19 +26,11 @@ void Node::setName(const std::string &name) {
 }
 
 bool Node::operator<(const Node &rhs) const {
-    if (label() < rhs.label())
-        return true;
-    if (rhs.label() < label())
-        return false;
-    return name < rhs.name;
+    return label() < rhs.label() && name < rhs.name;
 }
 
 bool Node::operator>(const Node &rhs) const {
-    if (label() > rhs.label())
-        return true;
-    if (rhs.label() > label())
-        return false;
-    return rhs.name < name;
+    return label() > rhs.label() && name > rhs.name;
 }
 
 bool Node::operator<=(const Node &rhs) const {
@@ -47,6 +39,14 @@ bool Node::operator<=(const Node &rhs) const {
 
 bool Node::operator>=(const Node &rhs) const {
     return !(*this < rhs);
+}
+
+bool Node::operator==(const Node &rhs) const {
+    return label() == rhs.label() && name == rhs.name;
+}
+
+bool Node::operator!=(const Node &rhs) const {
+    return !(rhs == *this);
 }
 
 NodeLabel Node::label() const {
@@ -59,4 +59,8 @@ unsigned int Node::getNodeID() const {
 
 void Node::setNodeID(unsigned int nodeID) {
     Node::nodeID = nodeID;
+}
+
+bool NodeComp::operator()(const Node *lhs, const Node *rhs) const {
+    return *lhs < *rhs;
 }

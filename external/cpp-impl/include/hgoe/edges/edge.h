@@ -43,9 +43,9 @@ public:
 
     bool operator>=(const Edge &rhs) const;
 
-    /*bool operator==(const Edge &rhs) const;
+    bool operator==(const Edge &rhs) const;
 
-    bool operator!=(const Edge &rhs) const;*/
+    bool operator!=(const Edge &rhs) const;
 
     unsigned int getEdgeID() const;
 
@@ -67,9 +67,7 @@ public:
 };
 
 struct EdgeComp {
-    bool operator()(const Edge *lhs, const Edge *rhs) const {
-        return *lhs < *rhs;
-    }
+    bool operator()(const Edge *lhs, const Edge *rhs) const;
 };
 
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(Edge)

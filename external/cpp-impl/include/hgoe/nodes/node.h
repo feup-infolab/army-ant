@@ -54,12 +54,14 @@ public:
     bool operator<=(const Node &rhs) const;
 
     bool operator>=(const Node &rhs) const;
+
+    bool operator==(const Node &rhs) const;
+
+    bool operator!=(const Node &rhs) const;
 };
 
 struct NodeComp {
-    bool operator()(const Node *lhs, const Node *rhs) const {
-        return *lhs < *rhs;
-    }
+    bool operator()(const Node *lhs, const Node *rhs) const;
 };
 
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(Node)
