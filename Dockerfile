@@ -14,7 +14,7 @@ WORKDIR $HOME
 # Install system dependencies
 RUN echo deb http://deb.debian.org/debian/ jessie-backports main >> /etc/apt/sources.list
 RUN apt-get update
-RUN apt-get -y install build-essential gcc make maven curl git openjdk-8-jre gnupg libssl1.0.0 wordnet \
+RUN apt-get -y install build-essential gcc make maven curl git openjdk-8-jdk gnupg libssl1.0.0 wordnet \
     zlib1g-dev libbz2-dev libreadline-dev libssl-dev libsqlite3-dev libxml2-dev
 
 # Install node and dependencies
