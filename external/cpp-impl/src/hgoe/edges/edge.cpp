@@ -83,23 +83,11 @@ bool Edge::operator>=(const Edge &rhs) const {
 }*/
 
 bool Edge::operator==(const Edge &rhs) const {
-    if (label() != rhs.label())
-        return false;
-
-    if (tail.size() != rhs.tail.size() || head.size() != rhs.head.size())
-        return false;
-
-    for (auto lhsNode = tail.begin(), rhsNode = rhs.tail.begin(); lhsNode != tail.end(); lhsNode++, rhsNode++) {
-        if (*lhsNode != *rhsNode)
-            return false;
-    }
-
-    for (auto lhsNode = head.begin(), rhsNode = rhs.head.begin(); lhsNode != head.end(); lhsNode++, rhsNode++) {
-        if (*lhsNode != *rhsNode)
-            return false;
-    }
-
-    return true;
+    return label() == rhs.label()
+            && tail.size() == rhs.tail.size()
+            && head.size() == rhs.head.size()
+            && tail == rhs.tail
+            && head == rhs.head;
 }
 
 bool Edge::operator!=(const Edge &rhs) const {

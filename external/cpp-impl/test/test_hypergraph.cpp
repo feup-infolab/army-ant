@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
     boost::shared_ptr<Node> n2 = hgWrite.getOrCreateNode(boost::shared_ptr<Node>(new TermNode("n2")));
     boost::shared_ptr<Node> n3 = hgWrite.getOrCreateNode(boost::shared_ptr<Node>(new EntityNode("n3")));
 
-    boost::shared_ptr<Edge> e1 = boost::shared_ptr<Edge>(new DocumentEdge(NodeSet({n1, n2}), NodeSet({n3})));
+    boost::shared_ptr<Edge> e1 = boost::make_shared<DocumentEdge>(NodeSet({n1, n2}), NodeSet({n3}));
     hgWrite.createEdge(e1);
 
     boost::filesystem::path tmpDirPath = boost::filesystem::temp_directory_path() / boost::filesystem::path("army-ant");
@@ -36,32 +36,15 @@ int main(int argc, char **argv) {
 
     const NodeSet &nodes = hgLoad.getNodes();
 
-    boost::shared_ptr<Node> node1 = boost::shared_ptr<Node>(new DocumentNode("n0"));
-    boost::shared_ptr<Node> node2 = boost::shared_ptr<Node>(new DocumentNode("n0"));
-    std::cout << "node1 == node2: " << (node1 == node2) << std::endl;
-    std::cout << "*node1 == *node2: " << (*node1 == *node2) << std::endl;
-
-    std::cout << "node1 in hgLoad: " << (nodes.find(node1) != nodes.end()) << std::endl;
-
-    if (nodes.find(boost::shared_ptr<Node>(new DocumentNode("n1"))) == nodes.end()) return 1;
-    if (nodes.find(boost::shared_ptr<Node>(new TermNode("n2"))) == nodes.end()) return 1;
-    if (nodes.find(boost::shared_ptr<Node>(new EntityNode("n3"))) == nodes.end()) return 1;
-
-    boost::shared_ptr<Edge> edge1 = boost::shared_ptr<Edge>(
-            new DocumentEdge(NodeSet({boost::shared_ptr<Node>(new DocumentNode("n0")),
-                                      boost::shared_ptr<Node>(new TermNode("n1"))}),
-                             NodeSet({boost::shared_ptr<Node>(new EntityNode("n2"))})));
-    boost::shared_ptr<Edge> edge2 = boost::shared_ptr<Edge>(
-            new DocumentEdge(NodeSet({boost::shared_ptr<Node>(new DocumentNode("n0")),
-                                      boost::shared_ptr<Node>(new TermNode("n1"))}),
-                             NodeSet({boost::shared_ptr<Node>(new EntityNode("n2"))})));
-    std::cout << "*edge1 == *edge2: " << (*edge1 == *edge2) << std::endl;
+    if (nodes.find(boost::make_shared<DocumentNode>("n1")) == nodes.end()) return 1;
+    if (nodes.find(boost::make_shared<TermNode>("n2")) == nodes.end()) return 1;
+    if (nodes.find(boost::make_shared<EntityNode>("n3")) == nodes.end()) return 1;
 
     const EdgeSet &edges = hgLoad.getEdges();
     boost::shared_ptr<Edge> edge = boost::shared_ptr<Edge>(
-            new DocumentEdge(NodeSet({boost::shared_ptr<Node>(new DocumentNode("n1")),
-                                      boost::shared_ptr<Node>(new TermNode("n2"))}),
-                             NodeSet({boost::shared_ptr<Node>(new EntityNode("n3"))})));
+            new DocumentEdge(NodeSet({boost::make_shared<DocumentNode>("n1"),
+                                      boost::make_shared<TermNode>("n2")}),
+                             NodeSet({boost::make_shared<EntityNode>("n3")})));
     if (hgLoad.getEdges().find(edge) == hgLoad.getEdges().end())
         return 1;
 

@@ -3,6 +3,8 @@ find_package(PythonLibs)
 include_directories(${PYTHON_INCLUDE_DIRS})
 
 set(TESTS
+    node
+    edge
     hypergraph
     hypergraph_of_entity)
 

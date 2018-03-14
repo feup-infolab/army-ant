@@ -13,6 +13,7 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/serialization/string.hpp>
 #include <boost/serialization/export.hpp>
+#include <boost/functional/hash.hpp>
 
 class Node {
 private:
@@ -37,13 +38,11 @@ public:
     };
 
     struct NodeEqual : std::binary_function<boost::shared_ptr<Node>, boost::shared_ptr<Node>, bool> {
-        bool operator()(const boost::shared_ptr<Node> &lhs, boost::shared_ptr<Node> rhs) const;
+        bool operator()(const boost::shared_ptr<Node> &lhs, const boost::shared_ptr<Node> &rhs) const;
     };
 
     struct NodeHash : std::unary_function<boost::shared_ptr<Node>, std::size_t> {
-        std::size_t operator()(const boost::shared_ptr<Node> &node) const {
-            return (size_t)node.get();
-        }
+        std::size_t operator()(const boost::shared_ptr<Node> &node) const;
     };
 
     Node();
@@ -75,7 +74,7 @@ public:
     virtual NodeLabel label() const = 0;
 };
 
-typedef boost::unordered_set<boost::shared_ptr<Node>, Node::NodeHash, Node::NodeEqual> NodeSet;
+typedef boost::unordered_set<boost::shared_ptr<Node>, Node::NodeHash, Node::NodeEqual, std::allocator<Node>> NodeSet;
 
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(Node)
 BOOST_CLASS_EXPORT_KEY(Node)
