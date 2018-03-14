@@ -38,7 +38,7 @@ public:
 
     void indexDocument(Document document);
 
-    std::set<Node *, NodeComp> indexEntities(Document document);
+    NodeSet indexEntities(Document document);
 
     void postProcessing();
 

@@ -22,7 +22,9 @@ private:
 public:
     RelatedToEdge();
 
-    explicit RelatedToEdge(std::set<Node *, NodeComp> nodes);
+    explicit RelatedToEdge(NodeSet nodes);
+
+    EdgeLabel label() const override;
 };
 
 BOOST_CLASS_EXPORT_KEY(RelatedToEdge)

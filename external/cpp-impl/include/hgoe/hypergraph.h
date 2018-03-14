@@ -6,14 +6,15 @@
 #define ARMYANT_HYPERGRAPH_H
 
 #include <string>
-#include <set>
+#include <boost/unordered_set.hpp>
 #include <hgoe/nodes/node.h>
 #include <boost/python/object.hpp>
 #include <hgoe/edges/edge.h>
 #include <boost/serialization/access.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
-#include <boost/serialization/set.hpp>
+#include <boost/serialization/boost_unordered_set.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 
 class Hypergraph {
 private:
@@ -25,21 +26,20 @@ private:
         ar & edges;
     };
 
-    // FIXME estes sets precisam de um comparador por valor para isto tudo funcionar!
-    std::set<Node *, NodeComp> nodes;
-    std::set<Edge *, EdgeComp> edges;
+    NodeSet nodes;
+    EdgeSet edges;
 public:
-    Node *getOrCreateNode(Node *node);
+    boost::shared_ptr<Node> getOrCreateNode(boost::shared_ptr<Node> node);
 
     unsigned long nodeCount();
 
     unsigned long edgeCount();
 
-    const std::set<Node *, NodeComp> &getNodes() const;
+    const NodeSet &getNodes() const;
 
-    Edge* createEdge(Edge *edge);
+    boost::shared_ptr<Edge> createEdge(boost::shared_ptr<Edge> edge);
 
-    const std::set<Edge *, EdgeComp> &getEdges() const;
+    const EdgeSet &getEdges() const;
 
     void save(std::string path);
 

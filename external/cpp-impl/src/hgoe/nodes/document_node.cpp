@@ -8,8 +8,8 @@ BOOST_CLASS_EXPORT_IMPLEMENT(DocumentNode)
 
 DocumentNode::DocumentNode() = default;
 
-DocumentNode::DocumentNode(std::string name) : Node(std::move(name)) {}
+DocumentNode::DocumentNode(std::string name) : Node(boost::move(name)) {}
 
-NodeLabel DocumentNode::label() const {
+Node::NodeLabel DocumentNode::label() const {
     return NodeLabel::DOCUMENT;
 }

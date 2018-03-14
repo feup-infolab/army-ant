@@ -9,16 +9,19 @@
 #include <hgoe/nodes/entity_node.h>
 #include <hgoe/nodes/document_node.h>
 #include <hgoe/edges/document_edge.h>
+#include <hgoe/edges/contained_in_edge.h>
 
 int main(int argc, char **argv) {
+    std::cout << std::boolalpha;
+
     std::cout << "==> Testing Hypergraph" << std::endl;
     Hypergraph hgWrite = Hypergraph();
 
-    Node *n1 = hgWrite.getOrCreateNode(new DocumentNode("n1"));
-    Node *n2 = hgWrite.getOrCreateNode(new TermNode("n2"));
-    Node *n3 = hgWrite.getOrCreateNode(new EntityNode("n3"));
+    boost::shared_ptr<Node> n1 = hgWrite.getOrCreateNode(boost::shared_ptr<Node>(new DocumentNode("n1")));
+    boost::shared_ptr<Node> n2 = hgWrite.getOrCreateNode(boost::shared_ptr<Node>(new TermNode("n2")));
+    boost::shared_ptr<Node> n3 = hgWrite.getOrCreateNode(boost::shared_ptr<Node>(new EntityNode("n3")));
 
-    Edge *e1 = new DocumentEdge({n1, n2}, {n3});
+    boost::shared_ptr<Edge> e1 = boost::shared_ptr<Edge>(new DocumentEdge(NodeSet({n1, n2}), NodeSet({n3})));
     hgWrite.createEdge(e1);
 
     boost::filesystem::path tmpDirPath = boost::filesystem::temp_directory_path() / boost::filesystem::path("army-ant");
@@ -31,53 +34,36 @@ int main(int argc, char **argv) {
     std::cout << "\tLoading from " << tmpPath << std::endl;
     Hypergraph hgLoad = Hypergraph::load(tmpPath.native());
 
-    const std::set<Node *, NodeComp> &nodes = hgLoad.getNodes();
+    const NodeSet &nodes = hgLoad.getNodes();
 
-    for (auto node : nodes) {
-        if (node == new DocumentNode("n1")) {
-            std::cout << node->getName() << std::endl;
-        }
-    }
+    boost::shared_ptr<Node> node1 = boost::shared_ptr<Node>(new DocumentNode("n0"));
+    boost::shared_ptr<Node> node2 = boost::shared_ptr<Node>(new DocumentNode("n0"));
+    std::cout << "node1 == node2: " << (node1 == node2) << std::endl;
+    std::cout << "*node1 == *node2: " << (*node1 == *node2) << std::endl;
 
-    //std::cout << (*nodes.find(new EntityNode("n3")))->getName() << std::endl;
+    std::cout << "node1 in hgLoad: " << (nodes.find(node1) != nodes.end()) << std::endl;
 
-    if (nodes.find(new DocumentNode("n1")) == nodes.end()) return 1;
-    if (nodes.find(new TermNode("n2")) == nodes.end()) return 1;
-    if (nodes.find(new EntityNode("n3")) == nodes.end()) return 1;
+    if (nodes.find(boost::shared_ptr<Node>(new DocumentNode("n1"))) == nodes.end()) return 1;
+    if (nodes.find(boost::shared_ptr<Node>(new TermNode("n2"))) == nodes.end()) return 1;
+    if (nodes.find(boost::shared_ptr<Node>(new EntityNode("n3"))) == nodes.end()) return 1;
 
-    std::cout << (std::set<Node *, NodeComp>({new DocumentNode("n1"), new TermNode("n2")}) ==
-                  std::set<Node *, NodeComp>({new DocumentNode("n1"), new TermNode("n2")})) << std::endl;
+    boost::shared_ptr<Edge> edge1 = boost::shared_ptr<Edge>(
+            new DocumentEdge(NodeSet({boost::shared_ptr<Node>(new DocumentNode("n0")),
+                                      boost::shared_ptr<Node>(new TermNode("n1"))}),
+                             NodeSet({boost::shared_ptr<Node>(new EntityNode("n2"))})));
+    boost::shared_ptr<Edge> edge2 = boost::shared_ptr<Edge>(
+            new DocumentEdge(NodeSet({boost::shared_ptr<Node>(new DocumentNode("n0")),
+                                      boost::shared_ptr<Node>(new TermNode("n1"))}),
+                             NodeSet({boost::shared_ptr<Node>(new EntityNode("n2"))})));
+    std::cout << "*edge1 == *edge2: " << (*edge1 == *edge2) << std::endl;
 
-    const std::set<Edge *, EdgeComp> &edges = hgLoad.getEdges();
-    if (hgLoad.getEdges().find(new DocumentEdge(
-            {new DocumentNode("n1"), new TermNode("n2")},
-            {new EntityNode("n3")})) == hgLoad.getEdges().end())
+    const EdgeSet &edges = hgLoad.getEdges();
+    boost::shared_ptr<Edge> edge = boost::shared_ptr<Edge>(
+            new DocumentEdge(NodeSet({boost::shared_ptr<Node>(new DocumentNode("n1")),
+                                      boost::shared_ptr<Node>(new TermNode("n2"))}),
+                             NodeSet({boost::shared_ptr<Node>(new EntityNode("n3"))})));
+    if (hgLoad.getEdges().find(edge) == hgLoad.getEdges().end())
         return 1;
 
     return 0;
-
-    /*auto n0 = new DocumentNode("n0");
-    auto n1 = new TermNode("n1");
-    auto n2 = new EntityNode("n2");
-
-    std::set<Node *> tail = {n0};
-    std::set<Node *> head = {n1, n2};
-
-    Edge *e0 = new DocumentEdge(tail, head);
-    e0->setEdgeID(10);
-
-    std::cout << "In: " << e0->getHead().size() << std::endl;
-
-    std::ofstream ofs("/tmp/edge");
-    boost::archive::binary_oarchive oa(ofs);
-    oa << e0;
-    ofs.close();
-
-    Edge *edge;
-    std::ifstream ifs("/tmp/edge");
-    boost::archive::binary_iarchive ia(ifs);
-    ia >> edge;
-    ifs.close();
-
-    std::cout << "Out: " << edge->getHead().size() << std::endl;*/
 }

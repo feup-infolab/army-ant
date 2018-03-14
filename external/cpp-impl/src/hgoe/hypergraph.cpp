@@ -7,7 +7,7 @@
 
 BOOST_CLASS_EXPORT_IMPLEMENT(Hypergraph)
 
-Node *Hypergraph::getOrCreateNode(Node *node) {
+boost::shared_ptr<Node> Hypergraph::getOrCreateNode(boost::shared_ptr<Node> node) {
     if (Hypergraph::nodes.insert(node).second) {
         return node;
     }
@@ -15,16 +15,16 @@ Node *Hypergraph::getOrCreateNode(Node *node) {
     return *nodes.find(node);
 }
 
-const std::set<Node *, NodeComp> &Hypergraph::getNodes() const {
+const NodeSet &Hypergraph::getNodes() const {
     return nodes;
 }
 
-Edge *Hypergraph::createEdge(Edge *edge) {
+boost::shared_ptr<Edge> Hypergraph::createEdge(boost::shared_ptr<Edge> edge) {
     Hypergraph::edges.insert(edge);
     return edge;
 }
 
-const std::set<Edge *, EdgeComp> &Hypergraph::getEdges() const {
+const EdgeSet &Hypergraph::getEdges() const {
     return edges;
 }
 

@@ -14,7 +14,7 @@ Node::Node() {
 
 Node::Node(std::string name) {
     Node::nodeID = nextNodeID++;
-    Node::name = std::move(name);
+    Node::name = boost::move(name);
 }
 
 const std::string &Node::getName() const {
@@ -25,12 +25,24 @@ void Node::setName(const std::string &name) {
     Node::name = name;
 }
 
-bool Node::operator<(const Node &rhs) const {
-    return label() < rhs.label() && name < rhs.name;
+/*bool Node::operator<(const Node &rhs) const {
+    if (label() > rhs.label())
+        return false;
+
+    if (name > rhs.name)
+        return false;
+
+    return label() < rhs.label() || name < rhs.name;
 }
 
 bool Node::operator>(const Node &rhs) const {
-    return label() > rhs.label() && name > rhs.name;
+    if (label() < rhs.label())
+        return false;
+
+    if (name < rhs.name)
+        return false;
+
+    return label() > rhs.label() || name > rhs.name;
 }
 
 bool Node::operator<=(const Node &rhs) const {
@@ -39,7 +51,7 @@ bool Node::operator<=(const Node &rhs) const {
 
 bool Node::operator>=(const Node &rhs) const {
     return !(*this < rhs);
-}
+}*/
 
 bool Node::operator==(const Node &rhs) const {
     return label() == rhs.label() && name == rhs.name;
@@ -49,7 +61,12 @@ bool Node::operator!=(const Node &rhs) const {
     return !(rhs == *this);
 }
 
-NodeLabel Node::label() const {
+std::ostream &operator<<(std::ostream &os, const Node &node) {
+    os << "{ nodeID: " << node.nodeID << ", name: " << node.name << " }";
+    return os;
+}
+
+Node::NodeLabel Node::label() const {
     return NodeLabel::DEFAULT;
 }
 
@@ -61,6 +78,6 @@ void Node::setNodeID(unsigned int nodeID) {
     Node::nodeID = nodeID;
 }
 
-bool NodeComp::operator()(const Node *lhs, const Node *rhs) const {
-    return *lhs < *rhs;
+bool Node::NodeEqual::operator()(const boost::shared_ptr<Node> &lhs, boost::shared_ptr<Node> rhs) const {
+    return *lhs == *rhs;
 }

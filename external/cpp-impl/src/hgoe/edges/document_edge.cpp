@@ -8,14 +8,14 @@ BOOST_CLASS_EXPORT_IMPLEMENT(DocumentEdge)
 
 DocumentEdge::DocumentEdge() = default;
 
-DocumentEdge::DocumentEdge(std::set<Node *, NodeComp> tail, std::set<Node *, NodeComp> head) :
-        Edge(std::move(tail), std::move(head)) {
+DocumentEdge::DocumentEdge(NodeSet tail, NodeSet head) :
+        Edge(boost::move(tail), boost::move(head)) {
     this->docID = std::string();
 }
 
-DocumentEdge::DocumentEdge(std::string docID, std::set<Node *, NodeComp> tail, std::set<Node *, NodeComp> head) :
-        Edge(std::move(tail), std::move(head)) {
-    this->docID = std::move(docID);
+DocumentEdge::DocumentEdge(std::string docID, NodeSet tail, NodeSet head) :
+        Edge(boost::move(tail), boost::move(head)) {
+    this->docID = boost::move(docID);
 }
 
 const std::string &DocumentEdge::getDocID() const {
@@ -24,4 +24,8 @@ const std::string &DocumentEdge::getDocID() const {
 
 void DocumentEdge::setDocID(const std::string &docID) {
     DocumentEdge::docID = docID;
+}
+
+Edge::EdgeLabel DocumentEdge::label() const {
+    return EdgeLabel::DOCUMENT;
 }

@@ -10,5 +10,8 @@ BOOST_CLASS_EXPORT_IMPLEMENT(ContainedInEdge)
 
 ContainedInEdge::ContainedInEdge() = default;
 
-ContainedInEdge::ContainedInEdge(std::set<Node *, NodeComp> tail, std::set<Node *, NodeComp> head) :
-        Edge(std::move(tail), std::move(head)) {}
+ContainedInEdge::ContainedInEdge(NodeSet tail, NodeSet head) : Edge(boost::move(tail), boost::move(head)) {}
+
+Edge::EdgeLabel ContainedInEdge::label() const {
+    return EdgeLabel::CONTAINED_IN;
+}

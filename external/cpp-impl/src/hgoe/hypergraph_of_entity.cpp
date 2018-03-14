@@ -86,7 +86,7 @@ void HypergraphOfEntity::pyIndex(py::object document) {
 void HypergraphOfEntity::index(Document document) {
     auto startTime = std::chrono::system_clock::now().time_since_epoch();
 
-    indexDocument(std::move(document));
+    indexDocument(boost::move(document));
 
     auto endTime = std::chrono::system_clock::now().time_since_epoch();
     auto time = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
@@ -106,31 +106,32 @@ void HypergraphOfEntity::index(Document document) {
 
 
 void HypergraphOfEntity::indexDocument(Document document) {
-    Node *sourceDocumentNode = this->hg.getOrCreateNode(new DocumentNode(document.getDocID()));
+    boost::shared_ptr<Node> sourceDocumentNode = this->hg.getOrCreateNode(
+            boost::shared_ptr<DocumentNode>(new DocumentNode(document.getDocID())));
 
-    std::set<Node *, NodeComp> targetNodes = indexEntities(document);
+    NodeSet targetNodes = indexEntities(document);
 
     std::vector<std::string> tokens = analyze(document.getText());
     if (tokens.empty()) return;
 
     for (auto token : tokens) {
-        targetNodes.insert(this->hg.getOrCreateNode(new TermNode(token)));
+        targetNodes.insert(this->hg.getOrCreateNode(boost::shared_ptr<Node>(new TermNode(token))));
     }
 
     // TODO Consider changing directed to undirected hyperedge.
-    Edge *edge = new DocumentEdge(document.getDocID(), {sourceDocumentNode}, targetNodes);
+    boost::shared_ptr<Edge> edge(new DocumentEdge(document.getDocID(), {sourceDocumentNode}, targetNodes));
     this->hg.createEdge(edge);
 }
 
-std::set<Node *, NodeComp> HypergraphOfEntity::indexEntities(Document document) {
-    std::set<Node *, NodeComp> nodes = std::set<Node *, NodeComp>();
+NodeSet HypergraphOfEntity::indexEntities(Document document) {
+    NodeSet nodes = NodeSet();
 
     for (auto triple : document.getTriples()) {
-        nodes.insert(this->hg.getOrCreateNode(new EntityNode(&document, triple.subject)));
-        nodes.insert(this->hg.getOrCreateNode(new EntityNode(&document, triple.object)));
+        nodes.insert(this->hg.getOrCreateNode(boost::shared_ptr<Node>(new EntityNode(&document, triple.subject))));
+        nodes.insert(this->hg.getOrCreateNode(boost::shared_ptr<Node>(new EntityNode(&document, triple.object))));
     }
 
-    this->hg.createEdge(new RelatedToEdge(nodes));
+    this->hg.createEdge(boost::shared_ptr<Edge>(new RelatedToEdge(nodes)));
 
     return nodes;
 }
@@ -146,12 +147,12 @@ void HypergraphOfEntity::linkTextAndKnowledge() {
 
     BOOST_LOG_TRIVIAL(info) << "Creating links between entity nodes and term nodes using trie";
     for (auto entityNode : this->hg.getNodes()) {
-        if (entityNode->label() == NodeLabel::ENTITY) {
+        if (entityNode->label() == Node::NodeLabel::ENTITY) {
             std::vector<std::string> tokens = analyze(entityNode->getName());
-            std::set<Node *, NodeComp> termNodes = std::set<Node *, NodeComp>();
+            NodeSet termNodes = NodeSet();
             for (auto token : tokens) {
                 if (trie.find(token) != trie.end()) {
-                    auto optTermNode = this->hg.getNodes().find(new TermNode(token));
+                    auto optTermNode = this->hg.getNodes().find(boost::shared_ptr<Node>(new TermNode(token)));
                     if (optTermNode != this->hg.getNodes().end()) {
                         termNodes.insert(*optTermNode);
                     }
@@ -160,7 +161,7 @@ void HypergraphOfEntity::linkTextAndKnowledge() {
 
             if (termNodes.empty()) continue;
 
-            this->hg.createEdge(new ContainedInEdge(termNodes, {entityNode}));
+            this->hg.createEdge(boost::shared_ptr<Edge>(new ContainedInEdge(termNodes, {entityNode})));
         }
     }
 }

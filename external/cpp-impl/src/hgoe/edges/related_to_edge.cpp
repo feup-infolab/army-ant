@@ -10,6 +10,10 @@ RelatedToEdge::RelatedToEdge() {
 
 }
 
-RelatedToEdge::RelatedToEdge(std::set<Node *, NodeComp> nodes) : Edge(nodes) {
+RelatedToEdge::RelatedToEdge(NodeSet nodes) : Edge(nodes) {
 
+}
+
+Edge::EdgeLabel RelatedToEdge::label() const {
+    return EdgeLabel::RELATED_TO;
 }

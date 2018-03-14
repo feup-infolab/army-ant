@@ -6,14 +6,10 @@
 
 BOOST_CLASS_EXPORT_IMPLEMENT(TermNode)
 
-TermNode::TermNode() {
+TermNode::TermNode() = default;
 
-}
+TermNode::TermNode(std::string name) : Node(boost::move(name)) {}
 
-TermNode::TermNode(std::string name) : Node(name) {
-
-}
-
-NodeLabel TermNode::label() const {
+Node::NodeLabel TermNode::label() const {
     return NodeLabel::TERM;
 }
