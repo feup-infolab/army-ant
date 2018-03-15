@@ -14,7 +14,7 @@ typedef struct {
     std::string subject;
     std::string predicate;
     std::string object;
-} triple;
+} Triple;
 
 class Document {
 private:
@@ -22,11 +22,11 @@ private:
     std::string docID;
     std::string entity;
     std::string text;
-    std::vector <triple> triples;
+    std::vector <Triple> triples;
 public:
-    Document(std::string docID, std::string entity, std::string text, std::vector <triple> triples);
+    Document(std::string docID, std::string entity, std::string text, std::vector <Triple> triples);
 
-    Document(float *score, std::string docID, std::string entity, std::string text, std::vector <triple> triples);
+    Document(float *score, std::string docID, std::string entity, std::string text, std::vector <Triple> triples);
 
     float *getScore() const;
 
@@ -44,9 +44,9 @@ public:
 
     void setText(const std::string &text);
 
-    const std::vector<triple> &getTriples() const;
+    const std::vector<Triple> &getTriples() const;
 
-    void setTriples(const std::vector<triple> &triples);
+    void setTriples(const std::vector<Triple> &triples);
 
     friend std::ostream &operator<<(std::ostream &os, const Document &document);
 };

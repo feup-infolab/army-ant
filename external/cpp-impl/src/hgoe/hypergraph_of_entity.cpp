@@ -33,9 +33,7 @@
 
 namespace py = boost::python;
 
-HypergraphOfEntity::HypergraphOfEntity() {
-
-}
+HypergraphOfEntity::HypergraphOfEntity() { }
 
 HypergraphOfEntity::HypergraphOfEntity(std::string path) {
     this->baseDirPath = boost::filesystem::path(path);
@@ -61,7 +59,7 @@ void HypergraphOfEntity::pyIndex(py::object document) {
     }
 
     py::object pyTriples = py::extract<py::object>(document.attr("triples"));
-    std::vector<triple> triples = std::vector<triple>();
+    std::vector<Triple> triples = std::vector<Triple>();
     if (!pyTriples.is_none()) {
         py::list pyTriplesList = py::extract<py::list>(document.attr("triples"));
         while (py::len(pyTriplesList) > 0) {
@@ -75,7 +73,7 @@ void HypergraphOfEntity::pyIndex(py::object document) {
             py::object pyObj = py::extract<py::object>(pyTriple[2]);
             std::string obj = py::extract<std::string>(pyObj.attr("label"));
 
-            triples.push_back(triple {subj, pred, obj});
+            triples.push_back(Triple {subj, pred, obj});
         }
     }
 
@@ -173,7 +171,7 @@ void HypergraphOfEntity::postProcessing() {
 
 void HypergraphOfEntity::save() {
     boost::filesystem::create_directories(baseDirPath);
-    this->hg.save(baseDirPath.string());
+    this->hg.save(hgFilePath.string());
 }
 
 void HypergraphOfEntity::load() {

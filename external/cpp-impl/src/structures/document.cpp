@@ -4,17 +4,19 @@
 
 #include <structures/document.h>
 
-Document::Document(std::string docID, std::string entity, std::string text, std::vector<triple> triples)
-        : Document(NULL, docID, entity, text, triples) {
+#include <utility>
+
+Document::Document(std::string docID, std::string entity, std::string text, std::vector<Triple> triples)
+        : Document(nullptr, std::move(docID), std::move(entity), std::move(text), std::move(triples)) {
 
 }
 
-Document::Document(float *score, std::string docID, std::string entity, std::string text, std::vector<triple> triples) {
+Document::Document(float *score, std::string docID, std::string entity, std::string text, std::vector<Triple> triples) {
     this->score = score;
-    this->docID = docID;
-    this->entity = entity;
-    this->text = text;
-    this->triples = triples;
+    this->docID = std::move(docID);
+    this->entity = std::move(entity);
+    this->text = std::move(text);
+    this->triples = std::move(triples);
 }
 
 float *Document::getScore() const {
@@ -49,11 +51,11 @@ void Document::setText(const std::string &text) {
     Document::text = text;
 }
 
-const std::vector<triple> &Document::getTriples() const {
+const std::vector<Triple> &Document::getTriples() const {
     return triples;
 }
 
-void Document::setTriples(const std::vector<triple> &triples) {
+void Document::setTriples(const std::vector<Triple> &triples) {
     Document::triples = triples;
 }
 
