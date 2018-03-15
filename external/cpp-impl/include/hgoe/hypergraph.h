@@ -6,15 +6,18 @@
 #define ARMYANT_HYPERGRAPH_H
 
 #include <string>
+
 #include <boost/unordered_set.hpp>
-#include <hgoe/nodes/node.h>
 #include <boost/python/object.hpp>
-#include <hgoe/edges/edge.h>
 #include <boost/serialization/access.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/serialization/boost_unordered_set.hpp>
 #include <boost/serialization/shared_ptr.hpp>
+
+#include <hgoe/nodes/node.h>
+#include <hgoe/edges/edge.h>
+#include <hgoe/edges/edge_set.h>
 
 class Hypergraph {
 private:

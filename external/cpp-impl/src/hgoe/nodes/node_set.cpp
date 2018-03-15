@@ -21,3 +21,20 @@ bool NodeSet::operator==(const NodeSet &rhs) const {
 bool NodeSet::operator!=(const NodeSet &rhs) const {
     return !(rhs == *this);
 }
+
+std::size_t hash_value(const Node &node) {
+    boost::hash<Node::NodeLabel> labelHash;
+    boost::hash<std::string> strHash;
+    size_t h = 0;
+    boost::hash_combine(h, labelHash(node.label()));
+    boost::hash_combine(h, strHash(node.getName()));
+    return h;
+}
+
+std::size_t hash_value(const NodeSet &nodeSet) {
+    std::size_t h = 0;
+    for (const auto &nodeIt : nodeSet) {
+        boost::hash_combine(h, *nodeIt);
+    }
+    return h;
+}

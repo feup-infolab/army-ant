@@ -18,6 +18,11 @@ DocumentEdge::DocumentEdge(std::string docID, NodeSet tail, NodeSet head) :
     this->docID = boost::move(docID);
 }
 
+bool DocumentEdge::doCompare(const Edge &rhs) const {
+    const auto rhsDocumentEdge = dynamic_cast<const DocumentEdge *>(&rhs);
+    return docID == rhsDocumentEdge->docID;
+}
+
 const std::string &DocumentEdge::getDocID() const {
     return docID;
 }

@@ -29,6 +29,10 @@ public:
     bool operator!=(const NodeSet &rhs) const;
 };
 
+std::size_t hash_value(const Node &node);
+
+std::size_t hash_value(const NodeSet &nodeSet);
+
 BOOST_CLASS_EXPORT_KEY(NodeSet)
 
 #endif //ARMY_ANT_CPP_NODE_SET_H

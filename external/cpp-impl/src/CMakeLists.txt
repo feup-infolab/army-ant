@@ -31,7 +31,8 @@ set(SRC
     hgoe/edges/edge.cpp
     hgoe/edges/document_edge.cpp
     hgoe/edges/related_to_edge.cpp
-    hgoe/edges/contained_in_edge.cpp)
+    hgoe/edges/contained_in_edge.cpp
+    hgoe/edges/edge_set.cpp)
 
 set(INCLUDE
     ../include/engine.h
@@ -47,7 +48,8 @@ set(INCLUDE
     ../include/hgoe/edges/edge.h
     ../include/hgoe/edges/contained_in_edge.h
     ../include/hgoe/edges/related_to_edge.h
-    ../include/hgoe/edges/document_edge.h)
+    ../include/hgoe/edges/document_edge.h
+    ../include/hgoe/edges/edge_set.h)
 
 add_library(army_ant_cpp SHARED ${SRC} ${INCLUDE})
 target_link_libraries(army_ant_cpp ${Boost_LIBRARIES} ${PYTHON_LIBRARIES})

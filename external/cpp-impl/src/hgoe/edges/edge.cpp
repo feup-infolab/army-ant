@@ -4,8 +4,8 @@
 
 #include <iostream>
 
+#include <hgoe/nodes/node_set.h>
 #include <hgoe/edges/edge.h>
-#include <boost/functional/hash.hpp>
 
 BOOST_CLASS_EXPORT_IMPLEMENT(Edge)
 
@@ -21,73 +21,15 @@ Edge::Edge(NodeSet tail, NodeSet head) {
     this->head = boost::move(head);
 }
 
-/*bool Edge::operator<(const Edge &rhs) const {
-    if (label() > rhs.label())
-        return false;
-
-    if (tail.size() > rhs.tail.size())
-        return false;
-
-    if (head.size() > rhs.head.size())
-        return false;
-
-    bool anyLess = false;
-
-    if (tail.size() == rhs.tail.size()) {
-        for (auto lhsIt = tail.begin(), rhsIt = rhs.tail.begin(); lhsIt != tail.end(); lhsIt++, rhsIt++) {
-            if (**lhsIt > **rhsIt)
-                return false;
-
-            anyLess = anyLess || (**lhsIt < **rhsIt);
-        }
-    }
-
-    if (head.size() == rhs.head.size()) {
-        for (auto lhsIt = head.begin(), rhsIt = rhs.head.begin(); lhsIt != head.end(); lhsIt++, rhsIt++) {
-            if (**lhsIt > **rhsIt)
-                return false;
-
-            anyLess = anyLess || (**lhsIt < **rhsIt);
-        }
-    }
-
-    return label() < rhs.label() || tail.size() < rhs.tail.size() || head.size() < rhs.head.size() || anyLess;
-}
-
-bool Edge::operator>(const Edge &rhs) const {
-    if (label() <= rhs.label())
-        return false;
-
-    if (tail.size() <= rhs.tail.size() || head.size() <= rhs.head.size())
-        return false;
-
-    for (auto lhsNode = tail.begin(), rhsNode = rhs.tail.begin(); lhsNode != tail.end(); lhsNode++, rhsNode++) {
-        if (*lhsNode <= *rhsNode)
-            return false;
-    }
-
-    for (auto lhsNode = head.begin(), rhsNode = rhs.head.begin(); lhsNode != head.end(); lhsNode++, rhsNode++) {
-        if (*lhsNode <= *rhsNode)
-            return false;
-    }
-
+bool Edge::doCompare(const Edge &rhs) const {
     return true;
 }
 
-bool Edge::operator<=(const Edge &rhs) const {
-    return !(rhs < *this);
-}
-
-bool Edge::operator>=(const Edge &rhs) const {
-    return !(*this < rhs);
-}*/
-
 bool Edge::operator==(const Edge &rhs) const {
     return label() == rhs.label()
-            && tail.size() == rhs.tail.size()
-            && head.size() == rhs.head.size()
-            && tail == rhs.tail
-            && head == rhs.head;
+           && doCompare(rhs)
+           && tail == rhs.tail
+           && head == rhs.head;
 }
 
 bool Edge::operator!=(const Edge &rhs) const {
@@ -130,11 +72,11 @@ bool Edge::isDirected() {
     return !this->head.empty();
 }
 
-/*bool Edge::EdgeEqual::operator()(const boost::shared_ptr<Edge> lhs, const boost::shared_ptr<Edge> rhs) const {
+bool Edge::Equal::operator()(const boost::shared_ptr<Edge> &lhs, const boost::shared_ptr<Edge> &rhs) const {
     return *lhs == *rhs;
-}*/
+}
 
-/*std::size_t Edge::hash_value(const boost::shared_ptr<Edge> edge) const {
+std::size_t Edge::Hash::operator()(const boost::shared_ptr<Edge> &edge) const {
     boost::hash<Edge::EdgeLabel> labelHasher;
     boost::hash<NodeSet> nodeSetHasher;
     std::size_t h = 0;
@@ -142,4 +84,4 @@ bool Edge::isDirected() {
     boost::hash_combine(h, nodeSetHasher(edge->tail));
     boost::hash_combine(h, nodeSetHasher(edge->head));
     return h;
-}*/
+}

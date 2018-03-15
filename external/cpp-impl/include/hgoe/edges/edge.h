@@ -7,12 +7,13 @@
 
 #include <boost/unordered_set.hpp>
 
-#include <hgoe/nodes/node.h>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/serialization/boost_unordered_set.hpp>
 #include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/export.hpp>
+
+#include <hgoe/nodes/node.h>
 #include <hgoe/nodes/node_set.h>
 
 class Edge {
@@ -25,12 +26,12 @@ private:
         ar & tail;
         ar & head;
     };
+protected:
+    static unsigned int nextEdgeID;
 
     unsigned int edgeID;
     NodeSet tail;
     NodeSet head;
-protected:
-    static unsigned int nextEdgeID;
 public:
     enum EdgeLabel {
         DEFAULT = 0,
@@ -39,19 +40,21 @@ public:
         CONTAINED_IN = 3
     };
 
+    struct Equal {
+        bool operator()(const boost::shared_ptr<Edge> &lhs, const boost::shared_ptr<Edge> &rhs) const;
+    };
+
+    struct Hash {
+        std::size_t operator()(const boost::shared_ptr<Edge> &edge) const;
+    };
+
     Edge();
 
     explicit Edge(NodeSet nodes);
 
     Edge(NodeSet tail, NodeSet head);
 
-    /*bool operator<(const Edge &rhs) const;
-
-    bool operator>(const Edge &rhs) const;
-
-    bool operator<=(const Edge &rhs) const;
-
-    bool operator>=(const Edge &rhs) const;*/
+    virtual bool doCompare(const Edge &rhs) const;
 
     bool operator==(const Edge &rhs) const;
 
@@ -77,8 +80,6 @@ public:
 
     virtual EdgeLabel label() const = 0;
 };
-
-typedef boost::unordered_set<boost::shared_ptr<Edge>> EdgeSet;
 
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(Edge)
 BOOST_CLASS_EXPORT_KEY(Edge)

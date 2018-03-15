@@ -25,34 +25,6 @@ void Node::setName(const std::string &name) {
     Node::name = name;
 }
 
-/*bool Node::operator<(const Node &rhs) const {
-    if (label() > rhs.label())
-        return false;
-
-    if (name > rhs.name)
-        return false;
-
-    return label() < rhs.label() || name < rhs.name;
-}
-
-bool Node::operator>(const Node &rhs) const {
-    if (label() < rhs.label())
-        return false;
-
-    if (name < rhs.name)
-        return false;
-
-    return label() > rhs.label() || name > rhs.name;
-}
-
-bool Node::operator<=(const Node &rhs) const {
-    return !(rhs < *this);
-}
-
-bool Node::operator>=(const Node &rhs) const {
-    return !(*this < rhs);
-}*/
-
 bool Node::operator==(const Node &rhs) const {
     return label() == rhs.label() && name == rhs.name;
 }
@@ -79,9 +51,7 @@ void Node::setNodeID(unsigned int nodeID) {
 }
 
 bool Node::Equal::operator()(const boost::shared_ptr<Node> &lhs, const boost::shared_ptr<Node> &rhs) const {
-    //std::cout << (*lhs) << " == " << (*rhs) << ": " << (*lhs == *rhs) << std::endl;
     return *lhs == *rhs;
-    //return lhs->label() == rhs->label() && lhs->name == rhs->name;
 }
 
 std::size_t Node::Hash::operator()(const boost::shared_ptr<Node> &node) const {

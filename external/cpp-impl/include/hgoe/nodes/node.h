@@ -24,11 +24,11 @@ private:
         ar & nodeID;
         ar & name;
     };
+protected:
+    static unsigned int nextNodeID;
 
     unsigned int nodeID;
     std::string name;
-protected:
-    static unsigned int nextNodeID;
 public:
     enum NodeLabel {
         DEFAULT = 0,
@@ -48,14 +48,6 @@ public:
     Node();
 
     explicit Node(std::string name);
-
-    /*bool operator<(const Node &rhs) const;
-
-    bool operator>(const Node &rhs) const;
-
-    bool operator<=(const Node &rhs) const;
-
-    bool operator>=(const Node &rhs) const;*/
 
     bool operator==(const Node &rhs) const;
 

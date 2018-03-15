@@ -29,6 +29,8 @@ public:
 
     DocumentEdge(std::string docID, NodeSet tail, NodeSet head);
 
+    bool doCompare(const Edge &rhs) const override;
+
     const std::string &getDocID() const;
 
     void setDocID(const std::string &docID);
