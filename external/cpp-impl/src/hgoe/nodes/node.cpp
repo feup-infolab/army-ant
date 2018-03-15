@@ -62,3 +62,12 @@ std::size_t Node::Hash::operator()(const boost::shared_ptr<Node> &node) const {
     boost::hash_combine(h, strHash(node->name));
     return h;
 }
+
+std::size_t hash_value(const Node &node) {
+    boost::hash<Node::NodeLabel> labelHash;
+    boost::hash<std::string> strHash;
+    size_t h = 0;
+    boost::hash_combine(h, labelHash(node.label()));
+    boost::hash_combine(h, strHash(node.getName()));
+    return h;
+}

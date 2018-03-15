@@ -32,6 +32,8 @@ public:
 
     bool doCompare(const Edge &rhs) const override;
 
+    std::size_t doHash() const override;
+
     void print(std::ostream &os) const override;
 
     const std::string &getDocID() const;

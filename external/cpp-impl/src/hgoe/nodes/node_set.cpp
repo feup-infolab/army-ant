@@ -10,8 +10,8 @@ bool NodeSet::operator==(const NodeSet &rhs) const {
     if (size() != rhs.size())
         return false;
 
-    for (auto it = begin(), rhsIt = rhs.begin(); it != end(); it++, rhsIt++) {
-        if (**it != **rhsIt)
+    for (auto it = this->begin(); it != this->end(); it++) {
+        if (rhs.find(*it) == rhs.end())
             return false;
     }
 
@@ -36,19 +36,11 @@ std::ostream &operator<<(std::ostream &os, const NodeSet &nodeSet) {
     return os;
 }
 
-std::size_t hash_value(const Node &node) {
-    boost::hash<Node::NodeLabel> labelHash;
-    boost::hash<std::string> strHash;
-    size_t h = 0;
-    boost::hash_combine(h, labelHash(node.label()));
-    boost::hash_combine(h, strHash(node.getName()));
-    return h;
-}
-
 std::size_t hash_value(const NodeSet &nodeSet) {
     std::size_t h = 0;
     for (const auto &nodeIt : nodeSet) {
-        boost::hash_combine(h, *nodeIt);
+        //boost::hash_combine(h, *nodeIt);
+        h ^= hash_value(*nodeIt); // since order matters in hash_combine!
     }
     return h;
 }

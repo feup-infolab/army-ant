@@ -32,8 +32,6 @@ public:
     friend std::ostream &operator<<(std::ostream &os, const NodeSet &nodeSet);
 };
 
-std::size_t hash_value(const Node &node);
-
 std::size_t hash_value(const NodeSet &nodeSet);
 
 BOOST_CLASS_EXPORT_KEY(NodeSet)

@@ -36,6 +36,14 @@ bool Edge::operator!=(const Edge &rhs) const {
     return !(rhs == *this);
 }
 
+std::size_t Edge::doHash() const {
+    std::size_t h = 0;
+    boost::hash_combine(h, label());
+    boost::hash_combine(h, tail);
+    boost::hash_combine(h, head);
+    return h;
+}
+
 void Edge::print(std::ostream &os) const {
     os << "Edge { edgeID: " << edgeID << ", tail: " << tail << ", head: " << head << " }";
 }
@@ -86,11 +94,5 @@ bool Edge::Equal::operator()(const boost::shared_ptr<Edge> &lhs, const boost::sh
 }
 
 std::size_t Edge::Hash::operator()(const boost::shared_ptr<Edge> &edge) const {
-    boost::hash<Edge::EdgeLabel> labelHasher;
-    boost::hash<NodeSet> nodeSetHasher;
-    std::size_t h = 0;
-    boost::hash_combine(h, labelHasher(edge->label()));
-    boost::hash_combine(h, nodeSetHasher(edge->tail));
-    boost::hash_combine(h, nodeSetHasher(edge->head));
-    return h;
+    return edge->doHash();
 }

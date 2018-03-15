@@ -23,19 +23,20 @@ int main(int argc, char **argv) {
     boost::shared_ptr<Node> n2 = hgWrite.getOrCreateNode(boost::make_shared<TermNode>("n2"));
     boost::shared_ptr<Node> n3 = hgWrite.getOrCreateNode(boost::make_shared<EntityNode>("n3"));
 
-    boost::shared_ptr<Edge> e1 = boost::make_shared<DocumentEdge>(NodeSet({n1, n2}), NodeSet({n3}));
+    boost::shared_ptr<Edge> e1 = boost::make_shared<DocumentEdge>("doc_1", NodeSet({n1, n2}), NodeSet({n3}));
     hgWrite.createEdge(e1);
 
-    std::cout << (*e1) << std::endl;
+//    std::cout << "In edge: " << (*e1) << std::endl;
+//    std::cout << "In edge hash: " << e1->doHash() << std::endl;
 
     boost::filesystem::path tmpDirPath = boost::filesystem::temp_directory_path() / boost::filesystem::path("army-ant");
     boost::filesystem::create_directories(tmpDirPath);
     boost::filesystem::path tmpPath = tmpDirPath / boost::filesystem::unique_path();
 
-    std::cout << "\tSaving to " << tmpPath << std::endl;
+    //std::cout << "\tSaving to " << tmpPath << std::endl;
     hgWrite.save(tmpPath.native());
 
-    std::cout << "\tLoading from " << tmpPath << std::endl;
+    //std::cout << "\tLoading from " << tmpPath << std::endl;
     Hypergraph hgLoad = Hypergraph::load(tmpPath.native());
 
     const NodeSet &nodes = hgLoad.getNodes();
@@ -45,12 +46,16 @@ int main(int argc, char **argv) {
     if (nodes.find(boost::make_shared<EntityNode>("n3")) == nodes.end()) return 1;
 
     const EdgeSet &edges = hgLoad.getEdges();
-    for (const auto &edgeIt : edges) {
-        std::cout << (*edgeIt) << std::endl;
-    }
+    /*for (const auto &edgeIt : edges) {
+        std::cout << "Edge: " << (*edgeIt) << std::endl;
+        std::cout << "Edge hash: " << edgeIt->doHash() << std::endl;
+    }*/
     boost::shared_ptr<Edge> edge = boost::make_shared<DocumentEdge>(
+            "doc_1",
             NodeSet({boost::make_shared<DocumentNode>("n1"), boost::make_shared<TermNode>("n2")}),
             NodeSet({boost::make_shared<EntityNode>("n3")}));
+//    std::cout << "Out edge: " << (*edge) << std::endl;
+//    std::cout << "Out edge hash: " << edge->doHash() << std::endl;
     if (hgLoad.getEdges().find(edge) == hgLoad.getEdges().end()) return 1;
 
     return 0;

@@ -61,6 +61,8 @@ public:
 
     bool operator!=(const Edge &rhs) const;
 
+    virtual std::size_t doHash() const;
+
     virtual void print(std::ostream &os) const;
 
     friend std::ostream &operator<<(std::ostream &os, const Edge &edge);
@@ -85,6 +87,8 @@ public:
 
     virtual EdgeLabel label() const = 0;
 };
+
+std::size_t hash_value(const Edge &edge);
 
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(Edge)
 BOOST_CLASS_EXPORT_KEY(Edge)

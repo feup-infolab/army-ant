@@ -19,6 +19,13 @@ bool DocumentEdge::doCompare(const Edge &rhs) const {
     return docID == rhsDocumentEdge->docID;
 }
 
+std::size_t DocumentEdge::doHash() const {
+    std::size_t h = 0;
+    boost::hash_combine(h, docID);
+    boost::hash_combine(h, Edge::doHash());
+    return h;
+}
+
 void DocumentEdge::print(std::ostream &os) const {
     os << "DocumentEdge { docID: " << (docID.empty() ?  "N/A" : docID) << " } & ";
     Edge::print(os);

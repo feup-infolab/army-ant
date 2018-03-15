@@ -66,7 +66,7 @@ public:
     virtual NodeLabel label() const = 0;
 };
 
-//typedef boost::unordered_set<boost::shared_ptr<Node>, Node::Hash, Node::Equal, std::allocator<Node>> NodeSet;
+std::size_t hash_value(const Node &node);
 
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(Node)
 BOOST_CLASS_EXPORT_KEY(Node)
