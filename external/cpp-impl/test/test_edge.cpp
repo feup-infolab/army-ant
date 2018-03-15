@@ -44,12 +44,37 @@ int testEdgeSetCompare() {
 
     std::cout << "*edge1a == *edge1b: " << (*edge1a == *edge1b) << std::endl;
 
-    EdgeSet edgeSet1 = EdgeSet({edge1a});
-    EdgeSet edgeSet2 = EdgeSet({edge1b});
+    EdgeSet edgeSet1({edge1a});
+    EdgeSet edgeSet2({edge1b});
 
     std::cout << "edgeSet1 == edgeSet2: " << (edgeSet1 == edgeSet2) << std::endl;
 
     if (edgeSet1 == edgeSet2) return 0;
+    return 1;
+}
+
+int testEdgeSetFind() {
+    std::cout << "\n==> Testing EdgeSet find" << std::endl;
+
+    auto n1 = boost::make_shared<DocumentNode>("n1");
+    auto n2 = boost::make_shared<TermNode>("n2");
+    auto n3 = boost::make_shared<EntityNode>("n3");
+
+    NodeSet nodeSet1({n1, n2});
+    NodeSet nodeSet2({n3});
+
+    auto edge1a = boost::make_shared<DocumentEdge>("doc_1", nodeSet1, nodeSet2);
+    auto edge1b = boost::make_shared<DocumentEdge>("doc_1", nodeSet1, nodeSet2);
+    EdgeSet edgeSet({edge1a});
+
+    std::cout << "Finding edge: " << (*edge1b) << std::endl;
+    auto edgeIt = edgeSet.find(edge1b);
+
+    if (edgeIt != edgeSet.end()) {
+        std::cout << "Found edge: " << (**edgeIt) << std::endl;
+        return 0;
+    }
+
     return 1;
 }
 
@@ -60,6 +85,7 @@ int main(int argc, char **argv) {
 
     if ( (ret = testEdgeCompare()) != 0) return ret;
     if ( (ret = testEdgeSetCompare()) != 0) return ret;
+    if ( (ret = testEdgeSetFind()) != 0) return ret;
     
     return 0;
 }

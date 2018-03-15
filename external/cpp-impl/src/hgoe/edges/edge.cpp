@@ -36,6 +36,15 @@ bool Edge::operator!=(const Edge &rhs) const {
     return !(rhs == *this);
 }
 
+void Edge::print(std::ostream &os) const {
+    os << "Edge { edgeID: " << edgeID << ", tail: " << tail << ", head: " << head << " }";
+}
+
+std::ostream &operator<<(std::ostream &os, const Edge &edge) {
+    edge.print(os);
+    return os;
+}
+
 unsigned int Edge::getEdgeID() const {
     return edgeID;
 }
@@ -73,7 +82,7 @@ bool Edge::isDirected() {
 }
 
 bool Edge::Equal::operator()(const boost::shared_ptr<Edge> &lhs, const boost::shared_ptr<Edge> &rhs) const {
-    return *lhs == *rhs;
+    return *lhs == *rhs && lhs->doCompare(*rhs);
 }
 
 std::size_t Edge::Hash::operator()(const boost::shared_ptr<Edge> &edge) const {

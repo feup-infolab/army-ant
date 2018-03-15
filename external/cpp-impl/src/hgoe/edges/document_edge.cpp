@@ -8,19 +8,20 @@ BOOST_CLASS_EXPORT_IMPLEMENT(DocumentEdge)
 
 DocumentEdge::DocumentEdge() = default;
 
-DocumentEdge::DocumentEdge(NodeSet tail, NodeSet head) :
-        Edge(boost::move(tail), boost::move(head)) {
-    this->docID = std::string();
-}
+DocumentEdge::DocumentEdge(NodeSet tail, NodeSet head) : Edge(boost::move(tail), boost::move(head)) { }
 
-DocumentEdge::DocumentEdge(std::string docID, NodeSet tail, NodeSet head) :
-        Edge(boost::move(tail), boost::move(head)) {
+DocumentEdge::DocumentEdge(std::string docID, NodeSet tail, NodeSet head) : Edge(boost::move(tail), boost::move(head)) {
     this->docID = boost::move(docID);
 }
 
 bool DocumentEdge::doCompare(const Edge &rhs) const {
     const auto rhsDocumentEdge = dynamic_cast<const DocumentEdge *>(&rhs);
     return docID == rhsDocumentEdge->docID;
+}
+
+void DocumentEdge::print(std::ostream &os) const {
+    os << "DocumentEdge { docID: " << (docID.empty() ?  "N/A" : docID) << " } & ";
+    Edge::print(os);
 }
 
 const std::string &DocumentEdge::getDocID() const {

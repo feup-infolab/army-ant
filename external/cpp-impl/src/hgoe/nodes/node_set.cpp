@@ -22,6 +22,20 @@ bool NodeSet::operator!=(const NodeSet &rhs) const {
     return !(rhs == *this);
 }
 
+std::ostream &operator<<(std::ostream &os, const NodeSet &nodeSet) {
+    os << "{ ";
+    bool first = true;
+    for (const auto &nodeIt : nodeSet) {
+        if (first)
+            first = false;
+        else
+            os << ", ";
+        os << *nodeIt;
+    }
+    os << " }";
+    return os;
+}
+
 std::size_t hash_value(const Node &node) {
     boost::hash<Node::NodeLabel> labelHash;
     boost::hash<std::string> strHash;

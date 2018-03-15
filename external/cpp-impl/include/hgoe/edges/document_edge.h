@@ -10,6 +10,7 @@
 #include <boost/serialization/string.hpp>
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/export.hpp>
+#include <ostream>
 
 class DocumentEdge : public Edge {
 private:
@@ -30,6 +31,8 @@ public:
     DocumentEdge(std::string docID, NodeSet tail, NodeSet head);
 
     bool doCompare(const Edge &rhs) const override;
+
+    void print(std::ostream &os) const override;
 
     const std::string &getDocID() const;
 

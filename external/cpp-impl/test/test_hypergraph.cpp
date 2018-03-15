@@ -3,8 +3,10 @@
 //
 
 #include <iostream>
-#include <hgoe/hypergraph.h>
+
 #include <boost/filesystem.hpp>
+
+#include <hgoe/hypergraph.h>
 #include <hgoe/nodes/term_node.h>
 #include <hgoe/nodes/entity_node.h>
 #include <hgoe/nodes/document_node.h>
@@ -24,6 +26,8 @@ int main(int argc, char **argv) {
     boost::shared_ptr<Edge> e1 = boost::make_shared<DocumentEdge>(NodeSet({n1, n2}), NodeSet({n3}));
     hgWrite.createEdge(e1);
 
+    std::cout << (*e1) << std::endl;
+
     boost::filesystem::path tmpDirPath = boost::filesystem::temp_directory_path() / boost::filesystem::path("army-ant");
     boost::filesystem::create_directories(tmpDirPath);
     boost::filesystem::path tmpPath = tmpDirPath / boost::filesystem::unique_path();
@@ -41,11 +45,13 @@ int main(int argc, char **argv) {
     if (nodes.find(boost::make_shared<EntityNode>("n3")) == nodes.end()) return 1;
 
     const EdgeSet &edges = hgLoad.getEdges();
+    for (const auto &edgeIt : edges) {
+        std::cout << (*edgeIt) << std::endl;
+    }
     boost::shared_ptr<Edge> edge = boost::make_shared<DocumentEdge>(
             NodeSet({boost::make_shared<DocumentNode>("n1"), boost::make_shared<TermNode>("n2")}),
             NodeSet({boost::make_shared<EntityNode>("n3")}));
-    if (hgLoad.getEdges().find(edge) == hgLoad.getEdges().end())
-        return 1;
+    if (hgLoad.getEdges().find(edge) == hgLoad.getEdges().end()) return 1;
 
     return 0;
 }

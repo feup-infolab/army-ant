@@ -5,8 +5,9 @@
 #ifndef ARMY_ANT_CPP_EDGE_H
 #define ARMY_ANT_CPP_EDGE_H
 
-#include <boost/unordered_set.hpp>
+#include <ostream>
 
+#include <boost/unordered_set.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/serialization/boost_unordered_set.hpp>
@@ -59,6 +60,10 @@ public:
     bool operator==(const Edge &rhs) const;
 
     bool operator!=(const Edge &rhs) const;
+
+    virtual void print(std::ostream &os) const;
+
+    friend std::ostream &operator<<(std::ostream &os, const Edge &edge);
 
     unsigned int getEdgeID() const;
 

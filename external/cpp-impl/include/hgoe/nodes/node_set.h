@@ -10,6 +10,7 @@
 #include <boost/serialization/boost_unordered_set.hpp>
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/export.hpp>
+#include <ostream>
 
 typedef boost::unordered_set<boost::shared_ptr<Node>, Node::Hash, Node::Equal, std::allocator<Node>> NodeSetContainer;
 
@@ -27,6 +28,8 @@ public:
     bool operator==(const NodeSet &rhs) const;
 
     bool operator!=(const NodeSet &rhs) const;
+
+    friend std::ostream &operator<<(std::ostream &os, const NodeSet &nodeSet);
 };
 
 std::size_t hash_value(const Node &node);
