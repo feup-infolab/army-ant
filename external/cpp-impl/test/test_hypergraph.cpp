@@ -17,9 +17,9 @@ int main(int argc, char **argv) {
     std::cout << "==> Testing Hypergraph" << std::endl;
     Hypergraph hgWrite = Hypergraph();
 
-    boost::shared_ptr<Node> n1 = hgWrite.getOrCreateNode(boost::shared_ptr<Node>(new DocumentNode("n1")));
-    boost::shared_ptr<Node> n2 = hgWrite.getOrCreateNode(boost::shared_ptr<Node>(new TermNode("n2")));
-    boost::shared_ptr<Node> n3 = hgWrite.getOrCreateNode(boost::shared_ptr<Node>(new EntityNode("n3")));
+    boost::shared_ptr<Node> n1 = hgWrite.getOrCreateNode(boost::make_shared<DocumentNode>("n1"));
+    boost::shared_ptr<Node> n2 = hgWrite.getOrCreateNode(boost::make_shared<TermNode>("n2"));
+    boost::shared_ptr<Node> n3 = hgWrite.getOrCreateNode(boost::make_shared<EntityNode>("n3"));
 
     boost::shared_ptr<Edge> e1 = boost::make_shared<DocumentEdge>(NodeSet({n1, n2}), NodeSet({n3}));
     hgWrite.createEdge(e1);
@@ -41,10 +41,9 @@ int main(int argc, char **argv) {
     if (nodes.find(boost::make_shared<EntityNode>("n3")) == nodes.end()) return 1;
 
     const EdgeSet &edges = hgLoad.getEdges();
-    boost::shared_ptr<Edge> edge = boost::shared_ptr<Edge>(
-            new DocumentEdge(NodeSet({boost::make_shared<DocumentNode>("n1"),
-                                      boost::make_shared<TermNode>("n2")}),
-                             NodeSet({boost::make_shared<EntityNode>("n3")})));
+    boost::shared_ptr<Edge> edge = boost::make_shared<DocumentEdge>(
+            NodeSet({boost::make_shared<DocumentNode>("n1"), boost::make_shared<TermNode>("n2")}),
+            NodeSet({boost::make_shared<EntityNode>("n3")}));
     if (hgLoad.getEdges().find(edge) == hgLoad.getEdges().end())
         return 1;
 

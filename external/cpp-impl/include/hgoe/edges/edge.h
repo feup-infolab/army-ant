@@ -13,6 +13,7 @@
 #include <boost/serialization/boost_unordered_set.hpp>
 #include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/export.hpp>
+#include <hgoe/nodes/node_set.h>
 
 class Edge {
 private:

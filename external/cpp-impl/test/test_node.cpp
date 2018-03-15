@@ -24,33 +24,16 @@ int testNodeCompare() {
     return 1;
 }
 
-struct NEqual : std::binary_function<boost::shared_ptr<int>, boost::shared_ptr<int>, bool> {
-    bool operator()(const boost::shared_ptr<int> &lhs, const boost::shared_ptr<int> &rhs) const {
-        return *lhs == *rhs;
-    };
-};
-
-struct NHash : std::unary_function<boost::shared_ptr<int>, std::size_t> {
-    std::size_t operator()(const boost::shared_ptr<int> &i) const {
-        return boost::hash<int>()(*i);
-    }
-};
-
 int testNodeSetCompare() {
     std::cout << "\n==> Testing NodeSet compare" << std::endl;
 
-    /*std::cout << "generic set compare: "
-              << (boost::unordered_set<boost::shared_ptr<int>, NEqual, NHash, std::allocator<int>>(
-                      {boost::make_shared<int>(10), boost::make_shared<int>(20)}) ==
-                  boost::unordered_set<boost::shared_ptr<int>, NEqual, NHash, std::allocator<int>>(
-                          {boost::make_shared<int>(10), boost::make_shared<int>(20)}))
-              << std::endl;*/
+    auto n1a = boost::make_shared<DocumentNode>("n1");
+    auto n2a = boost::make_shared<TermNode>("n2");
+    auto n1b = boost::make_shared<DocumentNode>("n1");
+    auto n2b = boost::make_shared<TermNode>("n2");
 
-    NodeSet nodeSet1({boost::make_shared<DocumentNode>("n1"), boost::make_shared<TermNode>("n2")});
-    NodeSet nodeSet2({boost::make_shared<DocumentNode>("n1"), boost::make_shared<TermNode>("n2")});
-
-    std::cout << nodeSet1.size() << std::endl;
-    std::cout << (**nodeSet1.begin()) << std::endl;
+    NodeSet nodeSet1({n1a, n2a});
+    NodeSet nodeSet2({n1b, n2b});
 
     std::cout << "nodeSet1 == nodeSet2: " << (nodeSet1 == nodeSet2) << std::endl;
 

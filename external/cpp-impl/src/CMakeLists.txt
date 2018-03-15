@@ -27,6 +27,7 @@ set(SRC
     hgoe/nodes/document_node.cpp
     hgoe/nodes/term_node.cpp
     hgoe/nodes/entity_node.cpp
+    hgoe/nodes/node_set.cpp
     hgoe/edges/edge.cpp
     hgoe/edges/document_edge.cpp
     hgoe/edges/related_to_edge.cpp
@@ -42,6 +43,7 @@ set(INCLUDE
     ../include/hgoe/nodes/document_node.h
     ../include/hgoe/nodes/term_node.h
     ../include/hgoe/nodes/entity_node.h
+    ../include/hgoe/nodes/node_set.h
     ../include/hgoe/edges/edge.h
     ../include/hgoe/edges/contained_in_edge.h
     ../include/hgoe/edges/related_to_edge.h

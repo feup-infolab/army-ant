@@ -78,12 +78,13 @@ void Node::setNodeID(unsigned int nodeID) {
     Node::nodeID = nodeID;
 }
 
-bool Node::NodeEqual::operator()(const boost::shared_ptr<Node> &lhs, const boost::shared_ptr<Node> &rhs) const {
+bool Node::Equal::operator()(const boost::shared_ptr<Node> &lhs, const boost::shared_ptr<Node> &rhs) const {
     //std::cout << (*lhs) << " == " << (*rhs) << ": " << (*lhs == *rhs) << std::endl;
     return *lhs == *rhs;
+    //return lhs->label() == rhs->label() && lhs->name == rhs->name;
 }
 
-std::size_t Node::NodeHash::operator()(const boost::shared_ptr<Node> &node) const {
+std::size_t Node::Hash::operator()(const boost::shared_ptr<Node> &node) const {
     boost::hash<Node::NodeLabel> labelHash;
     boost::hash<std::string> strHash;
     size_t h = 0;

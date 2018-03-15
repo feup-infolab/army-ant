@@ -14,6 +14,7 @@
 #include <boost/python/list.hpp>
 #include <boost/python/tuple.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/shared_ptr.hpp>
 
 #include <tsl/htrie_map.h>
 #include <tsl/htrie_set.h>
@@ -107,7 +108,7 @@ void HypergraphOfEntity::index(Document document) {
 
 void HypergraphOfEntity::indexDocument(Document document) {
     boost::shared_ptr<Node> sourceDocumentNode = this->hg.getOrCreateNode(
-            boost::shared_ptr<DocumentNode>(new DocumentNode(document.getDocID())));
+            boost::make_shared<DocumentNode>(document.getDocID()));
 
     NodeSet targetNodes = indexEntities(document);
 
@@ -115,11 +116,11 @@ void HypergraphOfEntity::indexDocument(Document document) {
     if (tokens.empty()) return;
 
     for (auto token : tokens) {
-        targetNodes.insert(this->hg.getOrCreateNode(boost::shared_ptr<Node>(new TermNode(token))));
+        targetNodes.insert(this->hg.getOrCreateNode(boost::make_shared<TermNode>(token)));
     }
 
     // TODO Consider changing directed to undirected hyperedge.
-    boost::shared_ptr<Edge> edge(new DocumentEdge(document.getDocID(), {sourceDocumentNode}, targetNodes));
+    auto edge = boost::make_shared<DocumentEdge>(document.getDocID(), NodeSet({sourceDocumentNode}), targetNodes);
     this->hg.createEdge(edge);
 }
 
@@ -127,11 +128,11 @@ NodeSet HypergraphOfEntity::indexEntities(Document document) {
     NodeSet nodes = NodeSet();
 
     for (auto triple : document.getTriples()) {
-        nodes.insert(this->hg.getOrCreateNode(boost::shared_ptr<Node>(new EntityNode(&document, triple.subject))));
-        nodes.insert(this->hg.getOrCreateNode(boost::shared_ptr<Node>(new EntityNode(&document, triple.object))));
+        nodes.insert(this->hg.getOrCreateNode(boost::make_shared<EntityNode>(&document, triple.subject)));
+        nodes.insert(this->hg.getOrCreateNode(boost::make_shared<EntityNode>(&document, triple.object)));
     }
 
-    this->hg.createEdge(boost::shared_ptr<Edge>(new RelatedToEdge(nodes)));
+    this->hg.createEdge(boost::make_shared<RelatedToEdge>(nodes));
 
     return nodes;
 }
@@ -152,7 +153,7 @@ void HypergraphOfEntity::linkTextAndKnowledge() {
             NodeSet termNodes = NodeSet();
             for (auto token : tokens) {
                 if (trie.find(token) != trie.end()) {
-                    auto optTermNode = this->hg.getNodes().find(boost::shared_ptr<Node>(new TermNode(token)));
+                    auto optTermNode = this->hg.getNodes().find(boost::make_shared<TermNode>(token));
                     if (optTermNode != this->hg.getNodes().end()) {
                         termNodes.insert(*optTermNode);
                     }
@@ -161,7 +162,7 @@ void HypergraphOfEntity::linkTextAndKnowledge() {
 
             if (termNodes.empty()) continue;
 
-            this->hg.createEdge(boost::shared_ptr<Edge>(new ContainedInEdge(termNodes, {entityNode})));
+            this->hg.createEdge(boost::make_shared<ContainedInEdge>(termNodes, NodeSet({entityNode})));
         }
     }
 }

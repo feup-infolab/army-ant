@@ -37,11 +37,11 @@ public:
         ENTITY = 3
     };
 
-    struct NodeEqual : std::binary_function<boost::shared_ptr<Node>, boost::shared_ptr<Node>, bool> {
+    struct Equal {
         bool operator()(const boost::shared_ptr<Node> &lhs, const boost::shared_ptr<Node> &rhs) const;
     };
 
-    struct NodeHash : std::unary_function<boost::shared_ptr<Node>, std::size_t> {
+    struct Hash {
         std::size_t operator()(const boost::shared_ptr<Node> &node) const;
     };
 
@@ -74,7 +74,7 @@ public:
     virtual NodeLabel label() const = 0;
 };
 
-typedef boost::unordered_set<boost::shared_ptr<Node>, Node::NodeHash, Node::NodeEqual, std::allocator<Node>> NodeSet;
+//typedef boost::unordered_set<boost::shared_ptr<Node>, Node::Hash, Node::Equal, std::allocator<Node>> NodeSet;
 
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(Node)
 BOOST_CLASS_EXPORT_KEY(Node)
