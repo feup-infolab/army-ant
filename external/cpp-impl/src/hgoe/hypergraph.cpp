@@ -24,15 +24,25 @@ boost::shared_ptr<Edge> Hypergraph::createEdge(boost::shared_ptr<Edge> edge) {
     Hypergraph::edges.insert(edge);
     if (edge->isDirected()) {
         for (const auto &nodeIt : edge->getTail()) {
-            if (adjacencyList.find(nodeIt) == adjacencyList.end())
-                adjacencyList[nodeIt] = boost::make_shared<EdgeSet>();
-            adjacencyList[nodeIt]->insert(edge);
+            if (outEdges.find(nodeIt) == outEdges.end())
+                outEdges[nodeIt] = boost::make_shared<EdgeSet>();
+            outEdges[nodeIt]->insert(edge);
+        }
+
+        for (const auto &nodeIt : edge->getHead()) {
+            if (inEdges.find(nodeIt) == inEdges.end())
+                inEdges[nodeIt] = boost::make_shared<EdgeSet>();
+            inEdges[nodeIt]->insert(edge);
         }
     } else {
         for (const auto &nodeIt : edge->getNodes()) {
-            if (adjacencyList.find(nodeIt) == adjacencyList.end())
-                adjacencyList[nodeIt] = boost::make_shared<EdgeSet>();
-            adjacencyList[nodeIt]->insert(edge);
+            if (outEdges.find(nodeIt) == outEdges.end())
+                outEdges[nodeIt] = boost::make_shared<EdgeSet>();
+            outEdges[nodeIt]->insert(edge);
+
+            if (inEdges.find(nodeIt) == inEdges.end())
+                inEdges[nodeIt] = boost::make_shared<EdgeSet>();
+            inEdges[nodeIt]->insert(edge);
         }
     }
     return edge;
@@ -42,8 +52,20 @@ const EdgeSet &Hypergraph::getEdges() const {
     return edges;
 }
 
-const boost::shared_ptr<EdgeSet> &Hypergraph::getIncidentEdges(boost::shared_ptr<Node> node) const {
-    return adjacencyList.at(node);
+const boost::shared_ptr<EdgeSet> &Hypergraph::getOutEdges(boost::shared_ptr<Node> node) const {
+    return outEdges.at(node);
+}
+
+const boost::shared_ptr<EdgeSet> &Hypergraph::getInEdges(boost::shared_ptr<Node> node) const {
+    return inEdges.at(node);
+}
+
+// FIXME inefficient
+const EdgeSet Hypergraph::getAllEdges(boost::shared_ptr<Node> node) const {
+    EdgeSet allEdges;
+    allEdges.insert(outEdges.at(node)->begin(), outEdges.at(node)->end());
+    allEdges.insert(inEdges.at(node)->begin(), inEdges.at(node)->end());
+    return allEdges;
 }
 
 void Hypergraph::save(std::string path) {

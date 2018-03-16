@@ -14,7 +14,7 @@ EntityNode::EntityNode(std::string name) : Node(boost::move(name)) {
     this->docID = nullptr;
 }
 
-EntityNode::EntityNode(Document *document, std::string name) : Node(boost::move(name)) {
+EntityNode::EntityNode(Document *document, std::string name) : Node(name) {
     if (name == document->getTitle()) {
         this->docID = boost::make_shared<std::string>(document->getDocID());
     } else {

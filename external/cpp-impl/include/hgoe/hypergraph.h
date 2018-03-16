@@ -37,7 +37,8 @@ private:
 
     NodeSet nodes;
     EdgeSet edges;
-    AdjacencyList adjacencyList;
+    AdjacencyList outEdges;
+    AdjacencyList inEdges;
 public:
     boost::shared_ptr<Node> getOrCreateNode(boost::shared_ptr<Node> node);
 
@@ -51,7 +52,11 @@ public:
 
     const EdgeSet &getEdges() const;
 
-    const boost::shared_ptr<EdgeSet> &getIncidentEdges(boost::shared_ptr<Node> node) const;
+    const boost::shared_ptr<EdgeSet> &getOutEdges(boost::shared_ptr<Node> node) const;
+
+    const boost::shared_ptr<EdgeSet> &getInEdges(boost::shared_ptr<Node> node) const;
+
+    const EdgeSet getAllEdges(boost::shared_ptr<Node> node) const;
 
     void save(std::string path);
 

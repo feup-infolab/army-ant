@@ -66,6 +66,10 @@ public:
 
     NodeSet getSeedNodes(const NodeSet &queryTermNodes);
 
+    NodeSet getUndirectedNeighborsPerEdgeType(boost::shared_ptr<Node> sourceNode, Edge::Label edgeLabel);
+
+    double confidenceWeight(boost::shared_ptr<Node> seedNode, const NodeSet &queryTermNodes);
+
     WeightedNodeSet seedNodeConfidenceWeights(const NodeSet &seedNodes, const NodeSet &queryTermNodes);
 
     Path randomWalk(boost::shared_ptr<Node> startNode, unsigned int length);

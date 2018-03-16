@@ -212,7 +212,7 @@ NodeSet HypergraphOfEntity::getSeedNodes(const NodeSet &queryTermNodes) {
         boost::shared_ptr<EdgeSet> edges;
         auto queryTermNodeIt = hg.getNodes().find(queryTermNode);
         if (queryTermNodeIt != hg.getNodes().end()) {
-            edges = hg.getIncidentEdges(queryTermNode);
+            edges = hg.getOutEdges(queryTermNode);
         }
 
         for (const auto &edge : *edges) {
@@ -235,8 +235,56 @@ NodeSet HypergraphOfEntity::getSeedNodes(const NodeSet &queryTermNodes) {
     return seedNodes;
 }
 
+NodeSet HypergraphOfEntity::getUndirectedNeighborsPerEdgeType(boost::shared_ptr<Node> sourceNode,
+                                                              Edge::Label edgeLabel) {
+    NodeSet result;
+
+    for (const auto &edge : hg.getAllEdges(sourceNode)) {
+        if (edge->label() != edgeLabel) continue;
+        if (edge->isDirected()) {
+            result.insert(edge->getTail().begin(), edge->getTail().end());
+            result.insert(edge->getHead().begin(), edge->getHead().end());
+        } else {
+            result.insert(edge->getNodes().begin(), edge->getNodes().end());
+        }
+        result.erase(sourceNode);
+    }
+
+    return result;
+}
+
+double HypergraphOfEntity::confidenceWeight(boost::shared_ptr<Node> seedNode, const NodeSet &queryTermNodes) {
+    // Shouldn't need this.
+    //auto seedNodeIt = hg.getNodes().find(seedNode);
+    //if (seedNodeIt == hg.getNodes().end()) return 0;
+
+    if (seedNode->label() == Node::Label::TERM) return 1;
+
+    NodeSet neighbors = getUndirectedNeighborsPerEdgeType(seedNode, Edge::Label::CONTAINED_IN);
+
+    NodeSet linkedQueryTermNodes;
+    linkedQueryTermNodes.insert(neighbors.begin(), neighbors.end());
+    // FIXME set_intersect?
+    for (const auto &linkedQueryTermNode : linkedQueryTermNodes) {
+        auto nodeIt = queryTermNodes.find(linkedQueryTermNode);
+        if (nodeIt == queryTermNodes.end()) {
+            linkedQueryTermNodes.erase(nodeIt);
+        }
+    }
+
+    if (neighbors.empty()) return 0;
+
+    return (double) linkedQueryTermNodes.size() / neighbors.size();
+}
+
 WeightedNodeSet HypergraphOfEntity::seedNodeConfidenceWeights(const NodeSet &seedNodes, const NodeSet &queryTermNodes) {
-    return WeightedNodeSet();
+    WeightedNodeSet weightedSeedNodes;
+
+    for (const auto &seedNode : seedNodes) {
+        weightedSeedNodes[seedNode] = confidenceWeight(seedNode, queryTermNodes);
+    }
+
+    return weightedSeedNodes;
 }
 
 // TODO Should follow Bellaachia2013 for random walks on hypergraphs (Equation 14)
@@ -266,7 +314,7 @@ Path HypergraphOfEntity::randomWalk(boost::shared_ptr<Node> startNode, unsigned 
 void HypergraphOfEntity::randomStep(boost::shared_ptr<Node> node, unsigned int remainingSteps, Path &path) {
     if (remainingSteps == 0) return;
 
-    boost::shared_ptr<EdgeSet> edges = hg.getIncidentEdges(node);
+    boost::shared_ptr<EdgeSet> edges = hg.getOutEdges(node);
 
     if (edges->empty()) return;
     boost::shared_ptr<Edge> randomEdge = HypergraphOfEntity::getRandom(*edges);
@@ -402,9 +450,10 @@ ResultSet HypergraphOfEntity::randomWalkSearch(const NodeSet &seedNodes, Weighte
             EntityNode entityNode = static_cast<EntityNode &>(*entry.first);
             BOOST_LOG_TRIVIAL(debug) << "Ranking " << entityNode << " using RANDOM_WALK_SCORE";
             double score = nodeCoverage[entry.first] * weightedNodeVisitProbability[entry.first];
+            // XXX TODO FIXME issue here
             if (score > PROBABILITY_THRESHOLD && entityNode.hasDocID()) {
                 resultSet.addReplaceResult(
-                        Result(score, boost::make_shared<EntityNode>(entityNode), entityNode.getDocID()));
+                        Result(score, entry.first, entityNode.getDocID()));
             }
             /*if (score > PROBABILITY_THRESHOLD) {
                 if (entityNode.hasDocID()) {
