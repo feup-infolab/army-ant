@@ -22,6 +22,7 @@
 
 // TODO Should also include edges, so we know which edge was traversed.
 typedef boost::container::vector<boost::shared_ptr<Node>> Path;
+typedef std::map<boost::shared_ptr<Node>, boost::shared_ptr<EdgeSet>> AdjacencyList;
 
 class Hypergraph {
 private:
@@ -35,6 +36,7 @@ private:
 
     NodeSet nodes;
     EdgeSet edges;
+    AdjacencyList adjacencyList;
 public:
     boost::shared_ptr<Node> getOrCreateNode(boost::shared_ptr<Node> node);
 
@@ -47,6 +49,8 @@ public:
     boost::shared_ptr<Edge> createEdge(boost::shared_ptr<Edge> edge);
 
     const EdgeSet &getEdges() const;
+
+    const boost::shared_ptr<EdgeSet> &getIncidentEdges(boost::shared_ptr<Node> node) const;
 
     void save(std::string path);
 

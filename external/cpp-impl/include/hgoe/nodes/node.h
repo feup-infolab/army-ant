@@ -2,8 +2,8 @@
 // Created by jldevezas on 3/6/18.
 //
 
-#ifndef ARMYANT_NODE_H
-#define ARMYANT_NODE_H
+#ifndef ARMY_ANT_NODE_H
+#define ARMY_ANT_NODE_H
 
 #include <string>
 #include <ostream>
@@ -14,9 +14,6 @@
 #include <boost/serialization/string.hpp>
 #include <boost/serialization/export.hpp>
 #include <boost/functional/hash.hpp>
-
-#include <hgoe/edges/edge.h>
-#include <hgoe/edges/edge_set.h>
 
 class Node {
 private:
@@ -32,9 +29,6 @@ protected:
 
     unsigned int nodeID;
     std::string name;
-
-    EdgeSet outEdges;
-    EdgeSet inEdges;
 public:
     enum NodeLabel {
         DEFAULT = 0,
@@ -61,18 +55,6 @@ public:
 
     void setNodeID(unsigned int nodeID);
 
-    const EdgeSet &getOutEdges() const;
-
-    void addOutEdge(boost::shared_ptr<Edge> outEdge);
-
-    void addOutEdges(EdgeSet outEdges);
-
-    const EdgeSet &getInEdges() const;
-
-    void addInEdge(boost::shared_ptr<Edge> inEdge);
-
-    void addInEdges(EdgeSet inEdges);
-
     virtual NodeLabel label() const = 0;
 };
 
@@ -81,4 +63,4 @@ std::size_t hash_value(const Node &node);
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(Node)
 BOOST_CLASS_EXPORT_KEY(Node)
 
-#endif //ARMYANT_NODE_H
+#endif //ARMY_ANT_NODE_H

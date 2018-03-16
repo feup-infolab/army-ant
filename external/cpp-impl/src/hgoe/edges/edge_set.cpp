@@ -6,6 +6,14 @@
 
 BOOST_CLASS_EXPORT_IMPLEMENT(EdgeSet)
 
+bool EdgeEqual::operator()(const boost::shared_ptr<Edge> &lhs, const boost::shared_ptr<Edge> &rhs) const {
+    return *lhs == *rhs && lhs->doCompare(*rhs);
+}
+
+std::size_t EdgeHash::operator()(const boost::shared_ptr<Edge> &edge) const {
+    return edge->doHash();
+}
+
 bool EdgeSet::operator==(const EdgeSet &rhs) const {
     if (size() != rhs.size())
         return false;

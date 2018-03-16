@@ -12,9 +12,7 @@
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/export.hpp>
 
-//#include <hgoe/nodes/node.h>
-
-class Node;
+#include <hgoe/nodes/node.h>
 
 struct NodeEqual {
     bool operator()(const boost::shared_ptr<Node> &lhs, const boost::shared_ptr<Node> &rhs) const;

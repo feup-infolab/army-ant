@@ -3,6 +3,7 @@
 //
 
 #include <fstream>
+
 #include <hgoe/hypergraph.h>
 
 BOOST_CLASS_EXPORT_IMPLEMENT(Hypergraph)
@@ -23,16 +24,11 @@ boost::shared_ptr<Edge> Hypergraph::createEdge(boost::shared_ptr<Edge> edge) {
     Hypergraph::edges.insert(edge);
     if (edge->isDirected()) {
         for (auto nodeIt : edge->getTail()) {
-            nodeIt->addOutEdge(edge);
-        }
-
-        for (auto nodeIt : edge->getHead()) {
-            nodeIt->addInEdge(edge);
+            adjacencyList[nodeIt]->insert(edge);
         }
     } else {
         for (auto nodeIt : edge->getNodes()) {
-            nodeIt->addInEdge(edge);
-            nodeIt->addOutEdge(edge);
+            adjacencyList[nodeIt]->insert(edge);
         }
     }
     return edge;
@@ -40,6 +36,10 @@ boost::shared_ptr<Edge> Hypergraph::createEdge(boost::shared_ptr<Edge> edge) {
 
 const EdgeSet &Hypergraph::getEdges() const {
     return edges;
+}
+
+const boost::shared_ptr<EdgeSet> &Hypergraph::getIncidentEdges(boost::shared_ptr<Node> node) const {
+    return adjacencyList.at(node);
 }
 
 void Hypergraph::save(std::string path) {

@@ -11,13 +11,29 @@ EntityNode::EntityNode() {
 }
 
 EntityNode::EntityNode(std::string name) : Node(boost::move(name)) {
-    this->document = nullptr;
+    this->docID = nullptr;
 }
 
 EntityNode::EntityNode(Document *document, std::string name) : Node(boost::move(name)) {
-    this->document = document;
+    if (name == document->getTitle()) {
+        this->docID = boost::make_shared<std::string>(document->getDocID());
+    } else {
+        this->docID = nullptr;
+    }
 }
 
 Node::NodeLabel EntityNode::label() const {
     return NodeLabel::ENTITY;
+}
+
+void EntityNode::setDocID(std::string &docID) {
+    this->docID = boost::make_shared<std::string>(docID);
+}
+
+std::string EntityNode::getDocID() const {
+    return *docID;
+}
+
+bool EntityNode::hasDocID() {
+    return docID != nullptr;
 }

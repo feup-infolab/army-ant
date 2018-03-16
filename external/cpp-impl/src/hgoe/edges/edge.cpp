@@ -88,11 +88,3 @@ void Edge::setNodes(const NodeSet &nodes) {
 bool Edge::isDirected() {
     return !this->head.empty();
 }
-
-bool Edge::Equal::operator()(const boost::shared_ptr<Edge> &lhs, const boost::shared_ptr<Edge> &rhs) const {
-    return *lhs == *rhs && lhs->doCompare(*rhs);
-}
-
-std::size_t Edge::Hash::operator()(const boost::shared_ptr<Edge> &edge) const {
-    return edge->doHash();
-}

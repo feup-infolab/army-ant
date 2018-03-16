@@ -20,13 +20,13 @@ class Document {
 private:
     float *score;
     std::string docID;
-    std::string entity;
+    std::string title;
     std::string text;
     std::vector <Triple> triples;
 public:
-    Document(std::string docID, std::string entity, std::string text, std::vector <Triple> triples);
+    Document(std::string docID, std::string title, std::string text, std::vector <Triple> triples);
 
-    Document(float *score, std::string docID, std::string entity, std::string text, std::vector <Triple> triples);
+    Document(float *score, std::string docID, std::string title, std::string text, std::vector <Triple> triples);
 
     float *getScore() const;
 
@@ -36,9 +36,9 @@ public:
 
     void setDocID(const std::string &docID);
 
-    const std::string &getEntity() const;
+    const std::string &getTitle() const;
 
-    void setEntity(const std::string &entity);
+    void setTitle(const std::string &title);
 
     const std::string &getText() const;
 

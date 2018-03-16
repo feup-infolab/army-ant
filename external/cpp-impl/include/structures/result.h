@@ -10,23 +10,33 @@
 class Result {
 private:
     double score;
-    Node *node;
+    boost::shared_ptr<Node> node;
     std::string docID;
     std::map<std::string, double> components;
 public:
-    Result(double score, Node *node);
+    Result();
 
-    Result(double score, Node *node, const std::string &docID);
+    Result(double score, boost::shared_ptr<Node> node);
 
-    Result(double score, Node *node, const std::string &docID, const std::map<std::string, double> &components);
+    Result(double score, boost::shared_ptr<Node> node, const std::string &docID);
+
+    Result(double score, boost::shared_ptr<Node> node, std::string docID, std::map<std::string, double> components);
+
+    bool operator<(const Result &rhs) const;
+
+    bool operator>(const Result &rhs) const;
+
+    bool operator<=(const Result &rhs) const;
+
+    bool operator>=(const Result &rhs) const;
 
     double getScore() const;
 
     void setScore(double score);
 
-    Node *getNode() const;
+    boost::shared_ptr<Node> getNode() const;
 
-    void setNode(Node *node);
+    void setNode(boost::shared_ptr<Node> node);
 
     const std::string &getDocID() const;
 

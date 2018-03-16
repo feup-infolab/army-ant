@@ -4,6 +4,8 @@
 
 #include <structures/result_set.h>
 
+ResultSet::ResultSet() = default;
+
 ResultSet::ResultSet(const ResultSet::results_t &results) : results(results), numDocs(nullptr) {}
 
 ResultSet::ResultSet(const ResultSet::results_t &results, unsigned int numDocs) : results(results), numDocs(&numDocs) {}
@@ -40,7 +42,7 @@ void ResultSet::setResults(const ResultSet::results_t &results) {
     ResultSet::results = results;
 }
 
-unsigned int ResultSet::getNumDocs() const {
+unsigned int ResultSet::getNumDocs() {
     if (numDocs == nullptr) {
         numDocs = boost::make_shared<unsigned int>(results.size());
     }
@@ -60,7 +62,7 @@ void ResultSet::addReplaceResult(Result result) {
     results.insert(result);
 
     auto maxResult = maxResultPerDocID.find(result.getDocID());
-    if (maxResult != maxResultPerDocID.end() && result.getScore() > (*maxResult)->getScore()) {
-        results.erase(maxResult);
+    if (maxResult != maxResultPerDocID.end() && result.getScore() > maxResult->second.getScore()) {
+        results.erase(maxResult->second);
     }
 }

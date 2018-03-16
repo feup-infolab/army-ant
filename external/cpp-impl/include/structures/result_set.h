@@ -18,6 +18,8 @@ private:
     boost::container::map<std::string, Result> maxResultPerDocID;
     boost::shared_ptr<unsigned int> numDocs;
 public:
+    ResultSet();
+
     explicit ResultSet(const results_t &results);
 
     ResultSet(const results_t &results, unsigned int numDocs);
@@ -41,7 +43,7 @@ public:
 
     void setResults(const results_t &results);
 
-    unsigned int getNumDocs() const;
+    unsigned int getNumDocs();
 
     void setNumDocs(unsigned int numDocs);
 

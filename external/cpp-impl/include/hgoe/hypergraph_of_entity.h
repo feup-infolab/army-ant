@@ -8,6 +8,7 @@
 #include <chrono>
 #include <iostream>
 #include <set>
+#include <map>
 
 #include <boost/python/object.hpp>
 #include <boost/filesystem.hpp>
@@ -22,9 +23,9 @@
 
 namespace py = boost::python;
 
-typedef boost::container::map<boost::shared_ptr<Node>, double> WeightedNodeSet;
-typedef boost::container::map<boost::shared_ptr<Node>, int> IntWeightedNodeSet;
-typedef boost::container::map<std::string, boost::variant<int, unsigned int, float, unsigned float, std::string>> RankingParams;
+typedef std::map<boost::shared_ptr<Node>, double> WeightedNodeSet;
+typedef std::map<boost::shared_ptr<Node>, int> IntWeightedNodeSet;
+typedef std::map<std::string, boost::variant<int, unsigned int, float, std::string>> RankingParams;
 
 class HypergraphOfEntity : Engine {
 private:
@@ -43,9 +44,10 @@ public:
 
     static const unsigned int DEFAULT_WALK_LENGTH = 2;
     static const unsigned int DEFAULT_WALK_REPEATS = 100;
+    static const float PROBABILITY_THRESHOLD;
 
-    template<class TSet, class TElement>
-    static boost::shared_ptr<TElement> getRandom(TSet elementSet);
+    template<typename T>
+    static typename T::value_type getRandom(T &elementSet);
 
     HypergraphOfEntity();
 
@@ -73,7 +75,7 @@ public:
 
     void randomStep(boost::shared_ptr<Node> node, unsigned int remainingSteps, Path &path);
 
-    ResultSet randomWalkSearch(const NodeSet &seedNodes, const WeightedNodeSet &seedNodeWeights,
+    ResultSet randomWalkSearch(const NodeSet &seedNodes, WeightedNodeSet &seedNodeWeights,
                                unsigned int walkLength, unsigned int walkRepeats);
 
     ResultSet search(std::string query, unsigned int offset, unsigned int limit) override;

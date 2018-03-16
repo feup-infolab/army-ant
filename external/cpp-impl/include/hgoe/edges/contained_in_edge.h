@@ -5,9 +5,10 @@
 #ifndef ARMY_ANT_CPP_CONTAINED_IN_EDGE_H
 #define ARMY_ANT_CPP_CONTAINED_IN_EDGE_H
 
-#include "edge.h"
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/export.hpp>
+
+#include <hgoe/edges/edge.h>
 
 class ContainedInEdge : public Edge {
 private:

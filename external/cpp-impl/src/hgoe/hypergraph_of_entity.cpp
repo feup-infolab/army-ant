@@ -18,6 +18,8 @@
 #include <boost/unordered_set.hpp>
 #include <boost/container/map.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
+#include <boost/range/algorithm/max_element.hpp>
+#include <boost/container/detail/pair.hpp>
 
 #include <tsl/htrie_map.h>
 #include <tsl/htrie_set.h>
@@ -36,6 +38,8 @@
 #include <boost/numeric/conversion/cast.hpp>
 
 namespace py = boost::python;
+
+const float PROBABILITY_THRESHOLD = 0.005;
 
 HypergraphOfEntity::HypergraphOfEntity() {}
 
@@ -195,15 +199,16 @@ WeightedNodeSet HypergraphOfEntity::seedNodeConfidenceWeights(const NodeSet &see
 }
 
 // TODO Should follow Bellaachia2013 for random walks on hypergraphs (Equation 14)
-template<class TSet, class TElement>
-boost::shared_ptr<TElement> HypergraphOfEntity::getRandom(TSet elementSet) {
-    boost::random::uniform_int_distribution<> randomBucket(0, boost::numeric_cast<int>(elementSet.bucket_count() - 1));
+template<typename T>
+typename T::value_type HypergraphOfEntity::getRandom(T &elementSet) {
+    boost::random::uniform_int_distribution<> randomBucket(0, boost::numeric_cast<int>(elementSet.bucket_count()) - 1);
     unsigned long bucket;
     do {
         bucket = boost::numeric_cast<unsigned long>(randomBucket(RNG));
     } while (elementSet.bucket_size(bucket) < 1);
 
-    boost::random::uniform_int_distribution<> randomIndex(0, boost::numeric_cast<int>(elementSet.bucket_size(bucket) - 1));
+    boost::random::uniform_int_distribution<> randomIndex(0,
+                                                          boost::numeric_cast<int>(elementSet.bucket_size(bucket) - 1));
     auto elementIt = elementSet.begin();
     boost::advance(elementIt, randomIndex(RNG));
     return *elementIt;
@@ -212,17 +217,17 @@ boost::shared_ptr<TElement> HypergraphOfEntity::getRandom(TSet elementSet) {
 Path HypergraphOfEntity::randomWalk(boost::shared_ptr<Node> startNode, unsigned int length) {
     Path path;
     path.push_back(startNode);
-    randomStep(startNode, length, path);
+    HypergraphOfEntity::randomStep(startNode, length, path);
     return path;
 }
 
 void HypergraphOfEntity::randomStep(boost::shared_ptr<Node> node, unsigned int remainingSteps, Path &path) {
     if (remainingSteps == 0) return;
 
-    EdgeSet edges = node->getOutEdges();
+    boost::shared_ptr<EdgeSet> edges = hg.getIncidentEdges(node);
 
-    if (edges.empty()) return;
-    boost::shared_ptr<Edge> randomEdge = HypergraphOfEntity::getRandom(edges);
+    if (edges->empty()) return;
+    boost::shared_ptr<Edge> randomEdge = HypergraphOfEntity::getRandom(*edges);
 
     NodeSet nodes;
     if (randomEdge->isDirected()) {
@@ -239,7 +244,7 @@ void HypergraphOfEntity::randomStep(boost::shared_ptr<Node> node, unsigned int r
     randomStep(randomNode, remainingSteps - 1, path);
 }
 
-ResultSet HypergraphOfEntity::randomWalkSearch(const NodeSet &seedNodes, const WeightedNodeSet &seedNodeWeights,
+ResultSet HypergraphOfEntity::randomWalkSearch(const NodeSet &seedNodes, WeightedNodeSet &seedNodeWeights,
                                                unsigned int walkLength, unsigned int walkRepeats) {
     BOOST_LOG_TRIVIAL(info) << "WALK_LENGTH = " << walkLength << ", WALK_REPEATS = " << walkRepeats;
 
@@ -268,8 +273,8 @@ ResultSet HypergraphOfEntity::randomWalkSearch(const NodeSet &seedNodes, const W
             trace.add(messageRandomPath.replace("%", "%%"));
             trace.goDown();*/
 
-            for (int nodeID : randomPath.toVertexArray()) {
-                nodeVisits.addTo(nodeID, 1);
+            for (auto node : randomPath) {
+                nodeVisits[node]++;
                 //trace.add("Node %s visited %d times", nodeIndex.getKey(nodeID), nodeVisits.get(nodeID));
             }
 
@@ -278,20 +283,27 @@ ResultSet HypergraphOfEntity::randomWalkSearch(const NodeSet &seedNodes, const W
 
         //trace.goUp();
 
-        int maxVisits = Arrays.stream(nodeVisits.values().toIntArray()).max().orElse(0);
+        auto maxVisitsIt = std::max_element(
+                nodeVisits.begin(), nodeVisits.end(),
+                [](const std::pair<boost::shared_ptr<Node>, int> &a,
+                   const std::pair<boost::shared_ptr<Node>, int> &b) {
+                    return a.second < b.second;
+                });
+        int maxVisits = 0;
+        if (maxVisitsIt != nodeVisits.end())
+            maxVisits = maxVisitsIt->second;
+
+/*
         trace.goDown();
         trace.add("max(visits) = %d", maxVisits);
+*/
 
         /*trace.add("Accumulating visit probability, weighted by seed node confidence");
         trace.goDown();*/
-        for (int nodeID : nodeVisits.keySet()) {
-            nodeCoverage.addTo(nodeID, 1);
-            synchronized(this)
-            {
-                weightedNodeVisitProbability.compute(
-                        nodeID, (k, v)->(v == null ? 0 : v) + (float) nodeVisits.get(nodeID) / maxVisits *
-                                                              seedNodeWeights.get(seedNode).floatValue());
-            }
+        for (auto entry : nodeVisits) {
+            nodeCoverage[entry.first]++;
+            weightedNodeVisitProbability[entry.first] +=
+                    nodeVisits[entry.first] / maxVisits * seedNodeWeights[seedNode];
             /*trace.add("score(%s) += visits(%s) * w(%s)",
                     nodeIndex.getKey(nodeID),
                     nodeIndex.getKey(nodeID),
@@ -303,40 +315,54 @@ ResultSet HypergraphOfEntity::randomWalkSearch(const NodeSet &seedNodes, const W
             trace.goUp();*/
         }
 
+/*
         trace.add("%d visited nodes", nodeVisits.size());
         trace.goUp();
+*/
 
         /*trace.goUp();
         trace.goUp();*/
     }
 
-    trace.goUp();
+    //trace.goUp();
 
-    ResultSet resultSet = new ResultSet();
-    resultSet.setTrace(trace);
+    ResultSet resultSet = ResultSet();
+    //resultSet.setTrace(trace);
 
+/*
     trace.add("Weighted nodes");
     trace.goDown();
+*/
 
-    double maxCoverage = Arrays.stream(nodeCoverage.values().toDoubleArray()).max().orElse(0d);
-    trace.add("max(coverage) = %f", maxCoverage);
+    auto maxCoverageIt = std::max_element(
+            nodeCoverage.begin(), nodeCoverage.end(),
+            [](const std::pair<boost::shared_ptr<Node>, int> &a,
+               const std::pair<boost::shared_ptr<Node>, int> &b) {
+                return a.second < b.second;
+            });
+    double maxCoverage = 0;
+    if (maxCoverageIt != nodeCoverage.end())
+        maxCoverage = maxCoverageIt->second;
+//    trace.add("max(coverage) = %f", maxCoverage);
 
-    for (int nodeID : weightedNodeVisitProbability.keySet()) {
-        nodeCoverage.compute(nodeID, (k, v)->v / maxCoverage);
+    for (auto entry : weightedNodeVisitProbability) {
+        nodeCoverage[entry.first] /= maxCoverage;
 
-        Node node = nodeIndex.getKey(nodeID);
+/*
         trace.add(node.toString().replace("%", "%%"));
         trace.goDown();
         trace.add("score = %f", weightedNodeVisitProbability.get(nodeID));
         trace.add("coverage = %f", nodeCoverage.get(nodeID));
         trace.goUp();
+*/
 
-        if (node instanceof EntityNode) {
-            EntityNode entityNode = (EntityNode) node;
-            logger.debug("Ranking {} using RANDOM_WALK_SCORE", entityNode);
-            double score = nodeCoverage.get(nodeID) * weightedNodeVisitProbability.get(nodeID);
+        if (entry.first->label() == Node::NodeLabel::ENTITY) {
+            EntityNode entityNode = static_cast<EntityNode &>(*entry.first);
+            BOOST_LOG_TRIVIAL(debug) << "Ranking " << entityNode << " using RANDOM_WALK_SCORE";
+            double score = nodeCoverage[entry.first] * weightedNodeVisitProbability[entry.first];
             if (score > PROBABILITY_THRESHOLD && entityNode.hasDocID()) {
-                resultSet.addReplaceResult(new Result(score, entityNode, entityNode.getDocID()));
+                resultSet.addReplaceResult(
+                        Result(score, boost::make_shared<EntityNode>(entityNode), entityNode.getDocID()));
             }
             /*if (score > PROBABILITY_THRESHOLD) {
                 if (entityNode.hasDocID()) {
@@ -348,7 +374,7 @@ ResultSet HypergraphOfEntity::randomWalkSearch(const NodeSet &seedNodes, const W
         }
     }
 
-    trace.goUp();
+    /*trace.goUp();
 
     trace.add("Collecting results (class=EntityNode; hasDocID()=true)");
     trace.goDown();
@@ -360,7 +386,7 @@ ResultSet HypergraphOfEntity::randomWalkSearch(const NodeSet &seedNodes, const W
         trace.add("docID = %s", result.getDocID());
         trace.add("nodeID = %d", nodeIndex.get(result.getNode()));
         trace.goUp();
-    }
+    }*/
 
     return resultSet;
 }
@@ -409,6 +435,6 @@ ResultSet HypergraphOfEntity::search(std::string query, unsigned int offset, uns
 
     ResultSet resultSet = randomWalkSearch(seedNodes, seedNodeWeights, DEFAULT_WALK_LENGTH, DEFAULT_WALK_REPEATS);
 
-    BOOST_LOG_TRIVIAL(info) << resultSet.getNumResults() << " entities ranked for [ " << query << " ]";
+    BOOST_LOG_TRIVIAL(info) << resultSet.getNumDocs() << " entities ranked for [ " << query << " ]";
     return resultSet;
 }

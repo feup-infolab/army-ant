@@ -50,30 +50,6 @@ void Node::setNodeID(unsigned int nodeID) {
     Node::nodeID = nodeID;
 }
 
-const EdgeSet &Node::getOutEdges() const {
-    return outEdges;
-}
-
-void Node::addOutEdge(boost::shared_ptr<Edge> outEdge) {
-    Node::outEdges.insert(outEdge);
-}
-
-void Node::addOutEdges(EdgeSet outEdges) {
-    Node::outEdges.insert(outEdges.begin(), outEdges.end());
-}
-
-const EdgeSet &Node::getInEdges() const {
-    return inEdges;
-}
-
-void Node::addInEdge(boost::shared_ptr<Edge> inEdge) {
-    Node::inEdges.insert(inEdge);
-}
-
-void Node::addInEdges(EdgeSet inEdges) {
-    Node::inEdges.insert(inEdges.begin(), inEdges.end());
-}
-
 std::size_t hash_value(const Node &node) {
     boost::hash<Node::NodeLabel> labelHash;
     boost::hash<std::string> strHash;

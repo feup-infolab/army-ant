@@ -12,7 +12,15 @@
 
 #include <hgoe/edges/edge.h>
 
-typedef boost::unordered_set<boost::shared_ptr<Edge>, Edge::Hash, Edge::Equal, std::allocator<boost::shared_ptr<Edge>>> EdgeSetContainer;
+struct EdgeEqual {
+    bool operator()(const boost::shared_ptr<Edge> &lhs, const boost::shared_ptr<Edge> &rhs) const;
+};
+
+struct EdgeHash {
+    std::size_t operator()(const boost::shared_ptr<Edge> &edge) const;
+};
+
+typedef boost::unordered_set<boost::shared_ptr<Edge>, EdgeHash, EdgeEqual, std::allocator<boost::shared_ptr<Edge>>> EdgeSetContainer;
 
 class EdgeSet : public EdgeSetContainer {
 private:

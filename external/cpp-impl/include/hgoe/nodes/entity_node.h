@@ -19,7 +19,7 @@ private:
         ar & boost::serialization::base_object<Node>(*this);
     };
 
-    Document *document;
+    boost::shared_ptr<std::string> docID;
 public:
     EntityNode();
 
@@ -28,6 +28,12 @@ public:
     EntityNode(Document *document, std::string name);
 
     NodeLabel label() const override;
+
+    void setDocID(std::string &docID);
+
+    std::string getDocID() const;
+
+    bool hasDocID();
 };
 
 BOOST_CLASS_EXPORT_KEY(EntityNode)

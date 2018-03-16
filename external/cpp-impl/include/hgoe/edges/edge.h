@@ -41,14 +41,6 @@ public:
         CONTAINED_IN = 3
     };
 
-    struct Equal {
-        bool operator()(const boost::shared_ptr<Edge> &lhs, const boost::shared_ptr<Edge> &rhs) const;
-    };
-
-    struct Hash {
-        std::size_t operator()(const boost::shared_ptr<Edge> &edge) const;
-    };
-
     Edge();
 
     explicit Edge(NodeSet nodes);

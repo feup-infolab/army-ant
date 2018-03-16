@@ -14,7 +14,7 @@ Document::Document(std::string docID, std::string entity, std::string text, std:
 Document::Document(float *score, std::string docID, std::string entity, std::string text, std::vector<Triple> triples) {
     this->score = score;
     this->docID = std::move(docID);
-    this->entity = std::move(entity);
+    this->title = std::move(entity);
     this->text = std::move(text);
     this->triples = std::move(triples);
 }
@@ -35,12 +35,12 @@ void Document::setDocID(const std::string &docID) {
     Document::docID = docID;
 }
 
-const std::string &Document::getEntity() const {
-    return entity;
+const std::string &Document::getTitle() const {
+    return title;
 }
 
-void Document::setEntity(const std::string &entity) {
-    Document::entity = entity;
+void Document::setTitle(const std::string &title) {
+    Document::title = title;
 }
 
 const std::string &Document::getText() const {
@@ -67,7 +67,7 @@ std::ostream &operator<<(std::ostream &os, const Document &document) {
     }
 
     os << "docID: " << document.docID << std::endl
-       << "  entity: " << document.entity << std::endl
+       << "  title: " << document.title << std::endl
        << "  text: " << document.text;
 
     if (!document.triples.empty()) {
