@@ -10,6 +10,6 @@ DocumentNode::DocumentNode() = default;
 
 DocumentNode::DocumentNode(std::string name) : Node(boost::move(name)) {}
 
-Node::NodeLabel DocumentNode::label() const {
-    return NodeLabel::DOCUMENT;
+Node::Label DocumentNode::label() const {
+    return Label::DOCUMENT;
 }

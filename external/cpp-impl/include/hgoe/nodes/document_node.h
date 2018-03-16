@@ -22,7 +22,7 @@ public:
 
     explicit DocumentNode(std::string name);
 
-    NodeLabel label() const override;
+    Label label() const override;
 };
 
 BOOST_CLASS_EXPORT_KEY(DocumentNode)

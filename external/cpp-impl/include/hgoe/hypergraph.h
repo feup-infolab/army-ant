@@ -9,6 +9,7 @@
 
 #include <boost/unordered_set.hpp>
 #include <boost/container/vector.hpp>
+#include <boost/unordered_map.hpp>
 #include <boost/python/object.hpp>
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/boost_unordered_set.hpp>
@@ -22,7 +23,7 @@
 
 // TODO Should also include edges, so we know which edge was traversed.
 typedef boost::container::vector<boost::shared_ptr<Node>> Path;
-typedef std::map<boost::shared_ptr<Node>, boost::shared_ptr<EdgeSet>> AdjacencyList;
+typedef boost::unordered_map<boost::shared_ptr<Node>, boost::shared_ptr<EdgeSet>, NodeHash, NodeEqual> AdjacencyList;
 
 class Hypergraph {
 private:

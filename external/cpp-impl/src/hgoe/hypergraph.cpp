@@ -23,11 +23,15 @@ const NodeSet &Hypergraph::getNodes() const {
 boost::shared_ptr<Edge> Hypergraph::createEdge(boost::shared_ptr<Edge> edge) {
     Hypergraph::edges.insert(edge);
     if (edge->isDirected()) {
-        for (auto nodeIt : edge->getTail()) {
+        for (const auto &nodeIt : edge->getTail()) {
+            if (adjacencyList.find(nodeIt) == adjacencyList.end())
+                adjacencyList[nodeIt] = boost::make_shared<EdgeSet>();
             adjacencyList[nodeIt]->insert(edge);
         }
     } else {
-        for (auto nodeIt : edge->getNodes()) {
+        for (const auto &nodeIt : edge->getNodes()) {
+            if (adjacencyList.find(nodeIt) == adjacencyList.end())
+                adjacencyList[nodeIt] = boost::make_shared<EdgeSet>();
             adjacencyList[nodeIt]->insert(edge);
         }
     }

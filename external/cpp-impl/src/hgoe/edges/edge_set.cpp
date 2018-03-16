@@ -31,7 +31,7 @@ bool EdgeSet::operator!=(const EdgeSet &rhs) const {
 }
 
 /*std::size_t hash_value(const Edge &edge) {
-    boost::hash<Edge::EdgeLabel> labelHasher;
+    boost::hash<Edge::Label> labelHasher;
     boost::hash<NodeSet> nodeSetHasher;
     std::size_t h = 0;
     boost::hash_combine(h, labelHasher(edge.label()));

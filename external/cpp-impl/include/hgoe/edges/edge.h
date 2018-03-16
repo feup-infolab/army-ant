@@ -34,7 +34,7 @@ protected:
     NodeSet tail;
     NodeSet head;
 public:
-    enum EdgeLabel {
+    enum Label {
         DEFAULT = 0,
         DOCUMENT = 1,
         RELATED_TO = 2,
@@ -77,7 +77,7 @@ public:
 
     bool isDirected();
 
-    virtual EdgeLabel label() const = 0;
+    virtual Label label() const = 0;
 };
 
 std::size_t hash_value(const Edge &edge);

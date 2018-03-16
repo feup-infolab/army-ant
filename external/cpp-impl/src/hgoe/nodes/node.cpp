@@ -38,8 +38,8 @@ std::ostream &operator<<(std::ostream &os, const Node &node) {
     return os;
 }
 
-Node::NodeLabel Node::label() const {
-    return NodeLabel::DEFAULT;
+Node::Label Node::label() const {
+    return Label::DEFAULT;
 }
 
 unsigned int Node::getNodeID() const {
@@ -51,7 +51,7 @@ void Node::setNodeID(unsigned int nodeID) {
 }
 
 std::size_t hash_value(const Node &node) {
-    boost::hash<Node::NodeLabel> labelHash;
+    boost::hash<Node::Label> labelHash;
     boost::hash<std::string> strHash;
     size_t h = 0;
     boost::hash_combine(h, labelHash(node.label()));

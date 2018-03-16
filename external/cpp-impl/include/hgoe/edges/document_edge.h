@@ -40,7 +40,7 @@ public:
 
     void setDocID(const std::string &docID);
 
-    EdgeLabel label() const override;
+    Label label() const override;
 };
 
 BOOST_CLASS_EXPORT_KEY(DocumentEdge)

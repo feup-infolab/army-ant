@@ -23,7 +23,7 @@ public:
 
     explicit ContainedInEdge(NodeSet tail, NodeSet head);
 
-    EdgeLabel label() const override;
+    Label label() const override;
 };
 
 BOOST_CLASS_EXPORT_KEY(ContainedInEdge)

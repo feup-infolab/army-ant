@@ -14,5 +14,11 @@ int main(int argc, char **argv) {
                       {Triple {"rock", "related_to", "stoner rock"}}));
     hg.postProcessing();
     hg.save();
+
+    auto resultSet = hg.search("rock", 0, 10);
+    for (const auto &result : resultSet) {
+        std::cout << result << std::endl;
+    }
+
     return 0;
 }

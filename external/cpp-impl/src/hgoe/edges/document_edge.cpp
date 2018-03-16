@@ -39,6 +39,6 @@ void DocumentEdge::setDocID(const std::string &docID) {
     DocumentEdge::docID = docID;
 }
 
-Edge::EdgeLabel DocumentEdge::label() const {
-    return EdgeLabel::DOCUMENT;
+Edge::Label DocumentEdge::label() const {
+    return Label::DOCUMENT;
 }

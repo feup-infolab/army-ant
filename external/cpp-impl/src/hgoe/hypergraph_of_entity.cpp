@@ -21,6 +21,7 @@
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/range/algorithm/max_element.hpp>
 #include <boost/container/detail/pair.hpp>
+#include <boost/range/algorithm/set_algorithm.hpp>
 
 #include <tsl/htrie_map.h>
 #include <tsl/htrie_set.h>
@@ -157,7 +158,7 @@ void HypergraphOfEntity::linkTextAndKnowledge() {
 
     BOOST_LOG_TRIVIAL(info) << "Creating links between entity nodes and term nodes using trie";
     for (auto entityNode : this->hg.getNodes()) {
-        if (entityNode->label() == Node::NodeLabel::ENTITY) {
+        if (entityNode->label() == Node::Label::ENTITY) {
             std::vector<std::string> tokens = analyze(entityNode->getName());
             NodeSet termNodes = NodeSet();
             for (auto token : tokens) {
@@ -189,12 +190,49 @@ void HypergraphOfEntity::load() {
     this->hg = Hypergraph::load(baseDirPath.string());
 }
 
-NodeSet HypergraphOfEntity::getQueryTermNodes(const std::vector<std::string> &tokens) {
-    return NodeSet();
+NodeSet HypergraphOfEntity::getQueryTermNodes(const std::vector<std::string> &terms) {
+    NodeSet termNodes;
+
+    for (const auto &term : terms) {
+        auto termNodeIt = hg.getNodes().find(boost::make_shared<TermNode>(term));
+        if (termNodeIt != hg.getNodes().end()) {
+            termNodes.insert(*termNodeIt);
+        }
+    }
+
+    return termNodes;
 }
 
 NodeSet HypergraphOfEntity::getSeedNodes(const NodeSet &queryTermNodes) {
-    return NodeSet();
+    NodeSet seedNodes;
+
+    for (const auto &queryTermNode : queryTermNodes) {
+        NodeSet localSeedNodes;
+
+        boost::shared_ptr<EdgeSet> edges;
+        auto queryTermNodeIt = hg.getNodes().find(queryTermNode);
+        if (queryTermNodeIt != hg.getNodes().end()) {
+            edges = hg.getIncidentEdges(queryTermNode);
+        }
+
+        for (const auto &edge : *edges) {
+            if (edge->label() != Edge::Label::CONTAINED_IN) continue;
+
+            for (const auto &node : edge->getHead()) {
+                if (node->label() == Node::Label::ENTITY) {
+                    localSeedNodes.insert(node);
+                }
+            }
+        }
+
+        if (localSeedNodes.empty() && queryTermNodeIt != hg.getNodes().end()) {
+            localSeedNodes.insert(queryTermNode);
+        }
+
+        seedNodes.insert(localSeedNodes.begin(), localSeedNodes.end());
+    }
+
+    return seedNodes;
 }
 
 WeightedNodeSet HypergraphOfEntity::seedNodeConfidenceWeights(const NodeSet &seedNodes, const NodeSet &queryTermNodes) {
@@ -360,7 +398,7 @@ ResultSet HypergraphOfEntity::randomWalkSearch(const NodeSet &seedNodes, Weighte
         trace.goUp();
 */
 
-        if (entry.first->label() == Node::NodeLabel::ENTITY) {
+        if (entry.first->label() == Node::Label::ENTITY) {
             EntityNode entityNode = static_cast<EntityNode &>(*entry.first);
             BOOST_LOG_TRIVIAL(debug) << "Ranking " << entityNode << " using RANDOM_WALK_SCORE";
             double score = nodeCoverage[entry.first] * weightedNodeVisitProbability[entry.first];

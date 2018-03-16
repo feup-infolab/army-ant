@@ -24,7 +24,7 @@ public:
 
     explicit RelatedToEdge(NodeSet nodes);
 
-    EdgeLabel label() const override;
+    Label label() const override;
 };
 
 BOOST_CLASS_EXPORT_KEY(RelatedToEdge)

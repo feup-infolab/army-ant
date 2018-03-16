@@ -12,7 +12,7 @@ bool NodeEqual::operator()(const boost::shared_ptr<Node> &lhs, const boost::shar
 }
 
 std::size_t NodeHash::operator()(const boost::shared_ptr<Node> &node) const {
-    boost::hash<Node::NodeLabel> labelHash;
+    boost::hash<Node::Label> labelHash;
     boost::hash<std::string> strHash;
     size_t h = 0;
     boost::hash_combine(h, labelHash(node->label()));

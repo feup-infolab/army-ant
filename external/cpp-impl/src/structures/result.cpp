@@ -74,3 +74,9 @@ void Result::setComponent(const std::string &key, const double &value) {
 void Result::unsetComponent(const std::string &key) {
     this->components.erase(key);
 }
+
+std::ostream &operator<<(std::ostream &os, const Result &result) {
+    os << "{ score: " << result.score << ", node: " << result.node << ", docID: " << result.docID << ", components: "
+       << result.components.size() << " }";
+    return os;
+}

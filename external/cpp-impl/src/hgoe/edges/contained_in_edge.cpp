@@ -12,6 +12,6 @@ ContainedInEdge::ContainedInEdge() = default;
 
 ContainedInEdge::ContainedInEdge(NodeSet tail, NodeSet head) : Edge(boost::move(tail), boost::move(head)) {}
 
-Edge::EdgeLabel ContainedInEdge::label() const {
-    return EdgeLabel::CONTAINED_IN;
+Edge::Label ContainedInEdge::label() const {
+    return Label::CONTAINED_IN;
 }

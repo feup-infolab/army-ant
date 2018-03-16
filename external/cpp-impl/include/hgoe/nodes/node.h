@@ -30,7 +30,7 @@ protected:
     unsigned int nodeID;
     std::string name;
 public:
-    enum NodeLabel {
+    enum Label {
         DEFAULT = 0,
         DOCUMENT = 1,
         TERM = 2,
@@ -55,7 +55,7 @@ public:
 
     void setNodeID(unsigned int nodeID);
 
-    virtual NodeLabel label() const = 0;
+    virtual Label label() const = 0;
 };
 
 std::size_t hash_value(const Node &node);

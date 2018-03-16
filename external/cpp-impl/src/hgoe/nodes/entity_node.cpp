@@ -22,8 +22,8 @@ EntityNode::EntityNode(Document *document, std::string name) : Node(boost::move(
     }
 }
 
-Node::NodeLabel EntityNode::label() const {
-    return NodeLabel::ENTITY;
+Node::Label EntityNode::label() const {
+    return Label::ENTITY;
 }
 
 void EntityNode::setDocID(std::string &docID) {

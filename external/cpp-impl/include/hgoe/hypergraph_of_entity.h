@@ -62,7 +62,7 @@ public:
 
     void linkTextAndKnowledge();
 
-    NodeSet getQueryTermNodes(const std::vector<std::string> &tokens);
+    NodeSet getQueryTermNodes(const std::vector<std::string> &terms);
 
     NodeSet getSeedNodes(const NodeSet &queryTermNodes);
 

@@ -6,6 +6,7 @@
 #define ARMY_ANT_CPP_RESULT_H
 
 #include <hgoe/nodes/node.h>
+#include <ostream>
 
 class Result {
 private:
@@ -29,6 +30,8 @@ public:
     bool operator<=(const Result &rhs) const;
 
     bool operator>=(const Result &rhs) const;
+
+    friend std::ostream &operator<<(std::ostream &os, const Result &result);
 
     double getScore() const;
 

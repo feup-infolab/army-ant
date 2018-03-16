@@ -10,6 +10,6 @@ TermNode::TermNode() = default;
 
 TermNode::TermNode(std::string name) : Node(boost::move(name)) {}
 
-Node::NodeLabel TermNode::label() const {
-    return NodeLabel::TERM;
+Node::Label TermNode::label() const {
+    return Label::TERM;
 }

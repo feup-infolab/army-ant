@@ -27,7 +27,7 @@ public:
 
     EntityNode(Document *document, std::string name);
 
-    NodeLabel label() const override;
+    Label label() const override;
 
     void setDocID(std::string &docID);
 

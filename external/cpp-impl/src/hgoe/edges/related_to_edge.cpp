@@ -14,6 +14,6 @@ RelatedToEdge::RelatedToEdge(NodeSet nodes) : Edge(nodes) {
 
 }
 
-Edge::EdgeLabel RelatedToEdge::label() const {
-    return EdgeLabel::RELATED_TO;
+Edge::Label RelatedToEdge::label() const {
+    return Label::RELATED_TO;
 }
