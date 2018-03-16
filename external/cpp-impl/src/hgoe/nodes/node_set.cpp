@@ -3,8 +3,22 @@
 //
 
 #include <hgoe/nodes/node_set.h>
+#include <hgoe/nodes/node.h>
 
 BOOST_CLASS_EXPORT_IMPLEMENT(NodeSet)
+
+bool NodeEqual::operator()(const boost::shared_ptr<Node> &lhs, const boost::shared_ptr<Node> &rhs) const {
+    return *lhs == *rhs;
+}
+
+std::size_t NodeHash::operator()(const boost::shared_ptr<Node> &node) const {
+    boost::hash<Node::NodeLabel> labelHash;
+    boost::hash<std::string> strHash;
+    size_t h = 0;
+    boost::hash_combine(h, labelHash(node->label()));
+    boost::hash_combine(h, strHash(node->getName()));
+    return h;
+}
 
 bool NodeSet::operator==(const NodeSet &rhs) const {
     if (size() != rhs.size())

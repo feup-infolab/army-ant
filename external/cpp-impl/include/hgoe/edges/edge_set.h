@@ -10,7 +10,6 @@
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/export.hpp>
 
-#include <hgoe/nodes/node.h>
 #include <hgoe/edges/edge.h>
 
 typedef boost::unordered_set<boost::shared_ptr<Edge>, Edge::Hash, Edge::Equal, std::allocator<boost::shared_ptr<Edge>>> EdgeSetContainer;

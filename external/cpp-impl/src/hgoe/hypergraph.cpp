@@ -21,6 +21,20 @@ const NodeSet &Hypergraph::getNodes() const {
 
 boost::shared_ptr<Edge> Hypergraph::createEdge(boost::shared_ptr<Edge> edge) {
     Hypergraph::edges.insert(edge);
+    if (edge->isDirected()) {
+        for (auto nodeIt : edge->getTail()) {
+            nodeIt->addOutEdge(edge);
+        }
+
+        for (auto nodeIt : edge->getHead()) {
+            nodeIt->addInEdge(edge);
+        }
+    } else {
+        for (auto nodeIt : edge->getNodes()) {
+            nodeIt->addInEdge(edge);
+            nodeIt->addOutEdge(edge);
+        }
+    }
     return edge;
 }
 

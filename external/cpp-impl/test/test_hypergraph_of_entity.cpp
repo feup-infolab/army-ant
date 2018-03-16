@@ -4,7 +4,6 @@
 
 #include <iostream>
 
-#include <structures/entity.h>
 #include <hgoe/hypergraph_of_entity.h>
 
 int main(int argc, char **argv) {

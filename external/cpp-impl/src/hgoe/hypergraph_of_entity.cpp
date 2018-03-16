@@ -15,6 +15,9 @@
 #include <boost/python/tuple.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/unordered_set.hpp>
+#include <boost/container/map.hpp>
+#include <boost/random/uniform_int_distribution.hpp>
 
 #include <tsl/htrie_map.h>
 #include <tsl/htrie_set.h>
@@ -30,10 +33,11 @@
 #include <hgoe/nodes/entity_node.h>
 #include <hgoe/edges/related_to_edge.h>
 #include <hgoe/edges/contained_in_edge.h>
+#include <boost/numeric/conversion/cast.hpp>
 
 namespace py = boost::python;
 
-HypergraphOfEntity::HypergraphOfEntity() { }
+HypergraphOfEntity::HypergraphOfEntity() {}
 
 HypergraphOfEntity::HypergraphOfEntity(std::string path) {
     this->baseDirPath = boost::filesystem::path(path);
@@ -176,4 +180,235 @@ void HypergraphOfEntity::save() {
 
 void HypergraphOfEntity::load() {
     this->hg = Hypergraph::load(baseDirPath.string());
+}
+
+NodeSet HypergraphOfEntity::getQueryTermNodes(const std::vector<std::string> &tokens) {
+    return NodeSet();
+}
+
+NodeSet HypergraphOfEntity::getSeedNodes(const NodeSet &queryTermNodes) {
+    return NodeSet();
+}
+
+WeightedNodeSet HypergraphOfEntity::seedNodeConfidenceWeights(const NodeSet &seedNodes, const NodeSet &queryTermNodes) {
+    return WeightedNodeSet();
+}
+
+// TODO Should follow Bellaachia2013 for random walks on hypergraphs (Equation 14)
+template<class TSet, class TElement>
+boost::shared_ptr<TElement> HypergraphOfEntity::getRandom(TSet elementSet) {
+    boost::random::uniform_int_distribution<> randomBucket(0, boost::numeric_cast<int>(elementSet.bucket_count() - 1));
+    unsigned long bucket;
+    do {
+        bucket = boost::numeric_cast<unsigned long>(randomBucket(RNG));
+    } while (elementSet.bucket_size(bucket) < 1);
+
+    boost::random::uniform_int_distribution<> randomIndex(0, boost::numeric_cast<int>(elementSet.bucket_size(bucket) - 1));
+    auto elementIt = elementSet.begin();
+    boost::advance(elementIt, randomIndex(RNG));
+    return *elementIt;
+}
+
+Path HypergraphOfEntity::randomWalk(boost::shared_ptr<Node> startNode, unsigned int length) {
+    Path path;
+    path.push_back(startNode);
+    randomStep(startNode, length, path);
+    return path;
+}
+
+void HypergraphOfEntity::randomStep(boost::shared_ptr<Node> node, unsigned int remainingSteps, Path &path) {
+    if (remainingSteps == 0) return;
+
+    EdgeSet edges = node->getOutEdges();
+
+    if (edges.empty()) return;
+    boost::shared_ptr<Edge> randomEdge = HypergraphOfEntity::getRandom(edges);
+
+    NodeSet nodes;
+    if (randomEdge->isDirected()) {
+        nodes.insert(randomEdge->getHead().begin(), randomEdge->getHead().end());
+    } else {
+        nodes.insert(randomEdge->getNodes().begin(), randomEdge->getNodes().end());
+        nodes.erase(node);
+    }
+
+    if (nodes.empty()) return;
+    boost::shared_ptr<Node> randomNode = HypergraphOfEntity::getRandom(nodes);
+
+    path.push_back(randomNode);
+    randomStep(randomNode, remainingSteps - 1, path);
+}
+
+ResultSet HypergraphOfEntity::randomWalkSearch(const NodeSet &seedNodes, const WeightedNodeSet &seedNodeWeights,
+                                               unsigned int walkLength, unsigned int walkRepeats) {
+    BOOST_LOG_TRIVIAL(info) << "WALK_LENGTH = " << walkLength << ", WALK_REPEATS = " << walkRepeats;
+
+    WeightedNodeSet weightedNodeVisitProbability;
+    WeightedNodeSet nodeCoverage;
+
+/*
+    trace.add("Random walk search (WALK_LENGTH = %d, WALK_REPEATS = %d)", walk_length, walk_repeats);
+    trace.goDown();
+*/
+
+    for (auto const &seedNode : seedNodes) {
+        IntWeightedNodeSet nodeVisits;
+//        trace.add("From seed node: %s", nodeIndex.getKey(seedNode));
+        /*trace.goDown();
+        trace.add("Random walk with restart (WALK_LENGTH = %d, WALK_REPEATS = %d)", WALK_LENGTH, WALK_REPEATS);
+        trace.goDown();*/
+
+        for (int i = 0; i < walkRepeats; i++) {
+            auto randomPath = randomWalk(seedNode, walkLength);
+
+            /*String messageRandomPath = Arrays.stream(randomPath.toVertexArray())
+                    .mapToObj(nodeID -> nodeIndex.getKey(nodeID).toString())
+                    .collect(Collectors.joining        //IntSet edgeIDs = graph.getEdgesIncidentTo(nodeID);
+(" -> "));
+            trace.add(messageRandomPath.replace("%", "%%"));
+            trace.goDown();*/
+
+            for (int nodeID : randomPath.toVertexArray()) {
+                nodeVisits.addTo(nodeID, 1);
+                //trace.add("Node %s visited %d times", nodeIndex.getKey(nodeID), nodeVisits.get(nodeID));
+            }
+
+            //trace.goUp();
+        }
+
+        //trace.goUp();
+
+        int maxVisits = Arrays.stream(nodeVisits.values().toIntArray()).max().orElse(0);
+        trace.goDown();
+        trace.add("max(visits) = %d", maxVisits);
+
+        /*trace.add("Accumulating visit probability, weighted by seed node confidence");
+        trace.goDown();*/
+        for (int nodeID : nodeVisits.keySet()) {
+            nodeCoverage.addTo(nodeID, 1);
+            synchronized(this)
+            {
+                weightedNodeVisitProbability.compute(
+                        nodeID, (k, v)->(v == null ? 0 : v) + (float) nodeVisits.get(nodeID) / maxVisits *
+                                                              seedNodeWeights.get(seedNode).floatValue());
+            }
+            /*trace.add("score(%s) += visits(%s) * w(%s)",
+                    nodeIndex.getKey(nodeID),
+                    nodeIndex.getKey(nodeID),
+                    nodeIndex.getKey(seedNodeID));
+            trace.goDown();
+            trace.add("P(visit(%s)) = %f", nodeIndex.getKey(nodeID).toString(), (float) nodeVisits.get(nodeID) / maxVisits);
+            trace.add("w(%s) = %f", nodeIndex.getKey(seedNodeID), seedNodeWeights.get(seedNodeID));
+            trace.add("score(%s) = %f", nodeIndex.getKey(nodeID), weightedNodeVisitProbability.get(nodeID));
+            trace.goUp();*/
+        }
+
+        trace.add("%d visited nodes", nodeVisits.size());
+        trace.goUp();
+
+        /*trace.goUp();
+        trace.goUp();*/
+    }
+
+    trace.goUp();
+
+    ResultSet resultSet = new ResultSet();
+    resultSet.setTrace(trace);
+
+    trace.add("Weighted nodes");
+    trace.goDown();
+
+    double maxCoverage = Arrays.stream(nodeCoverage.values().toDoubleArray()).max().orElse(0d);
+    trace.add("max(coverage) = %f", maxCoverage);
+
+    for (int nodeID : weightedNodeVisitProbability.keySet()) {
+        nodeCoverage.compute(nodeID, (k, v)->v / maxCoverage);
+
+        Node node = nodeIndex.getKey(nodeID);
+        trace.add(node.toString().replace("%", "%%"));
+        trace.goDown();
+        trace.add("score = %f", weightedNodeVisitProbability.get(nodeID));
+        trace.add("coverage = %f", nodeCoverage.get(nodeID));
+        trace.goUp();
+
+        if (node instanceof EntityNode) {
+            EntityNode entityNode = (EntityNode) node;
+            logger.debug("Ranking {} using RANDOM_WALK_SCORE", entityNode);
+            double score = nodeCoverage.get(nodeID) * weightedNodeVisitProbability.get(nodeID);
+            if (score > PROBABILITY_THRESHOLD && entityNode.hasDocID()) {
+                resultSet.addReplaceResult(new Result(score, entityNode, entityNode.getDocID()));
+            }
+            /*if (score > PROBABILITY_THRESHOLD) {
+                if (entityNode.hasDocID()) {
+                    resultSet.addReplaceResult(new Result(score, entityNode, entityNode.getDocID()));
+                } else {
+                    resultSet.addReplaceResult(new Result(score, entityNode, entityNode.getName()));
+                }
+            }*/
+        }
+    }
+
+    trace.goUp();
+
+    trace.add("Collecting results (class=EntityNode; hasDocID()=true)");
+    trace.goDown();
+
+    for (Result result : resultSet) {
+        trace.add(result.getNode().toString());
+        trace.goDown();
+        trace.add("score = %f", result.getScore());
+        trace.add("docID = %s", result.getDocID());
+        trace.add("nodeID = %d", nodeIndex.get(result.getNode()));
+        trace.goUp();
+    }
+
+    return resultSet;
+}
+
+ResultSet HypergraphOfEntity::search(std::string query, unsigned int offset, unsigned int limit) {
+    return search(query, offset, limit, RankingFunction::RANDOM_WALK,
+                  RankingParams({{"l", DEFAULT_WALK_LENGTH},
+                                 {"r", DEFAULT_WALK_REPEATS}}));
+}
+
+ResultSet HypergraphOfEntity::search(std::string query, unsigned int offset, unsigned int limit,
+                                     RankingFunction function, RankingParams params) {
+    std::vector<std::string> tokens = analyze(query);
+    NodeSet queryTermNodes = getQueryTermNodes(tokens);
+/*
+    trace.add("Mapping query terms [ %s ] to query term nodes", StringUtils.join(tokens, ", "));
+    trace.goDown();
+    for (int queryTermNodeID : queryTermNodes) {
+        trace.add(nodeIndex.getKey(queryTermNodeID).toString());
+    }
+    trace.goUp();
+*/
+
+    NodeSet seedNodes = getSeedNodes(queryTermNodes);
+    std::cout << "Seed Nodes: " << seedNodes << std::endl;
+/*
+    trace.add("Mapping query term nodes to seed nodes");
+    trace.goDown();
+    for (int seedNodeID : seedNodes) {
+        trace.add(nodeIndex.getKey(seedNodeID).toString().replace("%", "%%"));
+    }
+    trace.goUp();
+*/
+
+    WeightedNodeSet seedNodeWeights = seedNodeConfidenceWeights(seedNodes, queryTermNodes);
+    //System.out.println("Seed Node Confidence Weights: " + seedNodeWeights);
+    BOOST_LOG_TRIVIAL(info) << seedNodeWeights.size() << " seed nodes weights calculated for [ " << query << " ]";
+/*
+    trace.add("Calculating confidence weight for seed nodes");
+    trace.goDown();
+    for (Map.Entry < Integer, Double > entry : seedNodeWeights.entrySet()) {
+        trace.add("w(%s) = %f", nodeIndex.getKey(entry.getKey()), entry.getValue());
+    }
+    trace.goUp();
+*/
+
+    ResultSet resultSet = randomWalkSearch(seedNodes, seedNodeWeights, DEFAULT_WALK_LENGTH, DEFAULT_WALK_REPEATS);
+
+    BOOST_LOG_TRIVIAL(info) << resultSet.getNumResults() << " entities ranked for [ " << query << " ]";
+    return resultSet;
 }

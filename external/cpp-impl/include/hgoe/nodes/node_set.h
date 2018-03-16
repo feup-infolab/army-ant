@@ -5,14 +5,26 @@
 #ifndef ARMY_ANT_CPP_NODE_SET_H
 #define ARMY_ANT_CPP_NODE_SET_H
 
-#include <hgoe/nodes/node.h>
+#include <ostream>
+
 #include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/boost_unordered_set.hpp>
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/export.hpp>
-#include <ostream>
 
-typedef boost::unordered_set<boost::shared_ptr<Node>, Node::Hash, Node::Equal, std::allocator<Node>> NodeSetContainer;
+//#include <hgoe/nodes/node.h>
+
+class Node;
+
+struct NodeEqual {
+    bool operator()(const boost::shared_ptr<Node> &lhs, const boost::shared_ptr<Node> &rhs) const;
+};
+
+struct NodeHash {
+    std::size_t operator()(const boost::shared_ptr<Node> &node) const;
+};
+
+typedef boost::unordered_set<boost::shared_ptr<Node>, NodeHash, NodeEqual, std::allocator<Node>> NodeSetContainer;
 
 class NodeSet : public NodeSetContainer {
 private:

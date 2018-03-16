@@ -8,16 +8,20 @@
 #include <string>
 
 #include <boost/unordered_set.hpp>
+#include <boost/container/vector.hpp>
 #include <boost/python/object.hpp>
 #include <boost/serialization/access.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
 #include <boost/serialization/boost_unordered_set.hpp>
 #include <boost/serialization/shared_ptr.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
 
 #include <hgoe/nodes/node.h>
 #include <hgoe/edges/edge.h>
 #include <hgoe/edges/edge_set.h>
+
+// TODO Should also include edges, so we know which edge was traversed.
+typedef boost::container::vector<boost::shared_ptr<Node>> Path;
 
 class Hypergraph {
 private:

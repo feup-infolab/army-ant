@@ -21,6 +21,8 @@ set(SRC
     engine.cpp
     structures/document.cpp
     structures/entity.cpp
+    structures/result.cpp
+    structures/result_set.cpp
     hgoe/hypergraph.cpp
     hgoe/hypergraph_of_entity.cpp
     hgoe/nodes/node.cpp
@@ -38,6 +40,8 @@ set(INCLUDE
     ../include/engine.h
     ../include/structures/document.h
     ../include/structures/entity.h
+    ../include/structures/result.h
+    ../include/structures/result_set.h
     ../include/hgoe/hypergraph.h
     ../include/hgoe/hypergraph_of_entity.h
     ../include/hgoe/nodes/node.h

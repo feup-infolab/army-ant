@@ -7,13 +7,16 @@
 
 #include <string>
 #include <ostream>
-#include <boost/unordered_set.hpp>
 
+#include <boost/unordered_set.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/serialization/string.hpp>
 #include <boost/serialization/export.hpp>
 #include <boost/functional/hash.hpp>
+
+#include <hgoe/edges/edge.h>
+#include <hgoe/edges/edge_set.h>
 
 class Node {
 private:
@@ -29,20 +32,15 @@ protected:
 
     unsigned int nodeID;
     std::string name;
+
+    EdgeSet outEdges;
+    EdgeSet inEdges;
 public:
     enum NodeLabel {
         DEFAULT = 0,
         DOCUMENT = 1,
         TERM = 2,
         ENTITY = 3
-    };
-
-    struct Equal {
-        bool operator()(const boost::shared_ptr<Node> &lhs, const boost::shared_ptr<Node> &rhs) const;
-    };
-
-    struct Hash {
-        std::size_t operator()(const boost::shared_ptr<Node> &node) const;
     };
 
     Node();
@@ -62,6 +60,18 @@ public:
     unsigned int getNodeID() const;
 
     void setNodeID(unsigned int nodeID);
+
+    const EdgeSet &getOutEdges() const;
+
+    void addOutEdge(boost::shared_ptr<Edge> outEdge);
+
+    void addOutEdges(EdgeSet outEdges);
+
+    const EdgeSet &getInEdges() const;
+
+    void addInEdge(boost::shared_ptr<Edge> inEdge);
+
+    void addInEdges(EdgeSet inEdges);
 
     virtual NodeLabel label() const = 0;
 };
