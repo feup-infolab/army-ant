@@ -18,6 +18,7 @@
 #include <boost/unordered_set.hpp>
 #include <boost/container/map.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
+#include <boost/random/mersenne_twister.hpp>
 #include <boost/range/algorithm/max_element.hpp>
 #include <boost/container/detail/pair.hpp>
 
@@ -39,7 +40,9 @@
 
 namespace py = boost::python;
 
-const float PROBABILITY_THRESHOLD = 0.005;
+const unsigned int HypergraphOfEntity::DEFAULT_WALK_LENGTH = 2;
+const unsigned int HypergraphOfEntity::DEFAULT_WALK_REPEATS = 100;
+const float HypergraphOfEntity::PROBABILITY_THRESHOLD = 0.005;
 
 HypergraphOfEntity::HypergraphOfEntity() {}
 
@@ -201,16 +204,17 @@ WeightedNodeSet HypergraphOfEntity::seedNodeConfidenceWeights(const NodeSet &see
 // TODO Should follow Bellaachia2013 for random walks on hypergraphs (Equation 14)
 template<typename T>
 typename T::value_type HypergraphOfEntity::getRandom(T &elementSet) {
+    boost::random::mt19937 rng;
     boost::random::uniform_int_distribution<> randomBucket(0, boost::numeric_cast<int>(elementSet.bucket_count()) - 1);
     unsigned long bucket;
     do {
-        bucket = boost::numeric_cast<unsigned long>(randomBucket(RNG));
+        bucket = boost::numeric_cast<unsigned long>(randomBucket(rng));
     } while (elementSet.bucket_size(bucket) < 1);
 
     boost::random::uniform_int_distribution<> randomIndex(0,
                                                           boost::numeric_cast<int>(elementSet.bucket_size(bucket) - 1));
     auto elementIt = elementSet.begin();
-    boost::advance(elementIt, randomIndex(RNG));
+    boost::advance(elementIt, randomIndex(rng));
     return *elementIt;
 }
 

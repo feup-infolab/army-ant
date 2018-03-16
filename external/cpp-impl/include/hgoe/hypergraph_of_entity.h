@@ -14,7 +14,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/container/map.hpp>
 #include <boost/variant.hpp>
-#include <boost/random/mersenne_twister.hpp>
 
 #include <engine.h>
 #include <structures/document.h>
@@ -35,15 +34,13 @@ private:
     std::chrono::milliseconds totalTime;
     float avgTimePerDocument;
     unsigned int counter;
-protected:
-    static const boost::random::mt19937 RNG;
 public:
     enum RankingFunction {
         RANDOM_WALK
     };
 
-    static const unsigned int DEFAULT_WALK_LENGTH = 2;
-    static const unsigned int DEFAULT_WALK_REPEATS = 100;
+    static const unsigned int DEFAULT_WALK_LENGTH;
+    static const unsigned int DEFAULT_WALK_REPEATS;
     static const float PROBABILITY_THRESHOLD;
 
     template<typename T>
