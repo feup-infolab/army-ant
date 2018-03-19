@@ -447,13 +447,13 @@ ResultSet HypergraphOfEntity::randomWalkSearch(const NodeSet &seedNodes, Weighte
 */
 
         if (entry.first->label() == Node::Label::ENTITY) {
-            EntityNode entityNode = static_cast<EntityNode &>(*entry.first);
-            BOOST_LOG_TRIVIAL(debug) << "Ranking " << entityNode << " using RANDOM_WALK_SCORE";
+            EntityNode *entityNode = dynamic_cast<EntityNode *>(entry.first.get());
+            BOOST_LOG_TRIVIAL(debug) << "Ranking " << *entityNode << " using RANDOM_WALK_SCORE";
             double score = nodeCoverage[entry.first] * weightedNodeVisitProbability[entry.first];
             // XXX TODO FIXME issue here
-            if (score > PROBABILITY_THRESHOLD && entityNode.hasDocID()) {
+            if (score > PROBABILITY_THRESHOLD && entityNode->hasDocID()) {
                 resultSet.addReplaceResult(
-                        Result(score, entry.first, entityNode.getDocID()));
+                        Result(score, entry.first, entityNode->getDocID()));
             }
             /*if (score > PROBABILITY_THRESHOLD) {
                 if (entityNode.hasDocID()) {
@@ -528,4 +528,11 @@ ResultSet HypergraphOfEntity::search(std::string query, unsigned int offset, uns
 
     BOOST_LOG_TRIVIAL(info) << resultSet.getNumDocs() << " entities ranked for [ " << query << " ]";
     return resultSet;
+}
+
+ResultSet HypergraphOfEntity::pySearch(py::object query, py::object offset, py::object limit) {
+    return search(
+            py::extract<std::string>(query),
+            py::extract<unsigned int>(offset),
+            py::extract<unsigned int>(limit));
 }

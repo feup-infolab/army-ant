@@ -5,10 +5,15 @@
 #ifndef ARMY_ANT_CPP_ENTITY_NODE_H
 #define ARMY_ANT_CPP_ENTITY_NODE_H
 
+#include <string>
+
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/string.hpp>
+#include <boost/serialization/shared_ptr.hpp>
+#include <boost/serialization/export.hpp>
+
 #include <structures/document.h>
 #include <hgoe/nodes/node.h>
-#include <boost/serialization/base_object.hpp>
-#include <boost/serialization/export.hpp>
 
 class EntityNode : public Node {
 private:
@@ -17,9 +22,10 @@ private:
     template<class Archive>
     void serialize(Archive &ar, unsigned int version) {
         ar & boost::serialization::base_object<Node>(*this);
+        ar & docID;
     };
 
-    boost::shared_ptr<std::string> docID;
+    std::string docID;
 public:
     EntityNode();
 
@@ -27,9 +33,11 @@ public:
 
     EntityNode(Document *document, std::string name);
 
+    void print(std::ostream &os) const override;
+
     Label label() const override;
 
-    void setDocID(std::string &docID);
+    void setDocID(const std::string &docID);
 
     std::string getDocID() const;
 

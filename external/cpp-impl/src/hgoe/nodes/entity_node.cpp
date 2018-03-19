@@ -6,19 +6,13 @@
 
 BOOST_CLASS_EXPORT_IMPLEMENT(EntityNode)
 
-EntityNode::EntityNode() {
+EntityNode::EntityNode() = default;
 
-}
-
-EntityNode::EntityNode(std::string name) : Node(boost::move(name)) {
-    this->docID = nullptr;
-}
+EntityNode::EntityNode(std::string name) : Node(boost::move(name)) { }
 
 EntityNode::EntityNode(Document *document, std::string name) : Node(name) {
     if (name == document->getTitle()) {
-        this->docID = boost::make_shared<std::string>(document->getDocID());
-    } else {
-        this->docID = nullptr;
+        this->docID = document->getDocID();
     }
 }
 
@@ -26,14 +20,19 @@ Node::Label EntityNode::label() const {
     return Label::ENTITY;
 }
 
-void EntityNode::setDocID(std::string &docID) {
-    this->docID = boost::make_shared<std::string>(docID);
+void EntityNode::setDocID(const std::string &docID) {
+    this->docID = docID;
 }
 
 std::string EntityNode::getDocID() const {
-    return *docID;
+    return docID;
 }
 
 bool EntityNode::hasDocID() {
-    return docID != nullptr;
+    return !docID.empty();
+}
+
+void EntityNode::print(std::ostream &os) const {
+    os << "EntityNode { docID: " << (docID.empty() ?  "N/A" : docID) << " } & ";
+    Node::print(os);
 }

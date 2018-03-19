@@ -33,8 +33,12 @@ bool Node::operator!=(const Node &rhs) const {
     return !(rhs == *this);
 }
 
+void Node::print(std::ostream &os) const {
+    os << "{ nodeID: " << nodeID << ", name: " << name << " }";
+}
+
 std::ostream &operator<<(std::ostream &os, const Node &node) {
-    os << "{ nodeID: " << node.nodeID << ", name: " << node.name << " }";
+    node.print(os);
     return os;
 }
 

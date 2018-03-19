@@ -84,6 +84,8 @@ public:
     ResultSet search(std::string query, unsigned int offset, unsigned int limit,
                      RankingFunction function, RankingParams params);
 
+    ResultSet pySearch(py::object query, py::object offset, py::object limit);
+
     void save();
 
     void load();

@@ -12,6 +12,7 @@
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/serialization/string.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/export.hpp>
 #include <boost/functional/hash.hpp>
 
@@ -44,6 +45,8 @@ public:
     bool operator==(const Node &rhs) const;
 
     bool operator!=(const Node &rhs) const;
+
+    virtual void print(std::ostream &os) const;
 
     friend std::ostream &operator<<(std::ostream &os, const Node &node);
 

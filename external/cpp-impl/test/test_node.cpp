@@ -41,6 +41,35 @@ int testNodeSetCompare() {
     return 1;
 }
 
+int testEntityNodeSerialization() {
+    std::cout << "\n==> Testing EntityNode serialization" << std::endl;
+
+    NodeSet outEntityNodes = {
+            boost::make_shared<EntityNode>(new Document("doc_1", "entityName", "text", std::vector<Triple>()), "entityName")};
+    std::ofstream ofs("/tmp/hgoe-entity-node");
+    boost::archive::binary_oarchive oa(ofs);
+    oa << outEntityNodes;
+    ofs.close();
+
+    NodeSet inEntityNodes;
+    std::ifstream ifs("/tmp/hgoe-entity-node");
+    boost::archive::binary_iarchive ia(ifs);
+    ia >> inEntityNodes;
+    ifs.close();
+
+    Node *outNode = outEntityNodes.begin()->get();
+    EntityNode *inNode = dynamic_cast<EntityNode *>(inEntityNodes.begin()->get());
+
+    std::cout << "Saved node: " << (*outNode) << std::endl;
+    std::cout << "Loaded node: " << (*inNode) << std::endl;
+
+    if (outNode->label() != inNode->label()) return 1;
+    if (outNode->getName() != inNode->getName()) return 1;
+    if (outNode->getNodeID() != inNode->getNodeID()) return 1;
+
+    return 0;
+}
+
 int main(int argc, char **argv) {
     std::cout << std::boolalpha;
 
@@ -48,6 +77,7 @@ int main(int argc, char **argv) {
 
     if ((ret = testNodeCompare()) != 0) return ret;
     if ((ret = testNodeSetCompare()) != 0) return ret;
+    if ((ret = testEntityNodeSerialization()) != 0) return ret;
 
     return 0;
 }
