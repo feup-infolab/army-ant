@@ -60,8 +60,12 @@ EdgeSet Hypergraph::getOutEdges(boost::shared_ptr<Node> node) {
     return *(edgeSetIt->second);
 }
 
-const boost::shared_ptr<EdgeSet> &Hypergraph::getInEdges(boost::shared_ptr<Node> node) const {
-    return inEdges.at(node);
+EdgeSet Hypergraph::getInEdges(boost::shared_ptr<Node> node) {
+    auto edgeSetIt = this->inEdges.find(node);
+    if (edgeSetIt == this->inEdges.end()) {
+        return EdgeSet();
+    }
+    return *(edgeSetIt->second);
 }
 
 // FIXME inefficient

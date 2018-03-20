@@ -187,7 +187,7 @@ void HypergraphOfEntity::save() {
 }
 
 void HypergraphOfEntity::load() {
-    this->hg = Hypergraph::load(baseDirPath.string());
+    this->hg = Hypergraph::load(hgFilePath.string());
 }
 
 NodeSet HypergraphOfEntity::getQueryTermNodes(const std::vector<std::string> &terms) {

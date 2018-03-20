@@ -22,6 +22,8 @@ public:
 
     explicit DocumentNode(std::string name);
 
+    void print(std::ostream &os) const override;
+
     Label label() const override;
 };
 

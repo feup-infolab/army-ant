@@ -13,3 +13,8 @@ TermNode::TermNode(std::string name) : Node(boost::move(name)) {}
 Node::Label TermNode::label() const {
     return Label::TERM;
 }
+
+void TermNode::print(std::ostream &os) const {
+    os << "TermNode ";
+    Node::print(os);
+}

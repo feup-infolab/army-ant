@@ -54,7 +54,7 @@ public:
 
     EdgeSet getOutEdges(boost::shared_ptr<Node> node);
 
-    const boost::shared_ptr<EdgeSet> &getInEdges(boost::shared_ptr<Node> node) const;
+    EdgeSet getInEdges(boost::shared_ptr<Node> node);
 
     const EdgeSet getAllEdges(boost::shared_ptr<Node> node) const;
 

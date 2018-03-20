@@ -8,7 +8,7 @@
 
 int main(int argc, char **argv) {
     std::cout << "==> Testing HypergraphOfEntity" << std::endl;
-    HypergraphOfEntity hg = HypergraphOfEntity("/tmp/hgoe-index");
+    /*HypergraphOfEntity hg = HypergraphOfEntity("/tmp/hgoe-index");
 
     hg.index(Document("d1", "music", "I am a document about music.", {Triple {"music", "related_to", "rock"}}));
     hg.index(Document("d2", "rock music", "I am a document about rock music.",
@@ -18,13 +18,16 @@ int main(int argc, char **argv) {
     hg.index(Document("2", "História2", "", {Triple({"a", "b", "c"}), Triple({"c", "e", "f"})}));
     hg.index(
             Document("3", "História3", "Era uma vez uma coisa que eu queria tokenizer, mas convenientemente.",
-                     {Triple({"a", "b", "c"}), Triple({"c", "e", "f"})}));*/
+                     {Triple({"a", "b", "c"}), Triple({"c", "e", "f"})}));
 
 
     hg.postProcessing();
-    hg.save();
+    hg.save();*/
 
-    auto resultSet = hg.search("music", 0, 10);
+    HypergraphOfEntity hg("/tmp/hgoe++");
+    hg.load();
+
+    auto resultSet = hg.search("musician", 0, 10);
     for (const auto &result : resultSet) {
         std::cout << result << std::endl;
     }

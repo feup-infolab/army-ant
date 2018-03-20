@@ -13,3 +13,8 @@ DocumentNode::DocumentNode(std::string name) : Node(boost::move(name)) {}
 Node::Label DocumentNode::label() const {
     return Label::DOCUMENT;
 }
+
+void DocumentNode::print(std::ostream &os) const {
+    os << "DocumentNode ";
+    Node::print(os);
+}
