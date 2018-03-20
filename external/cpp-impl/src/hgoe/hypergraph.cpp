@@ -4,6 +4,8 @@
 
 #include <fstream>
 
+#include <boost/log/trivial.hpp>
+
 #include <hgoe/hypergraph.h>
 
 BOOST_CLASS_EXPORT_IMPLEMENT(Hypergraph)
@@ -22,7 +24,10 @@ const NodeSet &Hypergraph::getNodes() const {
 
 boost::shared_ptr<Edge> Hypergraph::createEdge(boost::shared_ptr<Edge> edge) {
     Hypergraph::edges.insert(edge);
-    /*if (edge->isDirected()) {
+    if (edge->isDirected()) {
+        BOOST_LOG_TRIVIAL(trace) << "Directed edge with " << edge->getTail().size() << " tail nodes and "
+                    << edge->getHead().size() << " head nodes";
+
         for (const auto &nodeIt : edge->getTail()) {
             if (outEdges.find(nodeIt) == outEdges.end())
                 outEdges[nodeIt] = boost::make_shared<EdgeSet>();
@@ -35,6 +40,8 @@ boost::shared_ptr<Edge> Hypergraph::createEdge(boost::shared_ptr<Edge> edge) {
             inEdges[nodeIt]->insert(edge);
         }
     } else {
+        BOOST_LOG_TRIVIAL(trace) << "Undirected edge with " << edge->getNodes().size() << " nodes";
+
         for (const auto &nodeIt : edge->getNodes()) {
             if (outEdges.find(nodeIt) == outEdges.end())
                 outEdges[nodeIt] = boost::make_shared<EdgeSet>();
@@ -44,7 +51,7 @@ boost::shared_ptr<Edge> Hypergraph::createEdge(boost::shared_ptr<Edge> edge) {
                 inEdges[nodeIt] = boost::make_shared<EdgeSet>();
             inEdges[nodeIt]->insert(edge);
         }
-    }*/
+    }
     return edge;
 }
 

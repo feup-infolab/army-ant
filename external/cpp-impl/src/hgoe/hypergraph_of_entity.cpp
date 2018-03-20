@@ -2,8 +2,6 @@
 // Created by jldevezas on 3/6/18.
 //
 
-#define BOOST_LOG_DYN_LINK 1
-
 #include <chrono>
 #include <utility>
 
@@ -45,7 +43,7 @@ const unsigned int HypergraphOfEntity::DEFAULT_WALK_LENGTH = 2;
 const unsigned int HypergraphOfEntity::DEFAULT_WALK_REPEATS = 100;
 const float HypergraphOfEntity::PROBABILITY_THRESHOLD = 0.005;
 
-HypergraphOfEntity::HypergraphOfEntity() {}
+HypergraphOfEntity::HypergraphOfEntity() = default;
 
 HypergraphOfEntity::HypergraphOfEntity(std::string path) {
     this->baseDirPath = boost::filesystem::path(path);

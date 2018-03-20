@@ -20,7 +20,7 @@ namespace logging = boost::log;
 class Engine {
 public:
     Engine() {
-        logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::debug);
+        logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::trace);
     };
 
     virtual void index(Document document) = 0;

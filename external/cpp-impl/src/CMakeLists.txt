@@ -13,6 +13,8 @@ set(hattrie_INCLUDE_DIRS ${CMAKE_BINARY_DIR}/hat-trie-src)
 find_package(PythonLibs)
 find_package(Boost COMPONENTS python3 log serialization filesystem)
 
+add_definitions(-DBOOST_LOG_DYN_LINK)
+
 include_directories(${Boost_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS} ${hattrie_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIR})
 
