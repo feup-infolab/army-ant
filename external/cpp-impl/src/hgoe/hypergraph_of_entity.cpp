@@ -117,19 +117,24 @@ void HypergraphOfEntity::index(Document document) {
 
 
 void HypergraphOfEntity::indexDocument(Document document) {
+    BOOST_LOG_TRIVIAL(trace) << "Creating document node";
     boost::shared_ptr<Node> sourceDocumentNode = this->hg.getOrCreateNode(
             boost::make_shared<DocumentNode>(document.getDocID()));
 
+    BOOST_LOG_TRIVIAL(trace) << "Indexing entities";
     NodeSet targetNodes = indexEntities(document);
 
+    BOOST_LOG_TRIVIAL(trace) << "Tokenizing document";
     std::vector<std::string> tokens = analyze(document.getText());
     if (tokens.empty()) return;
 
     for (auto token : tokens) {
+        BOOST_LOG_TRIVIAL(trace) << "Creating term node for '" << token << "'";
         targetNodes.insert(this->hg.getOrCreateNode(boost::make_shared<TermNode>(token)));
     }
 
     // TODO Consider changing directed to undirected hyperedge.
+    BOOST_LOG_TRIVIAL(trace) << "Creating document edge";
     auto edge = boost::make_shared<DocumentEdge>(document.getDocID(), NodeSet({sourceDocumentNode}), targetNodes);
     this->hg.createEdge(edge);
 }

@@ -23,17 +23,17 @@ hg = HypergraphOfEntity("/tmp/hgoe++")
 #              triples=[(Entity("a", "http://a"), "b", Entity("c", "http://c")),
 #                       (Entity("c", "http://c"), "e", Entity("f", "http://f"))]))
 
-# print("===> Preparing reader")
-# reader = INEXDirectoryReader("/media/hdd0/datasets/inex-2009-3t-nl/corpus", use_memory=True)
-#
-# print("===> Indexing")
-# for doc in reader:
-#    hg.index(doc)
-#
-# hg.post_processing()
-#
-# hg.save()
+print("===> Preparing reader")
+reader = INEXDirectoryReader("/media/hdd0/datasets/inex-2009-3t-nl/corpus", use_memory=True)
 
-hg.load()
-for result in hg.search("coisa", 0, 10):
-    print(result)
+print("===> Indexing")
+for doc in reader:
+   hg.index(doc)
+
+hg.post_processing()
+
+hg.save()
+
+#hg.load()
+#for result in hg.search("music", 0, 10):
+#    print(result)

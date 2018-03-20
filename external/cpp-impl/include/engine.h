@@ -8,11 +8,21 @@
 #include <string>
 #include <vector>
 
+#include <boost/log/core.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/log/expressions.hpp>
+
 #include <structures/document.h>
 #include <structures/result_set.h>
 
+namespace logging = boost::log;
+
 class Engine {
 public:
+    Engine() {
+        logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::debug);
+    };
+
     virtual void index(Document document) = 0;
 
     virtual ResultSet search(std::string query, unsigned int offset, unsigned int limit) = 0;
