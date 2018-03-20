@@ -4,6 +4,7 @@
 
 #include <fstream>
 
+#include <omp.h>
 #include <boost/log/trivial.hpp>
 
 #include <hgoe/hypergraph.h>
@@ -25,31 +26,51 @@ const NodeSet &Hypergraph::getNodes() const {
 boost::shared_ptr<Edge> Hypergraph::createEdge(boost::shared_ptr<Edge> edge) {
     Hypergraph::edges.insert(edge);
     if (edge->isDirected()) {
-        BOOST_LOG_TRIVIAL(trace) << "Directed edge with " << edge->getTail().size() << " tail nodes and "
-                    << edge->getHead().size() << " head nodes";
+        BOOST_LOG_TRIVIAL(trace) << "Directed edge with "
+                                 << edge->getTail().size() << " tail nodes and "
+                                 << edge->getHead().size() << " head nodes";
 
-        for (const auto &nodeIt : edge->getTail()) {
-            if (outEdges.find(nodeIt) == outEdges.end())
-                outEdges[nodeIt] = boost::make_shared<EdgeSet>();
-            outEdges[nodeIt]->insert(edge);
+
+        #pragma omp parallel
+        {
+            for (auto nodeIt = edge->getTail().begin(); nodeIt != edge->getTail().end(); nodeIt++) {
+                #pragma omp critical
+                {
+                    if (outEdges.find(*nodeIt) == outEdges.end())
+                        outEdges[*nodeIt] = boost::make_shared<EdgeSet>();
+                    outEdges[*nodeIt]->insert(edge);
+                }
+            }
         }
 
-        for (const auto &nodeIt : edge->getHead()) {
-            if (inEdges.find(nodeIt) == inEdges.end())
-                inEdges[nodeIt] = boost::make_shared<EdgeSet>();
-            inEdges[nodeIt]->insert(edge);
+        #pragma omp parallel
+        {
+            for (auto nodeIt = edge->getTail().begin(); nodeIt != edge->getHead().end(); nodeIt++) {
+                #pragma omp critical
+                {
+                    if (inEdges.find(*nodeIt) == inEdges.end())
+                        inEdges[*nodeIt] = boost::make_shared<EdgeSet>();
+                    inEdges[*nodeIt]->insert(edge);
+                }
+            }
         }
     } else {
         BOOST_LOG_TRIVIAL(trace) << "Undirected edge with " << edge->getNodes().size() << " nodes";
 
-        for (const auto &nodeIt : edge->getNodes()) {
-            if (outEdges.find(nodeIt) == outEdges.end())
-                outEdges[nodeIt] = boost::make_shared<EdgeSet>();
-            outEdges[nodeIt]->insert(edge);
+        #pragma omp parallel
+        {
+            for (auto nodeIt = edge->getTail().begin(); nodeIt != edge->getNodes().end(); nodeIt++) {
+                #pragma omp critical
+                {
+                    if (outEdges.find(*nodeIt) == outEdges.end())
+                        outEdges[*nodeIt] = boost::make_shared<EdgeSet>();
+                    outEdges[*nodeIt]->insert(edge);
 
-            if (inEdges.find(nodeIt) == inEdges.end())
-                inEdges[nodeIt] = boost::make_shared<EdgeSet>();
-            inEdges[nodeIt]->insert(edge);
+                    if (inEdges.find(*nodeIt) == inEdges.end())
+                        inEdges[*nodeIt] = boost::make_shared<EdgeSet>();
+                    inEdges[*nodeIt]->insert(edge);
+                }
+            }
         }
     }
     return edge;
