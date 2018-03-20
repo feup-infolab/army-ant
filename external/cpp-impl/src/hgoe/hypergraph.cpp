@@ -52,8 +52,12 @@ const EdgeSet &Hypergraph::getEdges() const {
     return edges;
 }
 
-const boost::shared_ptr<EdgeSet> &Hypergraph::getOutEdges(boost::shared_ptr<Node> node) const {
-    return outEdges.at(node);
+EdgeSet Hypergraph::getOutEdges(boost::shared_ptr<Node> node) {
+    auto edgeSetIt = this->outEdges.find(node);
+    if (edgeSetIt == this->outEdges.end()) {
+        return EdgeSet();
+    }
+    return *(edgeSetIt->second);
 }
 
 const boost::shared_ptr<EdgeSet> &Hypergraph::getInEdges(boost::shared_ptr<Node> node) const {

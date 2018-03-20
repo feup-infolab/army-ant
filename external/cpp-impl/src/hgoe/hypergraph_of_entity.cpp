@@ -209,13 +209,15 @@ NodeSet HypergraphOfEntity::getSeedNodes(const NodeSet &queryTermNodes) {
     for (const auto &queryTermNode : queryTermNodes) {
         NodeSet localSeedNodes;
 
-        boost::shared_ptr<EdgeSet> edges;
+        EdgeSet edgeSet;
         auto queryTermNodeIt = hg.getNodes().find(queryTermNode);
         if (queryTermNodeIt != hg.getNodes().end()) {
-            edges = hg.getOutEdges(queryTermNode);
+            edgeSet = hg.getOutEdges(queryTermNode);
         }
 
-        for (const auto &edge : *edges) {
+        //if (edgesIt == hg.getOutEdges().end()) continue;
+
+        for (const auto &edge : edgeSet) {
             if (edge->label() != Edge::Label::CONTAINED_IN) continue;
 
             for (const auto &node : edge->getHead()) {
@@ -314,10 +316,10 @@ Path HypergraphOfEntity::randomWalk(boost::shared_ptr<Node> startNode, unsigned 
 void HypergraphOfEntity::randomStep(boost::shared_ptr<Node> node, unsigned int remainingSteps, Path &path) {
     if (remainingSteps == 0) return;
 
-    boost::shared_ptr<EdgeSet> edges = hg.getOutEdges(node);
+    EdgeSet edges = hg.getOutEdges(node);
 
-    if (edges->empty()) return;
-    boost::shared_ptr<Edge> randomEdge = HypergraphOfEntity::getRandom(*edges);
+    if (edges.empty()) return;
+    boost::shared_ptr<Edge> randomEdge = HypergraphOfEntity::getRandom(edges);
 
     NodeSet nodes;
     if (randomEdge->isDirected()) {
@@ -447,13 +449,15 @@ ResultSet HypergraphOfEntity::randomWalkSearch(const NodeSet &seedNodes, Weighte
 */
 
         if (entry.first->label() == Node::Label::ENTITY) {
-            EntityNode *entityNode = dynamic_cast<EntityNode *>(entry.first.get());
+            auto entityNode = boost::static_pointer_cast<EntityNode>(entry.first);
             BOOST_LOG_TRIVIAL(debug) << "Ranking " << *entityNode << " using RANDOM_WALK_SCORE";
             double score = nodeCoverage[entry.first] * weightedNodeVisitProbability[entry.first];
             // XXX TODO FIXME issue here
             if (score > PROBABILITY_THRESHOLD && entityNode->hasDocID()) {
+                /*resultSet.addReplaceResult(
+                        Result(score, entry.first, entityNode->getDocID()));*/
                 resultSet.addReplaceResult(
-                        Result(score, entry.first, entityNode->getDocID()));
+                        Result(score, entityNode->getDocID()));
             }
             /*if (score > PROBABILITY_THRESHOLD) {
                 if (entityNode.hasDocID()) {

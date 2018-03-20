@@ -13,27 +13,27 @@ from army_ant_cpp import HypergraphOfEntity;
 
 hg = HypergraphOfEntity("/tmp/hgoe++")
 
-hg.index(Document(doc_id="1", entity="História1",
-                  text="Era uma vez uma coisa que eu queria tokenizer, mas convenientemente."))
-hg.index(Document(doc_id="2", entity="História2", triples=[(Entity("a", "http://a"), "b", Entity("c", "http://c")),
-                                                           (Entity("c", "http://c"), "e", Entity("f", "http://f"))]))
-hg.index(
-    Document(doc_id="3", entity="História3",
-             text="Era uma vez uma coisa que eu queria tokenizer, mas convenientemente.",
-             triples=[(Entity("a", "http://a"), "b", Entity("c", "http://c")),
-                      (Entity("c", "http://c"), "e", Entity("f", "http://f"))]))
+# hg.index(Document(doc_id="1", entity="História1",
+#                   text="Era uma vez uma coisa que eu queria tokenizer, mas convenientemente."))
+# hg.index(Document(doc_id="2", entity="História2", triples=[(Entity("a", "http://a"), "b", Entity("c", "http://c")),
+#                                                            (Entity("c", "http://c"), "e", Entity("f", "http://f"))]))
+# hg.index(
+#     Document(doc_id="3", entity="História3",
+#              text="Era uma vez uma coisa que eu queria tokenizer, mas convenientemente.",
+#              triples=[(Entity("a", "http://a"), "b", Entity("c", "http://c")),
+#                       (Entity("c", "http://c"), "e", Entity("f", "http://f"))]))
 
-#print("===> Preparing reader")
-#reader = INEXDirectoryReader("/media/hdd0/datasets/inex-2009-3t-nl/corpus", use_memory=True)
+print("===> Preparing reader")
+reader = INEXDirectoryReader("/media/hdd0/datasets/inex-2009-3t-nl/corpus", use_memory=True)
 
-#print("===> Indexing")
-#for doc in reader:
-#    hg.index(doc)
+print("===> Indexing")
+for doc in reader:
+   hg.index(doc)
 
-#hg.post_processing()
+hg.post_processing()
 
-#hg.save()
+hg.save()
 
 #hg.load()
-for result in hg.search("coisa", 0, 10):
-    print(result.getScore())
+#for result in hg.search("coisa", 0, 10):
+#    print(result)

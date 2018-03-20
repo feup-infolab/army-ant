@@ -17,11 +17,17 @@ private:
 public:
     Result();
 
-    Result(double score, boost::shared_ptr<Node> node);
+    /*Result(double score, boost::shared_ptr<Node> node);
 
     Result(double score, boost::shared_ptr<Node> node, const std::string &docID);
 
-    Result(double score, boost::shared_ptr<Node> node, std::string docID, std::map<std::string, double> components);
+    Result(double score, boost::shared_ptr<Node> node, std::string docID, std::map<std::string, double> components);*/
+
+    Result(double score);
+
+    Result(double score, const std::string &docID);
+
+    Result(double score, std::string docID, std::map<std::string, double> components);
 
     bool operator<(const Result &rhs) const;
 
@@ -37,9 +43,9 @@ public:
 
     void setScore(double score);
 
-    boost::shared_ptr<Node> getNode() const;
+    /*boost::shared_ptr<Node> getNode() const;
 
-    void setNode(boost::shared_ptr<Node> node);
+    void setNode(boost::shared_ptr<Node> node);*/
 
     const std::string &getDocID() const;
 

@@ -8,12 +8,19 @@
 
 Result::Result() = default;
 
-Result::Result(double score, boost::shared_ptr<Node> node) : score(score), node(std::move(node)) {}
+/*Result::Result(double score, boost::shared_ptr<Node> node) : score(score), node(std::move(node)) {}
 
 Result::Result(double score, boost::shared_ptr<Node> node, const std::string &docID) : score(score), node(std::move(node)), docID(docID) {}
 
 Result::Result(double score, boost::shared_ptr<Node> node, std::string docID, std::map<std::string, double> components)
-        : score(score), node(std::move(node)), docID(std::move(docID)), components(std::move(components)) {}
+        : score(score), node(std::move(node)), docID(std::move(docID)), components(std::move(components)) {}*/
+
+Result::Result(double score) : score(score) {}
+
+Result::Result(double score, const std::string &docID) : score(score), docID(docID) {}
+
+Result::Result(double score, std::string docID, std::map<std::string, double> components)
+        : score(score), docID(std::move(docID)), components(std::move(components)) {}
 
 bool Result::operator<(const Result &rhs) const {
     return score < rhs.score;
@@ -39,13 +46,13 @@ void Result::setScore(double score) {
     Result::score = score;
 }
 
-boost::shared_ptr<Node> Result::getNode() const {
+/*boost::shared_ptr<Node> Result::getNode() const {
     return node;
 }
 
 void Result::setNode(boost::shared_ptr<Node> node) {
     Result::node = node;
-}
+}*/
 
 const std::string &Result::getDocID() const {
     return docID;
@@ -76,7 +83,9 @@ void Result::unsetComponent(const std::string &key) {
 }
 
 std::ostream &operator<<(std::ostream &os, const Result &result) {
-    os << "{ score: " << result.score << ", node: " << result.node << ", docID: " << result.docID << ", components: "
+    /*os << "{ score: " << result.score << ", docID: " << result.docID << ", node: " << *result.node << ", |components|: "
+       << result.components.size() << " }";*/
+    os << "{ score: " << result.score << ", docID: " << result.docID << ", |components|: "
        << result.components.size() << " }";
     return os;
 }
