@@ -251,7 +251,7 @@
 
         if ($totalQueryTimeChart && $avgQueryTimeChart) {
           let xData = Object.keys(tasks[i].stats).map(function(key) {
-            return '(' + key.replace(/_/g, '=').replace(/-/g, ', ').replace(/﹒/g, '.') + ')';
+            return '(' + key.replace(/_/g, '=').replace(/-/g, ', ').replace(/~/g, '.') + ')';
           });
 
           let yDataTotalQueryTime = Object.keys(tasks[i].stats).map(function(key) {
@@ -289,7 +289,7 @@
 
         if ($detailsChart) {
           let xData = Object.keys(tasks[i].results).map(function(key) {
-            return '(' + key.replace(/_/g, '=').replace(/-/g, ', ').replace(/﹒/g, '.') + ')';
+            return '(' + key.replace(/_/g, '=').replace(/-/g, ', ').replace(/~/g, '.') + ')';
           });
 
           let yDataPerMetric = {};
