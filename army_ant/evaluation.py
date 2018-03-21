@@ -742,9 +742,11 @@ class EvaluationTaskManager(object):
             shutil.copytree(os.path.join(self.eval_location, 'results', task_id),
                             os.path.join(out_dir, 'search_results'))
 
+            sorted_ranking_params = sorted(task.ranking_params.keys()) if task.ranking_params else []
+
             with open(os.path.join(out_dir, "eval_metrics.csv"), 'w') as f:
                 writer = csv.writer(f)
-                writer.writerow(sorted(task.ranking_params.keys()) + ['metric', 'value'])
+                writer.writerow(sorted_ranking_params + ['metric', 'value'])
                 for params_id, results in task.results.items():
                     for metric, value in results['metrics'].items():
                         params = OrderedDict(sorted(
@@ -754,7 +756,7 @@ class EvaluationTaskManager(object):
 
             with open(os.path.join(out_dir, "eval_stats.csv"), 'w') as f:
                 writer = csv.writer(f)
-                writer.writerow(sorted(task.ranking_params.keys()) + ['stat', 'value'])
+                writer.writerow(sorted_ranking_params + ['stat', 'value'])
                 for params_id, stats in task.stats.items():
                     for stat, value in stats.items():
                         if type(value) is not dict and type(value) is not list:
