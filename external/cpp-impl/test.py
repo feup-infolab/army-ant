@@ -7,7 +7,8 @@
 
 import sys, os
 
-sys.path.append('external/cpp-impl/cmake-build-debug/src')
+sys.path.append('cmake-build-debug/src')
+sys.path.append('../..')
 from army_ant.reader import Document, Entity, INEXDirectoryReader;
 from army_ant_cpp import HypergraphOfEntity;
 
