@@ -5,6 +5,8 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2018-03-02
 
+import os
+
 import numpy as np
 import pandas as pd
 
@@ -24,14 +26,22 @@ def kendall_w(pd_dfs):
     if rankings.ndim != 2:
         raise ArmyAntException('Rankings matrix must be 2-dimensional')
 
-    m = rankings.shape[0] # rankers
-    n = rankings.shape[1] # documents
+    m = rankings.shape[0]  # rankers
+    n = rankings.shape[1]  # documents
 
-    return (12 * m * np.var(np.sum(rankings, axis=0))) / (m ** 2 * (n ** 3 - n))
-
+    return (12 * n * np.var(np.sum(rankings, axis=0))) / (m ** 2 * (n ** 3 - n))
 
 if __name__ == '__main__':
-    df1 = pd.DataFrame([[1, 2, 3], [10, 4, 2], ['d1', 'd2', 'd3']], index=['rank', 'score', 'doc_id']).T
-    df2 = pd.DataFrame([[1, 2, 3, 4], [20, 8, 4, 2], ['d1', 'd2', 'd7', 'd3']], index=['rank', 'score', 'doc_id']).T
-    df3 = pd.DataFrame([[1, 2, 3], [100, 40, 20], ['d2', 'd1', 'd3']], index=['rank', 'score', 'doc_id']).T
-    print(kendall_w([df1, df2, df3]))
+    dfs = [
+        pd.DataFrame({'rank': [1, 2, 3], 'score': [10, 4, 2], 'doc_id': ['d1', 'd2', 'd3']}),
+        pd.DataFrame({'rank': [1, 2, 3, 4], 'score': [20, 8, 4, 2], 'doc_id': ['d1', 'd2', 'd7', 'd3']}),
+        pd.DataFrame({'rank': [1, 2, 3], 'score': [100, 40, 20], 'doc_id': ['d2', 'd1', 'd3']}),
+        pd.DataFrame(columns=['rank', 'score', 'doc_id'])
+    ]
+    #filled_dfs = fill_missing(dfs, 'doc_id', rank=FillMethod.INC_MAX, score=FillMethod.ZERO)
+    #for df in filled_dfs: print(df)
+    print("Kendall's W:", kendall_w(dfs))
+
+    # dir_path = '/opt/army-ant/analysis/inex-52t-nl-hgoe-rw_stability/l_2-r_100/topic_2010003'
+    # dfs = [pd.read_csv(os.path.join(dir_path, filename)) for filename in os.listdir(dir_path)]
+    # print("Kendall's W:", kendall_w(dfs))

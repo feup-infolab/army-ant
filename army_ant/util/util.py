@@ -10,6 +10,7 @@ import os
 from enum import Enum
 
 import pandas as pd
+import numpy as np
 from bs4 import BeautifulSoup
 
 
@@ -152,17 +153,19 @@ def fill_missing(pd_dfs, key, **kwargs):
         all_keys = all_keys.union(df[key])
 
     for df in pd_dfs:
-        missing_keys = all_keys.difference(df[key])
-        missing_df = pd.DataFrame([missing_keys], index=[key]).T
+        missing_keys = sorted(all_keys.difference(df[key]))
+        missing_df = pd.DataFrame({key: missing_keys})
 
         for k, v in kwargs.items():
             if v == FillMethod.ZERO:
                 missing_df[k] = 0
             elif v == FillMethod.INC_MAX:
                 df_inc_max = df[k].max() + 1
+                if np.isnan(df_inc_max): df_inc_max = 0 + 1
                 missing_df[k] = range(df_inc_max, df_inc_max + len(missing_keys))
 
         df = df.append(missing_df)
+        print(df)
         result.append(df)
 
     return result
