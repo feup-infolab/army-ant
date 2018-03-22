@@ -165,7 +165,6 @@ def fill_missing(pd_dfs, key, **kwargs):
                 missing_df[k] = range(df_inc_max, df_inc_max + len(missing_keys))
 
         df = df.append(missing_df)
-        print(df)
         result.append(df)
 
     return result
