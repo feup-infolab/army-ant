@@ -49,3 +49,4 @@ hs_err_*.log
 # Army ANT
 *_cache.sqlite
 config/docker/opt/army-ant
+.Rproj.user
