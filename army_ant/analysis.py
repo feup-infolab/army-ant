@@ -18,8 +18,8 @@ from army_ant.util.stats import kendall_w, gmean
 logger = logging.getLogger(__name__)
 
 
-async def random_walk_concordance_test(index_location, index_type, ranking_function, rw_length, rw_repeats,
-                                       topics_path, output_path, limit, repeats, method, force, loop):
+async def random_walk_concordance_test(index_location, index_type, rw_length, rw_repeats, topics_path, output_path,
+                                       limit, repeats, method, force, loop):
     assert method in ('kendall_w')
 
     index = Index.open(index_location, index_type, loop)
@@ -55,7 +55,7 @@ async def random_walk_concordance_test(index_location, index_type, ranking_funct
                             repeat, filename))
                         continue
 
-                    result_set = await index.search(query, 0, limit, ranking_function,
+                    result_set = await index.search(query, 0, limit, 'random_walk',
                                                     { 'l': str(rw_length[i]), 'r': str(rw_repeats[j]) })
                     df = pd.DataFrame(columns=['score', 'doc_id'])
 
