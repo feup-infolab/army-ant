@@ -2,18 +2,23 @@ package armyant.hgoe;
 
 import armyant.structures.Document;
 import armyant.structures.Triple;
+import edu.mit.jwi.IRAMDictionary;
+import edu.mit.jwi.RAMDictionary;
+import edu.mit.jwi.data.ILoadPolicy;
+import edu.mit.jwi.item.*;
 import grph.Grph;
 import grph.in_memory.InMemoryGrph;
 import grph.path.ArrayListPath;
 import grph.path.Path;
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.testng.annotations.Test;
-import toools.collections.primitive.LucIntHashSet;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Created by jldevezas on 2017-11-29.
@@ -73,6 +78,32 @@ public class HypergraphOfEntityTest {
         System.out.println(path.indexOfVertex(10));
     }
 
+    public void testWordNet() throws IOException {
+        String[] terms = {"results", "system", "web", "meaning", "searcher", "understanding"};
+
+        IRAMDictionary dict = new RAMDictionary(new File("/usr/share/wordnet"), ILoadPolicy.NO_LOAD);
+        dict.open();
+
+        for (String term : terms) {
+            System.out.println(term);
+            IIndexWord idxWord = dict.getIndexWord(term, POS.NOUN);
+            if (idxWord != null) {
+                IWordID wordID = idxWord.getWordIDs().get(0);
+                IWord word = dict.getWord(wordID);
+                ISynset synset = word.getSynset();
+
+                for (IWord w : synset.getWords()) {
+                    Set<String> syns = new HashSet<>(Arrays.asList(w.getLemma().toLowerCase().split("_")));
+                    for (String syn : syns) {
+                        System.out.println('\t' + syn);
+                    }
+                }
+            }
+        }
+
+        dict.close();
+    }
+
     // Can Grph support a hypergraph with both directed and undirected hyperedges?
     // How does traversal work in mixed hypergraphs? Difference between incident to, in and out edges.
     public void testMixedEdgeHypergraph() {
@@ -96,7 +127,7 @@ public class HypergraphOfEntityTest {
         g.addToDirectedHyperEdgeHead(outgoingDirectedEdgeID, 2);
 
         // {0,1,3,4}
-        Arrays.stream(new Integer[] {0,1,3,4}).forEach(n -> g.addToUndirectedHyperEdge(1, n));
+        Arrays.stream(new Integer[]{0, 1, 3, 4}).forEach(n -> g.addToUndirectedHyperEdge(1, n));
 
         // {2,3,4} -> {0,5}
         g.addToDirectedHyperEdgeTail(incomingDirectedEdgeID, 2);

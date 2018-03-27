@@ -20,28 +20,6 @@ import java.util.ArrayList;
 public class HypergraphOfEntityInMemoryTest extends HypergraphOfEntityTest {
     private String dbPath = "/tmp/hgoe-inmemory";
 
-    public void testPrints() throws HypergraphException {
-        HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory(dbPath);
-
-        System.out.println("====> Statistics");
-        hgoe.printStatistics();
-        System.out.print("\n");
-
-        System.out.println("====> Nodes");
-        hgoe.printNodes();
-        System.out.print("\n");
-
-        System.out.println("====> Edges");
-        hgoe.printEdges();
-        System.out.print("\n");
-
-        /*System.out.println("====> Depth first traversal starting at 'Semantic search' entity");
-        hgoe.printDepthFirst("Semantic search");
-        System.out.print("\n");*/
-
-        //hgoe.printDepthFirst("web");
-    }
-
     public void testIndex() throws Exception {
         HypergraphOfEntityInMemory hgoe = new HypergraphOfEntityInMemory(
                 dbPath, new ArrayList<>(), null, true);
