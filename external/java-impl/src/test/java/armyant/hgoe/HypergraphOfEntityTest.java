@@ -79,7 +79,7 @@ public class HypergraphOfEntityTest {
     }
 
     public void testWordNet() throws IOException {
-        String[] terms = {"results", "system", "web", "meaning", "searcher", "understanding"};
+        String[] terms = {"term", "results", "system", "web", "meaning", "searcher", "understanding"};
 
         IRAMDictionary dict = new RAMDictionary(new File("/usr/share/wordnet"), ILoadPolicy.NO_LOAD);
         dict.open();
