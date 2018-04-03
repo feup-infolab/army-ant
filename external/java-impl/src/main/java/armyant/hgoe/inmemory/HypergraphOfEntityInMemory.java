@@ -17,6 +17,7 @@ import grph.algo.ConnectedComponentsAlgorithm;
 import grph.in_memory.InMemoryGrph;
 import grph.io.ParseException;
 import grph.path.ArrayListPath;
+import grph.properties.NumericalProperty;
 import it.unimi.dsi.fastutil.ints.*;
 import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
 import org.ahocorasick.trie.Emit;
@@ -45,10 +46,15 @@ import java.util.zip.GZIPInputStream;
 /**
  * Created by jldevezas on 2017-10-23.
  */
+// TODO instaceof might be replaced by a Grph Property of some sort (is it faster?)
 public class HypergraphOfEntityInMemory extends Engine {
     private static final Logger logger = LoggerFactory.getLogger(HypergraphOfEntityInMemory.class);
+
     private static final int SEARCH_MAX_DISTANCE = 2;
     private static final int MAX_PATHS_PER_PAIR = 1000;
+
+    private static final float DEFAULT_DOCUMENT_NODE_WEIGHT = 1;
+    private static final float DEFAULT_DOCUMENT_EDGE_WEIGHT = 0.5f;
 
     private static final int DEFAULT_WALK_LENGTH = 3;
     private static final int DEFAULT_WALK_REPEATS = 10;
@@ -77,6 +83,8 @@ public class HypergraphOfEntityInMemory extends Engine {
     private String featuresPath;
     private File directory;
     private InMemoryGrph graph;
+    private NumericalProperty nodeWeights;
+    private NumericalProperty edgeWeights;
     private BidiMap<Node, Integer> nodeIndex;
     private BidiMap<Edge, Integer> edgeIndex;
     private Map<Integer, IntSet> reachabilityIndex;
@@ -85,6 +93,8 @@ public class HypergraphOfEntityInMemory extends Engine {
     private long counter;
     private long totalTime;
     private float avgTimePerDocument;
+
+    private int numDocs;
 
     public HypergraphOfEntityInMemory(String path) throws HypergraphException {
         this(path, new ArrayList<>());
@@ -120,6 +130,8 @@ public class HypergraphOfEntityInMemory extends Engine {
         }
 
         this.graph = new InMemoryGrph();
+        this.nodeWeights = new NumericalProperty("weight");
+        this.edgeWeights = new NumericalProperty("weight");
         this.nodeIndex = new DualHashBidiMap<>();
         this.edgeIndex = new DualHashBidiMap<>();
         this.reachabilityIndex = new HashMap<>();
@@ -195,15 +207,22 @@ public class HypergraphOfEntityInMemory extends Engine {
         }
     }
 
+    private void addNodesToUndirectedHyperEdge(int edgeID, Set<Integer> nodeIDs) {
+        for (Integer nodeID : nodeIDs) {
+            synchronized (this) {
+                graph.addToUndirectedHyperEdge(edgeID, nodeID);
+            }
+        }
+    }
+
     private void indexDocument(Document document) throws IOException {
         DocumentEdge documentEdge = new DocumentEdge(document.getDocID());
-        int edgeID = getOrCreateDirectedEdge(documentEdge);
+        int edgeID = getOrCreateUndirectedEdge(documentEdge);
 
-        // TODO Consider changing directed to undirected hyperedge.
         DocumentNode documentNode = new DocumentNode(document.getDocID());
         int sourceDocumentNodeID = getOrCreateNode(documentNode);
         synchronized (this) {
-            graph.addToDirectedHyperEdgeTail(edgeID, sourceDocumentNodeID);
+            graph.addToUndirectedHyperEdge(edgeID, sourceDocumentNodeID);
         }
 
         Set<Integer> targetEntityNodeIDs = indexEntities(document);
@@ -216,7 +235,9 @@ public class HypergraphOfEntityInMemory extends Engine {
             TermNode termNode = new TermNode(token);
             return getOrCreateNode(termNode);
         }).collect(Collectors.toSet());
-        addNodesToHyperEdgeHead(edgeID, targetTermNodeIDs);
+        addNodesToUndirectedHyperEdge(edgeID, targetTermNodeIDs);
+
+        numDocs++;
     }
 
     private Set<Integer> indexEntities(Document document) {
@@ -280,8 +301,9 @@ public class HypergraphOfEntityInMemory extends Engine {
 
     private void linkSynonyms() {
         logger.info("Creating links between synonyms ({synonyms})");
+        IRAMDictionary dict = null;
         try {
-            IRAMDictionary dict = new RAMDictionary(new File("/usr/share/wordnet"), ILoadPolicy.NO_LOAD);
+            dict = new RAMDictionary(new File("/usr/share/wordnet"), ILoadPolicy.NO_LOAD);
             dict.open();
 
             for (int nodeID : graph.getVertices()) {
@@ -309,14 +331,16 @@ public class HypergraphOfEntityInMemory extends Engine {
                     }
                 }
             }
-
-            dict.close();
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
+        } finally {
+            if (dict != null) {
+                dict.close();
+            }
         }
     }
 
-    public void linkContextuallySimilarTerms() throws IOException, ParseException, ParserConfigurationException, SAXException {
+    private void linkContextuallySimilarTerms() throws IOException, ParseException, ParserConfigurationException, SAXException {
         logger.info("Creating links between terms that are contextually similar ({terms})");
 
         File simnetFile = Paths.get(featuresPath, CONTEXT_FEATURES_FILENAME).toFile();
@@ -360,6 +384,48 @@ public class HypergraphOfEntityInMemory extends Engine {
         });
     }
 
+    private void computeNodeWeights() {
+        logger.info("Computing node weights");
+        for (int nodeID : graph.getVertices()) {
+            Node node = nodeIndex.getKey(nodeID);
+            if (node instanceof DocumentNode) {
+                nodeWeights.setValue(nodeID, DEFAULT_DOCUMENT_NODE_WEIGHT);
+            } else if (node instanceof TermNode || node instanceof EntityNode) {
+                int n = 0;
+                for (int edgeID : graph.getEdgesIncidentTo(nodeID)) {
+                    Edge edge = edgeIndex.getKey(edgeID);
+                    if (edge instanceof DocumentEdge) n++;
+                }
+                nodeWeights.setValue(nodeID, Math.log((float) (numDocs - n) / n)); // Probabilistic IDF
+            }
+        }
+    }
+
+    private void computeHyperEdgeWeights() {
+        logger.info("Computing hyperedge weights");
+        for (int edgeID : graph.getEdges()) {
+            Edge edge = edgeIndex.getKey(edgeID);
+            if (edge instanceof DocumentEdge) {
+                edgeWeights.setValue(edgeID, DEFAULT_DOCUMENT_EDGE_WEIGHT);
+            } else if (edge instanceof ContainedInEdge) {
+
+            } else if (edge instanceof RelatedToEdge) {
+                for (int nodeID : graph.getUndirectedHyperEdgeVertices(edgeID)) {
+                    // TODO
+                }
+            } else if (edge instanceof SynonymEdge) {
+
+            } else if (edge instanceof ContextEdge) {
+
+            }
+        }
+    }
+
+    private void computeWeights() {
+        computeNodeWeights();
+        computeHyperEdgeWeights();
+    }
+
     private void createReachabilityIndex() {
         logger.info("Computing connected components and creating reachability index");
         ConnectedComponentsAlgorithm connectedComponentsAlgorithm = new ConnectedComponentsAlgorithm();
@@ -369,6 +435,10 @@ public class HypergraphOfEntityInMemory extends Engine {
                 reachabilityIndex.put(nodeID, connectedComponent);
             }
         }
+    }
+
+    private void prune() {
+        // TODO
     }
 
     @Override
@@ -382,6 +452,12 @@ public class HypergraphOfEntityInMemory extends Engine {
                     break;
                 case CONTEXT:
                     linkContextuallySimilarTerms();
+                    break;
+                case WEIGHTS:
+                    computeWeights();
+                    break;
+                case PRUNE:
+                    prune();
                     break;
             }
         }
@@ -452,6 +528,24 @@ public class HypergraphOfEntityInMemory extends Engine {
             logger.error("Unable to dump reachability index to {}", reachabilityIndexFile, e);
         }
 
+        File nodeWeightsFile = new File(directory, "node_weights.prp");
+        try {
+            ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream(nodeWeightsFile));
+            output.writeObject(nodeWeights);
+            output.close();
+        } catch (IOException e) {
+            logger.error("Unable to dump node weights to {}", nodeWeightsFile, e);
+        }
+
+        File edgeWeightsFile = new File(directory, "edge_weights.prp");
+        try {
+            ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream(edgeWeightsFile));
+            output.writeObject(edgeWeights);
+            output.close();
+        } catch (IOException e) {
+            logger.error("Unable to dump edge weights to {}", edgeWeightsFile, e);
+        }
+
         File hypergraphFile = new File(directory, "hypergraph.graph");
         try {
             ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream(hypergraphFile));
@@ -492,6 +586,26 @@ public class HypergraphOfEntityInMemory extends Engine {
             input.close();
         } catch (ClassNotFoundException | IOException e) {
             logger.warn("Cannot read  reachability index from {}", reachabilityIndexFile);
+            return false;
+        }
+
+        File nodeWeightsFile = new File(directory, "node_weights.prp");
+        try {
+            ObjectInputStream input = new ObjectInputStream(new FileInputStream(nodeWeightsFile));
+            this.nodeWeights = (NumericalProperty) input.readObject();
+            input.close();
+        } catch (ClassNotFoundException | IOException e) {
+            logger.warn("Cannot read node weights from {}", nodeWeightsFile);
+            return false;
+        }
+
+        File edgeWeightsFile = new File(directory, "edge_weights.prp");
+        try {
+            ObjectInputStream input = new ObjectInputStream(new FileInputStream(edgeWeightsFile));
+            this.edgeWeights = (NumericalProperty) input.readObject();
+            input.close();
+        } catch (ClassNotFoundException | IOException e) {
+            logger.warn("Cannot read edge weights from {}", edgeWeightsFile);
             return false;
         }
 
@@ -1139,7 +1253,7 @@ public class HypergraphOfEntityInMemory extends Engine {
     public Trace getNodeList() {
         Trace summary = new Trace("Nodes");
 
-        Class[] nodeClasses = { DocumentNode.class, TermNode.class, EntityNode.class };
+        Class[] nodeClasses = {DocumentNode.class, TermNode.class, EntityNode.class};
 
         for (Class nodeClass : nodeClasses) {
             summary.add(nodeClass.getSimpleName());
@@ -1161,7 +1275,7 @@ public class HypergraphOfEntityInMemory extends Engine {
     public Trace getHyperedgeList() {
         Trace summary = new Trace("Hyperedges");
 
-        Class[] hyperedgeClasses = { DocumentEdge.class, RelatedToEdge.class, ContainedInEdge.class };
+        Class[] hyperedgeClasses = {DocumentEdge.class, RelatedToEdge.class, ContainedInEdge.class};
 
         for (Class edgeClass : hyperedgeClasses) {
             summary.add(edgeClass.getSimpleName());
@@ -1235,6 +1349,8 @@ public class HypergraphOfEntityInMemory extends Engine {
 
     public enum Feature {
         SYNONYMS,
-        CONTEXT
+        CONTEXT,
+        WEIGHTS,
+        PRUNE
     }
 }
