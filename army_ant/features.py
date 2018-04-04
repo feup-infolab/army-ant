@@ -7,6 +7,7 @@
 
 import logging
 import os
+from collections import OrderedDict
 
 import igraph
 import langdetect
@@ -126,19 +127,20 @@ class Word2VecSimilarityNetwork(FeatureExtractor):
         """
         logging.info("Building similarity network")
 
-        graph = {}
+        graph = OrderedDict()
 
         for word in self.model.wv.vocab:
             sim_words = self.model.wv.most_similar(positive=[word], topn=k)
             for (sim_word, weight) in sim_words:
                 if weight <= threshold: continue
-                if not word in graph: graph[word] = {}
+                if not word in graph: graph[word] = OrderedDict()
                 graph[word][sim_word] = weight
 
         g = igraph.Graph(directed=False)
         g.add_vertices(iter(graph.keys()))
         edges = [(source, target) for source in graph.keys() for target in graph[source].keys()]
         g.add_edges(edges)
+        g.es['weight'] = [weight for source in graph.keys() for weight in graph[source].values()]
 
         g.write(self.graph_path, format='graphmlz')
         logger.info("Saved similarity network to %s" % self.graph_path)

@@ -18,6 +18,7 @@ import grph.in_memory.InMemoryGrph;
 import grph.io.ParseException;
 import grph.path.ArrayListPath;
 import grph.properties.NumericalProperty;
+import grph.properties.ObjectProperty;
 import it.unimi.dsi.fastutil.ints.*;
 import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
 import org.ahocorasick.trie.Emit;
@@ -85,6 +86,7 @@ public class HypergraphOfEntityInMemory extends Engine {
     private InMemoryGrph graph;
     private NumericalProperty nodeWeights;
     private NumericalProperty edgeWeights;
+    private ObjectProperty auxProperties;
     private BidiMap<Node, Integer> nodeIndex;
     private BidiMap<Edge, Integer> edgeIndex;
     private Map<Integer, IntSet> reachabilityIndex;
@@ -311,6 +313,7 @@ public class HypergraphOfEntityInMemory extends Engine {
                 if (node instanceof TermNode) {
                     IIndexWord idxWord = dict.getIndexWord(node.getName(), POS.NOUN);
                     if (idxWord != null) {
+                        auxProperties.setValue(nodeID, idxWord.getTagSenseCount());
                         IWordID wordID = idxWord.getWordIDs().get(0);
                         IWord word = dict.getWord(wordID);
                         ISynset synset = word.getSynset();
@@ -379,6 +382,12 @@ public class HypergraphOfEntityInMemory extends Engine {
                     if (nodeIndex.containsKey(otherNode)) {
                         this.graph.addToUndirectedHyperEdge(edgeID, nodeIndex.get(otherNode));
                     }
+
+                    float weight = 1f;
+                    if (e.property("weight").isPresent()) {
+                        weight = (float) e.property("weight").value();
+                    }
+                    auxProperties.setValue(edgeID, weight);
                 });
             }
         });
@@ -401,6 +410,33 @@ public class HypergraphOfEntityInMemory extends Engine {
         }
     }
 
+    private float computeContainedInHyperEdgeWeight(int edgeID) {
+        return 1 / graph.getDirectedHyperEdgeTail(edgeID).size();
+    }
+
+    private float computeRelatedToHyperEdgeWeight(int edgeID) {
+        IntSet entityNodeIDs = graph.getUndirectedHyperEdgeVertices(edgeID);
+        float weight = 0;
+        for (int entityNodeID : entityNodeIDs) {
+            IntSet neighborNodeIDs = graph.getNeighbours(entityNodeID);
+            neighborNodeIDs.retainAll(entityNodeIDs);
+            weight += (float) neighborNodeIDs.size() / entityNodeIDs.size();
+        }
+        weight /= entityNodeIDs.size();
+        return weight;
+    }
+
+    private float computeSynonymHyperEdgeWeight(int edgeID) {
+        if (auxProperties.isSetted(edgeID)) {
+            return 1f / (float) auxProperties.getValue(edgeID);
+        }
+        return 1;
+    }
+
+    private float computeContextHyperEdgeWeight(int edgeID) {
+        return 1;
+    }
+
     private void computeHyperEdgeWeights() {
         logger.info("Computing hyperedge weights");
         for (int edgeID : graph.getEdges()) {
@@ -408,15 +444,13 @@ public class HypergraphOfEntityInMemory extends Engine {
             if (edge instanceof DocumentEdge) {
                 edgeWeights.setValue(edgeID, DEFAULT_DOCUMENT_EDGE_WEIGHT);
             } else if (edge instanceof ContainedInEdge) {
-
+                edgeWeights.setValue(edgeID, computeContainedInHyperEdgeWeight(edgeID));
             } else if (edge instanceof RelatedToEdge) {
-                for (int nodeID : graph.getUndirectedHyperEdgeVertices(edgeID)) {
-                    // TODO
-                }
+                edgeWeights.setValue(edgeID, computeRelatedToHyperEdgeWeight(edgeID));
             } else if (edge instanceof SynonymEdge) {
-
+                edgeWeights.setValue(edgeID, computeSynonymHyperEdgeWeight(edgeID));
             } else if (edge instanceof ContextEdge) {
-
+                edgeWeights.setValue(edgeID, computeContextHyperEdgeWeight(edgeID));
             }
         }
     }
@@ -453,7 +487,7 @@ public class HypergraphOfEntityInMemory extends Engine {
                 case CONTEXT:
                     linkContextuallySimilarTerms();
                     break;
-                case WEIGHTS:
+                case WEIGHT:
                     computeWeights();
                     break;
                 case PRUNE:
@@ -1350,7 +1384,7 @@ public class HypergraphOfEntityInMemory extends Engine {
     public enum Feature {
         SYNONYMS,
         CONTEXT,
-        WEIGHTS,
+        WEIGHT,
         PRUNE
     }
 }
