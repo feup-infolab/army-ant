@@ -2,7 +2,6 @@ package armyant;
 
 import armyant.structures.Document;
 import armyant.structures.ResultSet;
-import armyant.util.ArrayIndexComparator;
 import com.optimaize.langdetect.LanguageDetector;
 import com.optimaize.langdetect.LanguageDetectorBuilder;
 import com.optimaize.langdetect.i18n.LdLocale;
@@ -12,6 +11,7 @@ import com.optimaize.langdetect.profiles.LanguageProfileReader;
 import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.LowerCaseFilter;
 import org.apache.lucene.analysis.StopFilter;
@@ -55,44 +55,42 @@ public abstract class Engine {
         }
     }
 
-    public static Integer getUniformlyAtRandom(int[] elementIDs) {
-        return Arrays.stream(elementIDs)
-                .skip((int) (elementIDs.length * RNG.nextDoubleFast()))
-                .findFirst().getAsInt();
+    public static Integer sampleUniformlyAtRandom(int[] elementIDs) {
+        return elementIDs[(int) (elementIDs.length * RNG.nextDoubleFast())];
     }
 
-    public static Integer getNonUniformlyAtRandom(int[] elementIDs, float[] probabilities) {
-        Float[] probs = ArrayUtils.toObject(probabilities);
-        ArrayIndexComparator<Float> comparator = new ArrayIndexComparator<>(probs);
-        Integer[] indexes = comparator.createIndexArray();
-        Arrays.sort(indexes, comparator.reversed());
+    public static Integer sampleNonUniformlyAtRandom(int[] elementIDs, float[] weights) {
+        Float[] probs = ArrayUtils.toObject(weights);
 
-        float probsSum = (float) Arrays.stream(probs).mapToDouble(v -> v).sum();
-        for (int i=0; i < probs.length; i++) {
-            probs[i] /= probsSum;
+        float weightsSum = 0;
+        for (float weight : weights) {
+            weightsSum += weight;
         }
 
-        TreeMap<Float, Integer> elements = new TreeMap<>();
         float cumulativeProbability = 0;
-        for (int i = 0; i < indexes.length; i++) {
-            cumulativeProbability += probs[indexes[i]];
-            elements.put(cumulativeProbability, elementIDs[indexes[i]]);
+        TreeMap<Float, Integer> elements = new TreeMap<>();
+        for (int i=0; i < probs.length; i++) {
+            probs[i] /= weightsSum;
+            cumulativeProbability += probs[i] / weightsSum;
+            elements.put(cumulativeProbability, elementIDs[i]);
         }
 
         Map.Entry<Float, Integer> randomElement = elements.higherEntry(RNG.nextFloat());
-        if (randomElement == null) return getUniformlyAtRandom(elementIDs);
+        if (randomElement == null) return sampleUniformlyAtRandom(elementIDs);
         return randomElement.getValue();
     }
 
     public abstract void index(Document document) throws Exception;
 
     public void indexCorpus(Collection<Document> corpus) {
+        throw new NotImplementedException("Not implemented");
     }
 
     public void postProcessing() throws Exception {
     }
 
     public void inspect(String feature) {
+        throw new NotImplementedException("Not implemented");
     }
 
     public abstract ResultSet search(String query, int offset, int limit) throws Exception;

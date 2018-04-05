@@ -10,10 +10,11 @@ import org.testng.annotations.Test;
  */
 @Test
 public class EngineTest {
-    private static final int RANDOM_ITERATIONS = 100000;
+    private static final int RANDOM_ITERATIONS = 50_000_000;
     private static final Int2FloatOpenHashMap valuesProbs = new Int2FloatOpenHashMap();
 
     static {
+        valuesProbs.put(0, 1f);
         valuesProbs.put(1, 0.1f);
         valuesProbs.put(2, 0.2f);
         valuesProbs.put(3, 0.1f);
@@ -22,36 +23,38 @@ public class EngineTest {
         valuesProbs.put(6, 0.5f);
     }
 
-    public void testGetNonUniformlyAtRandom() {
+    public void testSampleNonUniformlyAtRandom() {
         Int2IntOpenHashMap count = new Int2IntOpenHashMap();
         long start = System.currentTimeMillis();
         for (int i = 0; i < RANDOM_ITERATIONS; i++) {
-            count.addTo(Engine.getNonUniformlyAtRandom(
+            count.addTo(Engine.sampleNonUniformlyAtRandom(
                     valuesProbs.keySet().toIntArray(), valuesProbs.values().toFloatArray()), 1);
         }
         long end = System.currentTimeMillis();
 
-        System.out.println(String.format(
-                "Took %d ms to generate %d random numbers non-uniformly at random", end - start, RANDOM_ITERATIONS));
         for (Int2IntMap.Entry entry : count.int2IntEntrySet()) {
             System.out.println(String.format("%d (%.2f%%): %d",
                     entry.getIntKey(), valuesProbs.get(entry.getIntKey()) * 100, entry.getIntValue()));
         }
+
+        System.out.println(String.format(
+                "Took %,dms to sample %,d random elements non-uniformly at random", end - start, RANDOM_ITERATIONS));
     }
 
-    public void testGetUniformlyAtRandom() {
+    public void testSampleUniformlyAtRandom() {
         Int2IntOpenHashMap count = new Int2IntOpenHashMap();
         long start = System.currentTimeMillis();
         for (int i = 0; i < RANDOM_ITERATIONS; i++) {
-            count.addTo(Engine.getUniformlyAtRandom(valuesProbs.keySet().toIntArray()), 1);
+            count.addTo(Engine.sampleUniformlyAtRandom(valuesProbs.keySet().toIntArray()), 1);
         }
         long end = System.currentTimeMillis();
 
-        System.out.println(String.format(
-                "Took %d ms to generate %d random numbers uniformly at random", end - start, RANDOM_ITERATIONS));
         for (Int2IntMap.Entry entry : count.int2IntEntrySet()) {
             System.out.println(String.format("%d (%.2f%%): %d",
                     entry.getIntKey(), valuesProbs.get(entry.getIntKey()) * 100, entry.getIntValue()));
         }
+
+        System.out.println(String.format(
+                "Took %,dms to sample %,d random elements uniformly at random", end - start, RANDOM_ITERATIONS));
     }
 }

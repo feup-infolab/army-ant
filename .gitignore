@@ -50,3 +50,6 @@ hs_err_*.log
 *_cache.sqlite
 config/docker/opt/army-ant
 .Rproj.user
+
+# VisualVM
+.attach_pid*

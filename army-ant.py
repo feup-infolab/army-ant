@@ -8,6 +8,7 @@
 import asyncio
 import logging
 import os
+import re
 import readline
 import shutil
 import tempfile
@@ -93,7 +94,6 @@ class SimpleCompleter(object):
         self.options = sorted(options)
 
     def complete(self, text, state):
-        response = None
         if state == 0:
             if text:
                 self.matches = [s for s in self.options if s and s.startswith(text)]
@@ -101,11 +101,9 @@ class SimpleCompleter(object):
                 self.matches = self.options[:]
 
         try:
-            response = self.matches[state]
+            return self.matches[state]
         except IndexError:
-            response = None
-
-        return response
+            return None
 
 
 class CommandLineInterface(object):
@@ -133,7 +131,7 @@ class CommandLineInterface(object):
         except ArmyAntException as e:
             logger.error(e)
 
-    def search(self, index_location, index_type, ranking_function,
+    def search(self, index_location, index_type, ranking_function=None,
                db_location='localhost', db_name=None, db_type='mongo',
                query=None, offset=0, limit=10, interactive=False):
         if query is None and not interactive:
@@ -141,7 +139,7 @@ class CommandLineInterface(object):
             return
 
         if interactive:
-            completer = SimpleCompleter([r'\quit'])
+            completer = SimpleCompleter([r'\quit', r'\set_ranking_random_walk', r'\set_ranking_biased_random_walk'])
             readline.parse_and_bind("tab: complete")
             readline.set_completer(completer.complete)
             readline.set_completer_delims(readline.get_completer_delims().replace('\\', ''))
@@ -154,6 +152,13 @@ class CommandLineInterface(object):
                         query = input('query> ')
                         if query == r'\quit': break
                         if query.strip() == '': continue
+
+                        ranking = re.match(r'\\set_ranking_(.*)', query)
+                        if ranking:
+                            ranking_function = ranking.group(1)
+                            print("===> Switched to '%s' ranking function" % ranking_function)
+                            continue
+
 
                     index = Index.open(index_location, index_type, loop)
                     response = loop.run_until_complete(index.search(

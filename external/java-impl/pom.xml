@@ -146,6 +146,12 @@
             <artifactId>jwi</artifactId>
             <version>2.2.3</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+            <version>2.9.5</version>
+        </dependency>
     </dependencies>
 
     <build>

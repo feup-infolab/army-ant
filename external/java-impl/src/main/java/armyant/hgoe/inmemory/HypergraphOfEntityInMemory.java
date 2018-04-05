@@ -8,6 +8,9 @@ import armyant.hgoe.inmemory.nodes.EntityNode;
 import armyant.hgoe.inmemory.nodes.Node;
 import armyant.hgoe.inmemory.nodes.TermNode;
 import armyant.structures.*;
+import armyant.structures.yaml.PruneConfig;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import edu.mit.jwi.IRAMDictionary;
 import edu.mit.jwi.RAMDictionary;
 import edu.mit.jwi.data.ILoadPolicy;
@@ -59,27 +62,12 @@ public class HypergraphOfEntityInMemory extends Engine {
     private static final float DEFAULT_DOCUMENT_NODE_WEIGHT = 1;
     private static final float DEFAULT_DOCUMENT_EDGE_WEIGHT = 0.5f;
 
-    private static final int DEFAULT_WALK_LENGTH = 2;
-    private static final int DEFAULT_WALK_REPEATS = 10;
+    private static final int DEFAULT_WALK_LENGTH = 3;
+    private static final int DEFAULT_WALK_REPEATS = 1000;
 
     private static final float PROBABILITY_THRESHOLD = 0.005f;
 
     private static final String CONTEXT_FEATURES_FILENAME = "word2vec_simnet.graphml.gz";
-
-    /*private static final Kryo kryo;
-    private static final MapSerializer nodeEdgeIndexSerializer;
-
-    static {
-        kryo = new Kryo();
-        kryo.setInstantiatorStrategy(new StdInstantiatorStrategy());
-
-        nodeEdgeIndexSerializer = new MapSerializer();
-        nodeEdgeIndexSerializer.setKeyClass(Node.class, kryo.getSerializer(Node.class));
-        nodeEdgeIndexSerializer.setKeysCanBeNull(false);
-        nodeEdgeIndexSerializer.setValueClass(Integer.class, kryo.getSerializer(Integer.class));
-
-        kryo.register(HashMap.class, nodeEdgeIndexSerializer);
-    }*/
 
     private List<Feature> features;
     private String featuresPath;
@@ -475,8 +463,35 @@ public class HypergraphOfEntityInMemory extends Engine {
         }
     }
 
-    private void prune() {
-        // TODO
+    private void prune() throws IOException {
+        File pruneConfigFile = Paths.get(this.featuresPath, "prune.yml").toFile();
+        PruneConfig pruneConfig = PruneConfig.load(pruneConfigFile);
+
+        logger.info("Pruning hypergraph nodes and edges based on configuration file '{}'", pruneConfigFile);
+
+        int removedVertices = 0;
+        for (int nodeID : graph.getVertices()) {
+            float weight = nodeWeights.getValueAsFloat(nodeID);
+            Node node = nodeIndex.getKey(nodeID);
+            float threshold = pruneConfig.getNodeThreshold(node.getClass());
+            if (weight < threshold) {
+                graph.removeVertex(nodeID);
+                removedVertices++;
+            }
+        }
+
+        int removedEdges = 0;
+        for (int edgeID : graph.getEdges()) {
+            float weight = edgeWeights.getValueAsFloat(edgeID);
+            Edge edge = edgeIndex.getKey(edgeID);
+            float threshold = pruneConfig.getEdgeThreshold(edge.getClass());
+            if (weight < threshold) {
+                graph.removeEdge(edgeID);
+                removedEdges++;
+            }
+        }
+
+        logger.info("{} nodes pruned and {} hyperedges pruned", removedVertices, removedEdges);
     }
 
     @Override
@@ -815,9 +830,9 @@ public class HypergraphOfEntityInMemory extends Engine {
         int randomEdgeID;
         if (useWeightBias) {
             Float[] edgeWeights = edgeIDs.stream().map(this.edgeWeights::getValueAsFloat).toArray(Float[]::new);
-            randomEdgeID = getNonUniformlyAtRandom(edgeIDs.toIntArray(), ArrayUtils.toPrimitive(edgeWeights));
+            randomEdgeID = sampleNonUniformlyAtRandom(edgeIDs.toIntArray(), ArrayUtils.toPrimitive(edgeWeights));
         } else {
-            randomEdgeID = getUniformlyAtRandom(edgeIDs.toIntArray());
+            randomEdgeID = sampleUniformlyAtRandom(edgeIDs.toIntArray());
         }
 
         IntSet nodeIDs = new LucIntHashSet(10);
@@ -832,9 +847,9 @@ public class HypergraphOfEntityInMemory extends Engine {
         int randomNodeID;
         if (useWeightBias) {
             Float[] nodeWeights = nodeIDs.stream().map(this.nodeWeights::getValueAsFloat).toArray(Float[]::new);
-            randomNodeID = getNonUniformlyAtRandom(nodeIDs.toIntArray(), ArrayUtils.toPrimitive(nodeWeights));
+            randomNodeID = sampleNonUniformlyAtRandom(nodeIDs.toIntArray(), ArrayUtils.toPrimitive(nodeWeights));
         } else {
-            randomNodeID = getUniformlyAtRandom(nodeIDs.toIntArray());
+            randomNodeID = sampleUniformlyAtRandom(nodeIDs.toIntArray());
         }
 
         path.extend(randomEdgeID, randomNodeID);
@@ -843,19 +858,19 @@ public class HypergraphOfEntityInMemory extends Engine {
 
     public ResultSet randomWalkSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights,
                                       int walkLength, int walkRepeats, boolean biased) {
-        logger.info("walkLength = {}, walkRepeats = {}, biased = {}", walkLength, walkRepeats, biased);
+        logger.info("walkLength = {}, walkRepeats = {}", walkLength, walkRepeats);
 
         Int2FloatOpenHashMap weightedNodeVisitProbability = new Int2FloatOpenHashMap();
         Int2DoubleOpenHashMap nodeCoverage = new Int2DoubleOpenHashMap();
 
-        trace.add("Random walk search (WALK_LENGTH = %d, WALK_REPEATS = %d)", walkLength, walkRepeats);
+        trace.add("Random walk search (l = %d, r = %d)", walkLength, walkRepeats);
         trace.goDown();
 
         for (int seedNodeID : seedNodeIDs) {
             Int2IntOpenHashMap nodeVisits = new Int2IntOpenHashMap();
             trace.add("From seed node: %s", nodeIndex.getKey(seedNodeID));
             /*trace.goDown();
-            trace.add("Random walk with restart (WALK_LENGTH = %d, WALK_REPEATS = %d)", WALK_LENGTH, WALK_REPEATS);
+            trace.add("Random walk with repeat (walkLength = %d, walkRepeats = %d)", walkLength, walkRepeats);
             trace.goDown();*/
 
             for (int i = 0; i < walkRepeats; i++) {
@@ -1094,6 +1109,7 @@ public class HypergraphOfEntityInMemory extends Engine {
     }
 
     public ResultSet search(String query, int offset, int limit, RankingFunction function, Map<String, String> params) throws IOException {
+        long start = System.currentTimeMillis();
         trace.reset();
 
         List<String> tokens = analyze(query);
@@ -1143,7 +1159,9 @@ public class HypergraphOfEntityInMemory extends Engine {
                 resultSet = ResultSet.empty();
         }
 
-        logger.info("{} entities ranked for [ {} ]", resultSet.getNumDocs(), query);
+        long end = System.currentTimeMillis();
+
+        logger.info("{} entities ranked for [ {} ] in {}ms", resultSet.getNumDocs(), query, end - start);
         return resultSet;
     }
 
