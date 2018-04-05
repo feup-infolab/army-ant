@@ -26,6 +26,7 @@ import org.ahocorasick.trie.Emit;
 import org.ahocorasick.trie.Trie;
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.tinkerpop.gremlin.structure.Direction;
@@ -798,20 +799,26 @@ public class HypergraphOfEntityInMemory extends Engine {
     }
 
     // TODO Should follow Bellaachia2013 for random walks on hypergraphs (Equation 14)
-    private grph.path.Path randomWalk(int startNodeID, int length) {
+    private grph.path.Path randomWalk(int startNodeID, int length, boolean useWeightBias) {
         grph.path.Path path = new ArrayListPath();
         path.extend(startNodeID);
-        randomStep(startNodeID, length, path);
+        randomStep(startNodeID, length, path, useWeightBias);
         return path;
     }
 
-    private void randomStep(int nodeID, int remainingSteps, grph.path.Path path) {
+    private void randomStep(int nodeID, int remainingSteps, grph.path.Path path, boolean useWeightBias) {
         if (remainingSteps == 0) return;
 
         IntSet edgeIDs = graph.getOutEdges(nodeID);
 
         if (edgeIDs.isEmpty()) return;
-        int randomEdgeID = getUniformlyAtRandom(edgeIDs.toIntArray());
+        int randomEdgeID;
+        if (useWeightBias) {
+            Float[] edgeWeights = edgeIDs.stream().map(this.edgeWeights::getValueAsFloat).toArray(Float[]::new);
+            randomEdgeID = getNonUniformlyAtRandom(edgeIDs.toIntArray(), ArrayUtils.toPrimitive(edgeWeights));
+        } else {
+            randomEdgeID = getUniformlyAtRandom(edgeIDs.toIntArray());
+        }
 
         IntSet nodeIDs = new LucIntHashSet(10);
         if (graph.isDirectedHyperEdge(randomEdgeID)) {
@@ -822,19 +829,26 @@ public class HypergraphOfEntityInMemory extends Engine {
         }
 
         if (nodeIDs.isEmpty()) return;
-        int randomNodeID = getUniformlyAtRandom(nodeIDs.toIntArray());
+        int randomNodeID;
+        if (useWeightBias) {
+            Float[] nodeWeights = nodeIDs.stream().map(this.nodeWeights::getValueAsFloat).toArray(Float[]::new);
+            randomNodeID = getNonUniformlyAtRandom(nodeIDs.toIntArray(), ArrayUtils.toPrimitive(nodeWeights));
+        } else {
+            randomNodeID = getUniformlyAtRandom(nodeIDs.toIntArray());
+        }
 
         path.extend(randomEdgeID, randomNodeID);
-        randomStep(randomNodeID, remainingSteps - 1, path);
+        randomStep(randomNodeID, remainingSteps - 1, path, useWeightBias);
     }
 
-    public ResultSet randomWalkSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights, int walk_length, int walk_repeats) {
-        logger.info("WALK_LENGTH = {}, WALK_REPEATS = {}", walk_length, walk_repeats);
+    public ResultSet randomWalkSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights,
+                                      int walkLength, int walkRepeats, boolean biased) {
+        logger.info("walkLength = {}, walkRepeats = {}, biased = {}", walkLength, walkRepeats, biased);
 
         Int2FloatOpenHashMap weightedNodeVisitProbability = new Int2FloatOpenHashMap();
         Int2DoubleOpenHashMap nodeCoverage = new Int2DoubleOpenHashMap();
 
-        trace.add("Random walk search (WALK_LENGTH = %d, WALK_REPEATS = %d)", walk_length, walk_repeats);
+        trace.add("Random walk search (WALK_LENGTH = %d, WALK_REPEATS = %d)", walkLength, walkRepeats);
         trace.goDown();
 
         for (int seedNodeID : seedNodeIDs) {
@@ -844,8 +858,8 @@ public class HypergraphOfEntityInMemory extends Engine {
             trace.add("Random walk with restart (WALK_LENGTH = %d, WALK_REPEATS = %d)", WALK_LENGTH, WALK_REPEATS);
             trace.goDown();*/
 
-            for (int i = 0; i < walk_repeats; i++) {
-                grph.path.Path randomPath = randomWalk(seedNodeID, walk_length);
+            for (int i = 0; i < walkRepeats; i++) {
+                grph.path.Path randomPath = randomWalk(seedNodeID, walkLength, biased);
 
                 /*String messageRandomPath = Arrays.stream(randomPath.toVertexArray())
                         .mapToObj(nodeID -> nodeIndex.getKey(nodeID).toString())
@@ -1113,10 +1127,12 @@ public class HypergraphOfEntityInMemory extends Engine {
         ResultSet resultSet;
         switch (function) {
             case RANDOM_WALK_SCORE:
+            case BIASED_RANDOM_WALK_SCORE:
                 resultSet = randomWalkSearch(
                         seedNodeIDs, seedNodeWeights,
                         Integer.valueOf(params.getOrDefault("l", String.valueOf(DEFAULT_WALK_LENGTH))),
-                        Integer.valueOf(params.getOrDefault("r", String.valueOf(DEFAULT_WALK_REPEATS))));
+                        Integer.valueOf(params.getOrDefault("r", String.valueOf(DEFAULT_WALK_REPEATS))),
+                        function == RankingFunction.BIASED_RANDOM_WALK_SCORE);
                 break;
             case ENTITY_WEIGHT:
             case JACCARD_SCORE:
@@ -1375,7 +1391,8 @@ public class HypergraphOfEntityInMemory extends Engine {
     public enum RankingFunction {
         ENTITY_WEIGHT,
         JACCARD_SCORE,
-        RANDOM_WALK_SCORE
+        RANDOM_WALK_SCORE,
+        BIASED_RANDOM_WALK_SCORE
     }
 
     public enum Feature {
