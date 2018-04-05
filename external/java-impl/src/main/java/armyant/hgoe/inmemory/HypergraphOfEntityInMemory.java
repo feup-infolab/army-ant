@@ -229,7 +229,7 @@ public class HypergraphOfEntityInMemory extends Engine {
         }
 
         Set<Integer> targetEntityNodeIDs = indexEntities(document);
-        addNodesToHyperEdgeHead(edgeID, targetEntityNodeIDs);
+        addNodesToUndirectedHyperEdge(edgeID, targetEntityNodeIDs);
 
         List<String> tokens = analyze(document.getText());
         if (tokens.isEmpty()) return;
