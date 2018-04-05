@@ -59,7 +59,7 @@ public class HypergraphOfEntityInMemory extends Engine {
     private static final float DEFAULT_DOCUMENT_NODE_WEIGHT = 1;
     private static final float DEFAULT_DOCUMENT_EDGE_WEIGHT = 0.5f;
 
-    private static final int DEFAULT_WALK_LENGTH = 3;
+    private static final int DEFAULT_WALK_LENGTH = 2;
     private static final int DEFAULT_WALK_REPEATS = 10;
 
     private static final float PROBABILITY_THRESHOLD = 0.005f;

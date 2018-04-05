@@ -61,7 +61,6 @@ public abstract class Engine {
                 .findFirst().getAsInt();
     }
 
-    // FIXME NEEDS TESTING!
     public static Integer getNonUniformlyAtRandom(int[] elementIDs, float[] probabilities) {
         Float[] probs = ArrayUtils.toObject(probabilities);
         ArrayIndexComparator<Float> comparator = new ArrayIndexComparator<>(probs);
