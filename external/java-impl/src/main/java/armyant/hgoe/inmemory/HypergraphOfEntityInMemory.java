@@ -8,7 +8,6 @@ import armyant.hgoe.inmemory.nodes.EntityNode;
 import armyant.hgoe.inmemory.nodes.Node;
 import armyant.hgoe.inmemory.nodes.TermNode;
 import armyant.structures.*;
-import armyant.util.ArrayIndexComparator;
 import edu.mit.jwi.IRAMDictionary;
 import edu.mit.jwi.RAMDictionary;
 import edu.mit.jwi.data.ILoadPolicy;
@@ -23,12 +22,10 @@ import grph.properties.ObjectProperty;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.floats.FloatList;
 import it.unimi.dsi.fastutil.ints.*;
-import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
 import org.ahocorasick.trie.Emit;
 import org.ahocorasick.trie.Trie;
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.tinkerpop.gremlin.structure.Direction;
@@ -65,7 +62,6 @@ public class HypergraphOfEntityInMemory extends Engine {
     private static final int DEFAULT_WALK_REPEATS = 10;
 
     private static final float PROBABILITY_THRESHOLD = 0.005f;
-    private static final XoRoShiRo128PlusRandom RNG = new XoRoShiRo128PlusRandom();
 
     private static final String CONTEXT_FEATURES_FILENAME = "word2vec_simnet.graphml.gz";
 
@@ -801,27 +797,7 @@ public class HypergraphOfEntityInMemory extends Engine {
         return perSeedScore;
     }
 
-    private Integer getUniformlyAtRandom(int[] elementIDs) {
-        return Arrays.stream(elementIDs)
-                .skip((int) (elementIDs.length * RNG.nextDoubleFast()))
-                .findFirst().getAsInt();
-    }
-
     // TODO Should follow Bellaachia2013 for random walks on hypergraphs (Equation 14)
-    // FIXME NEEDS TESTING!
-    private Integer getNonUniformlyAtRandom(int[] elementIDs, float[] probabilities) {
-        ArrayIndexComparator<Float> comparator = new ArrayIndexComparator<>(ArrayUtils.toObject(probabilities));
-        Integer[] indexes = comparator.createIndexArray();
-        Arrays.sort(indexes, comparator.reversed());
-
-        TreeMap<Float, Integer> elements = new TreeMap<>();
-        for (int i = 0; i < indexes.length; i++) {
-            elements.put(probabilities[indexes[i]], elementIDs[indexes[i]]);
-        }
-
-        return elements.higherEntry(RNG.nextFloat()).getValue();
-    }
-
     private grph.path.Path randomWalk(int startNodeID, int length) {
         grph.path.Path path = new ArrayListPath();
         path.extend(startNodeID);

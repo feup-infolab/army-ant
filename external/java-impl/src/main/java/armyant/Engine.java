@@ -2,13 +2,16 @@ package armyant;
 
 import armyant.structures.Document;
 import armyant.structures.ResultSet;
+import armyant.util.ArrayIndexComparator;
 import com.optimaize.langdetect.LanguageDetector;
 import com.optimaize.langdetect.LanguageDetectorBuilder;
 import com.optimaize.langdetect.i18n.LdLocale;
 import com.optimaize.langdetect.ngram.NgramExtractors;
 import com.optimaize.langdetect.profiles.LanguageProfile;
 import com.optimaize.langdetect.profiles.LanguageProfileReader;
+import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.LowerCaseFilter;
 import org.apache.lucene.analysis.StopFilter;
@@ -28,17 +31,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by jldevezas on 2017-11-10.
  */
 public abstract class Engine {
     private static final Logger logger = LoggerFactory.getLogger(Engine.class);
+
     private static final int MIN_TOKEN_LENGTH = 3;
+    private static final XoRoShiRo128PlusRandom RNG = new XoRoShiRo128PlusRandom();
 
     private LanguageDetector languageDetector;
 
@@ -53,12 +55,51 @@ public abstract class Engine {
         }
     }
 
+    public static Integer getUniformlyAtRandom(int[] elementIDs) {
+        return Arrays.stream(elementIDs)
+                .skip((int) (elementIDs.length * RNG.nextDoubleFast()))
+                .findFirst().getAsInt();
+    }
+
+    // FIXME NEEDS TESTING!
+    public static Integer getNonUniformlyAtRandom(int[] elementIDs, float[] probabilities) {
+        Float[] probs = ArrayUtils.toObject(probabilities);
+        ArrayIndexComparator<Float> comparator = new ArrayIndexComparator<>(probs);
+        Integer[] indexes = comparator.createIndexArray();
+        Arrays.sort(indexes, comparator.reversed());
+
+        float probsSum = (float) Arrays.stream(probs).mapToDouble(v -> v).sum();
+        for (int i=0; i < probs.length; i++) {
+            probs[i] /= probsSum;
+        }
+
+        TreeMap<Float, Integer> elements = new TreeMap<>();
+        float cumulativeProbability = 0;
+        for (int i = 0; i < indexes.length; i++) {
+            cumulativeProbability += probs[indexes[i]];
+            elements.put(cumulativeProbability, elementIDs[indexes[i]]);
+        }
+
+        Map.Entry<Float, Integer> randomElement = elements.higherEntry(RNG.nextFloat());
+        if (randomElement == null) return getUniformlyAtRandom(elementIDs);
+        return randomElement.getValue();
+    }
+
     public abstract void index(Document document) throws Exception;
-    public void indexCorpus(Collection<Document> corpus) {}
-    public void postProcessing() throws Exception { }
-    public void inspect(String feature) { }
+
+    public void indexCorpus(Collection<Document> corpus) {
+    }
+
+    public void postProcessing() throws Exception {
+    }
+
+    public void inspect(String feature) {
+    }
+
     public abstract ResultSet search(String query, int offset, int limit) throws Exception;
-    public void close() throws Exception { }
+
+    public void close() throws Exception {
+    }
 
     protected String formatMillis(float millis) {
         if (millis >= 1000) return formatMillis((long) millis);
@@ -81,7 +122,6 @@ public abstract class Engine {
                 .toFormatter();
         return formatter.print(duration.toPeriod());
     }
-
 
     private CharArraySet getStopwords(String language) {
         StringWriter writer = new StringWriter();
