@@ -436,7 +436,9 @@ public class HypergraphOfEntityInMemory extends Engine {
             } else if (edge instanceof ContainedInEdge) {
                 edgeWeights.setValue(edgeID, computeContainedInHyperEdgeWeight(edgeID));
             } else if (edge instanceof RelatedToEdge) {
-                edgeWeights.setValue(edgeID, computeRelatedToHyperEdgeWeight(edgeID));
+                //edgeWeights.setValue(edgeID, computeRelatedToHyperEdgeWeight(edgeID));
+                logger.warn("Using random weight for related-to edges (TESTING ONLY)");
+                edgeWeights.setValue(edgeID, Math.random());
             } else if (edge instanceof SynonymEdge) {
                 edgeWeights.setValue(edgeID, computeSynonymHyperEdgeWeight(edgeID));
             } else if (edge instanceof ContextEdge) {
@@ -461,6 +463,24 @@ public class HypergraphOfEntityInMemory extends Engine {
         }
     }
 
+    private void removeNodeAndUpdateHyperedges(int nodeID) {
+        for (int edgeID : graph.getEdgesIncidentTo(nodeID)) {
+            if (graph.isDirectedHyperEdge(edgeID)) {
+                if (graph.getDirectedHyperEdgeTail(edgeID).contains(nodeID)) {
+                    graph.removeFromDirectedHyperEdgeTail(edgeID, nodeID);
+                    if (graph.getDirectedHyperEdgeTail(edgeID).size() == 0) graph.removeEdge(edgeID);
+                } else {
+                    graph.removeFromDirectedHyperEdgeHead(edgeID, nodeID);
+                    if (graph.getDirectedHyperEdgeHead(edgeID).size() == 0) graph.removeEdge(edgeID);
+                }
+            } else {
+                graph.removeFromHyperEdge(edgeID, nodeID);
+                if (graph.getUndirectedHyperEdgeVertices(edgeID).size() == 0) graph.removeEdge(edgeID);
+            }
+        }
+        graph.removeVertex(nodeID);
+    }
+
     private void prune() throws IOException {
         File pruneConfigFile = Paths.get(this.featuresPath, "prune.yml").toFile();
         PruneConfig pruneConfig = PruneConfig.load(pruneConfigFile);
@@ -473,7 +493,7 @@ public class HypergraphOfEntityInMemory extends Engine {
             Node node = nodeIndex.getKey(nodeID);
             float threshold = pruneConfig.getNodeThreshold(node.getClass());
             if (weight < threshold) {
-                graph.removeVertex(nodeID);
+                removeNodeAndUpdateHyperedges(nodeID);
                 removedVertices++;
             }
         }
