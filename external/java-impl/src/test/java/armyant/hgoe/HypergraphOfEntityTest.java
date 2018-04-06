@@ -181,7 +181,8 @@ public class HypergraphOfEntityTest {
         System.out.println("Node 2 neighbors: " + n2Neighbors);
         assert n2Neighbors.equals(new HashSet<>(Arrays.asList(0, 1, 5)));
 
-        // Current version does not support directed hyperedge removal...
+        int previousNumVertices = g.getNumberOfVertices();
+        int previousNumEdges = g.getNumberOfEdges();
         int removeNodeID = 2;
         for (int edgeID : g.getEdgesIncidentTo(removeNodeID)) {
             if (g.isDirectedHyperEdge(edgeID)) {
@@ -198,6 +199,8 @@ public class HypergraphOfEntityTest {
             }
         }
         g.removeVertex(removeNodeID);
+        assert g.getNumberOfVertices() == previousNumVertices - 1;
+        assert g.getNumberOfEdges() == previousNumEdges - 1;
 
         /**
          * Summary
