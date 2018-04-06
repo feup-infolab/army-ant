@@ -1,3 +1,3 @@
 [submodule "external/lib/Grph"]
 	path = external/lib/Grph
-	url = https://github.com/jldevezas/Grph.git
+	url = git@github.com:jldevezas/Grph.git
