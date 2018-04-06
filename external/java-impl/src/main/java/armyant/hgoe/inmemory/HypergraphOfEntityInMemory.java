@@ -9,8 +9,6 @@ import armyant.hgoe.inmemory.nodes.Node;
 import armyant.hgoe.inmemory.nodes.TermNode;
 import armyant.structures.*;
 import armyant.structures.yaml.PruneConfig;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import edu.mit.jwi.IRAMDictionary;
 import edu.mit.jwi.RAMDictionary;
 import edu.mit.jwi.data.ILoadPolicy;
@@ -467,7 +465,7 @@ public class HypergraphOfEntityInMemory extends Engine {
         File pruneConfigFile = Paths.get(this.featuresPath, "prune.yml").toFile();
         PruneConfig pruneConfig = PruneConfig.load(pruneConfigFile);
 
-        logger.info("Pruning hypergraph nodes and edges based on configuration file '{}'", pruneConfigFile);
+        logger.info("Pruning hypergraph nodes and edges based on configuration file: {}", pruneConfigFile);
 
         int removedVertices = 0;
         for (int nodeID : graph.getVertices()) {

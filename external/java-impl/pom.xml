@@ -18,11 +18,12 @@
             <url>http://hypergraphdb.org/maven</url>
         </repository>
 
-        <repository>
+        <!-- Uncomment when their removeEdge supports directed hyperedges -->
+        <!--repository>
             <id>lhogie.i3s.maven.repo</id>
             <name>Luc Hogie Maven repository</name>
             <url>http://www.i3s.unice.fr/~hogie/maven_repository/</url>
-        </repository>
+        </repository-->
     </repositories>
 
     <dependencies>
