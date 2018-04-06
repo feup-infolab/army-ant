@@ -382,6 +382,15 @@ public class HypergraphOfEntityInMemory extends Engine {
         });
     }
 
+    private float probalisticIDF(int numDocs, int numDocsWithTerm) {
+        float probIDF = (float) Math.log10((float) (numDocs - numDocsWithTerm) / numDocsWithTerm);
+        return Math.min(1, Math.max(0, probIDF));
+    }
+
+    private float linearIDF(int numDocs, int numDocsWithTerm) {
+        return 1 - (float) numDocsWithTerm / numDocs;
+    }
+
     private void computeNodeWeights() {
         logger.info("Computing node weights");
         for (int nodeID : graph.getVertices()) {
@@ -389,12 +398,14 @@ public class HypergraphOfEntityInMemory extends Engine {
             if (node instanceof DocumentNode) {
                 nodeWeights.setValue(nodeID, DEFAULT_DOCUMENT_NODE_WEIGHT);
             } else if (node instanceof TermNode || node instanceof EntityNode) {
-                int n = 0;
+                int numDocsWithTerm = 0;
                 for (int edgeID : graph.getEdgesIncidentTo(nodeID)) {
                     Edge edge = edgeIndex.getKey(edgeID);
-                    if (edge instanceof DocumentEdge) n++;
+                    if (edge instanceof DocumentEdge) {
+                        numDocsWithTerm++;
+                    }
                 }
-                nodeWeights.setValue(nodeID, Math.log((float) (numDocs - n) / n)); // Probabilistic IDF
+                nodeWeights.setValue(nodeID, linearIDF(numDocs, numDocsWithTerm));
             }
         }
     }
@@ -1345,7 +1356,8 @@ public class HypergraphOfEntityInMemory extends Engine {
             for (int nodeID : graph.getVertices()) {
                 Node node = nodeIndex.getKey(nodeID);
                 if (nodeClass.isInstance(node)) {
-                    summary.add("%10d %s", nodeID, node.getName());
+                    double nodeWeight = nodeWeights.getValueAsFloat(nodeID);
+                    summary.add("%10d %.2f %s", nodeID, nodeWeight, node.getName());
                 }
             }
 
@@ -1368,6 +1380,8 @@ public class HypergraphOfEntityInMemory extends Engine {
                 Edge edge = edgeIndex.getKey(edgeID);
 
                 if (edgeClass.isInstance(edge)) {
+                    float edgeWeight = edgeWeights.getValueAsFloat(edgeID);
+
                     if (graph.isDirectedHyperEdge(edgeID)) {
                         Set<String> tail = graph.getDirectedHyperEdgeTail(edgeID).stream()
                                 .map(nodeID -> nodeIndex.getKey(nodeID).getName())
@@ -1377,12 +1391,12 @@ public class HypergraphOfEntityInMemory extends Engine {
                                 .map(nodeID -> nodeIndex.getKey(nodeID).getName())
                                 .collect(Collectors.toSet());
 
-                        summary.add("%10d %s -> %s", edgeID, tail, head);
+                        summary.add("%10d %.2f %s -> %s", edgeID, edgeWeight, tail, head);
                     } else {
                         Set<String> nodes = graph.getUndirectedHyperEdgeVertices(edgeID).stream()
                                 .map(nodeID -> nodeIndex.getKey(nodeID).getName())
                                 .collect(Collectors.toSet());
-                        summary.add("%10d %s", edgeID, nodes);
+                        summary.add("%10d %.2f %s", edgeID, edgeWeight, nodes);
                     }
                 }
             }

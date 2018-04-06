@@ -10,6 +10,7 @@ import grph.Grph;
 import grph.in_memory.InMemoryGrph;
 import grph.path.ArrayListPath;
 import grph.path.Path;
+import grph.properties.NumericalProperty;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.testng.annotations.Test;
 
@@ -201,6 +202,16 @@ public class HypergraphOfEntityTest {
         g.removeVertex(removeNodeID);
         assert g.getNumberOfVertices() == previousNumVertices - 1;
         assert g.getNumberOfEdges() == previousNumEdges - 1;
+
+        NumericalProperty weights = new NumericalProperty("weight");
+        float n0Weight = 0.1f;
+        float n1Weight = (float) Math.max(0, Math.log10((2000 - 500) / 500));
+        weights.setValue(0, n0Weight);
+        weights.setValue(1, n1Weight);
+        assert weights.getValueAsFloat(0) == n0Weight;
+        assert weights.getValueAsFloat(1) == n1Weight;
+        System.out.println(String.format("weight(n0) = %.2f", n0Weight));
+        System.out.println(String.format("weight(n1) = %.2f", n1Weight));
 
         /**
          * Summary

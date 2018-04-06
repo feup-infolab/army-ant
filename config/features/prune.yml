@@ -1,7 +1,7 @@
 thresholds:
   nodes:
     DocumentNode: 1
-    TermNode: 0.5
+    TermNode: 0.75
     EntityNode: 0.75
   edges:
     DocumentEdge: 0.5
