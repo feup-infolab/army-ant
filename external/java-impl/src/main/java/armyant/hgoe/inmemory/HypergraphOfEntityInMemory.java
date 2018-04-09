@@ -495,25 +495,21 @@ public class HypergraphOfEntityInMemory extends Engine {
                 if (graph.getDirectedHyperEdgeTail(edgeID).contains(nodeID)) {
                     graph.removeFromDirectedHyperEdgeTail(edgeID, nodeID);
                     if (graph.getDirectedHyperEdgeTail(edgeID).size() == 0) {
-                        edgeWeights.setStatus(edgeID, false);
                         graph.removeEdge(edgeID);
                     }
                 } else {
                     graph.removeFromDirectedHyperEdgeHead(edgeID, nodeID);
                     if (graph.getDirectedHyperEdgeHead(edgeID).size() == 0) {
-                        edgeWeights.setStatus(edgeID, false);
                         graph.removeEdge(edgeID);
                     }
                 }
             } else {
                 graph.removeFromHyperEdge(edgeID, nodeID);
                 if (graph.getUndirectedHyperEdgeVertices(edgeID).size() == 0) {
-                    edgeWeights.setStatus(edgeID, false);
                     graph.removeEdge(edgeID);
                 }
             }
         }
-        nodeWeights.setStatus(nodeID, false);
         graph.removeVertex(nodeID);
     }
 
@@ -540,7 +536,6 @@ public class HypergraphOfEntityInMemory extends Engine {
             Edge edge = edgeIndex.getKey(edgeID);
             float threshold = pruneConfig.getEdgeThreshold(edge.getClass());
             if (weight < threshold) {
-                edgeWeights.setStatus(edgeID, false);
                 graph.removeEdge(edgeID);
                 removedEdges++;
             }
