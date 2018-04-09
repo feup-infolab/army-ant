@@ -513,6 +513,7 @@ public class HypergraphOfEntityInMemory extends Engine {
         graph.removeVertex(nodeID);
     }
 
+    // FIXME should delete weights for removed nodes and egdes
     private void prune() throws IOException {
         File pruneConfigFile = Paths.get(this.featuresPath, "prune.yml").toFile();
         PruneConfig pruneConfig = PruneConfig.load(pruneConfigFile);
