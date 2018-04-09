@@ -30,6 +30,7 @@ import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.math3.analysis.function.Sigmoid;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.io.IoCore;
@@ -53,6 +54,7 @@ import java.util.zip.GZIPInputStream;
 // TODO instaceof might be replaced by a Grph Property of some sort (is it faster?)
 public class HypergraphOfEntityInMemory extends Engine {
     private static final Logger logger = LoggerFactory.getLogger(HypergraphOfEntityInMemory.class);
+    private static final Sigmoid sigmoid = new Sigmoid();
 
     private static final int SEARCH_MAX_DISTANCE = 2;
     private static final int MAX_PATHS_PER_PAIR = 1000;
@@ -391,6 +393,14 @@ public class HypergraphOfEntityInMemory extends Engine {
         return 1 - (float) numDocsWithTerm / numDocs;
     }
 
+    private float sigmoidIDF(int numDocs, int numDocsWithTerm) {
+        return sigmoidIDF(numDocs, numDocsWithTerm, 0.5f);
+    }
+
+    private float sigmoidIDF(int numDocs, int numDocsWithTerm, float alpha) {
+        return (float) (2 * sigmoid.value(alpha * (numDocs - numDocsWithTerm) / numDocsWithTerm) - 1);
+    }
+
     private void computeNodeWeights() {
         logger.info("Computing node weights");
         for (int nodeID : graph.getVertices()) {
@@ -405,7 +415,8 @@ public class HypergraphOfEntityInMemory extends Engine {
                         numDocsWithTerm++;
                     }
                 }
-                nodeWeights.setValue(nodeID, linearIDF(numDocs, numDocsWithTerm));
+                nodeWeights.setValue(nodeID, sigmoidIDF(
+                        numDocs, numDocsWithTerm, node instanceof TermNode ? 0.25f : 0.15f));
             }
         }
     }
@@ -416,13 +427,17 @@ public class HypergraphOfEntityInMemory extends Engine {
 
     private float computeRelatedToHyperEdgeWeight(int edgeID) {
         IntSet entityNodeIDs = graph.getUndirectedHyperEdgeVertices(edgeID);
-        float weight = 0;
-        for (int entityNodeID : entityNodeIDs) {
-            IntSet neighborNodeIDs = graph.getNeighbours(entityNodeID);
-            neighborNodeIDs.retainAll(entityNodeIDs);
-            weight += (float) neighborNodeIDs.size() / entityNodeIDs.size();
-        }
+
+        float weight = entityNodeIDs.parallelStream()
+                .map(entityNodeID -> {
+                    IntSet neighborNodeIDs = graph.getNeighbours(entityNodeID);
+                    neighborNodeIDs.retainAll(entityNodeIDs);
+                    return (float) neighborNodeIDs.size() / entityNodeIDs.size();
+                })
+                .reduce(0f, (a, b) -> a + b);
+
         weight /= entityNodeIDs.size();
+
         return weight;
     }
 
@@ -447,9 +462,9 @@ public class HypergraphOfEntityInMemory extends Engine {
             } else if (edge instanceof ContainedInEdge) {
                 edgeWeights.setValue(edgeID, computeContainedInHyperEdgeWeight(edgeID));
             } else if (edge instanceof RelatedToEdge) {
-                //edgeWeights.setValue(edgeID, computeRelatedToHyperEdgeWeight(edgeID));
-                logger.warn("Using random weight for related-to edges (TESTING ONLY)");
-                edgeWeights.setValue(edgeID, Math.random());
+                edgeWeights.setValue(edgeID, computeRelatedToHyperEdgeWeight(edgeID));
+                /*logger.warn("Using random weight for related-to edges (TESTING ONLY)");
+                edgeWeights.setValue(edgeID, Math.random());*/
             } else if (edge instanceof SynonymEdge) {
                 edgeWeights.setValue(edgeID, computeSynonymHyperEdgeWeight(edgeID));
             } else if (edge instanceof ContextEdge) {
@@ -479,16 +494,26 @@ public class HypergraphOfEntityInMemory extends Engine {
             if (graph.isDirectedHyperEdge(edgeID)) {
                 if (graph.getDirectedHyperEdgeTail(edgeID).contains(nodeID)) {
                     graph.removeFromDirectedHyperEdgeTail(edgeID, nodeID);
-                    if (graph.getDirectedHyperEdgeTail(edgeID).size() == 0) graph.removeEdge(edgeID);
+                    if (graph.getDirectedHyperEdgeTail(edgeID).size() == 0) {
+                        edgeWeights.setStatus(edgeID, false);
+                        graph.removeEdge(edgeID);
+                    }
                 } else {
                     graph.removeFromDirectedHyperEdgeHead(edgeID, nodeID);
-                    if (graph.getDirectedHyperEdgeHead(edgeID).size() == 0) graph.removeEdge(edgeID);
+                    if (graph.getDirectedHyperEdgeHead(edgeID).size() == 0) {
+                        edgeWeights.setStatus(edgeID, false);
+                        graph.removeEdge(edgeID);
+                    }
                 }
             } else {
                 graph.removeFromHyperEdge(edgeID, nodeID);
-                if (graph.getUndirectedHyperEdgeVertices(edgeID).size() == 0) graph.removeEdge(edgeID);
+                if (graph.getUndirectedHyperEdgeVertices(edgeID).size() == 0) {
+                    edgeWeights.setStatus(edgeID, false);
+                    graph.removeEdge(edgeID);
+                }
             }
         }
+        nodeWeights.setStatus(nodeID, false);
         graph.removeVertex(nodeID);
     }
 
@@ -515,6 +540,7 @@ public class HypergraphOfEntityInMemory extends Engine {
             Edge edge = edgeIndex.getKey(edgeID);
             float threshold = pruneConfig.getEdgeThreshold(edge.getClass());
             if (weight < threshold) {
+                edgeWeights.setStatus(edgeID, false);
                 graph.removeEdge(edgeID);
                 removedEdges++;
             }
