@@ -1447,9 +1447,13 @@ public class HypergraphOfEntityInMemory extends Engine {
             Path path = Paths.get(workdir, String.format("node-weights-%s.csv", now));
             logger.info("Saving node weights to {}", path);
             try (BufferedWriter writer = Files.newBufferedWriter(path);
-                 CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("Node ID", "Weight"))) {
+                 CSVPrinter csvPrinter = new CSVPrinter(
+                         writer, CSVFormat.DEFAULT.withHeader("Node ID", "Type", "Weight"))) {
                 for (int nodeID : graph.getVertices()) {
-                    csvPrinter.printRecord(nodeID, nodeWeights.getValueAsFloat(nodeID));
+                    csvPrinter.printRecord(
+                            nodeID,
+                            nodeIndex.getKey(nodeID).getClass().getSimpleName(),
+                            nodeWeights.getValueAsFloat(nodeID));
                 }
                 csvPrinter.flush();
             }
@@ -1457,9 +1461,12 @@ public class HypergraphOfEntityInMemory extends Engine {
             Path path = Paths.get(workdir, String.format("edge-weights-%s.csv", now));
             logger.info("Saving edge weights to {}", path);
             try (BufferedWriter writer = Files.newBufferedWriter(path);
-                 CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("Edge ID", "Weight"))) {
+                 CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("Edge ID", "Type", "Weight"))) {
                 for (int edgeID : graph.getEdges()) {
-                    csvPrinter.printRecord(edgeID, edgeWeights.getValueAsFloat(edgeID));
+                    csvPrinter.printRecord(
+                            edgeID,
+                            edgeIndex.getKey(edgeID).getClass().getSimpleName(),
+                            edgeWeights.getValueAsFloat(edgeID));
                 }
                 csvPrinter.flush();
             }
