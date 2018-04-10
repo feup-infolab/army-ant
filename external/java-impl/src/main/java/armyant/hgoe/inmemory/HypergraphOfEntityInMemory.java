@@ -59,7 +59,7 @@ import java.util.zip.GZIPInputStream;
 public class HypergraphOfEntityInMemory extends Engine {
     private static final Logger logger = LoggerFactory.getLogger(HypergraphOfEntityInMemory.class);
     private static final Sigmoid sigmoid = new Sigmoid();
-    private static final SimpleDateFormat isoDateFormat = new SimpleDateFormat("yyyyMMdd'T'HH:mm:ss");
+    private static final SimpleDateFormat isoDateFormat = new SimpleDateFormat("yyyyMMdd'T'HHmmss");
 
     private static final int SEARCH_MAX_DISTANCE = 2;
     private static final int MAX_PATHS_PER_PAIR = 1000;
@@ -1436,7 +1436,7 @@ public class HypergraphOfEntityInMemory extends Engine {
 
     public void export(String feature) throws IOException {
         String now = isoDateFormat.format(new Date());
-        
+
         if (feature.equals("export-node-weights")) {
             String filename = String.format("node-weights-%s", now);
             logger.info("Saving node weights to {}", filename);
