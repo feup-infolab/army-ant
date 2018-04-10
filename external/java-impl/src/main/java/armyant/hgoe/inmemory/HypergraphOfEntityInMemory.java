@@ -27,6 +27,8 @@ import org.ahocorasick.trie.Emit;
 import org.ahocorasick.trie.Trie;
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -43,7 +45,9 @@ import toools.collections.primitive.LucIntHashSet;
 
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.*;
+import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
@@ -55,6 +59,7 @@ import java.util.zip.GZIPInputStream;
 public class HypergraphOfEntityInMemory extends Engine {
     private static final Logger logger = LoggerFactory.getLogger(HypergraphOfEntityInMemory.class);
     private static final Sigmoid sigmoid = new Sigmoid();
+    private static final SimpleDateFormat isoDateFormat = new SimpleDateFormat("yyyyMMdd'T'HH:mm:ss");
 
     private static final int SEARCH_MAX_DISTANCE = 2;
     private static final int MAX_PATHS_PER_PAIR = 1000;
@@ -416,7 +421,7 @@ public class HypergraphOfEntityInMemory extends Engine {
                     }
                 }
                 nodeWeights.setValue(nodeID, sigmoidIDF(
-                        numDocs, numDocsWithTerm, node instanceof TermNode ? 0.25f : 0.15f));
+                        numDocs, numDocsWithTerm, node instanceof TermNode ? 0.25f : 0.05f));
             }
         }
     }
@@ -1429,6 +1434,34 @@ public class HypergraphOfEntityInMemory extends Engine {
         return summary;
     }
 
+    public void export(String feature) throws IOException {
+        String now = isoDateFormat.format(new Date());
+        
+        if (feature.equals("export-node-weights")) {
+            String filename = String.format("node-weights-%s", now);
+            logger.info("Saving node weights to {}", filename);
+            try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(filename));
+                 CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("Node ID", "Weight"))) {
+                for (int nodeID : graph.getVertices()) {
+                    csvPrinter.printRecord(nodeID, nodeWeights.getValueAsFloat(nodeID));
+                }
+                csvPrinter.flush();
+            }
+        } else if (feature.equals("export-edge-weights")) {
+            String filename = String.format("edge-weights-%s", now);
+            logger.info("Saving edge weights to {}", filename);
+            try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(filename));
+                 CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("Edge ID", "Weight"))) {
+                for (int edgeID : graph.getEdges()) {
+                    csvPrinter.printRecord(edgeID, edgeWeights.getValueAsFloat(edgeID));
+                }
+                csvPrinter.flush();
+            }
+        } else {
+            logger.error("Invalid feature {}", feature);
+        }
+    }
+
     @Override
     public void inspect(String feature) {
         boolean valid = true;
@@ -1443,6 +1476,13 @@ public class HypergraphOfEntityInMemory extends Engine {
             trace = getNodeList();
         } else if (feature.equals("list-hyperedges")) {
             trace = getHyperedgeList();
+        } else if (feature.startsWith("export-")) {
+            try {
+                export(feature);
+            } catch (IOException e) {
+                logger.error(e.getMessage(), e);
+            }
+            return;
         } else {
             valid = false;
         }
