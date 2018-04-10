@@ -46,6 +46,7 @@ import toools.collections.primitive.LucIntHashSet;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.*;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -1437,10 +1438,15 @@ public class HypergraphOfEntityInMemory extends Engine {
     public void export(String feature, String workdir) throws IOException {
         String now = isoDateFormat.format(new Date());
 
+        if (!Files.exists(Paths.get(workdir))) {
+            logger.info("Creating working directory: {}", workdir);
+            Files.createDirectories(Paths.get(workdir));
+        }
+
         if (feature.equals("export-node-weights")) {
-            String filename = String.format("node-weights-%s.csv", now);
-            logger.info("Saving node weights to {}", filename);
-            try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(workdir, filename));
+            Path path = Paths.get(workdir, String.format("node-weights-%s.csv", now));
+            logger.info("Saving node weights to {}", path);
+            try (BufferedWriter writer = Files.newBufferedWriter(path);
                  CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("Node ID", "Weight"))) {
                 for (int nodeID : graph.getVertices()) {
                     csvPrinter.printRecord(nodeID, nodeWeights.getValueAsFloat(nodeID));
@@ -1448,9 +1454,9 @@ public class HypergraphOfEntityInMemory extends Engine {
                 csvPrinter.flush();
             }
         } else if (feature.equals("export-edge-weights")) {
-            String filename = String.format("edge-weights-%s.csv", now);
-            logger.info("Saving edge weights to {}", filename);
-            try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(workdir, filename));
+            Path path = Paths.get(workdir, String.format("edge-weights-%s.csv", now));
+            logger.info("Saving edge weights to {}", path);
+            try (BufferedWriter writer = Files.newBufferedWriter(path);
                  CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("Edge ID", "Weight"))) {
                 for (int edgeID : graph.getEdges()) {
                     csvPrinter.printRecord(edgeID, edgeWeights.getValueAsFloat(edgeID));
