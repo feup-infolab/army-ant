@@ -115,7 +115,7 @@ class Index(object):
     async def search(self, query, offset, limit, ranking_function=None, ranking_params=None):
         raise ArmyAntException("Search not implemented for %s" % self.__class__.__name__)
 
-    async def inspect(self, feature):
+    async def inspect(self, feature, workdir='.'):
         raise ArmyAntException("Inspect not implemented for %s" % self.__class__.__name__)
 
 
@@ -848,7 +848,7 @@ class HypergraphOfEntity(JavaIndex):
 
         return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()), trace_ascii=trace.toASCII())
 
-    async def inspect(self, feature):
+    async def inspect(self, feature, workdir):
         try:
             if self.index_location in HypergraphOfEntity.INSTANCES:
                 hgoe = HypergraphOfEntity.INSTANCES[self.index_location]
@@ -859,7 +859,7 @@ class HypergraphOfEntity(JavaIndex):
                     self.index_location, java.util.Arrays.asList(features))
                 HypergraphOfEntity.INSTANCES[self.index_location] = hgoe
 
-            hgoe.inspect(feature)
+            hgoe.inspect(feature, workdir)
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 

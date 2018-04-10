@@ -1434,13 +1434,13 @@ public class HypergraphOfEntityInMemory extends Engine {
         return summary;
     }
 
-    public void export(String feature) throws IOException {
+    public void export(String feature, String workdir) throws IOException {
         String now = isoDateFormat.format(new Date());
 
         if (feature.equals("export-node-weights")) {
             String filename = String.format("node-weights-%s.csv", now);
             logger.info("Saving node weights to {}", filename);
-            try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(filename));
+            try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(workdir, filename));
                  CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("Node ID", "Weight"))) {
                 for (int nodeID : graph.getVertices()) {
                     csvPrinter.printRecord(nodeID, nodeWeights.getValueAsFloat(nodeID));
@@ -1450,7 +1450,7 @@ public class HypergraphOfEntityInMemory extends Engine {
         } else if (feature.equals("export-edge-weights")) {
             String filename = String.format("edge-weights-%s.csv", now);
             logger.info("Saving edge weights to {}", filename);
-            try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(filename));
+            try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(workdir, filename));
                  CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("Edge ID", "Weight"))) {
                 for (int edgeID : graph.getEdges()) {
                     csvPrinter.printRecord(edgeID, edgeWeights.getValueAsFloat(edgeID));
@@ -1463,7 +1463,7 @@ public class HypergraphOfEntityInMemory extends Engine {
     }
 
     @Override
-    public void inspect(String feature) {
+    public void inspect(String feature, String workdir) {
         boolean valid = true;
         Trace trace = null;
         if (feature.equals("summary")) {
@@ -1478,7 +1478,7 @@ public class HypergraphOfEntityInMemory extends Engine {
             trace = getHyperedgeList();
         } else if (feature.startsWith("export-")) {
             try {
-                export(feature);
+                export(feature, workdir);
             } catch (IOException e) {
                 logger.error(e.getMessage(), e);
             }

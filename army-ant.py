@@ -188,7 +188,7 @@ class CommandLineInterface(object):
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()
 
-    def inspect(self, index_location, index_type, feature=None, interactive=False):
+    def inspect(self, index_location, index_type, workdir='.', feature=None, interactive=False):
         if feature is None and not interactive:
             logger.error("Must either use --feature or --interactive")
             return
@@ -210,7 +210,7 @@ class CommandLineInterface(object):
                         if feature.strip() == '': continue
 
                     index = Index.open(index_location, index_type, loop)
-                    loop.run_until_complete(index.inspect(feature))
+                    loop.run_until_complete(index.inspect(feature, workdir))
                 except ArmyAntException as e:
                     logger.error(e)
                 except (EOFError, KeyboardInterrupt):

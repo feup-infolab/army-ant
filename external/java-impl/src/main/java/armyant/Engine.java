@@ -89,7 +89,7 @@ public abstract class Engine {
     public void postProcessing() throws Exception {
     }
 
-    public void inspect(String feature) {
+    public void inspect(String feature, String workdir) {
         throw new NotImplementedException("Not implemented");
     }
 
