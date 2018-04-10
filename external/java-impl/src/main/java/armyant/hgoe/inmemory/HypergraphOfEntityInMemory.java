@@ -1438,7 +1438,7 @@ public class HypergraphOfEntityInMemory extends Engine {
         String now = isoDateFormat.format(new Date());
 
         if (feature.equals("export-node-weights")) {
-            String filename = String.format("node-weights-%s", now);
+            String filename = String.format("node-weights-%s.csv", now);
             logger.info("Saving node weights to {}", filename);
             try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(filename));
                  CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("Node ID", "Weight"))) {
@@ -1448,7 +1448,7 @@ public class HypergraphOfEntityInMemory extends Engine {
                 csvPrinter.flush();
             }
         } else if (feature.equals("export-edge-weights")) {
-            String filename = String.format("edge-weights-%s", now);
+            String filename = String.format("edge-weights-%s.csv", now);
             logger.info("Saving edge weights to {}", filename);
             try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(filename));
                  CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("Edge ID", "Weight"))) {
