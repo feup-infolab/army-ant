@@ -60,8 +60,6 @@ public abstract class Engine {
     }
 
     public static Integer sampleNonUniformlyAtRandom(int[] elementIDs, float[] weights) {
-        Float[] probs = ArrayUtils.toObject(weights);
-
         float weightsSum = 0;
         for (float weight : weights) {
             weightsSum += weight;
@@ -69,9 +67,8 @@ public abstract class Engine {
 
         float cumulativeProbability = 0;
         TreeMap<Float, Integer> elements = new TreeMap<>();
-        for (int i=0; i < probs.length; i++) {
-            probs[i] /= weightsSum;
-            cumulativeProbability += probs[i] / weightsSum;
+        for (int i=0; i < weights.length; i++) {
+            cumulativeProbability += weights[i] / weightsSum;
             elements.put(cumulativeProbability, elementIDs[i]);
         }
 
