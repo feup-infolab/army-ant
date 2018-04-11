@@ -1,17 +1,20 @@
-if (!require(pacman)) install.packages("pacman")
-pacman::p_load(
-  ggplot2
-)
+source('setup.R')
 
-plotWeightsPerType <- function(data) {
+plot_weights_per_type <- function(data) {
+  data <- aggregate(Weight~Type, data)
+
   ggplot(data, aes(x=Weight)) +
-    geom_histogram(binwidth = 0.1) +
+    #geom_histogram(aes(y = (..count..)/tapply(..count.., ..PANEL.., sum)[..PANEL..]), binwidth = 0.05) +
+    geom_bar(stat = 'identity') +
     facet_wrap(~Type) +
+    scale_y_continuous(label=scales::percent) +
     ylab("Frequency")
 }
 
-nodes <- read.csv("/tmp/hgoe-export/node-weights-20180410T145239.csv")
-edges <- read.csv("/tmp/hgoe-export/edge-weights-20180410T145252.csv")
+base_dir <- '/opt/army-ant/analysis/inex_3t_nl-hgoe-weights/syns-context-weighted'
 
-plotWeightsPerType(nodes)
-plotWeightsPerType(edges)
+nodes <- read.csv(paste(base_dir, 'node-weights.csv', sep='/'))
+edges <- read.csv(paste(base_dir, 'edge-weights.csv', sep='/'))
+
+plot_weights_per_type(nodes)
+plot_weights_per_type(edges)

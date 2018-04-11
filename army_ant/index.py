@@ -704,7 +704,7 @@ def handler(signum, frame): raise KeyboardInterrupt
 
 class JavaIndex(Index):
     BLOCK_SIZE = 5000
-    VERSION = '0.2-SNAPSHOT'
+    VERSION = '0.3-SNAPSHOT'
     CLASSPATH = 'external/java-impl/target/java-impl-%s-jar-with-dependencies.jar' % VERSION
     INSTANCES = {}
 

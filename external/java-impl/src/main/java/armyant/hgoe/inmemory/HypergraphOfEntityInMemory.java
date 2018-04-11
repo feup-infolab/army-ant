@@ -19,7 +19,6 @@ import grph.in_memory.InMemoryGrph;
 import grph.io.ParseException;
 import grph.path.ArrayListPath;
 import grph.properties.NumericalProperty;
-import grph.properties.ObjectProperty;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.floats.FloatList;
 import it.unimi.dsi.fastutil.ints.*;
@@ -81,7 +80,8 @@ public class HypergraphOfEntityInMemory extends Engine {
     private InMemoryGrph graph;
     private NumericalProperty nodeWeights;
     private NumericalProperty edgeWeights;
-    private ObjectProperty auxProperties;
+    private Map<Integer, Integer> synEdgeAux;
+    private Map<Integer, FloatList> contextEdgeAux;
     private BidiMap<Node, Integer> nodeIndex;
     private BidiMap<Edge, Integer> edgeIndex;
     private Map<Integer, IntSet> reachabilityIndex;
@@ -129,6 +129,8 @@ public class HypergraphOfEntityInMemory extends Engine {
         this.graph = new InMemoryGrph();
         this.nodeWeights = new NumericalProperty("weight");
         this.edgeWeights = new NumericalProperty("weight");
+        this.synEdgeAux = new HashMap<>();
+        this.contextEdgeAux = new HashMap<>();
         this.nodeIndex = new DualHashBidiMap<>();
         this.edgeIndex = new DualHashBidiMap<>();
         this.reachabilityIndex = new HashMap<>();
@@ -308,8 +310,8 @@ public class HypergraphOfEntityInMemory extends Engine {
                 if (node instanceof TermNode) {
                     IIndexWord idxWord = dict.getIndexWord(node.getName(), POS.NOUN);
                     if (idxWord != null) {
-                        auxProperties.setValue(nodeID, idxWord.getTagSenseCount());
-                        IWordID wordID = idxWord.getWordIDs().get(0);
+                        List<IWordID> senses = idxWord.getWordIDs();
+                        IWordID wordID = senses.get(0);
                         IWord word = dict.getWord(wordID);
                         ISynset synset = word.getSynset();
 
@@ -324,6 +326,7 @@ public class HypergraphOfEntityInMemory extends Engine {
                                     int synNodeID = getOrCreateNode(synNode);
                                     graph.addToUndirectedHyperEdge(edgeID, synNodeID);
                                 }
+                                synEdgeAux.put(edgeID, senses.size());
                             }
                         }
                     }
@@ -364,7 +367,7 @@ public class HypergraphOfEntityInMemory extends Engine {
             String term = (String) v.property("name").value();
             Node termNode = new TermNode(term);
 
-            FloatList synSims = new FloatArrayList();
+            FloatList embeddingSims = new FloatArrayList();
             if (nodeIndex.containsKey(termNode)) {
                 ContextEdge contextEdge = new ContextEdge();
                 int edgeID = createUndirectedEdge(contextEdge);
@@ -381,11 +384,11 @@ public class HypergraphOfEntityInMemory extends Engine {
 
                     float weight = 1f;
                     if (e.property("weight").isPresent()) {
-                        weight = (float) e.property("weight").value();
+                        weight = (float) (double) e.property("weight").value();
                     }
-                    synSims.add(weight);
+                    embeddingSims.add(weight);
                 });
-                auxProperties.setValue(edgeID, synSims);
+                contextEdgeAux.put(edgeID, embeddingSims);
             }
         });
     }
@@ -437,8 +440,9 @@ public class HypergraphOfEntityInMemory extends Engine {
         float weight = entityNodeIDs.parallelStream()
                 .map(entityNodeID -> {
                     IntSet neighborNodeIDs = graph.getNeighbours(entityNodeID);
+                    int numNeighbors = neighborNodeIDs.size();
                     neighborNodeIDs.retainAll(entityNodeIDs);
-                    return (float) neighborNodeIDs.size() / entityNodeIDs.size();
+                    return (float) numNeighbors / entityNodeIDs.size();
                 })
                 .reduce(0f, (a, b) -> a + b);
 
@@ -448,15 +452,18 @@ public class HypergraphOfEntityInMemory extends Engine {
     }
 
     private float computeSynonymHyperEdgeWeight(int edgeID) {
-        if (auxProperties.isSetted(edgeID)) {
-            return 1f / (float) auxProperties.getValue(edgeID);
+        if (synEdgeAux.containsKey(edgeID)) {
+            return 1f / (float) synEdgeAux.get(edgeID);
         }
         return 1f;
     }
 
     private float computeContextHyperEdgeWeight(int edgeID) {
-        FloatList synSims = (FloatArrayList) auxProperties.getValue(edgeID);
-        return (float) synSims.stream().mapToDouble(sim -> sim).average().orElse(0d);
+        if (contextEdgeAux.containsKey(edgeID)) {
+            FloatList embeddingSims = contextEdgeAux.get(edgeID);
+            return (float) embeddingSims.stream().mapToDouble(sim -> sim).average().orElse(0d);
+        }
+        return 1.0f;
     }
 
     private void computeHyperEdgeWeights() {

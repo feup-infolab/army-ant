@@ -22,8 +22,9 @@ plot_distribution <- function(values, attr_name='Weight') {
 
 loginfo("Loading graph")
 if (!exists('g') || class(g) != 'igraph') {
+  if (endsWith(graphml_file, '.gz')) graphml_file <- gzfile(graphml_file)
   g <- read.graph(graphml_file, format = 'graphml')
-  close(graphml_file)
+  if ('connection' %in% class(graphml_file)) close(graphml_file)
 } else {
   logwarn("Using existing graph (remove 'g' and run again if you want to reload)")
 }
