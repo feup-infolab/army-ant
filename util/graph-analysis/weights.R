@@ -1,13 +1,24 @@
 source('setup.R')
 
-plot_weights_per_type <- function(data) {
-  data <- aggregate(Weight~Type, data)
+binwidth <- 0.05
 
-  ggplot(data, aes(x=Weight)) +
-    #geom_histogram(aes(y = (..count..)/tapply(..count.., ..PANEL.., sum)[..PANEL..]), binwidth = 0.05) +
+plot_weights_per_type <- function(data) {
+  data <- split(data, data$Type)
+  data <- lapply(data, function(d) {
+    df <- as.data.frame(table(cut(d$Weight, seq(0, 1, binwidth), seq(0, 1-binwidth, binwidth))))
+    names(df) <- c("BinStart", "Freq")
+    df$BinStart <- as.numeric(as.character(df$BinStart))
+    df$Freq <- df$Freq / sum(df$Freq)
+    cbind(df, Type=unique(d$Type))
+  })
+  data <- do.call(rbind, data)
+
+  ggplot(data, aes(x=BinStart + binwidth/2, y=Freq, width = binwidth)) +
     geom_bar(stat = 'identity') +
     facet_wrap(~Type) +
+    scale_x_continuous(breaks=seq(0, 1.0, 0.2)) +
     scale_y_continuous(label=scales::percent) +
+    xlab("Weight") +
     ylab("Frequency")
 }
 

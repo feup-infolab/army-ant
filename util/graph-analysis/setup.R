@@ -8,6 +8,7 @@ if (!require(pacman)) install.packages('pacman')
 pacman::p_load(
   igraph,
   ggplot2,
+  dplyr,
   logging,
   sigmoid
 )
