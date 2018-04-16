@@ -36,6 +36,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Build java implementation and clean maven dependencies
 COPY external/java-impl external/java-impl
+RUN cd external/lib/Grph && mvn install
 RUN cd external/java-impl && mvn compile assembly:single
 RUN rm -rf $HOME/.m2
 

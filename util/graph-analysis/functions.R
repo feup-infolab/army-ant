@@ -7,6 +7,10 @@
 #    http://shiny.rstudio.com/
 #
 
+#
+# Meh, this sucks... Just plot the damn thing instead.
+#
+
 source('setup.R')
 library(shiny)
 
@@ -14,7 +18,9 @@ functions_library <- list(
   sigmoid=sigmoid,
   log10=log10,
   sec=function(x) 1/cos(x),
-  cot=function(x) 1/tan(x)
+  cot=function(x) 1/tan(x),
+  'x^2'=function(x) x^2,
+  power_law=function(x, a=1, k=1) a*x^(-k)
 )
 
 # Define UI for application that draws a histogram
@@ -29,61 +35,63 @@ ui <- fluidPage(
         "func",
         "Function:",
         list(
+          'f(x, a=1, k=1) = a * x^(-k)'='power_law',
+          'f(x) = x^2'='x^2',
           'sigmoid(x)'='sigmoid',
           'log10(x)'='log10',
           'sec(x)'='sec',
           'cot(x)'='cot'
         )
       ),
-      sliderInput(
-        'xMin',
+      numericInput(
+        'x_min',
         'min(x):',
-        min=-10,
-        max=10,
-        value=-10,
-        step=0.1
+        value=-10
       ),
-      sliderInput(
-        'xMax',
+      numericInput(
+        'x_max',
         'max(x):',
-        min=-10,
-        max=10,
-        value=10,
-        step=0.1
+        value=10
       ),
       textInput(
-        'xAffect',
+        'x_affect',
         'Change value of x:',
         placeholder = 'x * 2 + 1'
       ),
       textInput(
-        'yAffect',
+        'y_affect',
         'Change value of y:',
         placeholder = '1 / y'
       )
     ),
     
     # Show a plot of the generated distribution
-    mainPanel(plotOutput("plot"))
+    mainPanel(plotOutput('plot'))
   )
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   output$plot <- renderPlot({
-    x <- seq(input$xMin, input$xMax, 0.01)
-    if (input$xAffect != '') {
-      x <- eval(parse(text=input$xAffect))
+    x <- seq(input$x_min, input$x_max, 0.001)
+    if (input$x_affect != '') {
+      x <- eval(parse(text=input$x_affect))
     }
     
     y <- functions_library[[input$func]](x)
-    if (input$yAffect != '') {
-      y <- eval(parse(text=input$yAffect))
+    if (input$y_affect != '') {
+      y <- eval(parse(text=input$y_affect))
     }
     
-    qplot(x, y, geom='line', ylab=input$func, xlim = c(input$xMin, input$xMax))
+    qplot(x, y, geom='line', ylab=input$func, xlim = c(input$x_min, input$x_max))
   })
 }
 
 # Run the application
-shinyApp(ui = ui, server = server)
+#shinyApp(ui = ui, server = server)
+
+#
+# Sandbox
+#
+
+N <- 2200; n <- seq(0, N); plot(n, sigmoid((N^-.75)*(length(n)-n)/n)*2-1, type='l', xlim=c(0,2200))

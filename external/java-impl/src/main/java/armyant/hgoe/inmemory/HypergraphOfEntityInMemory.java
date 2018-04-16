@@ -402,12 +402,8 @@ public class HypergraphOfEntityInMemory extends Engine {
         return 1 - (float) numDocsWithTerm / numDocs;
     }
 
-    private float sigmoidIDF(int numDocs, int numDocsWithTerm) {
-        return sigmoidIDF(numDocs, numDocsWithTerm, 0.5f);
-    }
-
     private float sigmoidIDF(int numDocs, int numDocsWithTerm, float alpha) {
-        return (float) (2 * sigmoid.value(alpha * (numDocs - numDocsWithTerm) / numDocsWithTerm) - 1);
+        return (float) (2 * sigmoid.value(alpha * numDocs / numDocsWithTerm) - 1);
     }
 
     private void computeNodeWeights() {
@@ -424,8 +420,7 @@ public class HypergraphOfEntityInMemory extends Engine {
                         numDocsWithTerm++;
                     }
                 }
-                nodeWeights.setValue(nodeID, sigmoidIDF(
-                        numDocs, numDocsWithTerm, node instanceof TermNode ? 0.25f : 0.05f));
+                nodeWeights.setValue(nodeID, sigmoidIDF(numDocs, numDocsWithTerm, (float) Math.pow(numDocs, -0.75)));
             }
         }
     }
@@ -440,9 +435,8 @@ public class HypergraphOfEntityInMemory extends Engine {
         float weight = entityNodeIDs.parallelStream()
                 .map(entityNodeID -> {
                     IntSet neighborNodeIDs = graph.getNeighbours(entityNodeID);
-                    int numNeighbors = neighborNodeIDs.size();
                     neighborNodeIDs.retainAll(entityNodeIDs);
-                    return (float) numNeighbors / entityNodeIDs.size();
+                    return (float) neighborNodeIDs.size() / entityNodeIDs.size();
                 })
                 .reduce(0f, (a, b) -> a + b);
 
@@ -459,9 +453,13 @@ public class HypergraphOfEntityInMemory extends Engine {
     }
 
     private float computeContextHyperEdgeWeight(int edgeID) {
+        return computeContextHyperEdgeWeight(edgeID, 0.5f);
+    }
+
+    private float computeContextHyperEdgeWeight(int edgeID, float min) {
         if (contextEdgeAux.containsKey(edgeID)) {
             FloatList embeddingSims = contextEdgeAux.get(edgeID);
-            return (float) embeddingSims.stream().mapToDouble(sim -> sim).average().orElse(0d);
+            return (float) embeddingSims.stream().mapToDouble(sim -> (sim - min) / (1 - min)).average().orElse(0d);
         }
         return 1.0f;
     }
@@ -477,7 +475,7 @@ public class HypergraphOfEntityInMemory extends Engine {
             } else if (edge instanceof RelatedToEdge) {
                 edgeWeights.setValue(edgeID, computeRelatedToHyperEdgeWeight(edgeID));
                 /*logger.warn("Using random weight for related-to edges (TESTING ONLY)");
-                edgeWeights.setValue(edgeID, Math.random());*/
+                edgeWeights.setValue(edgeID, (float) Math.random());*/
             } else if (edge instanceof SynonymEdge) {
                 edgeWeights.setValue(edgeID, computeSynonymHyperEdgeWeight(edgeID));
             } else if (edge instanceof ContextEdge) {
