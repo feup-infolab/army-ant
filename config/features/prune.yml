@@ -1,11 +1,11 @@
 thresholds:
   nodes:
-    DocumentNode: 1
+    DocumentNode: 0.5
     TermNode: 0.5
     EntityNode: 0.5
   edges:
     DocumentEdge: 0.5
     RelatedToEdge: 0.5
-    ContainedInEdge: 0.25
-    SynonymEdge: 0.2
-    ContextEdge: 0.75
+    ContainedInEdge: 0.5
+    SynonymEdge: 0.5
+    ContextEdge: 0.5

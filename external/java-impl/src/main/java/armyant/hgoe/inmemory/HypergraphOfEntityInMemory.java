@@ -403,7 +403,7 @@ public class HypergraphOfEntityInMemory extends Engine {
     }
 
     private float sigmoidIDF(int numDocs, int numDocsWithTerm, float alpha) {
-        return (float) (2 * sigmoid.value(alpha * numDocs / numDocsWithTerm) - 1);
+        return (float) (2 * sigmoid.value(alpha * (numDocs - numDocsWithTerm) / numDocsWithTerm) - 1);
     }
 
     private void computeNodeWeights() {
@@ -436,6 +436,7 @@ public class HypergraphOfEntityInMemory extends Engine {
                 .map(entityNodeID -> {
                     IntSet neighborNodeIDs = graph.getNeighbours(entityNodeID);
                     neighborNodeIDs.retainAll(entityNodeIDs);
+                    neighborNodeIDs.remove(entityNodeID.intValue());
                     return (float) neighborNodeIDs.size() / entityNodeIDs.size();
                 })
                 .reduce(0f, (a, b) -> a + b);
@@ -524,7 +525,7 @@ public class HypergraphOfEntityInMemory extends Engine {
         graph.removeVertex(nodeID);
     }
 
-    // FIXME should delete weights for removed nodes and egdes
+    // TODO also delete weights for removed nodes and egdes
     private void prune() throws IOException {
         File pruneConfigFile = Paths.get(this.featuresPath, "prune.yml").toFile();
         PruneConfig pruneConfig = PruneConfig.load(pruneConfigFile);
