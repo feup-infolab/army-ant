@@ -39,11 +39,9 @@ plot_funcs <- function(funcs, params) {
   
   ggplot(data, aes(x=n, y=val, color = func)) +
     geom_line(size=1.1) +
-    scale_color_discrete("Variant") +
-    xlab(expression(n[t])) +
-    ylab("IDF") +
-    xlim(0, N) +
-    ylim(0, 1) +
+    scale_color_discrete("Function") +
+    xlab("x") +
+    ylab("y") +
     theme(legend.position = 'top')  
 }
 
@@ -57,4 +55,4 @@ N <- 2200
 # Random uniform simulation of the number of documents a term appears in (not realistic)
 n <- sample(seq(0, N), 1e5, replace = T)
 
-plot_funcs(idf_funcs, list(N=N, n=n))
+plot_funcs(idf_funcs, list(N=N, n=n)) + xlim(0, N)+ ylim(0, 1)
