@@ -22,10 +22,23 @@ plot_weights_per_type <- function(data) {
     ylab("Frequency")
 }
 
-base_dir <- '/opt/army-ant/analysis/inex_3t_nl-hgoe-weights/syns-context-weighted'
+base_dir <- '/opt/army-ant/analysis/inex_52t_nl-hgoe-weights'
 
-nodes <- read.csv(paste(base_dir, 'node-weights.csv', sep='/'))
-edges <- read.csv(paste(base_dir, 'edge-weights.csv', sep='/'))
+nodes <- read.csv(paste(base_dir, 'node-weights.csv', sep='/'), stringsAsFactors = F)
+edges <- read.csv(paste(base_dir, 'edge-weights.csv', sep='/'), stringsAsFactors = F)
+
+nodes[which(nodes$Type == 'DocumentNode'), 'Type'] <- 'document'
+nodes[which(nodes$Type == 'EntityNode'), 'Type'] <- 'entity'
+nodes[which(nodes$Type == 'TermNode'), 'Type'] <- 'term'
+
+edges[which(edges$Type == 'ContainedInEdge'), 'Type'] <- 'contained_in'
+edges[which(edges$Type == 'ContextEdge'), 'Type'] <- 'context'
+edges[which(edges$Type == 'RelatedToEdge'), 'Type'] <- 'related_to'
+edges[which(edges$Type == 'DocumentEdge'), 'Type'] <- 'document'
+edges[which(edges$Type == 'RelatedToEdge'), 'Type'] <- 'related_to'
+edges[which(edges$Type == 'SynonymEdge'), 'Type'] <- 'synonym'
 
 plot_weights_per_type(nodes)
+ggsave("output/node_weight_distr.pdf", width = 7, height = 2.5)
 plot_weights_per_type(edges)
+ggsave("output/hyperedge_weight_distr.pdf", width = 7, height = 4.5)
