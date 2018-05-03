@@ -65,7 +65,7 @@ engines:
       name: aa_inex
     index:
       type: hgoe
-      location: /opt/army-ant/data/inex-10t-nl/hypergraph-of-entity
+      location: /opt/army-ant/data/inex-10t-nl/hgoe
       preload: false
     ranking:
       default:
