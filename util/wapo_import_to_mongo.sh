@@ -1,8 +1,8 @@
 #!/bin/bash
 
-if [ $# -lt 1 ]
+if [ $# -lt 2 ]
 then
-  echo "Usage: $0 TREC_WAPO_CORPUS_DIRECTORY|TREC_WAPO_CORPUS_ARCHIVE"
+  echo "Usage: $0 TREC_WAPO_CORPUS_DIRECTORY|TREC_WAPO_CORPUS_ARCHIVE MONGODB_DATABASE"
   exit 1
 fi
 
@@ -14,9 +14,10 @@ then
         exit 2
     fi
 
-    wapo_dir=$(mktemp -d)
-    echo "===> Uncompressing Washington Post to $wapo_dir"
-    tar xvzf $1 -C $wapo_dir
+    tmp_dir=$(mktemp -d)
+    echo "===> Uncompressing Washington Post to $tmp_dir"
+    tar xvzf $1 -C $tmp_dir
+    wapo_dir="$tmp_dir/WashingtonPost"
 else
     wapo_dir=$1
 fi
@@ -26,3 +27,25 @@ then
     echo "===> Error: directory must have read and execution permissions"
     exit 3
 fi
+
+if [ ! -z ${tmp_dir+x} ]
+then
+    echo "===> Removing temporary directory $tmp_dir"
+    rm -rf $tmp_dir
+fi
+
+db_name=$2
+
+echo "===> Importing articles to MongoDB database $db_name"
+
+for file in $wapo_dir/data/TREC_article_*
+do
+    echo "===> $file"
+    mongoimport --db $db_name --collection article --type json $file
+done
+
+for file in $wapo_dir/data/TREC_blog_*
+do
+    echo "===> $file"
+    mongoimport --db $db_name --collection article --type json $file
+done
