@@ -21,6 +21,8 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, SoupStrainer
 from lxml import etree
+from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure
 from requests.auth import HTTPBasicAuth
 
 from army_ant.exception import ArmyAntException
@@ -356,6 +358,103 @@ class LivingLabsReader(Reader):
                 doc_id=doc['docid'],
                 text=self.to_text(doc),
                 triples=self.to_triples(doc))
+
+class MongoDBReader(Reader):
+    def __init__(self, source_path):
+        super(MongoDBReader, self).__init__(source_path)
+
+        db_location_parts = re.split(r'[:/]', source_path)
+
+        if len(db_location_parts) >= 3:
+            db_host = db_location_parts[0]
+            db_port = int(db_location_parts[1])
+            db_name = db_location_parts[1]
+        elif len(db_location_parts) == 2:
+            db_host = db_location_parts[0]
+            db_port = 27017
+            db_name = db_location_parts[1]
+        else:
+            db_host = 'localhost'
+            db_port = 27017
+            db_name = db_location_parts[0]
+
+        try:
+            self.client = MongoClient(db_host, db_port)
+        except ConnectionFailure as e:
+            raise ArmyAntException("Could not connect to MongoDB instance on %s:%s" % (db_host, db_port))
+
+        self.db = self.client[db_name]
+
+# TODO unfinished
+class TRECWashingtonPostReader(MongoDBReader):
+    def __init__(self, source_path, include_blogs=True, include_articles=True):
+        super(TRECWashingtonPostReader, self).__init__(source_path)
+
+        if include_articles:
+            self.articles = self.db.find('')
+        else:
+            self.articles = iter()
+
+        self.include_blog = include_blogs
+        self.include_articles = include_articles
+
+
+    def to_plain_text(self, json):
+        pass
+
+    def to_wikipedia_entity(self, json):
+        pass
+        #return Entity(label, "http://en.wikipedia.org/?curid=%s" % page_id)
+
+    def to_triples(self, page_id, title, bdy):
+        triples = []
+
+
+
+        return triples
+
+    # FIXME copied from INEXREader
+    def __next__(self):
+        url = None
+        entity = None
+        html = ''
+
+        # Note that this for is only required in case the first element cannot be parsed.
+        # If that happens, it skips to the next parsable item.
+        while True:
+            member = self.tar.next()
+            if member is None: break
+            if not member.name.endswith('.xml'): continue
+
+            logger.debug("Reading %s" % member.name)
+
+            if self.limit is not None and self.counter >= self.limit: break
+            self.counter += 1
+
+            try:
+                article = etree.parse(self.tar.extractfile(member), self.parser)
+            except etree.XMLSyntaxError:
+                logger.warning("Error parsing XML, skipping %s in %s" % (member.name, self.source_path))
+                continue
+
+            page_id = inex.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
+            title = get_first(article.xpath('//header/title/text()'))
+
+            bdy = get_first(article.xpath('//bdy'))
+            if bdy is None: continue
+
+            url = self.to_wikipedia_entity(page_id, title).url
+
+            return Document(
+                doc_id=page_id,
+                entity=title,
+                text=self.to_plain_text(bdy),
+                triples=self.to_triples(page_id, title, bdy),
+                metadata={'url': url, 'name': title})
+
+        self.tar.close()
+        if type(self.title_index) is shelve.DbfilenameShelf: self.title_index.close()
+        raise StopIteration
 
 
 class CSVReader(Reader):
