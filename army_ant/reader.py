@@ -28,6 +28,7 @@ from requests.auth import HTTPBasicAuth
 from army_ant.exception import ArmyAntException
 # from army_ant.index import Index
 from army_ant.util import inex, html_to_text, get_first
+from army_ant.util.text import extract_entities
 
 logger = logging.getLogger(__name__)
 
@@ -359,6 +360,7 @@ class LivingLabsReader(Reader):
                 text=self.to_text(doc),
                 triples=self.to_triples(doc))
 
+
 class MongoDBReader(Reader):
     def __init__(self, source_path):
         super(MongoDBReader, self).__init__(source_path)
@@ -385,75 +387,67 @@ class MongoDBReader(Reader):
 
         self.db = self.client[db_name]
 
+
 # TODO unfinished
 class TRECWashingtonPostReader(MongoDBReader):
     def __init__(self, source_path, include_blogs=True, include_articles=True):
         super(TRECWashingtonPostReader, self).__init__(source_path)
 
+        assert include_articles or include_blogs, "Must include at least blogs or articles"
+
         if include_articles:
-            self.articles = self.db.find('')
+            self.articles = self.db.articles.find({})
         else:
-            self.articles = iter()
+            self.articles = iter([])
 
-        self.include_blog = include_blogs
-        self.include_articles = include_articles
+        if include_blogs:
+            self.blogs = self.db.blogs.find({})
+        else:
+            self.blogs = iter([])
 
+        self.iter = itertools.chain(self.articles, self.blogs)
 
-    def to_plain_text(self, json):
+    def to_plain_text(self, doc):
+        paragraphs = []
+
+        for content in doc['contents']:
+            if 'subtype' in content and content['subtype'] == 'paragraph':
+                text = re.sub(r'<.*?>', '', content['content'])
+                paragraphs.append(text)
+
+        return '\n\n'.join(paragraphs)
+
+    def to_wikidata_entity(self, doc):
         pass
+        # return Entity(label, "http://en.wikipedia.org/?curid=%s" % page_id)
 
-    def to_wikipedia_entity(self, json):
-        pass
-        #return Entity(label, "http://en.wikipedia.org/?curid=%s" % page_id)
-
-    def to_triples(self, page_id, title, bdy):
+    def build_triples(self, text):
         triples = []
 
-
+        for labeled_entity in extract_entities(text):
+            label, entity = labeled_entity
+            triples.append((entity, 'is-a', label))
+            # TODO get triples from WikiData
 
         return triples
 
-    # FIXME copied from INEXREader
     def __next__(self):
-        url = None
-        entity = None
-        html = ''
-
         # Note that this for is only required in case the first element cannot be parsed.
         # If that happens, it skips to the next parsable item.
-        while True:
-            member = self.tar.next()
-            if member is None: break
-            if not member.name.endswith('.xml'): continue
+        for doc in self.iter:
+            logger.debug("Reading %s" % doc['id'])
 
-            logger.debug("Reading %s" % member.name)
-
-            if self.limit is not None and self.counter >= self.limit: break
-            self.counter += 1
-
-            try:
-                article = etree.parse(self.tar.extractfile(member), self.parser)
-            except etree.XMLSyntaxError:
-                logger.warning("Error parsing XML, skipping %s in %s" % (member.name, self.source_path))
-                continue
-
-            page_id = inex.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
-            title = get_first(article.xpath('//header/title/text()'))
-
-            bdy = get_first(article.xpath('//bdy'))
-            if bdy is None: continue
-
-            url = self.to_wikipedia_entity(page_id, title).url
+            text = self.to_plain_text(doc)
+            triples = self.build_triples(text)
 
             return Document(
-                doc_id=page_id,
-                entity=title,
-                text=self.to_plain_text(bdy),
-                triples=self.to_triples(page_id, title, bdy),
-                metadata={'url': url, 'name': title})
+                doc_id=doc['id'],
+                entity=None,
+                text=text,
+                triples=triples,
+                metadata={'url': doc['article_url'], 'title': doc['title']})
 
-        self.tar.close()
-        if type(self.title_index) is shelve.DbfilenameShelf: self.title_index.close()
+        self.client.close()
         raise StopIteration
 
 
@@ -512,3 +506,9 @@ class CSVReader(Reader):
     # return Document(doc_id = doc_id, text = text)
 
     # raise StopIteration
+
+
+if __name__ == '__main__':
+    r = TRECWashingtonPostReader('wapo')
+    for doc in r:
+        print(doc)

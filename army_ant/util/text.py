@@ -152,3 +152,11 @@ def remove_by_pos_tag(pos_tagger, tokens, tags):
         if not tag in tags:
             filtered_tokens.append(token)
     return filtered_tokens
+
+def extract_entities(text):
+    entities = set([])
+    for sent in nltk.sent_tokenize(text):
+        for chunk in nltk.ne_chunk(nltk.pos_tag(nltk.word_tokenize(sent))):
+            if hasattr(chunk, 'label'):
+                entities.add((chunk.label(), ' '.join(c[0] for c in chunk)))
+    return entities

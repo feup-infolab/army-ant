@@ -41,11 +41,11 @@ echo "===> Importing articles to MongoDB database $db_name"
 for file in $wapo_dir/data/TREC_article_*
 do
     echo "===> $file"
-    mongoimport --db $db_name --collection article --type json $file
+    mongoimport --db $db_name --collection articles --type json $file
 done
 
 for file in $wapo_dir/data/TREC_blog_*
 do
     echo "===> $file"
-    mongoimport --db $db_name --collection article --type json $file
+    mongoimport --db $db_name --collection blogs --type json $file
 done
