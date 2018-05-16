@@ -43,8 +43,6 @@ RUN rm -rf $HOME/.m2
 
 # Copy code, configuration and data
 COPY . .
-COPY config/docker/config.yaml .
-COPY config/docker/opt/army-ant /opt/army-ant
 RUN rm -rf config
 
 # Start the server
