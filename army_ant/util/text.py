@@ -4,16 +4,17 @@
 # text.py
 # José Devezas <joseluisdevezas@gmail.com>
 # 2017-07-20
-
-import collections
+import itertools
 import logging
 import os
 import pickle
 import re
 import string
 
+import collections
 import langdetect
 import nltk
+import yaml
 from langdetect.lang_detect_exception import LangDetectException
 from nltk.corpus import stopwords, mac_morpho
 from nltk.tokenize import WordPunctTokenizer
@@ -153,10 +154,40 @@ def remove_by_pos_tag(pos_tagger, tokens, tags):
             filtered_tokens.append(token)
     return filtered_tokens
 
-def extract_entities(text):
+
+def extract_entities(text, lib='NLTK'):
+    assert lib in ('NLTK', 'StanfordNER'), "The valye of 'lib' must either be 'NLTK' or 'StanfordNER'."
+
     entities = set([])
-    for sent in nltk.sent_tokenize(text):
-        for chunk in nltk.ne_chunk(nltk.pos_tag(nltk.word_tokenize(sent))):
-            if hasattr(chunk, 'label'):
-                entities.add((chunk.label(), ' '.join(c[0] for c in chunk)))
+
+    if lib == 'NLTK':
+        for sent in nltk.sent_tokenize(text):
+            for chunk in nltk.ne_chunk(nltk.pos_tag(nltk.word_tokenize(sent))):
+                if hasattr(chunk, 'label'):
+                    entities.add((chunk.label(), ' '.join(c[0] for c in chunk)))
+
+    elif lib == 'StanfordNER':
+        config = yaml.load(open('config.yaml'))
+        stanford_ner_location = config.get('defaults', {}).get('depend', {}).get('stanford-ner')
+
+        assert stanford_ner_location, "Please provide the location to the StanfordNER 2015-12-09 directory in the" \
+                                      " defaults->depend->stanford-ner configuration section."
+
+        tokenized_sents = []
+        for sent in nltk.sent_tokenize(text):
+            tokenized_sents.append([
+                token.replace('/', '-')
+                for token in nltk.word_tokenize(sent)])
+
+        stanford_tagger = nltk.StanfordNERTagger(
+            model_filename=os.path.join(stanford_ner_location, 'classifiers/english.all.3class.distsim.crf.ser.gz'),
+            path_to_jar=os.path.join(stanford_ner_location, 'stanford-ner-3.6.0.jar'),
+            encoding='utf-8')
+
+        ne_tagged_sentences = stanford_tagger.tag_sents(tokenized_sents)
+        for ne_tagged_sentence in ne_tagged_sentences:
+            for tag, chunk in itertools.groupby(ne_tagged_sentence, lambda x: x[1]):
+                if tag != 'O':
+                    entities.add((tag, ' '.join(w for w, t in chunk)))
+
     return entities

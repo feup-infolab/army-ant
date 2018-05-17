@@ -396,12 +396,12 @@ class TRECWashingtonPostReader(MongoDBReader):
         assert include_articles or include_blogs, "Must include at least blogs or articles"
 
         if include_articles:
-            self.articles = self.db.articles.find({})
+            self.articles = self.db.articles.find({}).limit(1)
         else:
             self.articles = iter([])
 
         if include_blogs:
-            self.blogs = self.db.blogs.find({})
+            self.blogs = self.db.blogs.find({}).limit(1)
         else:
             self.blogs = iter([])
 

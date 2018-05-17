@@ -16,6 +16,7 @@ pandas==0.22.0
 ruamel.yaml==0.15.35
 yarl==0.16.0
 unidecode==1.0.22
+Wikidata==0.6.1
 
 #aiogremlin==3.2.4
 #aiocache==0.8.0

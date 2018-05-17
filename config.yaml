@@ -11,6 +11,8 @@ defaults:
         - NDCG@10
         - P@10
     location: /opt/army-ant/eval
+  depend:
+    stanford-ner: /opt/stanford-ner-2015-12-09
   jvm:
     memory: 5120
 
