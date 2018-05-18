@@ -112,7 +112,7 @@ class Index(object):
         """Indexes the documents and yields documents to store in the database."""
         raise ArmyAntException("Index not implemented for %s" % self.__class__.__name__)
 
-    async def search(self, query, offset, limit, ranking_function=None, ranking_params=None):
+    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None):
         raise ArmyAntException("Search not implemented for %s" % self.__class__.__name__)
 
     async def inspect(self, feature, workdir='.'):
@@ -280,7 +280,7 @@ class GraphOfWord(GremlinServerIndex):
 
         await self.cluster.close()
 
-    async def search(self, query, offset, limit, ranking_function=None, ranking_params=None):
+    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None):
         try:
             self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
         except ClientConnectorError as e:
@@ -363,7 +363,7 @@ class GraphOfEntity(GremlinServerIndex):
 
         await self.cluster.close()
 
-    async def search(self, query, offset, limit, ranking_function=None, ranking_params=None):
+    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None):
         try:
             self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
         except ClientConnectorError as e:
@@ -742,6 +742,11 @@ class HypergraphOfEntity(JavaIndex):
         weight = 'WEIGHT'
         prune = 'PRUNE'
 
+    class Task(Enum):
+        document_retrieval = 'DOCUMENT_RETRIEVAL'
+        entity_retrieval = 'ENTITY_RETRIEVAL'
+        term_retrieval = 'TERM_RETRIEVAL'
+
     class RankingFunction(Enum):
         entity_weight = 'ENTITY_WEIGHT'
         jaccard = 'JACCARD_SCORE'
@@ -818,7 +823,7 @@ class HypergraphOfEntity(JavaIndex):
         finally:
             shutdownJVM()
 
-    async def search(self, query, offset, limit, ranking_function=None, ranking_params=None):
+    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None):
         if ranking_function:
             try:
                 ranking_function = HypergraphOfEntity.RankingFunction[ranking_function]
@@ -827,6 +832,15 @@ class HypergraphOfEntity(JavaIndex):
                 ranking_function = HypergraphOfEntity.RankingFunction['random_walk']
         else:
             ranking_function = HypergraphOfEntity.RankingFunction['random_walk']
+
+        if task:
+            try:
+                task = HypergraphOfEntity.Task[task]
+            except (JavaException, KeyError) as e:
+                logger.error("Could not use '%s' as the ranking function" % ranking_function)
+                task = HypergraphOfEntity.Task['document_retrieval']
+        else:
+            task = HypergraphOfEntity.Task['document_retrieval']
 
         logger.info("Using '%s' as ranking function" % ranking_function.value)
         ranking_function = HypergraphOfEntity.JRankingFunction.valueOf(ranking_function.value)
@@ -851,7 +865,7 @@ class HypergraphOfEntity(JavaIndex):
                     self.index_location, java.util.Arrays.asList(features))
                 HypergraphOfEntity.INSTANCES[self.index_location] = hgoe
 
-            task = HypergraphOfEntity.JTask.DOCUMENT_RETRIEVAL
+            task = HypergraphOfEntity.JTask.valueOf(task.value)
             results = hgoe.search(query, offset, limit, task, ranking_function, ranking_params)
             num_docs = results.getNumDocs()
             trace = results.getTrace()
@@ -927,7 +941,7 @@ class LuceneEngine(JavaIndex):
         finally:
             shutdownJVM()
 
-    async def search(self, query, offset, limit, ranking_function=None, ranking_params=None):
+    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None):
         if ranking_function:
             try:
                 ranking_function = LuceneEngine.RankingFunction[ranking_function]

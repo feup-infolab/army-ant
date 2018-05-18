@@ -129,7 +129,7 @@ class CommandLineInterface(object):
         except ArmyAntException as e:
             logger.error(e)
 
-    def search(self, index_location, index_type, ranking_function=None,
+    def search(self, index_location, index_type, task=None, ranking_function=None,
                db_location='localhost', db_name=None, db_type='mongo',
                query=None, offset=0, limit=10, interactive=False):
         if query is None and not interactive:
@@ -159,7 +159,7 @@ class CommandLineInterface(object):
 
                     index = Index.open(index_location, index_type, loop)
                     response = loop.run_until_complete(index.search(
-                        query, offset, limit, ranking_function=ranking_function))
+                        query, offset, limit, task, ranking_function=ranking_function))
 
                     if db_location and db_name and db_type:
                         db = Database.factory(db_location, db_name, db_type, loop)

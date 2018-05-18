@@ -3,10 +3,7 @@ package armyant.hgoe;
 import armyant.Engine;
 import armyant.hgoe.edges.*;
 import armyant.hgoe.exceptions.HypergraphException;
-import armyant.hgoe.nodes.DocumentNode;
-import armyant.hgoe.nodes.EntityNode;
-import armyant.hgoe.nodes.Node;
-import armyant.hgoe.nodes.TermNode;
+import armyant.hgoe.nodes.*;
 import armyant.structures.*;
 import armyant.structures.yaml.PruneConfig;
 import edu.mit.jwi.IRAMDictionary;
@@ -1007,14 +1004,18 @@ public class HypergraphOfEntity extends Engine {
             trace.add("coverage = %f", nodeCoverage.get(nodeID));
             trace.goUp();
 
-            if (node instanceof EntityNode) {
-                EntityNode entityNode = (EntityNode) node;
-                logger.debug("Ranking {} using RANDOM_WALK_SCORE", entityNode);
+            if (task == Task.DOCUMENT_RETRIEVAL && !(node instanceof DocumentNode)) continue;
+            if (task == Task.ENTITY_RETRIEVAL && !(node instanceof EntityNode)) continue;
+            if (task == Task.TERM_RETRIEVAL && !(node instanceof TermNode)) continue;
+
+            if (node instanceof RankableNode) {
+                RankableNode rankableNode = (RankableNode) node;
+                logger.debug("Ranking entity {} using RANDOM_WALK_SCORE", rankableNode);
                 double score = nodeCoverage.get(nodeID) * weightedNodeVisitProbability.get(nodeID);
-                if (score > PROBABILITY_THRESHOLD) {
-                    //resultSet.addReplaceResult(new Result(score, entityNode));
-                    resultSet.addResult(new Result(score, entityNode.getID(), entityNode.getName(), "entity"));
-                }
+                //if (score > PROBABILITY_THRESHOLD) {
+                    resultSet.addResult(
+                            new Result(score, rankableNode.getID(), rankableNode.getName(), rankableNode.getLabel()));
+                //}
             }
         }
 
