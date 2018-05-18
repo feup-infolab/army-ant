@@ -1,7 +1,7 @@
 package armyant.structures.yaml;
 
-import armyant.hgoe.inmemory.edges.Edge;
-import armyant.hgoe.inmemory.nodes.Node;
+import armyant.hgoe.edges.Edge;
+import armyant.hgoe.nodes.Node;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 

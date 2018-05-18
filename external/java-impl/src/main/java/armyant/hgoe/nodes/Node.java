@@ -1,4 +1,4 @@
-package armyant.hgoe.inmemory.nodes;
+package armyant.hgoe.nodes;
 
 import java.io.Serializable;
 

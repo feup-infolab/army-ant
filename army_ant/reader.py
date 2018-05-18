@@ -26,7 +26,6 @@ from pymongo.errors import ConnectionFailure
 from requests.auth import HTTPBasicAuth
 
 from army_ant.exception import ArmyAntException
-# from army_ant.index import Index
 from army_ant.setup import config_logger
 from army_ant.util import inex, html_to_text, get_first
 from army_ant.util.text import extract_entities_per_sentence
@@ -45,6 +44,8 @@ class Reader(object):
             return INEXDirectoryReader(source_path)
         elif source_reader == 'living_labs':
             return LivingLabsReader(source_path, limit)
+        elif source_reader == 'wapo':
+            return TRECWashingtonPostReader(source_path)
         elif source_reader == 'csv':
             return CSVReader(source_path)
         # elif source_reader == 'gremlin':
@@ -63,9 +64,9 @@ class Reader(object):
 
 
 class Document(object):
-    def __init__(self, doc_id, entity=None, text=None, triples=None, metadata=None):
+    def __init__(self, doc_id, title=None, text=None, triples=None, metadata=None):
         self.doc_id = doc_id
-        self.entity = entity
+        self.title = title
         self.text = text
         self.triples = triples
         self.metadata = metadata
@@ -81,17 +82,20 @@ class Document(object):
         else:
             metadata = '\n'.join([str((k, v)) for k, v in self.metadata.items()])
 
-        return '-----------------\nDOC ID:\n%s\n\nENTITY:\n%s\n\nTEXT:\n%s\n\nTRIPLES:\n%s\n\nMETADATA:\n%s\n-----------------\n' % (
-            self.doc_id, self.entity, self.text, triples, metadata)
+        return '-----------------\nDOC ID:\n%s\n\nTITLE:\n%s\n\nTEXT:\n%s\n\nTRIPLES:\n%s\n\nMETADATA:\n%s\n-----------------\n' % (
+            self.doc_id, self.title, self.text, triples, metadata)
 
 
 class Entity(object):
-    def __init__(self, label, url=None):
+    def __init__(self, label, uri=None):
         self.label = label
-        self.url = url
+        if uri:
+            self.uri = uri
+        else:
+            self.uri = '#%s' % label
 
     def __repr__(self):
-        return "(%s, %s)" % (self.label, self.url)
+        return "(%s, %s)" % (self.label, self.uri)
 
 
 class WikipediaDataReader(Reader):
@@ -114,7 +118,7 @@ class WikipediaDataReader(Reader):
             if link.has_attr('relation'):
                 triples.append((
                     self.to_wikipedia_entity(entity),
-                    link['relation'],
+                    Entity(link['relation']),
                     self.to_wikipedia_entity(link['title'])))
 
         return triples
@@ -128,7 +132,7 @@ class WikipediaDataReader(Reader):
             if line == '\n':
                 return Document(
                     doc_id=url,
-                    entity=entity,
+                    title=entity,
                     text=self.to_plain_text(html),
                     triples=self.to_triples(entity, html),
                     metadata={'url': url, 'name': entity})
@@ -198,7 +202,7 @@ class INEXReader(Reader):
 
             triples.append((
                 self.to_wikipedia_entity(page_id, title),
-                'related_to',
+                Entity('related_to'),
                 self.to_wikipedia_entity(related_id, related_title)))
 
         return triples
@@ -232,11 +236,11 @@ class INEXReader(Reader):
             bdy = get_first(article.xpath('//bdy'))
             if bdy is None: continue
 
-            url = self.to_wikipedia_entity(page_id, title).url
+            url = self.to_wikipedia_entity(page_id, title).uri
 
             return Document(
                 doc_id=page_id,
-                entity=title,
+                title=title,
                 text=self.to_plain_text(bdy),
                 triples=self.to_triples(page_id, title, bdy),
                 metadata={'url': url, 'name': title})
@@ -347,7 +351,7 @@ class LivingLabsReader(Reader):
         for field in content_fields:
             if field in doc['content'] and doc['content'][field]:
                 if field == 'author': doc['content'][field] = self.format_author_name(doc['content'][field])
-                triples.append((Entity(doc['docid']), field, Entity(doc['content'][field])))
+                triples.append((Entity(doc['docid']), Entity(field), Entity(doc['content'][field])))
         return triples
 
     def __next__(self):
@@ -389,24 +393,12 @@ class MongoDBReader(Reader):
         self.db = self.client[db_name]
 
 
-# TODO unfinished
 class TRECWashingtonPostReader(MongoDBReader):
-    def __init__(self, source_path, include_blogs=True, include_articles=True):
+    def __init__(self, source_path):
         super(TRECWashingtonPostReader, self).__init__(source_path)
 
-        assert include_articles or include_blogs, "Must include at least blogs or articles"
-
-        if include_articles:
-            self.articles = self.db.articles.find({}).limit(10)
-        else:
-            self.articles = iter([])
-
-        if include_blogs:
-            self.blogs = self.db.blogs.find({}).limit(10)
-        else:
-            self.blogs = iter([])
-
-        self.iter = itertools.chain(self.articles, self.blogs)
+        self.articles = self.db.articles.find({})
+        self.blogs = self.db.blogs.find({})
 
     def to_plain_text(self, doc):
         paragraphs = []
@@ -418,9 +410,11 @@ class TRECWashingtonPostReader(MongoDBReader):
 
         return '\n\n'.join(paragraphs)
 
-    def to_wikidata_entity(self, doc):
-        pass
-        # return Entity(label, "http://en.wikipedia.org/?curid=%s" % page_id)
+    def to_wikipedia_entity(self, entity):
+        return Entity(entity, "http://en.wikipedia.org/wiki/%s" % entity.replace(' ', '_'))
+
+    def to_washington_post_author_entity(self, author_name):
+        return Entity(author_name, 'https://www.washingtonpost.com/people/%s' % (author_name.lower().replace(' ', '-')))
 
     def build_triples(self, text):
         triples = set([])
@@ -431,25 +425,34 @@ class TRECWashingtonPostReader(MongoDBReader):
 
                 # In conjunction with the set, avoids duplicate triples
                 if entity_a <= entity_b:
-                    triples.add((entity_a, 'occurs_with', entity_b))
+                    triples.add((
+                        self.to_wikipedia_entity(entity_a),
+                        'occurs_with',
+                        self.to_wikipedia_entity(entity_b)
+                    ))
                 else:
-                    triples.add((entity_b, 'occurs_with', entity_a))
+                    triples.add((self.to_wikipedia_entity(entity_b), 'occurs_with', self.to_wikipedia_entity(entity_a)))
 
         return list(triples)
 
     def __next__(self):
-        # Note that this for is only required in case the first element cannot be parsed.
-        # If that happens, it skips to the next parsable item.
-        for doc in self.iter:
+        doc = next(self.articles)
+        if doc is None: doc = next(self.blogs)
+
+        if doc:
             logger.debug("Reading %s" % doc['id'])
 
             text = self.to_plain_text(doc)
             triples = self.build_triples(text)
-            triples.append((doc['id'], 'has_author', doc['author']))
+            triples.append((
+                Entity(doc['id'], doc['article_url']),
+                Entity('has_author'),
+                self.to_washington_post_author_entity(doc['author'])
+            ))
 
             return Document(
                 doc_id=doc['id'],
-                entity=None,
+                title=doc['title'],
                 text=text,
                 triples=triples,
                 metadata={'url': doc['article_url'], 'title': doc['title']})
@@ -487,32 +490,6 @@ class CSVReader(Reader):
             return Document(doc_id=doc_id, text=text)
 
         raise StopIteration
-
-    # TODO should this be here? should we use a NullReader read the graph some other way?
-    # class GremlinReader(Reader):
-    # def __init__(self, source_path):
-    # super(GremlinReader, self).__init__(source_path)
-
-    # loop = asyncio.get_event_loop()
-    # self.index = Index.open(source_path, 'gremlin', loop)
-    # self.edge_list = self.index.to_edge_list(use_names=True)
-
-    # def __next__(self):
-    # for edge in self.edge_list:
-    # doc_id = None
-    # text = []
-
-    # for k in row.keys():
-    # if k.endswith(self.text_suffix):
-    # text.append(row[k])
-    # elif k.endswith(self.doc_id_suffix):
-    # doc_id = row[k]
-
-    # text = '\n'.join(text)
-
-    # return Document(doc_id = doc_id, text = text)
-
-    # raise StopIteration
 
 
 if __name__ == '__main__':

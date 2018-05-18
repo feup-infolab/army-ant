@@ -68,10 +68,10 @@ public class ResultSet implements Iterator<Result>, Iterable<Result> {
     }
 
     public void addReplaceResult(Result result) {
-        maxResultPerDocID.put(result.getDocID(), result);
+        maxResultPerDocID.put(result.getID(), result);
         results.add(result);
 
-        Result maxResult = maxResultPerDocID.get(result.getDocID());
+        Result maxResult = maxResultPerDocID.get(result.getID());
         if (maxResult != null && result.getScore() > maxResult.getScore()) {
             results.remove(maxResult);
         }

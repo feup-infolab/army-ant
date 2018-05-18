@@ -168,8 +168,9 @@ class CommandLineInterface(object):
                         metadata = []
 
                     for (result, i) in zip(response['results'], range(offset, offset + limit)):
-                        print("===> %3d %7.2f %s" % (i + 1, result['score'], result['docID']))
-                        doc_id = result['docID']
+                        print("===> %3d %7.2f [%s] %s" % (
+                            i + 1, result['score'], result['type'], result['name'] if result['name'] else result['id']))
+                        doc_id = result['id']
                         if doc_id in metadata:
                             for item in metadata[doc_id].items():
                                 print("\t%10s: %s" % item)

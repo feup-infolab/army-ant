@@ -1,4 +1,4 @@
-package armyant.hgoe.inmemory.edges;
+package armyant.hgoe.edges;
 
 /**
  * Created by jldevezas on 2018-02-21.

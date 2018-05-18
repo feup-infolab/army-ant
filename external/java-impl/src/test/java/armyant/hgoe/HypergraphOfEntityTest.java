@@ -1,6 +1,10 @@
 package armyant.hgoe;
 
+import armyant.hgoe.exceptions.HypergraphException;
+import armyant.hgoe.nodes.TermNode;
 import armyant.structures.Document;
+import armyant.structures.Result;
+import armyant.structures.ResultSet;
 import armyant.structures.Triple;
 import edu.mit.jwi.IRAMDictionary;
 import edu.mit.jwi.RAMDictionary;
@@ -16,10 +20,7 @@ import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by jldevezas on 2017-11-29.
@@ -29,20 +30,35 @@ public class HypergraphOfEntityTest {
     public static final Document document1 = new Document(
             "D1",
 
-            "Semantic Search",
+            "Semantic search",
 
             "Semantic search seeks to improve search accuracy by understanding the searcher's intent and the " +
             "contextual meaning of terms as they appear in the searchable dataspace, whether on the Web or within a " +
             "closed system, to generate more relevant results.",
 
             Arrays.asList(
-                    new Triple("Semantic search", "related_to", "Search engine technology"),
-                    new Triple("Semantic search", "related_to", "Intention"),
-                    new Triple("Semantic search", "related_to", "Context (language use)"),
-                    new Triple("Semantic search", "related_to", "World Wide Web")
+                    new Triple(
+                            new Triple.Instance("http://example.com/Semantic_search", "Semantic search"),
+                            new Triple.Instance("http://example.com/related_to", "related_to"),
+                            new Triple.Instance("http://example.com/Search_engine_technology", "Search engine technology")
+                    ),
+                    new Triple(
+                            new Triple.Instance("http://example.com/Semantic_search", "Semantic search"),
+                            new Triple.Instance("http://example.com/related_to", "related_to"),
+                            new Triple.Instance("http://example.com/Intention", "Intention")
+                    ),
+                    new Triple(
+                            new Triple.Instance("http://example.com/Semantic_search", "Semantic search"),
+                            new Triple.Instance("http://example.com/related_to", "related_to"),
+                            new Triple.Instance("http://example.com/Context_(language_use)", "Context (language use)")
+                    ),
+                    new Triple(
+                            new Triple.Instance("http://example.com/Semantic_search", "Semantic search"),
+                            new Triple.Instance("http://example.com/related_to", "related_to"),
+                            new Triple.Instance("http://example.com/World_Wide_Web", "World Wide Web")
+                    )
             )
     );
-
     public static final Document document2 = new Document(
             "D2",
 
@@ -52,19 +68,80 @@ public class HypergraphOfEntityTest {
             "stores information for retrieval and presentation in response to user queries.",
 
             Arrays.asList(
-                    new Triple("Search engine technology", "related_to", "Search engine")
+                    new Triple(
+                            new Triple.Instance("http://example.org/Search_engine_technology", "Search engine technology"),
+                            new Triple.Instance("http://example.org/related_to", "related_to"),
+                            new Triple.Instance("http://example.org/Search_engine", "Search engine")
+                    )
             )
     );
-
     public static final Document document3 = new Document(
             "D3",
 
-            "Unreachable Document",
+            "Unreachable",
 
             "Unreachable people.",
 
-            Collections.singletonList(new Triple("Unreachable Me", "related_to", "Unreachable You"))
+            Collections.singletonList(new Triple(
+                    new Triple.Instance("http://example.org/Unreachable_Me", "Unreachable Me"),
+                    new Triple.Instance("http://example.org/related_to", "related_to"),
+                    new Triple.Instance("http://example.org/Unreachable_You", "Unreachable You")
+            ))
     );
+    private static String dbPath = "/tmp/hgoe-inmemory";
+
+    public void testIndex() throws Exception {
+        HypergraphOfEntity hgoe = new HypergraphOfEntity(
+                dbPath, new ArrayList<>(), null, true);
+        hgoe.index(document1);
+        hgoe.index(document2);
+        hgoe.index(document3);
+        hgoe.postProcessing();
+        hgoe.save();
+    }
+
+    public void testSearch() throws IOException, HypergraphException {
+        HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
+
+        //ResultSet resultSet = hgoe.search("web search system");
+        //ResultSet resultSet = hgoe.search("Monuments of India");
+        //ResultSet resultSet = hgoe.search("Poirot");
+        ResultSet resultSet = hgoe.search("national park", 0, 1000);
+        //ResultSet resultSet = hgoe.search("viking");
+        //ResultSet resultSet = hgoe.search("viking ship");
+
+        while (resultSet.hasNext()) {
+            Result result = resultSet.next();
+            System.out.println(String.format("%.4f %s %s", result.getScore(), result.getID(), result.getName()));
+        }
+    }
+
+    public void testTrace() throws IOException, HypergraphException {
+        HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
+
+        //ResultSet resultSet = hgoe.search("web search system");
+        //ResultSet resultSet = hgoe.search("Monuments of India");
+        //ResultSet resultSet = hgoe.search("Poirot");
+        //ResultSet resultSet = hgoe.search("national park");
+        //ResultSet resultSet = hgoe.search("viking");
+        //ResultSet resultSet = hgoe.search("viking ship");
+        ResultSet resultSet = hgoe.search("doom", 0, 1000);
+
+        resultSet.getTrace().toASCII();
+    }
+
+    public void testContainsNode() throws HypergraphException {
+        HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
+        String[] terms = {"ca", "calif.", "drug"};
+        for (String term : terms) {
+            System.out.println(term + ": " + hgoe.containsNode(new TermNode(term)));
+        }
+
+    }
+
+    /**
+     * Sandbox tests
+     */
 
     // How does a Path work in Grph?
     public void testPath() {

@@ -62,6 +62,7 @@ public class LuceneEngine extends Engine {
 
         org.apache.lucene.document.Document luceneDocument = new org.apache.lucene.document.Document();
         luceneDocument.add(new StringField("doc_id", document.getDocID(), Field.Store.YES));
+        luceneDocument.add(new TextField("title", document.getTitle(), Field.Store.YES));
         luceneDocument.add(new TextField("text", document.getText(), Field.Store.YES));
         writer.addDocument(luceneDocument);
 
@@ -145,8 +146,10 @@ public class LuceneEngine extends Engine {
 
         int end = Math.min(offset + limit, hits.length);
         for (int i = offset; i < end; i++) {
-            String docID = searcher.doc(hits[i].doc).get("doc_id");
-            results.addResult(new Result(hits[i].score, null, docID));
+            org.apache.lucene.document.Document doc = searcher.doc(hits[i].doc);
+            String docID = doc.get("doc_id");
+            String title = doc.get("title");
+            results.addResult(new Result(hits[i].score, docID, title));
         }
 
         reader.close();

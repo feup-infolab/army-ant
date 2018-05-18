@@ -1,7 +1,7 @@
-package armyant.hgoe.inmemory.traversals;
+package armyant.hgoe.traversals;
 
-import armyant.hgoe.inmemory.edges.Edge;
-import armyant.hgoe.inmemory.nodes.Node;
+import armyant.hgoe.edges.Edge;
+import armyant.hgoe.nodes.Node;
 import edu.uci.ics.jung.graph.SetHypergraph;
 
 import java.util.*;

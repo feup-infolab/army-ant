@@ -14,7 +14,7 @@ from army_ant.exception import ArmyAntException
 
 logger = logging.getLogger(__name__)
 
-
+# TODO support for entity and term storage
 class Database(object):
     @staticmethod
     def factory(db_location, db_name, db_type, loop):

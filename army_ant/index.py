@@ -120,8 +120,10 @@ class Index(object):
 
 
 class Result(object):
-    def __init__(self, doc_id, score, components=None):
-        self.doc_id = doc_id
+    def __init__(self, score, id, name, type=None, components=None):
+        self.id = id
+        self.name = name
+        self.type = type
         self.score = score
         self.components = components
 
@@ -136,20 +138,26 @@ class Result(object):
             self.components = None
 
     def __getitem__(self, key):
-        if key == 'docID':
-            return self.doc_id
+        if key == 'id':
+            return self.id
+        elif key == 'name':
+            return self.name
+        elif key == 'type':
+            return self.type
         elif key == 'score':
             return self.score
         else:
             raise KeyError
 
     def __contains__(self, key):
-        return (key == 'docID' and self.doc_id or
+        return (key == 'id' and self.id or
+                key == 'name' and self.name or
+                key == 'type' and self.type or
                 key == 'score' and self.score)
 
     def __repr__(self):
-        return """{ "docID": %s, "score": %f, "has_components": %s }""" % (
-            self.doc_id, self.score, ("true" if self.components else "false"))
+        return """{ "score": %f, "id": %s, "name": %s, "type": %s, "has_components": %s }""" % (
+            self.score, self.id, self.name, self.type, ("true" if self.components else "false"))
 
 
 class ResultSet(object):
@@ -704,7 +712,7 @@ def handler(signum, frame): raise KeyboardInterrupt
 
 class JavaIndex(Index):
     BLOCK_SIZE = 5000
-    VERSION = '0.3-SNAPSHOT'
+    VERSION = '0.4-SNAPSHOT'
     CLASSPATH = 'external/java-impl/target/java-impl-%s-jar-with-dependencies.jar' % VERSION
     INSTANCES = {}
 
@@ -724,6 +732,7 @@ class JavaIndex(Index):
     armyant = JPackage('armyant')
     JDocument = armyant.structures.Document
     JTriple = armyant.structures.Triple
+    JTripleInstance = JClass("armyant.structures.Triple$Instance")
 
 
 class HypergraphOfEntity(JavaIndex):
@@ -739,9 +748,10 @@ class HypergraphOfEntity(JavaIndex):
         random_walk = 'RANDOM_WALK_SCORE'
         biased_random_walk = 'BIASED_RANDOM_WALK_SCORE'
 
-    JHypergraphOfEntityInMemory = JavaIndex.armyant.hgoe.inmemory.HypergraphOfEntityInMemory
-    JFeature = JClass("armyant.hgoe.inmemory.HypergraphOfEntityInMemory$Feature")
-    JRankingFunction = JClass("armyant.hgoe.inmemory.HypergraphOfEntityInMemory$RankingFunction")
+    JHypergraphOfEntityInMemory = JavaIndex.armyant.hgoe.HypergraphOfEntity
+    JFeature = JClass("armyant.hgoe.HypergraphOfEntity$Feature")
+    JRankingFunction = JClass("armyant.hgoe.HypergraphOfEntity$RankingFunction")
+    JTask = JClass("armyant.hgoe.HypergraphOfEntity$Task")
 
     def __init__(self, reader, index_location, index_features, loop):
         super().__init__(reader, index_location, loop)
@@ -774,9 +784,12 @@ class HypergraphOfEntity(JavaIndex):
             corpus = []
             for doc in self.reader:
                 logger.debug("Preloading document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
-                triples = list(map(lambda t: HypergraphOfEntity.JTriple(t[0].label, t[1], t[2].label), doc.triples))
+                triples = list(map(lambda t: HypergraphOfEntity.JTriple(
+                    HypergraphOfEntity.JTripleInstance(t[0].uri, t[0].label),
+                    HypergraphOfEntity.JTripleInstance(t[1].uri, t[1].label),
+                    HypergraphOfEntity.JTripleInstance(t[2].uri, t[2].label)), doc.triples))
                 jDoc = HypergraphOfEntity.JDocument(
-                    JString(doc.doc_id), JString(doc.entity), JString(doc.text), java.util.Arrays.asList(triples))
+                    JString(doc.doc_id), JString(doc.title), JString(doc.text), java.util.Arrays.asList(triples))
                 corpus.append(jDoc)
                 if len(corpus) % (HypergraphOfEntity.BLOCK_SIZE // 10) == 0:
                     logger.info("%d documents preloaded" % len(corpus))
@@ -838,10 +851,11 @@ class HypergraphOfEntity(JavaIndex):
                     self.index_location, java.util.Arrays.asList(features))
                 HypergraphOfEntity.INSTANCES[self.index_location] = hgoe
 
-            results = hgoe.search(query, offset, limit, ranking_function, ranking_params)
+            task = HypergraphOfEntity.JTask.DOCUMENT_RETRIEVAL
+            results = hgoe.search(query, offset, limit, task, ranking_function, ranking_params)
             num_docs = results.getNumDocs()
             trace = results.getTrace()
-            results = [Result(result.getDocID(), result.getScore())
+            results = [Result(result.getScore(), result.getID(), result.getName(), result.getType())
                        for result in itertools.islice(results, offset, offset + limit)]
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
@@ -881,9 +895,12 @@ class LuceneEngine(JavaIndex):
             corpus = []
             for doc in self.reader:
                 logger.debug("Preloading document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
-                triples = list(map(lambda t: LuceneEngine.JTriple(t[0].label, t[1], t[2].label), doc.triples))
+                triples = list(map(lambda t: LuceneEngine.JTriple(
+                    HypergraphOfEntity.JTripleInstance(t[0].uri, t[0].label),
+                    HypergraphOfEntity.JTripleInstance(t[1].uri, t[1].label),
+                    HypergraphOfEntity.JTripleInstance(t[2].uri, t[2].label)), doc.triples))
                 jDoc = LuceneEngine.JDocument(
-                    JString(doc.doc_id), JString(doc.entity), JString(doc.text), java.util.Arrays.asList(triples))
+                    JString(doc.doc_id), JString(doc.title), JString(doc.text), java.util.Arrays.asList(triples))
                 corpus.append(jDoc)
                 if len(corpus) % (LuceneEngine.BLOCK_SIZE // 10) == 0:
                     logger.info("%d documents preloaded" % len(corpus))
@@ -943,7 +960,7 @@ class LuceneEngine(JavaIndex):
             results = lucene.search(query, offset, limit, ranking_function, ranking_params)
             num_docs = results.getNumDocs()
             trace = results.getTrace()
-            results = [Result(result.getDocID(), result.getScore())
+            results = [Result(result.getScore(), result.getID(), result.getName(), result.getType())
                        for result in itertools.islice(results, offset, offset + limit)]
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())

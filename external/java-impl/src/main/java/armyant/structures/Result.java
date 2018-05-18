@@ -1,7 +1,5 @@
 package armyant.structures;
 
-import armyant.hgoe.indisk.nodes.Node;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,22 +8,24 @@ import java.util.Map;
  */
 public class Result {
     private double score;
-    private Object node;
-    private String docID;
+    private String id;
+    private String name;
+    private String type;
     private Map<String, Double> components;
 
-    public Result(double score, Object node) {
-        this(score, node, null, null);
+    public Result(double score, String id, String name) {
+        this(score, id, name, "document");
     }
 
-    public Result(double score, Object node, String docID) {
-        this(score, node, docID, null);
+    public Result(double score, String id, String name, String type) {
+        this(score, id, name, type, null);
     }
 
-    public Result(double score, Object node, String docID, Map<String, Double> components) {
-        this.node = node;
+    public Result(double score, String id, String name, String type, Map<String, Double> components) {
         this.score = score;
-        this.docID = docID;
+        this.id = id;
+        this.name = name;
+        this.type = type;
         this.components = components;
     }
 
@@ -37,20 +37,28 @@ public class Result {
         this.score = score;
     }
 
-    public Object getNode() {
-        return node;
+    public String getID() {
+        return id;
     }
 
-    public void setNode(Node node) {
-        this.node = node;
+    public void setID(String id) {
+        this.id = id;
     }
 
-    public String getDocID() {
-        return docID;
+    public String getName() {
+        return name;
     }
 
-    public void setDocID(String docID) {
-        this.docID = docID;
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 
     public Map<String, Double> getComponents() {

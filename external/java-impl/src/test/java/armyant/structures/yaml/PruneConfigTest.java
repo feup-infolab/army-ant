@@ -1,9 +1,9 @@
 package armyant.structures.yaml;
 
-import armyant.hgoe.inmemory.edges.*;
-import armyant.hgoe.inmemory.nodes.DocumentNode;
-import armyant.hgoe.inmemory.nodes.EntityNode;
-import armyant.hgoe.inmemory.nodes.TermNode;
+import armyant.hgoe.edges.*;
+import armyant.hgoe.nodes.DocumentNode;
+import armyant.hgoe.nodes.EntityNode;
+import armyant.hgoe.nodes.TermNode;
 import org.testng.annotations.Test;
 
 import java.io.IOException;

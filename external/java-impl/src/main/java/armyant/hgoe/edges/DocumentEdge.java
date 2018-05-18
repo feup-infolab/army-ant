@@ -1,11 +1,11 @@
-package armyant.hgoe.inmemory.edges;
+package armyant.hgoe.edges;
 
-import armyant.hgoe.inmemory.Rankable;
+import armyant.hgoe.nodes.RankableNode;
 
 /**
  * Created by jldevezas on 2017-10-24.
  */
-public class DocumentEdge extends Edge implements Rankable {
+public class DocumentEdge extends Edge {
     private String docID;
 
     public DocumentEdge() {

@@ -1,4 +1,4 @@
-package armyant.hgoe.inmemory.edges;
+package armyant.hgoe.edges;
 
 import java.io.Serializable;
 

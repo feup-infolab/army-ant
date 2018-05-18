@@ -1,12 +1,12 @@
-package armyant.hgoe.inmemory;
+package armyant.hgoe;
 
 import armyant.Engine;
+import armyant.hgoe.edges.*;
 import armyant.hgoe.exceptions.HypergraphException;
-import armyant.hgoe.inmemory.edges.*;
-import armyant.hgoe.inmemory.nodes.DocumentNode;
-import armyant.hgoe.inmemory.nodes.EntityNode;
-import armyant.hgoe.inmemory.nodes.Node;
-import armyant.hgoe.inmemory.nodes.TermNode;
+import armyant.hgoe.nodes.DocumentNode;
+import armyant.hgoe.nodes.EntityNode;
+import armyant.hgoe.nodes.Node;
+import armyant.hgoe.nodes.TermNode;
 import armyant.structures.*;
 import armyant.structures.yaml.PruneConfig;
 import edu.mit.jwi.IRAMDictionary;
@@ -56,8 +56,8 @@ import java.util.zip.GZIPInputStream;
  * Created by jldevezas on 2017-10-23.
  */
 // TODO instaceof might be replaced by a Grph Property of some sort (is it faster?)
-public class HypergraphOfEntityInMemory extends Engine {
-    private static final Logger logger = LoggerFactory.getLogger(HypergraphOfEntityInMemory.class);
+public class HypergraphOfEntity extends Engine {
+    private static final Logger logger = LoggerFactory.getLogger(HypergraphOfEntity.class);
     private static final Sigmoid sigmoid = new Sigmoid();
     private static final SimpleDateFormat isoDateFormat = new SimpleDateFormat("yyyyMMdd'T'HHmmss");
 
@@ -93,19 +93,19 @@ public class HypergraphOfEntityInMemory extends Engine {
 
     private int numDocs;
 
-    public HypergraphOfEntityInMemory(String path) throws HypergraphException {
+    public HypergraphOfEntity(String path) throws HypergraphException {
         this(path, new ArrayList<>());
     }
 
-    public HypergraphOfEntityInMemory(String path, List<Feature> features) throws HypergraphException {
+    public HypergraphOfEntity(String path, List<Feature> features) throws HypergraphException {
         this(path, features, null, false);
     }
 
-    public HypergraphOfEntityInMemory(String path, List<Feature> features, String featuresPath) throws HypergraphException {
+    public HypergraphOfEntity(String path, List<Feature> features, String featuresPath) throws HypergraphException {
         this(path, features, featuresPath, false);
     }
 
-    public HypergraphOfEntityInMemory(String path, List<Feature> features, String featuresPath, boolean overwrite) throws HypergraphException {
+    public HypergraphOfEntity(String path, List<Feature> features, String featuresPath, boolean overwrite) throws HypergraphException {
         super();
 
         this.features = features;
@@ -136,7 +136,7 @@ public class HypergraphOfEntityInMemory extends Engine {
         this.reachabilityIndex = new HashMap<>();
         this.trace = new Trace();
 
-        logger.info("Using in-memory version of Hypergraph of Entity for {}", path);
+        logger.info("Using Hypergraph of Entity for {}", path);
 
         if (overwrite) {
             logger.info("Overwriting graph in {}, if it exists", path);
@@ -218,7 +218,7 @@ public class HypergraphOfEntityInMemory extends Engine {
         DocumentEdge documentEdge = new DocumentEdge(document.getDocID());
         int edgeID = getOrCreateUndirectedEdge(documentEdge);
 
-        DocumentNode documentNode = new DocumentNode(document.getDocID());
+        DocumentNode documentNode = new DocumentNode(document.getDocID(), document.getTitle());
         int sourceDocumentNodeID = getOrCreateNode(documentNode);
         synchronized (this) {
             graph.addToUndirectedHyperEdge(edgeID, sourceDocumentNodeID);
@@ -243,8 +243,8 @@ public class HypergraphOfEntityInMemory extends Engine {
         Set<Node> nodes = new HashSet<>();
 
         for (Triple triple : document.getTriples()) {
-            nodes.add(new EntityNode(document, triple.getSubject()));
-            nodes.add(new EntityNode(document, triple.getObject()));
+            nodes.add(new EntityNode(triple.getSubject().getURI(), triple.getSubject().getLabel()));
+            nodes.add(new EntityNode(triple.getObject().getURI(), triple.getObject().getLabel()));
         }
 
         Set<Integer> nodeIDs = new HashSet<>();
@@ -919,7 +919,7 @@ public class HypergraphOfEntityInMemory extends Engine {
         randomStep(randomNodeID, remainingSteps - 1, path, useWeightBias);
     }
 
-    public ResultSet randomWalkSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights,
+    public ResultSet randomWalkSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights, Task task,
                                       int walkLength, int walkRepeats, boolean biased) {
         logger.info("walkLength = {}, walkRepeats = {}", walkLength, walkRepeats);
 
@@ -1011,16 +1011,10 @@ public class HypergraphOfEntityInMemory extends Engine {
                 EntityNode entityNode = (EntityNode) node;
                 logger.debug("Ranking {} using RANDOM_WALK_SCORE", entityNode);
                 double score = nodeCoverage.get(nodeID) * weightedNodeVisitProbability.get(nodeID);
-                if (score > PROBABILITY_THRESHOLD && entityNode.hasDocID()) {
-                    resultSet.addReplaceResult(new Result(score, entityNode, entityNode.getDocID()));
+                if (score > PROBABILITY_THRESHOLD) {
+                    //resultSet.addReplaceResult(new Result(score, entityNode));
+                    resultSet.addResult(new Result(score, entityNode.getID(), entityNode.getName(), "entity"));
                 }
-                /*if (score > PROBABILITY_THRESHOLD) {
-                    if (entityNode.hasDocID()) {
-                        resultSet.addReplaceResult(new Result(score, entityNode, entityNode.getDocID()));
-                    } else {
-                        resultSet.addReplaceResult(new Result(score, entityNode, entityNode.getName()));
-                    }
-                }*/
             }
         }
 
@@ -1030,11 +1024,12 @@ public class HypergraphOfEntityInMemory extends Engine {
         trace.goDown();
 
         for (Result result : resultSet) {
-            trace.add(result.getNode().toString());
+            trace.add(result.getName());
             trace.goDown();
             trace.add("score = %f", result.getScore());
-            trace.add("docID = %s", result.getDocID());
-            trace.add("nodeID = %d", nodeIndex.get(result.getNode()));
+            trace.add("id= %s", result.getID());
+            trace.add("name = %s", result.getName());
+            trace.add("type = %s", result.getType());
             trace.goUp();
         }
 
@@ -1128,7 +1123,7 @@ public class HypergraphOfEntityInMemory extends Engine {
         }).mapToDouble(f -> f).sum();
     }
 
-    public ResultSet entityIteratorSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights,
+    public ResultSet entityIteratorSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights, Task task,
                                           RankingFunction function) {
         ResultSet resultSet = new ResultSet();
         resultSet.setTrace(trace);
@@ -1152,9 +1147,10 @@ public class HypergraphOfEntityInMemory extends Engine {
                         score = 0d;
                 }
 
-                if (score > 0 && entityNode.hasDocID()) {
+                if (score > 0) {
                     synchronized (this) {
-                        resultSet.addReplaceResult(new Result(score, entityNode, entityNode.getDocID()));
+                        //resultSet.addReplaceResult(new Result(score, entityNode));
+                        resultSet.addResult(new Result(score, entityNode.getID(), entityNode.getName(), "entity"));
                     }
                 }
             }
@@ -1165,13 +1161,17 @@ public class HypergraphOfEntityInMemory extends Engine {
 
     @Override
     public ResultSet search(String query, int offset, int limit) throws IOException {
+        return search(query, offset, limit, Task.DOCUMENT_RETRIEVAL);
+    }
+
+    public ResultSet search(String query, int offset, int limit, Task task) throws IOException {
         Map<String, String> params = new HashMap<>();
         params.put("l", String.valueOf(DEFAULT_WALK_LENGTH));
         params.put("r", String.valueOf(DEFAULT_WALK_REPEATS));
-        return search(query, offset, limit, RankingFunction.RANDOM_WALK_SCORE, params);
+        return search(query, offset, limit, task, RankingFunction.RANDOM_WALK_SCORE, params);
     }
 
-    public ResultSet search(String query, int offset, int limit, RankingFunction function, Map<String, String> params) throws IOException {
+    public ResultSet search(String query, int offset, int limit, Task task, RankingFunction function, Map<String, String> params) throws IOException {
         long start = System.currentTimeMillis();
         trace.reset();
 
@@ -1208,14 +1208,14 @@ public class HypergraphOfEntityInMemory extends Engine {
             case RANDOM_WALK_SCORE:
             case BIASED_RANDOM_WALK_SCORE:
                 resultSet = randomWalkSearch(
-                        seedNodeIDs, seedNodeWeights,
+                        seedNodeIDs, seedNodeWeights, task,
                         Integer.valueOf(params.getOrDefault("l", String.valueOf(DEFAULT_WALK_LENGTH))),
                         Integer.valueOf(params.getOrDefault("r", String.valueOf(DEFAULT_WALK_REPEATS))),
                         function == RankingFunction.BIASED_RANDOM_WALK_SCORE);
                 break;
             case ENTITY_WEIGHT:
             case JACCARD_SCORE:
-                resultSet = entityIteratorSearch(seedNodeIDs, seedNodeWeights, function);
+                resultSet = entityIteratorSearch(seedNodeIDs, seedNodeWeights, task, function);
                 break;
             default:
                 logger.warn("Ranking function {} is unsupported", function);
@@ -1531,5 +1531,11 @@ public class HypergraphOfEntityInMemory extends Engine {
         CONTEXT,
         WEIGHT,
         PRUNE
+    }
+
+    public enum Task {
+        DOCUMENT_RETRIEVAL,
+        ENTITY_RETRIEVAL,
+        TERM_RETRIEVAL
     }
 }
