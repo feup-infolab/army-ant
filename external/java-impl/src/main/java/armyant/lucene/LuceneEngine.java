@@ -62,7 +62,9 @@ public class LuceneEngine extends Engine {
 
         org.apache.lucene.document.Document luceneDocument = new org.apache.lucene.document.Document();
         luceneDocument.add(new StringField("doc_id", document.getDocID(), Field.Store.YES));
-        luceneDocument.add(new TextField("title", document.getTitle(), Field.Store.YES));
+        if (document.getTitle() != null) {
+            luceneDocument.add(new TextField("title", document.getTitle(), Field.Store.YES));
+        }
         luceneDocument.add(new TextField("text", document.getText(), Field.Store.YES));
         writer.addDocument(luceneDocument);
 
