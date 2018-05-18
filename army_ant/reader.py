@@ -427,11 +427,15 @@ class TRECWashingtonPostReader(MongoDBReader):
                 if entity_a <= entity_b:
                     triples.add((
                         self.to_wikipedia_entity(entity_a),
-                        'occurs_with',
+                        Entity('occurs_with'),
                         self.to_wikipedia_entity(entity_b)
                     ))
                 else:
-                    triples.add((self.to_wikipedia_entity(entity_b), 'occurs_with', self.to_wikipedia_entity(entity_a)))
+                    triples.add((
+                        self.to_wikipedia_entity(entity_b),
+                        Entity('occurs_with'),
+                        self.to_wikipedia_entity(entity_a)
+                    ))
 
         return list(triples)
 
