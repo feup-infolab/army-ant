@@ -11,14 +11,14 @@ import itertools
 import logging
 import os
 import re
-import requests
-import requests_cache
 import shelve
 import shutil
 import tarfile
 import tempfile
 from urllib.parse import urljoin
 
+import requests
+import requests_cache
 from bs4 import BeautifulSoup, SoupStrainer
 from lxml import etree
 from pymongo import MongoClient
@@ -27,8 +27,9 @@ from requests.auth import HTTPBasicAuth
 
 from army_ant.exception import ArmyAntException
 # from army_ant.index import Index
+from army_ant.setup import config_logger
 from army_ant.util import inex, html_to_text, get_first
-from army_ant.util.text import extract_entities
+from army_ant.util.text import extract_entities_per_sentence
 
 logger = logging.getLogger(__name__)
 
@@ -396,12 +397,12 @@ class TRECWashingtonPostReader(MongoDBReader):
         assert include_articles or include_blogs, "Must include at least blogs or articles"
 
         if include_articles:
-            self.articles = self.db.articles.find({}).limit(1)
+            self.articles = self.db.articles.find({}).limit(10)
         else:
             self.articles = iter([])
 
         if include_blogs:
-            self.blogs = self.db.blogs.find({}).limit(1)
+            self.blogs = self.db.blogs.find({}).limit(10)
         else:
             self.blogs = iter([])
 
@@ -422,14 +423,19 @@ class TRECWashingtonPostReader(MongoDBReader):
         # return Entity(label, "http://en.wikipedia.org/?curid=%s" % page_id)
 
     def build_triples(self, text):
-        triples = []
+        triples = set([])
 
-        for labeled_entity in extract_entities(text):
-            label, entity = labeled_entity
-            triples.append((entity, 'is-a', label))
-            # TODO get triples from WikiData
+        for sentence in extract_entities_per_sentence(text):
+            for (_, entity_a), (_, entity_b) in itertools.product(sentence, sentence):
+                if entity_a == entity_b: continue
 
-        return triples
+                # In conjunction with the set, avoids duplicate triples
+                if entity_a <= entity_b:
+                    triples.add((entity_a, 'occurs_with', entity_b))
+                else:
+                    triples.add((entity_b, 'occurs_with', entity_a))
+
+        return list(triples)
 
     def __next__(self):
         # Note that this for is only required in case the first element cannot be parsed.
@@ -439,6 +445,7 @@ class TRECWashingtonPostReader(MongoDBReader):
 
             text = self.to_plain_text(doc)
             triples = self.build_triples(text)
+            triples.append((doc['id'], 'has_author', doc['author']))
 
             return Document(
                 doc_id=doc['id'],
@@ -509,6 +516,8 @@ class CSVReader(Reader):
 
 
 if __name__ == '__main__':
+    config_logger()
+
     r = TRECWashingtonPostReader('wapo')
     for doc in r:
         print(doc)

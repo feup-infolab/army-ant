@@ -155,16 +155,18 @@ def remove_by_pos_tag(pos_tagger, tokens, tags):
     return filtered_tokens
 
 
-def extract_entities(text, lib='NLTK'):
+def extract_entities_per_sentence(text, lib='NLTK'):
     assert lib in ('NLTK', 'StanfordNER'), "The valye of 'lib' must either be 'NLTK' or 'StanfordNER'."
 
-    entities = set([])
+    entities = []
 
     if lib == 'NLTK':
         for sent in nltk.sent_tokenize(text):
+            entities_per_sentence = collections.defaultdict(int)
             for chunk in nltk.ne_chunk(nltk.pos_tag(nltk.word_tokenize(sent))):
                 if hasattr(chunk, 'label'):
-                    entities.add((chunk.label(), ' '.join(c[0] for c in chunk)))
+                    entities_per_sentence[(chunk.label(), ' '.join(c[0] for c in chunk))] += 1
+            entities.append(entities_per_sentence)
 
     elif lib == 'StanfordNER':
         config = yaml.load(open('config.yaml'))
@@ -186,8 +188,10 @@ def extract_entities(text, lib='NLTK'):
 
         ne_tagged_sentences = stanford_tagger.tag_sents(tokenized_sents)
         for ne_tagged_sentence in ne_tagged_sentences:
+            entities_per_sentence = collections.defaultdict(int)
             for tag, chunk in itertools.groupby(ne_tagged_sentence, lambda x: x[1]):
                 if tag != 'O':
-                    entities.add((tag, ' '.join(w for w, t in chunk)))
+                    entities_per_sentence[(tag, ' '.join(w for w, t in chunk))] += 1
+            entities.append(entities_per_sentence)
 
     return entities

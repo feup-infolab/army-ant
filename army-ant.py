@@ -26,11 +26,9 @@ from army_ant.index import Index
 from army_ant.reader import Reader
 from army_ant.sampling import INEXSampler
 from army_ant.server import run_app
+from army_ant.setup import config_logger
 
-logging.basicConfig(
-    format='%(asctime)s army-ant: [%(name)s] %(levelname)s: %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    level=logging.INFO)
+config_logger()
 
 logger = logging.getLogger(__name__)
 
@@ -158,7 +156,6 @@ class CommandLineInterface(object):
                             ranking_function = ranking.group(1)
                             print("===> Switched to '%s' ranking function" % ranking_function)
                             continue
-
 
                     index = Index.open(index_location, index_type, loop)
                     response = loop.run_until_complete(index.search(
