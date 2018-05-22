@@ -87,7 +87,7 @@ class CommandLineInterfaceExtras(object):
         print(word1, '~', word2, '=', sim)
 
     def build_wikidata_gazetteer(self, class_name, output_location):
-        limit = 10_000
+        limit = 5_000
         offset = 0
 
         with open(output_location, 'w') as f:
