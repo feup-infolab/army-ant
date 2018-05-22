@@ -20,7 +20,7 @@ from army_ant.analysis import random_walk_concordance_test
 from army_ant.database import Database
 from army_ant.evaluation import EvaluationTask, EvaluationTaskManager
 from army_ant.exception import ArmyAntException
-from army_ant.extras import fetch_wikipedia_images, word2vec_knn, word2vec_sim
+from army_ant.extras import fetch_wikipedia_images, word2vec_knn, word2vec_sim, fetch_wikidata_entities
 from army_ant.features import FeatureExtractor
 from army_ant.index import Index
 from army_ant.reader import Reader
@@ -85,6 +85,14 @@ class CommandLineInterfaceExtras(object):
             return
 
         print(word1, '~', word2, '=', sim)
+
+    def build_wikidata_gazetteer(self, class_name, output_location):
+        logger.info("Fetching Wikidata entities of class %s" % class_name)
+        entities = fetch_wikidata_entities(class_name)
+        with open(output_location, 'w') as f:
+            for entity in entities:
+                f.write("%s\n" % entity)
+        logger.info("Wrote %d entities of class %s to %s" % (len(entities), class_name, output_location))
 
 
 class SimpleCompleter(object):
