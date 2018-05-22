@@ -87,11 +87,19 @@ class CommandLineInterfaceExtras(object):
         print(word1, '~', word2, '=', sim)
 
     def build_wikidata_gazetteer(self, class_name, output_location):
-        logger.info("Fetching Wikidata entities of class %s" % class_name)
-        entities = fetch_wikidata_entities(class_name)
+        limit = 10_000
+        offset = 0
+
         with open(output_location, 'w') as f:
-            for entity in entities:
-                f.write("%s\n" % entity)
+            while True:
+                logger.info(
+                    "Fetching Wikidata entities of class %s (offset=%d, limit=%d)" % (class_name, offset, limit))
+                entities = fetch_wikidata_entities(class_name, offset, limit)
+                if len(entities) < 1: break
+                for entity in entities:
+                    f.write("%s\n" % entity)
+                    f.flush()
+                offset += limit
         logger.info("Wrote %d entities of class %s to %s" % (len(entities), class_name, output_location))
 
 
