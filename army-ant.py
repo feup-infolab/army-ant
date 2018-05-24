@@ -21,13 +21,13 @@ from army_ant.database import Database
 from army_ant.evaluation import EvaluationTask, EvaluationTaskManager
 from army_ant.exception import ArmyAntException
 from army_ant.extras import fetch_wikipedia_images, word2vec_knn, word2vec_sim
-from army_ant.util.wikidata import fetch_wikidata_entities
 from army_ant.features import FeatureExtractor
 from army_ant.index import Index
 from army_ant.reader import Reader
 from army_ant.sampling import INEXSampler
 from army_ant.server import run_app
 from army_ant.setup import config_logger
+from army_ant.util.wikidata import fetch_wikidata_entities, get_entities
 
 config_logger()
 
@@ -87,9 +87,10 @@ class CommandLineInterfaceExtras(object):
 
         print(word1, '~', word2, '=', sim)
 
-    def build_wikidata_gazetteer(self, class_name, output_location):
-        limit = 5_000
+    def fetch_wikidata_entities(self, class_name, output_location):
+        limit = 100_000
         offset = 0
+        count = 0
 
         with open(output_location, 'w') as f:
             while True:
@@ -97,11 +98,33 @@ class CommandLineInterfaceExtras(object):
                     "Fetching Wikidata entities of class %s (offset=%d, limit=%d)" % (class_name, offset, limit))
                 entities = fetch_wikidata_entities(class_name, offset, limit)
                 if len(entities) < 1: break
+                count += len(entities)
                 for entity in entities:
                     f.write("%s\n" % entity)
                     f.flush()
                 offset += limit
-        logger.info("Wrote %d entities of class %s to %s" % (len(entities), class_name, output_location))
+        logger.info("Wrote %d entities of class %s to %s" % (count, class_name, output_location))
+
+    def fetch_wikidata_entity_labels(self, input_location, output_location):
+        with open(output_location, 'w') as out_file:
+            def write_batch(batch):
+                logger.info("Writing batch of 50 entity labels")
+                entities = get_entities(
+                    [entity.replace('http://www.wikidata.org/entity/', '') for entity in batch])
+
+                for entity in entities.values():
+                    if 'labels' in entity and 'en' in entity['labels']:
+                        out_file.write("%s\n" % entity['labels']['en']['value'])
+                        out_file.flush()
+
+            with open(input_location, 'r') as in_file:
+                batch = []
+                for entity in in_file:
+                    batch.append(entity.strip())
+                    if len(batch) % 50 == 0:
+                        write_batch(batch)
+                        batch = []
+                write_batch(batch)
 
 
 class SimpleCompleter(object):
