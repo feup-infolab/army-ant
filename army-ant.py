@@ -20,7 +20,8 @@ from army_ant.analysis import random_walk_concordance_test
 from army_ant.database import Database
 from army_ant.evaluation import EvaluationTask, EvaluationTaskManager
 from army_ant.exception import ArmyAntException
-from army_ant.extras import fetch_wikipedia_images, word2vec_knn, word2vec_sim, fetch_wikidata_entities
+from army_ant.extras import fetch_wikipedia_images, word2vec_knn, word2vec_sim
+from army_ant.util.wikidata import fetch_wikidata_entities
 from army_ant.features import FeatureExtractor
 from army_ant.index import Index
 from army_ant.reader import Reader

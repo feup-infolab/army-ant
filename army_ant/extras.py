@@ -9,7 +9,6 @@ import logging
 import re
 
 import requests
-from SPARQLWrapper import SPARQLWrapper, XML, JSON
 from gensim.models import Word2Vec
 from lxml import html
 from requests.exceptions import RequestException
@@ -54,35 +53,3 @@ def word2vec_sim(model_path, word1, word2):
         return model.wv.similarity(word1, word2)
     except KeyError:
         return
-
-
-def fetch_wikidata_entities(class_label, offset, limit):
-    class_label_to_uri = {
-        'person': 'wd:Q215627',
-        'organization': 'wd:Q43229',
-        'geographic location': 'wd:Q2221906'
-    }
-
-    assert class_label in class_label_to_uri, "Class label %s not supported" % class_label
-
-    sparql = SPARQLWrapper('https://query.wikidata.org/sparql')
-    query = '''
-        SELECT ?entityLabel
-        WHERE {
-          SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en" }
-          ?entity (wdt:P31/wdt:P279*) %s
-        }
-        OFFSET %d
-        LIMIT %d
-    ''' % (class_label_to_uri[class_label], offset, limit)
-
-    sparql.setQuery(query)
-    sparql.setReturnFormat(JSON)
-    response = sparql.query().convert()
-
-    entities = []
-    for binding in response['results']['bindings']:
-        entity = binding['entityLabel']['value']
-        if re.match(r'^Q\d+$', entity): continue # skip unlabeled entities
-        entities.append(entity)
-    return entities
