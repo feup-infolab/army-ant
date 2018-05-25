@@ -27,7 +27,9 @@ from army_ant.reader import Reader
 from army_ant.sampling import INEXSampler
 from army_ant.server import run_app
 from army_ant.setup import config_logger
-from army_ant.util.wikidata import fetch_wikidata_entities, get_entities
+from army_ant.util.wikidata import fetch_wikidata_entity_labels, get_entities, WikidataClass, \
+    fetch_wikidata_entity_subclasses, filter_entities_by_class, get_label_for_entity_uris, \
+    get_wikidata_dump_entity_labels
 
 config_logger()
 
@@ -96,14 +98,21 @@ class CommandLineInterfaceExtras(object):
             while True:
                 logger.info(
                     "Fetching Wikidata entities of class %s (offset=%d, limit=%d)" % (class_name, offset, limit))
-                entities = fetch_wikidata_entities(class_name, offset, limit)
+                entities = fetch_wikidata_entity_labels(WikidataClass[class_name], offset=offset, limit=limit)
                 if len(entities) < 1: break
                 count += len(entities)
                 for entity in entities:
                     f.write("%s\n" % entity)
                     f.flush()
                 offset += limit
-        logger.info("Wrote %d entities of class %s to %s" % (count, class_name, output_location))
+        logger.info("Wrote %d entities of class %s (%s) to %s" % (
+            count, WikidataClass[class_name], class_name, output_location))
+
+        logger.info("Removing duplicate entities and overwriting file")
+        entities = set(open(output_location, 'r').readlines())
+        with open(output_location, 'w') as f:
+            for entity in entities:
+                f.write(entity)
 
     def fetch_wikidata_entity_labels(self, input_location, output_location):
         with open(output_location, 'w') as out_file:
@@ -125,6 +134,24 @@ class CommandLineInterfaceExtras(object):
                         write_batch(batch)
                         batch = []
                 write_batch(batch)
+
+    def build_wikidata_dump_gazetteer(self, class_name, dump_location, output_location):
+        with open(output_location, 'w') as f:
+            logger.info("Fetching Wikidata entity classes for %s" % class_name)
+            subclass_uris = fetch_wikidata_entity_subclasses(WikidataClass[class_name])
+
+            logger.info("Using dump in %s" % dump_location)
+
+            logger.info("Filtering entities based on %d retrieved subclasses" % len(subclass_uris))
+            entities = filter_entities_by_class(dump_location, subclass_uris)
+
+            logger.info("Getting entity labels for %d entities" % len(entities))
+            entity_labels = get_label_for_entity_uris(dump_location, entities)
+
+            for label in entity_labels.values():
+                f.write('%s\n' % label)
+
+            logger.info("Result saved to %s" % output_location)
 
 
 class SimpleCompleter(object):
