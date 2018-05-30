@@ -28,12 +28,6 @@ then
     exit 3
 fi
 
-if [ ! -z ${tmp_dir+x} ]
-then
-    echo "===> Removing temporary directory $tmp_dir"
-    rm -rf $tmp_dir
-fi
-
 db_name=$2
 
 echo "===> Importing articles to MongoDB database $db_name"
@@ -49,3 +43,9 @@ do
     echo "===> $file"
     mongoimport --db $db_name --collection blogs --type json $file
 done
+
+if [ ! -z ${tmp_dir+x} ]
+then
+    echo "===> Removing temporary directory $tmp_dir"
+    rm -rf $tmp_dir
+fi
