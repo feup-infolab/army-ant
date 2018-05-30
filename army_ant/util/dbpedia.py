@@ -13,7 +13,8 @@ memory = Memory(cachedir='/opt/army-ant/cache/dbpedia', verbose=0, bytes_limit=5
 
 class DBpediaClass(Enum):
     person = 'dbo:Person'
-    organization = 'dbo:Organization'
+    organization = 'dbo:Organisation' \
+                   ''
     place = 'dbo:Place'
 
 #

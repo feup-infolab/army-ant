@@ -13,6 +13,7 @@ import os
 import re
 import shelve
 import shutil
+import sys
 import tarfile
 import tempfile
 from urllib.parse import urljoin
@@ -28,7 +29,7 @@ from requests.auth import HTTPBasicAuth
 from army_ant.exception import ArmyAntException
 from army_ant.setup import config_logger
 from army_ant.util import inex, html_to_text, get_first
-from army_ant.util.text import extract_entities_per_sentence
+from army_ant.util.text import extract_entities_per_sentence, AhoCorasickEntityExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -416,26 +417,51 @@ class TRECWashingtonPostReader(MongoDBReader):
     def to_washington_post_author_entity(self, author_name):
         return Entity(author_name, 'https://www.washingtonpost.com/people/%s' % (author_name.lower().replace(' ', '-')))
 
+    # def build_triples(self, text):
+    #     triples = set([])
+    #
+    #     for sentence in extract_entities_per_sentence(text):
+    #         for (_, entity_a), (_, entity_b) in itertools.product(sentence, sentence):
+    #             if entity_a == entity_b: continue
+    #
+    #             # In conjunction with the set, avoids duplicate triples
+    #             if entity_a <= entity_b:
+    #                 triples.add((
+    #                     self.to_wikipedia_entity(entity_a),
+    #                     Entity('occurs_with'),
+    #                     self.to_wikipedia_entity(entity_b)
+    #                 ))
+    #             else:
+    #                 triples.add((
+    #                     self.to_wikipedia_entity(entity_b),
+    #                     Entity('occurs_with'),
+    #                     self.to_wikipedia_entity(entity_a)
+    #                 ))
+    #
+    #     return list(triples)
+
     def build_triples(self, text):
         triples = set([])
 
-        for sentence in extract_entities_per_sentence(text):
-            for (_, entity_a), (_, entity_b) in itertools.product(sentence, sentence):
-                if entity_a == entity_b: continue
+        ner = AhoCorasickEntityExtractor("/opt/army-ant/gazetteers/all.txt")
+        print(text)
+        entities = ner.extract(text)
 
-                # In conjunction with the set, avoids duplicate triples
-                if entity_a <= entity_b:
-                    triples.add((
-                        self.to_wikipedia_entity(entity_a),
-                        Entity('occurs_with'),
-                        self.to_wikipedia_entity(entity_b)
-                    ))
-                else:
-                    triples.add((
-                        self.to_wikipedia_entity(entity_b),
-                        Entity('occurs_with'),
-                        self.to_wikipedia_entity(entity_a)
-                    ))
+        for entity_a, entity_b in itertools.product(entities, entities):
+            if entity_a == entity_b: continue
+
+            if entity_a <= entity_b:
+                triples.add((
+                    self.to_wikipedia_entity(entity_a),
+                    Entity('occurs_with'),
+                    self.to_wikipedia_entity(entity_b)
+                ))
+            else:
+                triples.add((
+                    self.to_wikipedia_entity(entity_b),
+                    Entity('occurs_with'),
+                    self.to_wikipedia_entity(entity_a)
+                ))
 
         return list(triples)
 
@@ -500,5 +526,8 @@ if __name__ == '__main__':
     config_logger()
 
     r = TRECWashingtonPostReader('wapo')
+    #c = 0
     for doc in r:
         print(doc)
+        #c+=1
+        #if c % 10 == 0: sys.exit(0)
