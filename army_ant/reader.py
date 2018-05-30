@@ -13,7 +13,6 @@ import os
 import re
 import shelve
 import shutil
-import sys
 import tarfile
 import tempfile
 from urllib.parse import urljoin
@@ -29,7 +28,7 @@ from requests.auth import HTTPBasicAuth
 from army_ant.exception import ArmyAntException
 from army_ant.setup import config_logger
 from army_ant.util import inex, html_to_text, get_first
-from army_ant.util.text import extract_entities_per_sentence, AhoCorasickEntityExtractor
+from army_ant.util.text import AhoCorasickEntityExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -398,6 +397,7 @@ class TRECWashingtonPostReader(MongoDBReader):
     def __init__(self, source_path):
         super(TRECWashingtonPostReader, self).__init__(source_path)
 
+        self.ner = AhoCorasickEntityExtractor("/opt/army-ant/gazetteers/all.txt")
         self.articles = self.db.articles.find({})
         self.blogs = self.db.blogs.find({})
 
@@ -405,7 +405,7 @@ class TRECWashingtonPostReader(MongoDBReader):
         paragraphs = []
 
         for content in doc['contents']:
-            if 'subtype' in content and content['subtype'] == 'paragraph':
+            if content and 'subtype' in content and content['subtype'] == 'paragraph':
                 text = re.sub(r'<.*?>', '', content['content'])
                 paragraphs.append(text)
 
@@ -443,9 +443,7 @@ class TRECWashingtonPostReader(MongoDBReader):
     def build_triples(self, text):
         triples = set([])
 
-        ner = AhoCorasickEntityExtractor("/opt/army-ant/gazetteers/all.txt")
-        print(text)
-        entities = ner.extract(text)
+        entities = self.ner.extract(text)
 
         for entity_a, entity_b in itertools.product(entities, entities):
             if entity_a == entity_b: continue
@@ -526,8 +524,8 @@ if __name__ == '__main__':
     config_logger()
 
     r = TRECWashingtonPostReader('wapo')
-    #c = 0
+    # c = 0
     for doc in r:
         print(doc)
-        #c+=1
-        #if c % 10 == 0: sys.exit(0)
+        # c+=1
+        # if c % 10 == 0: sys.exit(0)

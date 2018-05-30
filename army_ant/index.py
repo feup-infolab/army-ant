@@ -794,7 +794,7 @@ class HypergraphOfEntity(JavaIndex):
                     HypergraphOfEntity.JTripleInstance(t[1].uri, t[1].label),
                     HypergraphOfEntity.JTripleInstance(t[2].uri, t[2].label)), doc.triples))
                 jDoc = HypergraphOfEntity.JDocument(
-                    JString(doc.doc_id), JString(doc.title), JString(doc.text), java.util.Arrays.asList(triples))
+                    JString(doc.doc_id), doc.title, JString(doc.text), java.util.Arrays.asList(triples))
                 corpus.append(jDoc)
                 if len(corpus) % (HypergraphOfEntity.BLOCK_SIZE // 10) == 0:
                     logger.info("%d documents preloaded" % len(corpus))
