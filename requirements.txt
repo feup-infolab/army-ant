@@ -17,7 +17,7 @@ ruamel.yaml==0.15.35
 yarl==0.16.0
 unidecode==1.0.22
 joblib==0.11
-SPARQLWrapper==1.8.0
+SPARQLWrapper==1.8.2
 rdflib==4.2.2
 
 #aiogremlin==3.2.4

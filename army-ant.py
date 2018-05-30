@@ -12,6 +12,7 @@ import re
 import readline
 import shutil
 import tempfile
+from json import JSONDecodeError
 
 import fire
 import yaml
@@ -27,6 +28,7 @@ from army_ant.reader import Reader
 from army_ant.sampling import INEXSampler
 from army_ant.server import run_app
 from army_ant.setup import config_logger
+from army_ant.util.dbpedia import fetch_dbpedia_entity_labels, DBpediaClass
 from army_ant.util.wikidata import fetch_wikidata_entity_labels, get_entities, WikidataClass, \
     fetch_wikidata_entity_subclasses, filter_entities_by_class, get_label_for_entity_uris, \
     get_wikidata_dump_entity_labels
@@ -89,69 +91,29 @@ class CommandLineInterfaceExtras(object):
 
         print(word1, '~', word2, '=', sim)
 
-    def fetch_wikidata_entities(self, class_name, output_location):
-        limit = 100_000
+    def fetch_dbpedia_entities(self, class_name, output_location):
+        limit = 10_000
         offset = 0
         count = 0
 
         with open(output_location, 'w') as f:
             while True:
                 logger.info(
-                    "Fetching Wikidata entities of class %s (offset=%d, limit=%d)" % (class_name, offset, limit))
-                entities = fetch_wikidata_entity_labels(WikidataClass[class_name], offset=offset, limit=limit)
+                    "Fetching DBpedia entities of class %s (offset=%s, limit=%s)" % (class_name, offset, limit))
+
+                entities = fetch_dbpedia_entity_labels(DBpediaClass[class_name], offset=offset, limit=limit)
+
                 if len(entities) < 1: break
                 count += len(entities)
+
                 for entity in entities:
                     f.write("%s\n" % entity)
                     f.flush()
+
                 offset += limit
+
         logger.info("Wrote %d entities of class %s (%s) to %s" % (
-            count, WikidataClass[class_name], class_name, output_location))
-
-        logger.info("Removing duplicate entities and overwriting file")
-        entities = set(open(output_location, 'r').readlines())
-        with open(output_location, 'w') as f:
-            for entity in entities:
-                f.write(entity)
-
-    def fetch_wikidata_entity_labels(self, input_location, output_location):
-        with open(output_location, 'w') as out_file:
-            def write_batch(batch):
-                logger.info("Writing batch of 50 entity labels")
-                entities = get_entities(
-                    [entity.replace('http://www.wikidata.org/entity/', '') for entity in batch])
-
-                for entity in entities.values():
-                    if 'labels' in entity and 'en' in entity['labels']:
-                        out_file.write("%s\n" % entity['labels']['en']['value'])
-                        out_file.flush()
-
-            with open(input_location, 'r') as in_file:
-                batch = []
-                for entity in in_file:
-                    batch.append(entity.strip())
-                    if len(batch) % 50 == 0:
-                        write_batch(batch)
-                        batch = []
-                write_batch(batch)
-
-    def build_wikidata_dump_gazetteer(self, class_name, dump_location, output_location):
-        with open(output_location, 'w') as f:
-            logger.info("Fetching Wikidata entity classes for %s" % class_name)
-            subclass_uris = fetch_wikidata_entity_subclasses(WikidataClass[class_name])
-
-            logger.info("Using dump in %s" % dump_location)
-
-            logger.info("Filtering entities based on %d retrieved subclasses" % len(subclass_uris))
-            entities = filter_entities_by_class(dump_location, subclass_uris)
-
-            logger.info("Getting entity labels for %d entities" % len(entities))
-            entity_labels = get_label_for_entity_uris(dump_location, entities)
-
-            for label in entity_labels.values():
-                f.write('%s\n' % label)
-
-            logger.info("Result saved to %s" % output_location)
+            count, DBpediaClass[class_name], class_name, output_location))
 
 
 class SimpleCompleter(object):
