@@ -793,11 +793,13 @@ class HypergraphOfEntity(JavaIndex):
                 triples = []
 
                 for s, p, o in doc.triples:
-                    if s.uri and s.label and p.uri and p.label and o.uri and o.label:
+                    try:
                         triples.append(HypergraphOfEntity.JTriple(
                             HypergraphOfEntity.JTripleInstance(s.uri, s.label),
                             HypergraphOfEntity.JTripleInstance(p.uri, p.label),
                             HypergraphOfEntity.JTripleInstance(o.uri, p.label)))
+                    except:
+                        logger.warning("Triple (%s, %s, %s) skipped" % (s, p, o))
 
                 jDoc = HypergraphOfEntity.JDocument(
                     JString(doc.doc_id), doc.title, JString(doc.text), java.util.Arrays.asList(triples))
