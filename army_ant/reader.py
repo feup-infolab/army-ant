@@ -464,8 +464,10 @@ class TRECWashingtonPostReader(MongoDBReader):
         return list(triples)
 
     def __next__(self):
-        doc = next(self.articles)
-        if doc is None: doc = next(self.blogs)
+        try:
+            doc = next(self.articles)
+        except StopIteration:
+            doc = next(self.blogs)
 
         if doc:
             logger.debug("Reading %s" % doc['id'])
