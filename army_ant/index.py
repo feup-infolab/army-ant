@@ -789,13 +789,20 @@ class HypergraphOfEntity(JavaIndex):
             corpus = []
             for doc in self.reader:
                 logger.debug("Preloading document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
-                triples = list(map(lambda t: HypergraphOfEntity.JTriple(
-                    HypergraphOfEntity.JTripleInstance(t[0].uri, t[0].label),
-                    HypergraphOfEntity.JTripleInstance(t[1].uri, t[1].label),
-                    HypergraphOfEntity.JTripleInstance(t[2].uri, t[2].label)), doc.triples))
+
+                triples = []
+
+                for s, p, o in doc.triples:
+                    if s.uri and s.label and p.uri and p.label and o.uri and o.label:
+                        triples.append(HypergraphOfEntity.JTriple(
+                            HypergraphOfEntity.JTripleInstance(s.uri, s.label),
+                            HypergraphOfEntity.JTripleInstance(p.uri, p.label),
+                            HypergraphOfEntity.JTripleInstance(o.uri, p.label)))
+
                 jDoc = HypergraphOfEntity.JDocument(
                     JString(doc.doc_id), doc.title, JString(doc.text), java.util.Arrays.asList(triples))
                 corpus.append(jDoc)
+
                 if len(corpus) % (HypergraphOfEntity.BLOCK_SIZE // 10) == 0:
                     logger.info("%d documents preloaded" % len(corpus))
 
