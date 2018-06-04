@@ -67,7 +67,7 @@ class MongoDatabase(Database):
         logger.info("Retrieving metadata for matching documents")
 
         metadata = {}
-        records = self.db['documents'].find({'doc_id': {'$in': [doc["docID"] for doc in results]}})
+        records = self.db['documents'].find({'doc_id': {'$in': [doc['id'] for doc in results]}})
 
         for record in records:
             metadata[record['doc_id']] = record['metadata']

@@ -147,7 +147,7 @@ class Result(object):
         elif key == 'score':
             return self.score
         else:
-            raise KeyError
+            raise KeyError(key)
 
     def __contains__(self, key):
         return (key == 'id' and self.id or
