@@ -194,3 +194,7 @@ dl dl {
 .c3-line {
   stroke-width: 2px;
 }
+
+#task {
+  max-width: 8.5em;
+}

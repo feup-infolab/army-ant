@@ -13,6 +13,11 @@
     <div class="column col-mr-auto">
       <!-- form input control -->
       <div class="input-group">
+        <select class="form-select" id="task" name="task">
+          <option value="DOCUMENT_RETRIEVAL">Documents</option>
+          <option value="ENTITY_RETRIEVAL" disabled>Entities</option>
+          <option value="TERM_RETRIEVAL" disabled>Terms</option>
+        </select>
         <input class="form-input" type="text" id="query" name="query" placeholder="Search" value="{{ query if query }}" />
         <button class="btn btn-primary btn input-group-btn">Search</button>
       </div>

@@ -83,6 +83,7 @@ async def search(request):
 
     debug = request.GET.get('debug', 'off')
 
+    task = request.GET.get('task')
     query = request.GET.get('query')
     error = None
     trace = None
@@ -99,7 +100,7 @@ async def search(request):
                 request.app['engines'][engine]['index']['location'],
                 request.app['engines'][engine]['index']['type'],
                 loop)
-            engine_response = await index.search(query, offset, limit, ranking_function, ranking_params or None)
+            engine_response = await index.search(query, offset, limit, task, ranking_function, ranking_params or None)
 
             num_docs = len(engine_response['results'])
             if engine_response['numDocs']: num_docs = engine_response['numDocs']
