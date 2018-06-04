@@ -59,7 +59,7 @@
               <th class="text-right">Score(q, d)</th>
               {% endif %}
 
-              <th>Doc ID</th>
+              <th>Node ID</th>
             </tr>
           </thead>
           <tbody>
@@ -67,7 +67,7 @@
             <tr>
               <td class="text-right">{{ loop.index }}</td>
               <td class="text-right"> {{ '%f' % result.score|float }} </td>
-              <td>{{ result.docID }}</td>
+              <td>{{ result.id }}</td>
             </tr>
             {% endfor %}
           </tbody>

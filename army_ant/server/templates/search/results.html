@@ -4,21 +4,21 @@
       <tbody>
         {% for result in results %}
         <tr>
-          {% if result.docID in metadata %}
+          {% if result.id in metadata %}
 
           <td> <div class="image" style="background-image: url('{{
-              metadata[result.docID].img_url or app.router.static.url(filename='img/thumbnail_placeholder.png') }}')"></div> </td>
-          <td> <a href="{{ metadata[result.docID].url }}" target="_blank">{{ metadata[result.docID].name }}</a> </td>
+              metadata[result.id].img_url or app.router.static.url(filename='img/thumbnail_placeholder.png') }}')"></div> </td>
+          <td> <a href="{{ metadata[result.id].url }}" target="_blank">{{ metadata[result.id].name }}</a> </td>
 
           {% else %}
 
           <td> <div class="image" style="background-image: url('{{
               app.router.static.url(filename='img/thumbnail_placeholder.png') }}')"></div> </td>
           <td>
-            {% if result.docID and result.docID.startswith('http') %}
-            <a href="{{ result.docID }}" target="_blank">{{ result.docID }}</a>
+            {% if result.id and result.id.startswith('http') %}
+            <a href="{{ result.id }}" target="_blank">{{ result.id }}</a>
             {% else %}
-            {{ result.docID }}
+            {{ result.id }}
             {% endif %}
           </td>
 
