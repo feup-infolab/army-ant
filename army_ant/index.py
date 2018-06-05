@@ -918,10 +918,18 @@ class LuceneEngine(JavaIndex):
             corpus = []
             for doc in self.reader:
                 logger.debug("Preloading document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
-                triples = list(map(lambda t: LuceneEngine.JTriple(
-                    HypergraphOfEntity.JTripleInstance(t[0].uri, t[0].label),
-                    HypergraphOfEntity.JTripleInstance(t[1].uri, t[1].label),
-                    HypergraphOfEntity.JTripleInstance(t[2].uri, t[2].label)), doc.triples))
+
+                triples = []
+
+                for s, p, o in doc.triples:
+                    try:
+                        triples.append(LuceneEngine.JTriple(
+                            LuceneEngine.JTripleInstance(s.uri, s.label),
+                            LuceneEngine.JTripleInstance(p.uri, p.label),
+                            LuceneEngine.JTripleInstance(o.uri, p.label)))
+                    except:
+                        logger.warning("Triple (%s, %s, %s) skipped" % (s, p, o))
+
                 jDoc = LuceneEngine.JDocument(
                     JString(doc.doc_id), doc.title, JString(doc.text), java.util.Arrays.asList(triples))
                 corpus.append(jDoc)
