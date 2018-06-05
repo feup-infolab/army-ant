@@ -417,29 +417,6 @@ class TRECWashingtonPostReader(MongoDBReader):
     def to_washington_post_author_entity(self, author_name):
         return Entity(author_name, 'https://www.washingtonpost.com/people/%s' % (author_name.lower().replace(' ', '-')))
 
-    # def build_triples(self, text):
-    #     triples = set([])
-    #
-    #     for sentence in extract_entities_per_sentence(text):
-    #         for (_, entity_a), (_, entity_b) in itertools.product(sentence, sentence):
-    #             if entity_a == entity_b: continue
-    #
-    #             # In conjunction with the set, avoids duplicate triples
-    #             if entity_a <= entity_b:
-    #                 triples.add((
-    #                     self.to_wikipedia_entity(entity_a),
-    #                     Entity('occurs_with'),
-    #                     self.to_wikipedia_entity(entity_b)
-    #                 ))
-    #             else:
-    #                 triples.add((
-    #                     self.to_wikipedia_entity(entity_b),
-    #                     Entity('occurs_with'),
-    #                     self.to_wikipedia_entity(entity_a)
-    #                 ))
-    #
-    #     return list(triples)
-
     def build_triples(self, text):
         triples = set([])
 
@@ -485,7 +462,7 @@ class TRECWashingtonPostReader(MongoDBReader):
                 title=doc['title'],
                 text=text,
                 triples=triples,
-                metadata={'url': doc['article_url'], 'title': doc['title']})
+                metadata={'url': doc['article_url'], 'name': doc['title']})
 
         self.client.close()
         raise StopIteration
