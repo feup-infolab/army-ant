@@ -52,3 +52,45 @@ def fetch_dbpedia_entity_labels(dbpedia_class, offset=None, limit=None):
         entities.append(entity)
 
     return entities
+
+@memory.cache
+def fetch_dbpedia_triples(entity_name):
+    sparql = SPARQLWrapper(dbpedia_sparql_url)
+
+    query = '''
+            PREFIX dbr: <http://dbpedia.org/resource/>
+            SELECT ?s ?sLabel ?p ?pLabel ?o ?oLabel
+            WHERE {
+              VALUES ?s { dbr:%s }
+              ?s ?p ?o .
+              ?s rdfs:label ?sLabel .
+              ?p rdfs:label ?pLabel .
+              ?o rdfs:label ?oLabel .
+              FILTER (langMatches(lang(?sLabel), 'en')
+                && langMatches(lang(?pLabel), 'en')
+                && langMatches(lang(?oLabel), 'en'))
+            }
+        ''' % entity_name.replace(' ', '_')
+
+    # print(query)
+    sparql.setQuery(query)
+
+    sparql.setReturnFormat(JSON)
+    result = sparql.query()
+    data = result.response.read()
+    # print(data.decode('utf-8'))
+    data = json.loads(data.decode('utf-8'))
+
+    triples = []
+    for binding in data['results']['bindings']:
+        s = (binding['s']['value'], binding['sLabel']['value'])
+        p = (binding['p']['value'], binding['pLabel']['value'])
+        o = (binding['o']['value'], binding['oLabel']['value'])
+        triples.append((s, p, o))
+
+    print(triples)
+
+    return triples
+
+if __name__ == '__main__':
+    fetch_dbpedia_triples("Barack Obama")

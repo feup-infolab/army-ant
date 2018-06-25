@@ -28,6 +28,7 @@ from requests.auth import HTTPBasicAuth
 from army_ant.exception import ArmyAntException
 from army_ant.setup import config_logger
 from army_ant.util import inex, html_to_text, get_first
+from army_ant.util.dbpedia import fetch_dbpedia_triples
 from army_ant.util.text import AhoCorasickEntityExtractor
 
 logger = logging.getLogger(__name__)
@@ -397,9 +398,9 @@ class TRECWashingtonPostReader(MongoDBReader):
     def __init__(self, source_path):
         super(TRECWashingtonPostReader, self).__init__(source_path)
 
-        self.ner = AhoCorasickEntityExtractor("/opt/army-ant/gazetteers/all.txt")
+        self.ac_ner = AhoCorasickEntityExtractor("/opt/army-ant/gazetteers/all.txt")
         self.articles = self.db.articles.find({})
-        self.blogs = self.db.blogs.find({})
+        self.blog_posts = self.db.blog_posts.find({})
 
     def to_plain_text(self, doc):
         paragraphs = []
@@ -417,26 +418,40 @@ class TRECWashingtonPostReader(MongoDBReader):
     def to_washington_post_author_entity(self, author_name):
         return Entity(author_name, 'https://www.washingtonpost.com/people/%s' % (author_name.lower().replace(' ', '-')))
 
-    def build_triples(self, text):
+    def build_triples(self, text, include_co_occurrence=False, include_dbpedia=True):
+        assert include_co_occurrence or include_dbpedia, \
+            "At least one of include_co_occurrence or include_dbpedia must be True"
+
         triples = set([])
 
-        entities = self.ner.extract(text)
+        entities = self.ac_ner.extract(text)
 
-        for entity_a, entity_b in itertools.product(entities, entities):
-            if entity_a == entity_b: continue
+        if include_co_occurrence:
+            for entity_a, entity_b in itertools.product(entities, entities):
+                if entity_a == entity_b: continue
 
-            if entity_a <= entity_b:
-                triples.add((
-                    self.to_wikipedia_entity(entity_a),
-                    Entity('occurs_with'),
-                    self.to_wikipedia_entity(entity_b)
-                ))
-            else:
-                triples.add((
-                    self.to_wikipedia_entity(entity_b),
-                    Entity('occurs_with'),
-                    self.to_wikipedia_entity(entity_a)
-                ))
+                if entity_a <= entity_b:
+                    triples.add((
+                        self.to_wikipedia_entity(entity_a),
+                        Entity('occurs_with'),
+                        self.to_wikipedia_entity(entity_b)
+                    ))
+                else:
+                    triples.add((
+                        self.to_wikipedia_entity(entity_b),
+                        Entity('occurs_with'),
+                        self.to_wikipedia_entity(entity_a)
+                    ))
+
+        if include_dbpedia:
+            for entity in entities:
+                entity_triples = fetch_dbpedia_triples(entity)
+                for (s, sl), (p, pl), (o, ol) in entity_triples:
+                    triples.add((
+                        Entity(sl, s),
+                        Entity(pl, p),
+                        Entity(ol, o)
+                    ))
 
         return list(triples)
 
@@ -444,7 +459,7 @@ class TRECWashingtonPostReader(MongoDBReader):
         try:
             doc = next(self.articles)
         except StopIteration:
-            doc = next(self.blogs)
+            doc = next(self.blog_posts)
 
         if doc:
             logger.debug("Reading %s" % doc['id'])
