@@ -1,4 +1,9 @@
 #!/bin/bash
+#
+# José Devezas
+# FEUP InfoLab and INESC TEC
+# 2018-05-15
+#
 
 if [ $# -lt 2 ]
 then
@@ -41,7 +46,7 @@ done
 for file in $wapo_dir/data/TREC_blog_*
 do
     echo "===> $file"
-    mongoimport --db $db_name --collection blogs --type json $file
+    mongoimport --db $db_name --collection blog_posts --type json $file
 done
 
 if [ ! -z ${tmp_dir+x} ]
