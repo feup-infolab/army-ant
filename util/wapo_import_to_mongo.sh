@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# José Devezas
+# José Devezas <jld@fe.up.pt>
 # FEUP InfoLab and INESC TEC
 # 2018-05-15
 #
