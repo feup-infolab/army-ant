@@ -40,13 +40,13 @@ echo "===> Importing articles to MongoDB database $db_name"
 for file in $wapo_dir/data/TREC_article_*
 do
     echo "===> $file"
-    mongoimport --db $db_name --collection articles --type json $file
+    mongoimport --db $db_name --collection articles --type json --maintainInsertionOrder $file
 done
 
 for file in $wapo_dir/data/TREC_blog_*
 do
     echo "===> $file"
-    mongoimport --db $db_name --collection blog_posts --type json $file
+    mongoimport --db $db_name --collection blog_posts --type json --maintainInsertionOrder $file
 done
 
 if [ ! -z ${tmp_dir+x} ]

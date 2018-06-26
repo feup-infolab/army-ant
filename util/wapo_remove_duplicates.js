@@ -4,35 +4,30 @@
  * 2018-06-25
  */
 
-print("===> Deleting duplicate articles");
+print("===> Deleting duplicate articles (keeping last version according to _id order)");
 
 db.articles.aggregate([
-  {"$unwind": "$contents"},
-  {"$match": {"published_date": { $ne: null }, "contents.type": {"$eq": "date"}}},
-  {"$group": {"_id": "$id", "count": {"$sum": 1}, "most_recent_date": {"$max": "$contents.content"}}},
+  {"$sort": {"_id": 1}},
+  {"$group": {"_id": "$id", "count": {"$sum": 1}, "keep_id": {"$last": "$_id"}}},
   {"$match": {"_id": {"$ne": null}, "count": {"$gt": 1}}},
-  {"$project": {"_id": 0, "id": "$_id", "most_recent_date": "$most_recent_date"}}
+  {"$project": {"_id": 0, "id": "$_id", "keep_id": "$keep_id"}}
 ], allowDiskUse = true).forEach(function (doc) {
-  if (doc.most_recent_date === null || doc.most_recent_date === undefined) return;
   db.articles.deleteMany({
     "id": doc.id,
-    "contents.content": {"$lt": doc.most_recent_date}
+    "_id": {"$ne": doc.keep_id}
   });
 });
 
-// FIXME "WriteError: cannot compare to undefined"
-print("===> Deleting duplicate blog posts");
+print("===> Deleting duplicate blog posts(keeping last version according to _id order)");
 
 db.blog_posts.aggregate([
-  {"$unwind": "$contents"},
-  {"$match": {"published_date": { $ne: null }, "contents.type": {"$eq": "date"}}},
-  {"$group": {"_id": "$id", "count": {"$sum": 1}, "most_published_date": {"$max": "contents.content"}}},
+  {"$sort": {"_id": 1}},
+  {"$group": {"_id": "$id", "count": {"$sum": 1}, "keep_id": {"$last": "$_id"}}},
   {"$match": {"_id": {"$ne": null}, "count": {"$gt": 1}}},
-  {"$project": {"_id": 0, "id": "$_id", "most_recent_date": "$most_recent_date"}}
+  {"$project": {"_id": 0, "id": "$_id", "keep_id": "$keep_id"}}
 ], allowDiskUse = true).forEach(function (doc) {
-  if (doc.most_recent_date === null || doc.most_recent_date === undefined) return;
   db.blog_posts.deleteMany({
     "id": doc.id,
-    "contents.content": {"$lt": doc.most_recent_date}
+    "_id": {"$ne": doc.keep_id}
   });
 });
