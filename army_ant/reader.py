@@ -76,15 +76,15 @@ class Document(object):
         if self.triples is None:
             triples = []
         else:
-            triples = '\n'.join([str(triple) for triple in self.triples])
+            triples = [str(triple) for triple in self.triples]
 
         if self.metadata is None:
-            metadata = ''
+            metadata = []
         else:
-            metadata = '\n'.join([str((k, v)) for k, v in self.metadata.items()])
+            metadata = [str((k, v)) for k, v in self.metadata.items()]
 
-        return '-----------------\nDOC ID:\n%s\n\nTITLE:\n%s\n\nTEXT:\n%s\n\nTRIPLES:\n%s\n\nMETADATA:\n%s\n-----------------\n' % (
-            self.doc_id, self.title, self.text, triples, metadata)
+        return '-----------------\nDOC ID:\n%s\n\nTITLE:\n%s\n\nTEXT (%d chars):\n%s\n%s\n\nTRIPLES (%d):\n%s\n%s\n\nMETADATA:\n%s\n-----------------\n' % (
+            self.doc_id, self.title, len(self.text), self.text[0:2000], '[...]' if len(self.text) > 2000 else '', len(triples), '\n\n'.join(triples[0:5]), '[...]' if len(triples) > 5 else '', '\n'.join(metadata))
 
 
 class Entity(object):
@@ -502,7 +502,7 @@ class CSVReader(Reader):
 
 
 if __name__ == '__main__':
-    config_logger()
+    config_logger(logging.DEBUG)
 
     r = TRECWashingtonPostReader('wapo')
     # c = 0

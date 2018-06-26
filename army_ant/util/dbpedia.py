@@ -46,15 +46,19 @@ def fetch_dbpedia_entity_labels(dbpedia_class, offset=None, limit=None):
     #print(data.decode('utf-8'))
     data = json.loads(data.decode('utf-8'))
 
-    entities = []
+    entities = set([])
     for binding in data['results']['bindings']:
         entity = binding['label']['value']
-        entities.append(entity)
+        entities.add(entity)
 
-    return entities
+    return list(entities)
 
 @memory.cache
-def fetch_dbpedia_triples(entity_name):
+def fetch_dbpedia_triples(entity_name, ignored_properties=None):
+    if ignored_properties is None:
+        ignored_properties = ['http://dbpedia.org/ontology/wikiPageWikiLink']
+        logger.warning("Using default list of ignored properties: %s" % ', '.join(ignored_properties))
+
     sparql = SPARQLWrapper(dbpedia_sparql_url)
 
     query = '''
@@ -81,16 +85,17 @@ def fetch_dbpedia_triples(entity_name):
     # print(data.decode('utf-8'))
     data = json.loads(data.decode('utf-8'))
 
-    triples = []
+    triples = set([])
     for binding in data['results']['bindings']:
+        if binding['p']['value'] in ignored_properties: continue
+
         s = (binding['s']['value'], binding['sLabel']['value'])
         p = (binding['p']['value'], binding['pLabel']['value'])
         o = (binding['o']['value'], binding['oLabel']['value'])
-        triples.append((s, p, o))
 
-    print(triples)
+        triples.add((s, p, o))
 
-    return triples
+    return list(triples)
 
 if __name__ == '__main__':
     fetch_dbpedia_triples("Barack Obama")

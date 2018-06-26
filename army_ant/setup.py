@@ -8,8 +8,8 @@
 import logging
 
 
-def config_logger():
+def config_logger(level=logging.INFO):
     logging.basicConfig(
         format='%(asctime)s army-ant: [%(name)s] %(levelname)s: %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
-        level=logging.INFO)
+        level=level)
