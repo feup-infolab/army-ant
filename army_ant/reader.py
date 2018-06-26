@@ -432,6 +432,7 @@ class TRECWashingtonPostReader(MongoDBReader):
 
         if include_dbpedia:
             for entity in entities:
+                logger.info("Fetching DBpedia triples for %s in %s" % (entity, doc_id))
                 entity_triples = fetch_dbpedia_triples(entity)
                 for (s, sl), (p, pl), (o, ol) in entity_triples:
                     triples.add((
