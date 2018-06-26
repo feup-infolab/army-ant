@@ -57,7 +57,6 @@ def fetch_dbpedia_entity_labels(dbpedia_class, offset=None, limit=None):
 def fetch_dbpedia_triples(entity_name, ignored_properties=None):
     if ignored_properties is None:
         ignored_properties = ['http://dbpedia.org/ontology/wikiPageWikiLink']
-        logger.warning("Using default list of ignored properties: %s" % ', '.join(ignored_properties))
 
     sparql = SPARQLWrapper(dbpedia_sparql_url)
 
@@ -87,7 +86,7 @@ def fetch_dbpedia_triples(entity_name, ignored_properties=None):
 
     triples = set([])
     for binding in data['results']['bindings']:
-        if binding['p']['value'] in ignored_properties: continue
+        if ignored_properties and binding['p']['value'] in ignored_properties: continue
 
         s = (binding['s']['value'], binding['sLabel']['value'])
         p = (binding['p']['value'], binding['pLabel']['value'])
