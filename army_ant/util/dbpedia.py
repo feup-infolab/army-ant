@@ -54,18 +54,15 @@ def fetch_dbpedia_entity_labels(dbpedia_class, offset=None, limit=None):
 
 @memory.cache
 def fetch_dbpedia_triples(entity_name, ignored_properties=None):
-    if entity_name.endswith('.'): return []
-
     if ignored_properties is None:
         ignored_properties = ['http://dbpedia.org/ontology/wikiPageWikiLink']
 
     sparql = SPARQLWrapper(dbpedia_sparql_url)
 
     query = '''
-            PREFIX dbr: <http://dbpedia.org/resource/>
             SELECT ?s ?sLabel ?p ?pLabel ?o ?oLabel
             WHERE {
-              VALUES ?s { dbr:%s }
+              VALUES ?s { <http://dbpedia.org/resource/%s> }
               ?s ?p ?o .
               ?s rdfs:label ?sLabel .
               ?p rdfs:label ?pLabel .
@@ -98,4 +95,5 @@ def fetch_dbpedia_triples(entity_name, ignored_properties=None):
     return list(triples)
 
 if __name__ == '__main__':
-    fetch_dbpedia_triples("Barack Obama")
+    print(fetch_dbpedia_triples("Mr."))
+    print(fetch_dbpedia_triples("Ames, Iowa"))
