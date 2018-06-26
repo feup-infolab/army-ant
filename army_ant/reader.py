@@ -418,30 +418,17 @@ class TRECWashingtonPostReader(MongoDBReader):
     def to_washington_post_author_entity(self, author_name):
         return Entity(author_name, 'https://www.washingtonpost.com/people/%s' % (author_name.lower().replace(' ', '-')))
 
-    def build_triples(self, text, include_co_occurrence=False, include_dbpedia=True):
-        assert include_co_occurrence or include_dbpedia, \
-            "At least one of include_co_occurrence or include_dbpedia must be True"
+    def build_triples(self, doc_id, text, include_ae_doc_profile=False, include_dbpedia=True):
+        assert include_ae_doc_profile or include_dbpedia, \
+            "At least one of include_ae_doc_profile or include_dbpedia must be True"
 
         triples = set([])
 
         entities = self.ac_ner.extract(text)
 
-        if include_co_occurrence:
-            for entity_a, entity_b in itertools.product(entities, entities):
-                if entity_a == entity_b: continue
-
-                if entity_a <= entity_b:
-                    triples.add((
-                        self.to_wikipedia_entity(entity_a),
-                        Entity('occurs_with'),
-                        self.to_wikipedia_entity(entity_b)
-                    ))
-                else:
-                    triples.add((
-                        self.to_wikipedia_entity(entity_b),
-                        Entity('occurs_with'),
-                        self.to_wikipedia_entity(entity_a)
-                    ))
+        if include_ae_doc_profile:
+            # TODO load Antonio Espejo's document profiles
+            raise ArmyAntException("Not implemented")
 
         if include_dbpedia:
             for entity in entities:
@@ -465,7 +452,7 @@ class TRECWashingtonPostReader(MongoDBReader):
             logger.debug("Reading %s" % doc['id'])
 
             text = self.to_plain_text(doc)
-            triples = self.build_triples(text)
+            triples = self.build_triples(doc['id'], text)
             triples.append((
                 Entity(doc['id'], doc['article_url']),
                 Entity('has_author'),
