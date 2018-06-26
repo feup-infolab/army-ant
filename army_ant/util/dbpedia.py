@@ -54,6 +54,8 @@ def fetch_dbpedia_entity_labels(dbpedia_class, offset=None, limit=None):
 
 @memory.cache
 def fetch_dbpedia_triples(entity_name, ignored_properties=None):
+    if entity_name.endswith('.'): return []
+
     if ignored_properties is None:
         ignored_properties = ['http://dbpedia.org/ontology/wikiPageWikiLink']
 
