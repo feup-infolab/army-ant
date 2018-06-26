@@ -399,8 +399,8 @@ class TRECWashingtonPostReader(MongoDBReader):
         super(TRECWashingtonPostReader, self).__init__(source_path)
 
         self.ac_ner = AhoCorasickEntityExtractor("/opt/army-ant/gazetteers/all.txt")
-        self.articles = self.db.articles.find({})
-        self.blog_posts = self.db.blog_posts.find({})
+        self.articles = self.db.articles.find({}, no_cursor_timeout=True)
+        self.blog_posts = self.db.blog_posts.find({}, no_cursor_timeout=True)
 
     def to_plain_text(self, doc):
         paragraphs = []
@@ -447,6 +447,7 @@ class TRECWashingtonPostReader(MongoDBReader):
         try:
             doc = next(self.articles)
         except StopIteration:
+            self.articles.close()
             doc = next(self.blog_posts)
 
         if doc:
@@ -467,6 +468,7 @@ class TRECWashingtonPostReader(MongoDBReader):
                 triples=triples,
                 metadata={'url': doc['article_url'], 'name': doc['title']})
 
+        self.blog_posts.close()
         self.client.close()
         raise StopIteration
 
@@ -505,7 +507,7 @@ class CSVReader(Reader):
 if __name__ == '__main__':
     config_logger(logging.DEBUG)
 
-    r = TRECWashingtonPostReader('wapo')
+    r = TRECWashingtonPostReader('wapo_sample')
     # c = 0
     for doc in r:
         print(doc)
