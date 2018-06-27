@@ -431,15 +431,14 @@ class TRECWashingtonPostReader(MongoDBReader):
             raise ArmyAntException("Not implemented")
 
         if include_dbpedia:
-            for entity in entities:
-                logger.debug("Fetching DBpedia triples for %s in %s" % (entity, doc_id))
-                entity_triples = fetch_dbpedia_triples(entity)
-                for (s, sl), (p, pl), (o, ol) in entity_triples:
-                    triples.add((
-                        Entity(sl, s),
-                        Entity(pl, p),
-                        Entity(ol, o)
-                    ))
+            logger.debug("Fetching DBpedia triples for %d entities in document %s" % (len(entities), doc_id))
+            dbpedia_triples = list(fetch_dbpedia_triples(entities))
+            for (s, sl), (p, pl), (o, ol) in dbpedia_triples:
+                triples.add((
+                    Entity(sl, s),
+                    Entity(pl, p),
+                    Entity(ol, o)
+                ))
 
         return list(triples)
 
