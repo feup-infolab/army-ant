@@ -1,5 +1,6 @@
 import json
 import logging
+import urllib.parse
 from enum import Enum
 
 from SPARQLWrapper import SPARQLWrapper, JSON
@@ -71,7 +72,7 @@ def fetch_dbpedia_triples(entity_name, ignored_properties=None):
                 && langMatches(lang(?pLabel), 'en')
                 && langMatches(lang(?oLabel), 'en'))
             }
-        ''' % entity_name.replace(' ', '_')
+        ''' % urllib.parse.quote_plus(entity_name.replace(' ', '_'))
 
     # print(query)
     sparql.setQuery(query)
