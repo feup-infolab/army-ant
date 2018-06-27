@@ -63,6 +63,7 @@ def fetch_dbpedia_triples(entity_labels, ignored_properties=None):
     while individually caching triples per entity and ensuring only a single HTTP
     request is done for the whole list of entities.
     """
+
     config = yaml.load(open('config.yaml'))
     db_config = config.get('defaults', {}).get('db', {})
     if db_config.get('type', 'mongo') != 'mongo': db_config = {}
