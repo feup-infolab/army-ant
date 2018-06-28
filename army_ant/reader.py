@@ -15,6 +15,8 @@ import shelve
 import shutil
 import tarfile
 import tempfile
+import time
+from urllib.error import URLError
 from urllib.parse import urljoin
 
 import requests
@@ -84,7 +86,8 @@ class Document(object):
             metadata = [str((k, v)) for k, v in self.metadata.items()]
 
         return '-----------------\nDOC ID:\n%s\n\nTITLE:\n%s\n\nTEXT (%d chars):\n%s\n%s\n\nTRIPLES (%d):\n%s\n%s\n\nMETADATA:\n%s\n-----------------\n' % (
-            self.doc_id, self.title, len(self.text), self.text[0:2000], '[...]' if len(self.text) > 2000 else '', len(triples), '\n\n'.join(triples[0:5]), '[...]' if len(triples) > 5 else '', '\n'.join(metadata))
+            self.doc_id, self.title, len(self.text), self.text[0:2000], '[...]' if len(self.text) > 2000 else '',
+            len(triples), '\n\n'.join(triples[0:5]), '[...]' if len(triples) > 5 else '', '\n'.join(metadata))
 
 
 class Entity(object):
@@ -432,7 +435,30 @@ class TRECWashingtonPostReader(MongoDBReader):
 
         if include_dbpedia:
             logger.debug("Fetching DBpedia triples for %d entities in document %s" % (len(entities), doc_id))
-            dbpedia_triples = list(fetch_dbpedia_triples(entities))
+
+            max_retries = 10
+
+            retries_left = max_retries
+            retry_wait = 0
+
+            while True:
+                try:
+                    dbpedia_triples = list(fetch_dbpedia_triples(entities))
+                    break
+                except URLError:
+                    if retries_left > 0:
+                        retry_wait += 10 * (max_retries - retries_left + 1)
+                        logger.warning(
+                            "Error retrieving triples for %d entities in document %s, retrying in %d seconds (%d retries left)" % (
+                                len(entities), doc_id, retry_wait, retries_left))
+                        retries_left -= 1
+                        time.sleep(retry_wait)
+                    else:
+                        logger.error("Could not retrieve triples for %d entities in document %s, giving up (returning %d cached triples)" % (
+                            len(entities), doc_id, len(triples)))
+                        dbpedia_triples = []
+                        break
+
             for (s, sl), (p, pl), (o, ol) in dbpedia_triples:
                 triples.add((
                     Entity(sl, s),
