@@ -114,28 +114,27 @@ class TRECEvaluator(FilesystemEvaluator):
         if not params_id in self.stats:
             self.stats[params_id] = {'ranking_params': ranking_params, 'query_time': {}}
 
-        for topic_id, query in topics:
-            if self.interrupt:
-                logger.warning("Evaluation task was interruped")
-                break
+        with open(os.path.join(o_results_path, '%s.res' % self.task.run_id), 'w') as f:
+            for topic_id, query in topics:
+                if self.interrupt:
+                    logger.warning("Evaluation task was interruped")
+                    break
 
-            if topic_filter and not topic_id in topic_filter:
-                logger.warning("Skipping topic '%s'" % topic_id)
-                continue
+                if topic_filter and not topic_id in topic_filter:
+                    logger.warning("Skipping topic '%s'" % topic_id)
+                    continue
 
-            logger.info("Obtaining results for query '%s' of topic '%s' using '%s' index at '%s'" % (
-                query, topic_id, self.task.index_type, self.task.index_location))
-            start_time = time.time()
-            engine_response = await self.index.search(query, 0, 10000, self.task.ranking_function, ranking_params)
-            end_time = int(round((time.time() - start_time) * 1000))
-            self.stats[params_id]['query_time'][topic_id] = end_time
+                logger.info("Obtaining results for query '%s' of topic '%s' using '%s' index at '%s'" % (
+                    query, topic_id, self.task.index_type, self.task.index_location))
+                start_time = time.time()
+                engine_response = await self.index.search(query, 0, 10000, self.task.ranking_function, ranking_params)
+                end_time = int(round((time.time() - start_time) * 1000))
+                self.stats[params_id]['query_time'][topic_id] = end_time
 
-            with open(os.path.join(o_results_path, '%s.csv' % topic_id), 'w', newline='') as f:
-                writer = csv.writer(f)
-                writer.writerow(['rank', 'doc_id'])
                 for i, result in zip(range(1, len(engine_response['results']) + 1), engine_response['results']):
                     doc_id = result['id']
-                    writer.writerow([i, doc_id])
+                    score = result['score']
+                    f.write("%s Q0 %s %s %s %s\n" % (topic_id, doc_id, i, score, self.task.run_id))
 
         self.stats[params_id]['total_query_time'] = sum([t for t in self.stats[params_id]['query_time'].values()])
         self.stats[params_id]['avg_query_time'] = (

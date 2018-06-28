@@ -132,7 +132,7 @@
       </tr>
       {% endif %}
 
-      {% if task.eval_format == "inex" %}
+      {% if task.eval_format in ("inex", "trec") %}
 
       <!-- START INEX METADATA -->
       <tr>
