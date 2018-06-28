@@ -17,6 +17,54 @@ defaults:
     memory: 5120
 
 engines:
+  lucene-wapo-sample:
+    name: WaPo Sample - Lucene
+    db:
+      name: aa_wapo
+    index:
+      type: lucene
+      location: /opt/army-ant/indexes/wapo-sample/lucene
+    ranking:
+      default:
+        id: tf_idf
+      functions:
+        tf_idf:
+          name: TF-IDF
+        bm25:
+          name: BM25
+          params:
+            k1: [1, 1.2, 1.8]
+            b: [0.5, 0.75, 1]
+        dfr:
+          name: DFR
+          params:
+            BM: [BE, G, P, D, In, Ine, IF]
+            AE: [L, B, Disabled]
+            N: [H1, H2, H3, Z, Disabled]
+
+  hgoe-dbpedia-wapo-sample:
+    name: WaPo Sample - Hypergraph-of-Entity (DBpedia)
+    db:
+      name: aa_wapo
+    index:
+      type: hgoe
+      location: /opt/army-ant/indexes/wapo-sample/hgoe-dbpedia
+      preload: false
+    ranking:
+      default:
+        id: random_walk
+        params:
+          l: 3
+          r: 10
+      functions:
+        jaccard:
+          name: Jaccard Score
+        random_walk:
+          name: Random Walk Score
+          params:
+            l: [1, 2, 3, 4, 5, 6]
+            r: [10, 100, 250, 500, 750, 1000]
+
   gow-wikipedia:
     name: Wikipedia Data - Graph of Word
     message: >-

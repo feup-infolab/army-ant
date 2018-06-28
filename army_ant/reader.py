@@ -50,6 +50,12 @@ class Reader(object):
             return LivingLabsReader(source_path, limit)
         elif source_reader == 'wapo':
             return TRECWashingtonPostReader(source_path)
+        elif source_reader == 'wapo_doc_profile':
+            return TRECWashingtonPostReader(source_path, include_ae_doc_profile=True)
+        elif source_reader == 'wapo_dbpedia':
+            return TRECWashingtonPostReader(source_path, include_dbpedia=True)
+        elif source_reader == 'wapo_doc_profile_dbpedia':
+            return TRECWashingtonPostReader(source_path, include_ae_doc_profile=True, include_dbpedia=True)
         elif source_reader == 'csv':
             return CSVReader(source_path)
         # elif source_reader == 'gremlin':
@@ -399,12 +405,14 @@ class MongoDBReader(Reader):
 
 
 class TRECWashingtonPostReader(MongoDBReader):
-    def __init__(self, source_path):
+    def __init__(self, source_path, include_ae_doc_profile=False, include_dbpedia=False):
         super(TRECWashingtonPostReader, self).__init__(source_path)
 
         self.ac_ner = AhoCorasickEntityExtractor("/opt/army-ant/gazetteers/all.txt")
         self.articles = self.db.articles.find({}, no_cursor_timeout=True)
         self.blog_posts = self.db.blog_posts.find({}, no_cursor_timeout=True)
+        self.include_ae_doc_profile = include_ae_doc_profile
+        self.include_dbpedia = include_dbpedia
 
     def to_plain_text(self, doc):
         paragraphs = []
@@ -422,19 +430,18 @@ class TRECWashingtonPostReader(MongoDBReader):
     def to_washington_post_author_entity(self, author_name):
         return Entity(author_name, 'https://www.washingtonpost.com/people/%s' % (author_name.lower().replace(' ', '-')))
 
-    def build_triples(self, doc_id, text, include_ae_doc_profile=False, include_dbpedia=True):
-        assert include_ae_doc_profile or include_dbpedia, \
-            "At least one of include_ae_doc_profile or include_dbpedia must be True"
+    def build_triples(self, doc_id, text):
+        if not self.include_ae_doc_profile and not self.include_ae_doc_profile: return []
 
         triples = set([])
 
         entities = self.ac_ner.extract(text)
 
-        if include_ae_doc_profile:
+        if self.include_ae_doc_profile:
             # TODO load Antonio Espejo's document profiles
             raise ArmyAntException("Not implemented")
 
-        if include_dbpedia:
+        if self.include_dbpedia:
             logger.debug("Fetching DBpedia triples for %d entities in document %s" % (len(entities), doc_id))
 
             max_retries = 10

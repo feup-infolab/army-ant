@@ -6,6 +6,7 @@
     <div class="column">
       <select class="form-select select-sm" id="eval-format" name="eval-format">
         <option value="inex">INEX</option>
+        <option value="trec">TREC</option>
         <option value="ll-api">Living Labs API</option>
       </select>
     </div>
@@ -14,11 +15,12 @@
       <label class="form-label label-sm" for="run-id">Run ID</label>
     </div>
     <div class="column">
-      <input class="form-input input-sm" type="text" id="run-id" name="run-id" value="" placeholder="Dataset - retrieval model - ranking function">
+      <input class="form-input input-sm" type="text" id="run-id" name="run-id" value=""
+             placeholder="Dataset - retrieval model - ranking function">
     </div>
   </div>
 
-  <div id="inex-block" class="form-group dynamic-block">
+  <div class="form-group dynamic-block inex-block trec-block">
     <div class="col-1">
       <label class="form-label label-sm" for="topics">Topics</label>
     </div>
@@ -34,19 +36,21 @@
     </div>
   </div>
 
-  <div id="ll-api-block" class="form-group dynamic-block d-hide">
+  <div class="form-group dynamic-block ll-api-block d-hide">
     <div class="col-1">
       <label class="form-label label-sm" for="base-url">Base URL</label>
     </div>
     <div class="column">
-      <input class="form-input input-sm" type="text" id="base-url" name="base-url" value="" placeholder="http://api.trec-open-search.org">
+      <input class="form-input input-sm" type="text" id="base-url" name="base-url" value=""
+             placeholder="http://api.trec-open-search.org">
     </div>
 
     <div class="col-1">
       <label class="form-label label-sm" for="api-key">API Key</label>
     </div>
     <div class="column">
-      <input class="form-input input-sm" type="text" id="api-key" name="api-key" value="" placeholder="JDJ43JH43JH43JHH-JDSJH4J3H4J0JHJ3">
+      <input class="form-input input-sm" type="text" id="api-key" name="api-key" value=""
+             placeholder="JDJ43JH43JH43JHH-JDSJH4J3H4J0JHJ3">
     </div>
   </div>
 
@@ -65,10 +69,10 @@
 <script type="text/javascript">
   (function() {
     $(document).on('change', '#eval-format', function(e) {
-      var evalFormat = $(this).val();
+      let evalFormat = $(this).val();
       $('.dynamic-block').addClass('d-hide');
-      $('#' + evalFormat + '-block').removeClass('d-hide');
-      if (evalFormat == 'll-api') {
+      $('.' + evalFormat + '-block').removeClass('d-hide');
+      if (evalFormat === 'll-api') {
         $('#ranking-params select')
           .css('height', null)
           .removeAttr('multiple');

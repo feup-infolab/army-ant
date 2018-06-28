@@ -34,15 +34,22 @@
       <!-- START DETAIL BUTTONS -->
       <div class="column col-2 text-right">
         <div class="btn-group">
-          {% if task.status == 3 and task.results %}
+          {% if task.status == 3 %}
 
           <a class="btn btn-sm tooltip" data-tooltip="Download ZIP file with evaluation details."
             href="{{ app.router['evaluation_results_archive'].url_for().with_query(task_id=task._id) }}">
             <i class="icon icon-download"></i>
           </a>
+
+          {% if task.results %}
           <button class="expand-btn btn btn-sm tooltip" data-tooltip="View computed evaluation metrics.">
             <i class="icon icon-plus"></i>
           </button>
+          {% else %}
+          <button class="btn btn-sm disabled tooltip" data-tooltip="View evaluation results, when available.">
+            <i class="icon icon-plus"></i>
+          </button>
+          {% endif %}
 
           {% elif task.status == 4 %}
 

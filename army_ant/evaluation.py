@@ -13,6 +13,7 @@ import logging
 import math
 import os
 import pickle
+import re
 import shutil
 import tempfile
 import time
@@ -49,6 +50,8 @@ class Evaluator(object):
     def factory(task, eval_location):
         if task.eval_format == 'inex':
             return INEXEvaluator(task, eval_location)
+        if task.eval_format == 'trec':
+            return TRECEvaluator(task, eval_location)
         elif task.eval_format == 'll-api':
             return LivingLabsEvaluator(task, eval_location)
         else:
@@ -85,6 +88,73 @@ class FilesystemEvaluator(Evaluator):
     def remove_output(self):
         shutil.rmtree(self.o_results_path, ignore_errors=True)
         shutil.rmtree(self.o_assessments_path, ignore_errors=True)
+
+
+class TRECEvaluator(FilesystemEvaluator):
+    def __init__(self, task, eval_location):
+        super().__init__(task, eval_location)
+
+        self.loop = asyncio.get_event_loop()
+        self.index = Index.open(self.task.index_location, self.task.index_type, self.loop)
+
+    async def get_topic_results(self, ranking_params=None, topic_filter=None):
+        data = open(self.task.topics_path, 'r').read()
+
+        topics = re.findall(
+            r'<top>.*?<num>.*?Number:.*?(\d+).*?<title>.*?([^<]+).*?</top>',
+            data, re.MULTILINE | re.DOTALL)
+
+        topics = [(topic_id.strip(), query.strip()) for topic_id, query in topics]
+
+        params_id = ranking_params_to_params_id(ranking_params)
+
+        o_results_path = os.path.join(self.o_results_path, params_id)
+        if not os.path.exists(o_results_path): os.makedirs(o_results_path)
+
+        if not params_id in self.stats:
+            self.stats[params_id] = {'ranking_params': ranking_params, 'query_time': {}}
+
+        for topic_id, query in topics:
+            if self.interrupt:
+                logger.warning("Evaluation task was interruped")
+                break
+
+            if topic_filter and not topic_id in topic_filter:
+                logger.warning("Skipping topic '%s'" % topic_id)
+                continue
+
+            logger.info("Obtaining results for query '%s' of topic '%s' using '%s' index at '%s'" % (
+                query, topic_id, self.task.index_type, self.task.index_location))
+            start_time = time.time()
+            engine_response = await self.index.search(query, 0, 10000, self.task.ranking_function, ranking_params)
+            end_time = int(round((time.time() - start_time) * 1000))
+            self.stats[params_id]['query_time'][topic_id] = end_time
+
+            with open(os.path.join(o_results_path, '%s.csv' % topic_id), 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(['rank', 'doc_id'])
+                for i, result in zip(range(1, len(engine_response['results']) + 1), engine_response['results']):
+                    doc_id = result['id']
+                    writer.writerow([i, doc_id])
+
+        self.stats[params_id]['total_query_time'] = sum([t for t in self.stats[params_id]['query_time'].values()])
+        self.stats[params_id]['avg_query_time'] = (
+                self.stats[params_id]['total_query_time'] / len(self.stats[params_id]['query_time']))
+
+    async def run_with_params(self, ranking_params=None):
+        await self.get_topic_results(ranking_params=ranking_params)
+
+    async def run(self):
+        if self.task.ranking_params:
+            sorted_ranking_params = OrderedDict(sorted(self.task.ranking_params.items(), key=lambda d: d[0]))
+            keys = list(sorted_ranking_params.keys())
+            values = list(sorted_ranking_params.values())
+
+            for param_values in itertools.product(*values):
+                ranking_params = dict(zip(keys, param_values))
+                await self.run_with_params(ranking_params)
+        else:
+            await self.run_with_params()
 
 
 class INEXEvaluator(FilesystemEvaluator):
@@ -540,8 +610,8 @@ class EvaluationTask(object):
         self.run_id = run_id
         self.status = EvaluationTaskStatus(status)
         self.time = time
-        if results: self.results = results
-        if stats: self.stats = stats
+        self.results = results
+        self.stats = stats
         if _id: self._id = str(_id)
 
     def __repr__(self):
@@ -744,26 +814,28 @@ class EvaluationTaskManager(object):
 
             sorted_ranking_params = sorted(task.ranking_params.keys()) if task.ranking_params else []
 
-            with open(os.path.join(out_dir, "eval_metrics.csv"), 'w') as f:
-                writer = csv.writer(f)
-                writer.writerow(sorted_ranking_params + ['metric', 'value'])
-                for params_id, results in task.results.items():
-                    for metric, value in results['metrics'].items():
-                        params = OrderedDict(sorted(
-                            params_id_to_ranking_params(params_id),
-                            key=lambda d: d[0]))
-                        writer.writerow(list(params.values()) + [metric, value])
-
-            with open(os.path.join(out_dir, "eval_stats.csv"), 'w') as f:
-                writer = csv.writer(f)
-                writer.writerow(sorted_ranking_params + ['stat', 'value'])
-                for params_id, stats in task.stats.items():
-                    for stat, value in stats.items():
-                        if type(value) is not dict and type(value) is not list:
+            if task.results:
+                with open(os.path.join(out_dir, "eval_metrics.csv"), 'w') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(sorted_ranking_params + ['metric', 'value'])
+                    for params_id, results in task.results.items():
+                        for metric, value in results['metrics'].items():
                             params = OrderedDict(sorted(
                                 params_id_to_ranking_params(params_id),
                                 key=lambda d: d[0]))
-                            writer.writerow(list(params.values()) + [stat, value])
+                            writer.writerow(list(params.values()) + [metric, value])
+
+            if task.stats:
+                with open(os.path.join(out_dir, "eval_stats.csv"), 'w') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(sorted_ranking_params + ['stat', 'value'])
+                    for params_id, stats in task.stats.items():
+                        for stat, value in stats.items():
+                            if type(value) is not dict and type(value) is not list:
+                                params = OrderedDict(sorted(
+                                    params_id_to_ranking_params(params_id),
+                                    key=lambda d: d[0]))
+                                writer.writerow(list(params.values()) + [stat, value])
 
             archive_filename = os.path.join(tmp_dir, '%s.zip' % task_id)
             with zipfile.ZipFile(archive_filename, 'w') as zipf:
@@ -783,48 +855,16 @@ class EvaluationTaskManager(object):
             headers = {'Content-Type': 'application/json'}
             r = requests.get(url, headers=headers, auth=auth)
             return r.json()
-            # return {
-            # "outcomes": [
-            # {
-            # "impressions": 181,
-            # "losses": 1,
-            # "outcome": 0.5,
-            # "qid": "all",
-            # "site_id": "ssoar",
-            # "test_period": {
-            # "end": "Sat, 15 Jul 2017 00:00:00 -0000",
-            # "name": "TREC OpenSearch 2017 trial round",
-            # "start": "Sat, 01 Jul 2017 00:00:00 -0000"
-            # },
-            # "ties": 179,
-            # "type": "test",
-            # "wins": 1
-            # },
-            # {
-            # "impressions": 59,
-            # "losses": 13,
-            # "outcome": 0.23529411764705882,
-            # "qid": "all",
-            # "site_id": "ssoar",
-            # "test_period": None,
-            # "ties": 42,
-            # "type": "train",
-            # "wins": 4
-            # }
-            # ]
-            # }
 
         return {}
-
-        HTTPBasicAuth
-        return {'base_url': task.base_url, 'api_key': task.api_key}
 
     def clean_spool(self):
         valid_spool_filenames = set([])
         for task in self.db['evaluation_tasks'].find():
-            if task['eval_format'] == 'inex':
+            if task['eval_format'] in ('inex', 'trec'):
                 valid_spool_filenames.add(os.path.basename(task['topics_path']))
-                valid_spool_filenames.add(os.path.basename(task['assessments_path']))
+                if 'assessment_path' in task:
+                    valid_spool_filenames.add(os.path.basename(task['assessments_path']))
 
         for filename in os.listdir(self.spool_dirname):
             path = os.path.join(self.spool_dirname, filename)
@@ -840,8 +880,8 @@ class EvaluationTaskManager(object):
 
         for filename in os.listdir(self.results_dirname):
             path = os.path.join(self.results_dirname, filename)
-            if not filename in valid_output_dirnames and len(
-                    filename) == 24:  # 24 is the MongoDB ObjectId default length
+            # 24 is the MongoDB ObjectId default length
+            if not filename in valid_output_dirnames and len(filename) == 24:
                 logger.warning("Removing unreferenced result directory '%s'" % path)
                 shutil.rmtree(path)
 
@@ -857,27 +897,31 @@ class EvaluationTaskManager(object):
             self.clean_spool()
             self.clean_results_and_assessments()
             while True:
-                task = self.get_waiting_task(task_id=task_id)
-                if task:
-                    try:
-                        logger.info("Running evaluation task %s" % task._id)
-                        if task.eval_format == 'll-api':
-                            e = Evaluator.factory(task, '%s::%s::%s' % (task.base_url, task.api_key, task.run_id))
-                        else:
-                            e = Evaluator.factory(task, self.eval_location)
+                try:
+                    task = self.get_waiting_task(task_id=task_id)
+                    if task:
+                        try:
+                            logger.info("Running evaluation task %s" % task._id)
+                            if task.eval_format == 'll-api':
+                                e = Evaluator.factory(task, '%s::%s::%s' % (task.base_url, task.api_key, task.run_id))
+                            else:
+                                e = Evaluator.factory(task, self.eval_location)
 
-                        self.running = e
-                        status = await e.run()
+                            self.running = e
+                            status = await e.run()
 
-                        if task.eval_format == 'inex':
-                            self.save(task, e.results, e.stats)
-                            self.running = None
-                        elif task.eval_format == 'll-api':
-                            self.set_status(task, status)
-                    except ArmyAntException as e:
-                        logger.error("Could not run evaluation task %s: %s" % (task._id, str(e)))
+                            if task.eval_format in ('inex', 'trec'):
+                                self.save(task, e.results, e.stats)
+                                self.running = None
+                            elif task.eval_format == 'll-api':
+                                self.set_status(task, status)
+                        except ArmyAntException as e:
+                            logger.error("Could not run evaluation task %s: %s" % (task._id, str(e)))
 
-                if task_id: break
-                await asyncio.sleep(5)
+                    if task_id: break
+                    await asyncio.sleep(5)
+                except Exception as e:
+                    if type(e) is asyncio.CancelledError: raise
+                    logger.exception(e)
         except asyncio.CancelledError:
             self.reset_running_tasks()
