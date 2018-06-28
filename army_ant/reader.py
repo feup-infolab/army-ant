@@ -16,11 +16,12 @@ import shutil
 import tarfile
 import tempfile
 import time
-from urllib.error import URLError
+from urllib.error import URLError, HTTPError
 from urllib.parse import urljoin
 
 import requests
 import requests_cache
+from SPARQLWrapper.SPARQLExceptions import EndPointNotFound
 from bs4 import BeautifulSoup, SoupStrainer
 from lxml import etree
 from pymongo import MongoClient
@@ -445,7 +446,7 @@ class TRECWashingtonPostReader(MongoDBReader):
                 try:
                     dbpedia_triples = list(fetch_dbpedia_triples(entities))
                     break
-                except URLError:
+                except (URLError, HTTPError, EndPointNotFound):
                     if retries_left > 0:
                         retry_wait += 10 * (max_retries - retries_left + 1)
                         logger.warning(
