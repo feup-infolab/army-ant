@@ -610,8 +610,8 @@ class EvaluationTask(object):
         self.run_id = run_id
         self.status = EvaluationTaskStatus(status)
         self.time = time
-        self.results = results
-        self.stats = stats
+        if results: self.results = results
+        if stats: self.stats = stats
         if _id: self._id = str(_id)
 
     def __repr__(self):
@@ -814,7 +814,7 @@ class EvaluationTaskManager(object):
 
             sorted_ranking_params = sorted(task.ranking_params.keys()) if task.ranking_params else []
 
-            if task.results:
+            if hasattr(task, 'results'):
                 with open(os.path.join(out_dir, "eval_metrics.csv"), 'w') as f:
                     writer = csv.writer(f)
                     writer.writerow(sorted_ranking_params + ['metric', 'value'])
@@ -825,7 +825,7 @@ class EvaluationTaskManager(object):
                                 key=lambda d: d[0]))
                             writer.writerow(list(params.values()) + [metric, value])
 
-            if task.stats:
+            if hasattr(task, 'stats'):
                 with open(os.path.join(out_dir, "eval_stats.csv"), 'w') as f:
                     writer = csv.writer(f)
                     writer.writerow(sorted_ranking_params + ['stat', 'value'])
