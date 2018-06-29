@@ -85,7 +85,7 @@ def fetch_dbpedia_triples(entity_labels, ignored_properties=None):
     cached_count = 0
     for entity_label in entity_labels:
         cached_entity = cache.find_one({ 'label': entity_label })
-        if cached_entity:
+        if cached_entity and 'triples' in cached_entity and len(cached_entity['triples']) > 0:
             s = (cached_entity['uri'], cached_entity['label'])
             for triple in cached_entity['triples']:
                 p = (triple['predicate']['uri'], triple['predicate']['label'])
