@@ -453,7 +453,7 @@ class TRECWashingtonPostReader(MongoDBReader):
                 try:
                     dbpedia_triples = list(fetch_dbpedia_triples(entities))
                     break
-                except (URLError, HTTPError, EndPointNotFound):
+                except:
                     if retries_left > 0:
                         retry_wait += 10 * (max_retries - retries_left + 1)
                         logger.warning(
