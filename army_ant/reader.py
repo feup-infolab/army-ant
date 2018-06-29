@@ -456,13 +456,13 @@ class TRECWashingtonPostReader(MongoDBReader):
                 except:
                     if retries_left > 0:
                         retry_wait += 10 * (max_retries - retries_left + 1)
-                        logger.warning(
+                        logger.exception(
                             "Error retrieving triples for %d entities in document %s, retrying in %d seconds (%d retries left)" % (
                                 len(entities), doc_id, retry_wait, retries_left))
                         retries_left -= 1
                         time.sleep(retry_wait)
                     else:
-                        logger.error("Could not retrieve triples for %d entities in document %s, giving up (returning %d cached triples)" % (
+                        logger.exception("Could not retrieve triples for %d entities in document %s, giving up (returning %d cached triples)" % (
                             len(entities), doc_id, len(triples)))
                         dbpedia_triples = []
                         break
