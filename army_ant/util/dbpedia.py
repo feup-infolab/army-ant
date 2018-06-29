@@ -82,6 +82,7 @@ def fetch_dbpedia_triples(entity_labels, ignored_properties=None):
     triples = set([])
 
     entity_uris = set([])
+    cached_count = 0
     for entity_label in entity_labels:
         cached_entity = cache.find_one({ 'label': entity_label })
         if cached_entity:
@@ -90,8 +91,11 @@ def fetch_dbpedia_triples(entity_labels, ignored_properties=None):
                 p = (triple['predicate']['uri'], triple['predicate']['label'])
                 o = (triple['object']['uri'], triple['object']['label'])
                 triples.add((s, p, o))
+            cached_count += 1
         else:
             entity_uris.add('<http://dbpedia.org/resource/%s>' % urllib.parse.quote_plus(entity_label.replace(' ', '_')))
+
+    logger.debug("%d out of %d entities with cached triples" % (cached_count, len(entity_labels)))
 
     if len(entity_uris) == 0: return triples
 
