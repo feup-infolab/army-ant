@@ -431,7 +431,7 @@ class TRECWashingtonPostReader(MongoDBReader):
         return Entity(author_name, 'https://www.washingtonpost.com/people/%s' % (author_name.lower().replace(' ', '-')))
 
     def build_triples(self, doc_id, text):
-        if not self.include_ae_doc_profile and not self.include_ae_doc_profile: return []
+        if not self.include_ae_doc_profile and not self.include_dbpedia: return []
 
         triples = set([])
 

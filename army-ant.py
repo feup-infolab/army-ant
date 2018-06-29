@@ -33,7 +33,7 @@ from army_ant.util.wikidata import fetch_wikidata_entity_labels, get_entities, W
     fetch_wikidata_entity_subclasses, filter_entities_by_class, get_label_for_entity_uris, \
     get_wikidata_dump_entity_labels
 
-config_logger()
+config_logger(logging.DEBUG)
 
 logger = logging.getLogger(__name__)
 
