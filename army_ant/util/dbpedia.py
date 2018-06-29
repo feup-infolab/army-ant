@@ -149,6 +149,12 @@ def fetch_dbpedia_triples(entity_labels, ignored_properties=None):
             'triples': v
         })
 
+    for entity_label in set(entity_labels).difference(cache_data.keys()):
+        cache.insert({
+            'label': entity_label,
+            'triples': []
+        })
+
     return list(triples)
 
 if __name__ == '__main__':
