@@ -21,6 +21,10 @@ crashlytics-build.properties
 
 # Visual Studio Code
 .vscode/
+.classpath
+.factorypath
+.project
+.settings/
 
 # R
 .Rhistory

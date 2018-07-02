@@ -414,23 +414,17 @@ class TRECWashingtonPostReader(MongoDBReader):
         self.include_ae_doc_profile = include_ae_doc_profile
         self.include_dbpedia = include_dbpedia
 
-    def to_plain_text(self, doc):
+    def to_plain_text(self, doc, limit=None):
         paragraphs = []
 
         for content in doc['contents']:
             if content and 'subtype' in content and content['subtype'] == 'paragraph':
                 text = re.sub(r'<.*?>', '', content['content'])
                 paragraphs.append(text)
+                if limit and len(paragraphs) >= limit:
+                    break
 
         return '\n\n'.join(paragraphs)
-
-    def first_paragraph(self, doc):
-        paragraphs = []
-
-        for content in doc['contents']:
-            if content and 'subtype' in content and content['subtype'] == 'paragraph':
-                text = re.sub(r'<.*?>', '', content['content'])
-                return text
 
     def to_wikipedia_entity(self, entity):
         return Entity(entity, "http://en.wikipedia.org/wiki/%s" % entity.replace(' ', '_'))
@@ -438,11 +432,19 @@ class TRECWashingtonPostReader(MongoDBReader):
     def to_washington_post_author_entity(self, author_name):
         return Entity(author_name, 'https://www.washingtonpost.com/people/%s' % (author_name.lower().replace(' ', '-')))
 
-    def build_triples(self, doc_id, text):
-        if not self.include_ae_doc_profile and not self.include_dbpedia: return []
-
+    def build_triples(self, doc):
         triples = set([])
 
+        triples.add((
+            Entity(doc['id'], doc['article_url']),
+            Entity('has_author'),
+            self.to_washington_post_author_entity(doc['author'])
+        ))
+
+        if not self.include_ae_doc_profile and not self.include_dbpedia: return list(triples)
+
+        doc_id = doc['id']
+        text = self.to_plain_text(doc, limit=3)
         entities = self.ac_ner.extract(text)
 
         if self.include_ae_doc_profile:
@@ -495,12 +497,7 @@ class TRECWashingtonPostReader(MongoDBReader):
             logger.debug("Reading %s" % doc['id'])
 
             text = self.to_plain_text(doc)
-            triples = self.build_triples(doc['id'], text)
-            triples.append((
-                Entity(doc['id'], doc['article_url']),
-                Entity('has_author'),
-                self.to_washington_post_author_entity(doc['author'])
-            ))
+            triples = self.build_triples(doc)
 
             return Document(
                 doc_id=doc['id'],
