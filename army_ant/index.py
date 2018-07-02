@@ -31,6 +31,11 @@ logger = logging.getLogger(__name__)
 class Index(object):
     PRELOADED = {}
 
+    class RetrievalTask(Enum):
+        document_retrieval = 'DOCUMENT_RETRIEVAL'
+        entity_retrieval = 'ENTITY_RETRIEVAL'
+        term_retrieval = 'TERM_RETRIEVAL'
+
     @staticmethod
     def __preloaded_key__(index_location, index_type):
         return '%s::%s' % (index_location, index_type)
@@ -742,11 +747,6 @@ class HypergraphOfEntity(JavaIndex):
         weight = 'WEIGHT'
         prune = 'PRUNE'
 
-    class Task(Enum):
-        document_retrieval = 'DOCUMENT_RETRIEVAL'
-        entity_retrieval = 'ENTITY_RETRIEVAL'
-        term_retrieval = 'TERM_RETRIEVAL'
-
     class RankingFunction(Enum):
         entity_weight = 'ENTITY_WEIGHT'
         jaccard = 'JACCARD_SCORE'
@@ -843,13 +843,14 @@ class HypergraphOfEntity(JavaIndex):
             ranking_function = HypergraphOfEntity.RankingFunction['random_walk']
 
         if task:
-            try:
-                task = HypergraphOfEntity.Task[task]
-            except (JavaException, KeyError) as e:
-                logger.error("Could not use '%s' as the ranking function" % ranking_function)
-                task = HypergraphOfEntity.Task['document_retrieval']
+            if not type(task) is Index.RetrievalTask:
+                try:
+                    task = Index.RetrievalTask[task]
+                except (JavaException, KeyError) as e:
+                    logger.error("Could not use '%s' as the ranking function" % ranking_function)
+                    task = Index.RetrievalTask['document_retrieval']
         else:
-            task = HypergraphOfEntity.Task['document_retrieval']
+            task = Index.RetrievalTask['document_retrieval']
 
         logger.info("Using '%s' as ranking function" % ranking_function.value)
         ranking_function = HypergraphOfEntity.JRankingFunction.valueOf(ranking_function.value)

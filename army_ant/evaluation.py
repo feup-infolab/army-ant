@@ -114,7 +114,7 @@ class TRECEvaluator(FilesystemEvaluator):
         if not params_id in self.stats:
             self.stats[params_id] = {'ranking_params': ranking_params, 'query_time': {}}
 
-        with open(os.path.join(o_results_path, '%s.res' % self.task.run_id), 'w') as f:
+        with open(os.path.join(o_results_path, '%s.res' % self.task.run_id), 'w') as trec_f:
             for topic_id, query in topics:
                 if self.interrupt:
                     logger.warning("Evaluation task was interruped")
@@ -127,14 +127,19 @@ class TRECEvaluator(FilesystemEvaluator):
                 logger.info("Obtaining results for query '%s' of topic '%s' using '%s' index at '%s'" % (
                     query, topic_id, self.task.index_type, self.task.index_location))
                 start_time = time.time()
-                engine_response = await self.index.search(query, 0, 10000, self.task.ranking_function, ranking_params)
+                engine_response = await self.index.search(
+                    query, 0, 10000, Index.RetrievalTask.document_retrieval, self.task.ranking_function, ranking_params)
                 end_time = int(round((time.time() - start_time) * 1000))
                 self.stats[params_id]['query_time'][topic_id] = end_time
 
-                for i, result in zip(range(1, len(engine_response['results']) + 1), engine_response['results']):
-                    doc_id = result['id']
-                    score = result['score']
-                    f.write("%s Q0 %s %s %s %s\n" % (topic_id, doc_id, i, score, self.task.run_id))
+                with open(os.path.join(o_results_path, '%s.csv' % topic_id), 'w', newline='') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(['rank', 'score', 'doc_id']) # TODO add relevant column from qrels
+                    for i, result in zip(range(1, len(engine_response['results']) + 1), engine_response['results']):
+                        doc_id = result['id']
+                        score = result['score']
+                        trec_f.write("%s Q0 %s %s %s %s\n" % (topic_id, doc_id, i, score, self.task.run_id))
+                        writer.writerow([i, score, doc_id])
 
         self.stats[params_id]['total_query_time'] = sum([t for t in self.stats[params_id]['query_time'].values()])
         self.stats[params_id]['avg_query_time'] = (
@@ -212,18 +217,20 @@ class INEXEvaluator(FilesystemEvaluator):
             logger.info("Obtaining results for query '%s' of topic '%s' using '%s' index at '%s'" % (
                 query, topic_id, self.task.index_type, self.task.index_location))
             start_time = time.time()
-            engine_response = await self.index.search(query, 0, 10000, self.task.ranking_function, ranking_params)
+            engine_response = await self.index.search(
+                query, 0, 10000, Index.RetrievalTask.document_retrieval, self.task.ranking_function, ranking_params)
             end_time = int(round((time.time() - start_time) * 1000))
             self.stats[params_id]['query_time'][topic_id] = end_time
 
             with open(os.path.join(o_results_path, '%s.csv' % topic_id), 'w', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow(['rank', 'doc_id', 'relevant'])
+                writer.writerow(['rank', 'score', 'doc_id', 'relevant'])
                 for i, result in zip(range(1, len(engine_response['results']) + 1), engine_response['results']):
-                    doc_id = result['docID']
+                    doc_id = result['id']
+                    score = result['score']
                     relevant = topic_doc_judgements[topic_id][doc_id] > 0 if doc_id in topic_doc_judgements[
                         topic_id] else False
-                    writer.writerow([i, doc_id, relevant])
+                    writer.writerow([i, score, doc_id, relevant])
 
         self.stats[params_id]['total_query_time'] = sum([t for t in self.stats[params_id]['query_time'].values()])
         self.stats[params_id]['avg_query_time'] = (
@@ -566,7 +573,8 @@ class LivingLabsEvaluator(Evaluator):
                         results = pickle.load(f)
                 else:
                     engine_response = await self.index.search(
-                        query['qstr'], 0, 10000, self.task.ranking_function, self.task.ranking_params)
+                        query['qstr'], 0, 10000, Index.RetrievalTask.document_retrieval,
+                        self.task.ranking_function, self.task.ranking_params)
                     results = engine_response['results']
                     with open(pickle_path, 'wb') as f:
                         pickle.dump(results, f)

@@ -424,6 +424,14 @@ class TRECWashingtonPostReader(MongoDBReader):
 
         return '\n\n'.join(paragraphs)
 
+    def first_paragraph(self, doc):
+        paragraphs = []
+
+        for content in doc['contents']:
+            if content and 'subtype' in content and content['subtype'] == 'paragraph':
+                text = re.sub(r'<.*?>', '', content['content'])
+                return text
+
     def to_wikipedia_entity(self, entity):
         return Entity(entity, "http://en.wikipedia.org/wiki/%s" % entity.replace(' ', '_'))
 
