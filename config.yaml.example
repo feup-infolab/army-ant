@@ -15,6 +15,7 @@ defaults:
     stanford-ner: /opt/stanford-ner-2015-12-09
   jvm:
     memory: 5120
+    other_args: -XX:+UseConcMarkSweepGC
 
 engines:
   lucene-wapo-sample:

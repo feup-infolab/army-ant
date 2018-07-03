@@ -16,14 +16,16 @@ from enum import Enum
 
 import jpype
 import psycopg2
+import yaml
 from aiogremlin import Cluster
 from aiohttp.client_exceptions import ClientConnectorError
 from jpype import *
 
 from army_ant.exception import ArmyAntException
 from army_ant.reader import Document, Entity
-from army_ant.util.text import analyze
+from army_ant.setup import config_logger
 from army_ant.util import load_gremlin_script, load_sql_script
+from army_ant.util.text import analyze
 
 logger = logging.getLogger(__name__)
 
@@ -721,16 +723,25 @@ class JavaIndex(Index):
     CLASSPATH = 'external/java-impl/target/java-impl-%s-jar-with-dependencies.jar' % VERSION
     INSTANCES = {}
 
-    config = configparser.ConfigParser()
-    config.read('server.cfg')
-    MEMORY_MB = int(config['DEFAULT'].get('jvm_memory', '5120'))
+    config = yaml.load(open('config.yaml'))
+    jvm_config = config['defaults'].get('jvm', {})
+    MEMORY_MB = int(jvm_config.get('memory', '5120'))
+    OTHER_ARGS = jvm_config.get('other_args')
+
+    if OTHER_ARGS and len(OTHER_ARGS) > 0:
+        args_message = 'the following additional arguments: %s' % OTHER_ARGS
+    else:
+        args_message = 'no additional arguments'
+
+    logger.info("Starting JVM with %s MB of heap and %s" % (MEMORY_MB, args_message))
 
     if not isJVMStarted():
         startJVM(
             jpype.getDefaultJVMPath(),
             '-Djava.class.path=%s' % CLASSPATH,
             '-Xms%dm' % MEMORY_MB,
-            '-Xmx%dm' % MEMORY_MB)
+            '-Xmx%dm' % MEMORY_MB,
+            OTHER_ARGS)
 
     signal.signal(signal.SIGINT, handler)
 

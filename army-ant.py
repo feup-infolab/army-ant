@@ -5,8 +5,12 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import asyncio
 import logging
+from army_ant.setup import config_logger
+
+config_logger(logging.DEBUG)
+
+import asyncio
 import os
 import re
 import readline
@@ -27,13 +31,10 @@ from army_ant.index import Index
 from army_ant.reader import Reader
 from army_ant.sampling import INEXSampler
 from army_ant.server import run_app
-from army_ant.setup import config_logger
 from army_ant.util.dbpedia import fetch_dbpedia_entity_labels, DBpediaClass
 from army_ant.util.wikidata import fetch_wikidata_entity_labels, get_entities, WikidataClass, \
     fetch_wikidata_entity_subclasses, filter_entities_by_class, get_label_for_entity_uris, \
     get_wikidata_dump_entity_labels
-
-config_logger(logging.DEBUG)
 
 logger = logging.getLogger(__name__)
 
