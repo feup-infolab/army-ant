@@ -435,13 +435,13 @@ class TRECWashingtonPostReader(MongoDBReader):
     def build_triples(self, doc):
         triples = set([])
 
+        if not self.include_ae_doc_profile and not self.include_dbpedia: return list(triples)
+
         triples.add((
             Entity(doc['id'], doc['article_url']),
             Entity('has_author'),
             self.to_washington_post_author_entity(doc['author'])
         ))
-
-        if not self.include_ae_doc_profile and not self.include_dbpedia: return list(triples)
 
         doc_id = doc['id']
         text = self.to_plain_text(doc, limit=3)
