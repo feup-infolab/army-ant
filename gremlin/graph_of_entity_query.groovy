@@ -168,7 +168,7 @@ graph_of_entity_query: {
       score = entityWeight
         
       [
-        docID: docID.toString(),
+        id: docID.toString(),
         score: score,
         components: [[
           docID: docID.toString(),
@@ -187,13 +187,13 @@ graph_of_entity_query: {
     }
     //.plus(termEntityFrequency.collect {
       ////docID = "http://en.wikipedia.org/wiki/${it.key.value("name").replace(" ", "_")}"
-      //docID = it.key.value("doc_id")
+      //docID = it.key.value("id")
 
       ////score = 0.3 * it.value
       //score = 0
 
       //[
-        //docID: docID.toString(),
+        //id: docID.toString(),
         //score: score.doubleValue(),
         //components: [[
           //docID: docID.toString(),
@@ -206,7 +206,7 @@ graph_of_entity_query: {
         //]]
       //]
     //})
-    .unique { a, b -> a.docID <=> b.docID }
+    .unique { a, b -> a.id <=> b.id }
     .sort { -it.score }
 
   numDocs = ewIlf.size()

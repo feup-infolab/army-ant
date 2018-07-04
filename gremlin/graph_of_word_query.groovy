@@ -51,7 +51,7 @@ graph_of_word_query: {
         score = twIdf(indegree, docFrequencyPerToken[token], docLengths[docID], avgDocLength, corpusSize)
 
         [
-          docID: docID,
+          id: docID,
           twIdf: score,
           components: [
             docID: docID,
@@ -67,8 +67,8 @@ graph_of_word_query: {
       }
     }
     .flatten()
-    .groupBy { item -> item['docID'] }
-    .collect { docID, item -> [docID: docID, score: item['twIdf'].sum(), components: item['components']] }
+    .groupBy { item -> item['id'] }
+    .collect { id, item -> [id: id, score: item['twIdf'].sum(), components: item['components']] }
     .sort { -it.score }
 
   numDocs = twIdf.size()
