@@ -18,13 +18,15 @@ library(shiny)
 # IDF Functions
 #
 
-sigmoid_idf <- function(N, n) sigmoid((N^-1)*(length(n)-n)/n)*2-1
+sigmoid_idf <- function(N, n, alpha=-0.75) sigmoid((N^alpha)*(length(n)-n)/n)*2-1
 
 prob_idf <- function(N, n) log10((N - n) / n)
 
 idf_funcs <- list(
-  Sigmoid=sigmoid_idf,
-  Probabilistic=prob_idf
+  'Sigmoid (α=-0.5)'=function(N, n) sigmoid_idf(N, n, alpha=-0.5),
+  'Sigmoid (α=-0.75)'=function(N, n) sigmoid_idf(N, n, alpha=-0.75),
+  'Sigmoid (α=-1)'=function(N, n) sigmoid_idf(N, n, alpha=-1),
+  'Probabilistic'=prob_idf
 )
 
 #
@@ -42,7 +44,7 @@ plot_funcs <- function(funcs, params) {
     scale_color_discrete("Function") +
     xlab("x") +
     ylab("y") +
-    theme(legend.position = 'top')  
+    theme(legend.position = 'top')
 }
 
 #
@@ -55,4 +57,4 @@ N <- 2200
 # Random uniform simulation of the number of documents a term appears in (not realistic)
 n <- sample(seq(0, N), 1e5, replace = T)
 
-plot_funcs(idf_funcs, list(N=N, n=n)) + xlim(0, N)+ ylim(0, 1)
+plot_funcs(idf_funcs, list(N=N, n=n)) + xlim(0, N)+ ylim(-0.25, 1.25)
