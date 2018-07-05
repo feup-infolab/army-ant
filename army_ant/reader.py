@@ -444,7 +444,8 @@ class TRECWashingtonPostReader(MongoDBReader):
         ))
 
         doc_id = doc['id']
-        text = self.to_plain_text(doc, limit=3)
+        #text = self.to_plain_text(doc, limit=3)
+        text = self.to_plain_text(doc)
         entities = self.ac_ner.extract(text)
 
         if self.include_ae_doc_profile:
