@@ -19,6 +19,7 @@ from army_ant.evaluation import EvaluationTask, EvaluationTaskManager
 from army_ant.exception import ArmyAntException
 from army_ant.index import Index, Result
 from army_ant.util import set_dict_defaults, params_id_to_str
+from army_ant.util.text import AhoCorasickEntityExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -348,6 +349,28 @@ async def evaluation_results_archive(request):
         return web.HTTPNotFound()
 
 
+async def service_ner(request):
+    data = await request.post()
+    if not 'text' in data:
+        return web.json_response({ 'error': "Must provide a text parameter" }, status=404)
+
+    if not 'SINGLETONS' in request.app:
+        request.app['SINGLETONS'] = {}
+    
+    if not 'ac_ner' in request.app['SINGLETONS']:
+        request.app['SINGLETONS']['ac_ner'] = AhoCorasickEntityExtractor(
+            list_path=request.app['defaults']['service']['ner']['entity_list'])
+
+    ac_ner = request.app['SINGLETONS']['ac_ner']
+    
+    entities = ac_ner.extract(data['text'])
+
+    return web.json_response({
+        'success': "Extracted %d entities from given text." % len(entities),
+        'data': entities
+    })
+
+
 @aiohttp_jinja2.template('ll_api_outcome.html')
 async def evaluation_results_ll_api(request):
     task_id = request.GET.get('task_id')
@@ -471,6 +494,7 @@ def run_app(loop, host, port, path=None):
     app.router.add_get('/evaluation/download', evaluation_download, name='evaluation_download')
     app.router.add_get('/evaluation/results/archive', evaluation_results_archive, name='evaluation_results_archive')
     app.router.add_get('/evaluation/results/ll-api', evaluation_results_ll_api, name='evaluation_results_ll_api')
+    app.router.add_post('/service/ner', service_ner)
     app.router.add_get('/about', about, name='about')
 
     app.router.add_static('/static', 'army_ant/server/static', name='static', follow_symlinks=True)
