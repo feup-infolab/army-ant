@@ -139,6 +139,7 @@ async def search(request):
         response = {
             'engine': engine,
             'index_features': index_features,
+            'task': task,
             'query': query,
             'debug': debug,
             'time': end_time - start_time,
@@ -148,6 +149,7 @@ async def search(request):
         response = {
             'engine': engine,
             'index_features': index_features,
+            'task': task,
             'rankingFunction': ranking_function,
             'rankingParams': ranking_params,
             'query': query,

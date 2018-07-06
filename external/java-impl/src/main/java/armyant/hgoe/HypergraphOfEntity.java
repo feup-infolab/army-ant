@@ -1021,7 +1021,7 @@ public class HypergraphOfEntity extends Engine {
 
         trace.goUp();
 
-        trace.add("Collecting results (class=EntityNode; hasDocID()=true)");
+        trace.add("Collecting results (task=%s)", task);
         trace.goDown();
 
         for (Result result : resultSet) {
