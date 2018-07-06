@@ -39,6 +39,10 @@ def timestamp_to_date(timestamp):
     return datetime.fromtimestamp(int(round(timestamp / 1000)))
 
 
+def results_to_json(results):
+    return json.dumps([r.__dict__ for r in results])
+
+
 def serialize_json(obj):
     if isinstance(obj, Result):
         return obj.__dict__
@@ -47,22 +51,22 @@ def serialize_json(obj):
 
 def ranking_model_page_exists(index_type):
     current_dir = os.path.dirname(__file__)
-    path = os.path.join(current_dir, 'templates/search/debug/ranking_models/%s.html' % index_type)
+    path = os.path.join(current_dir, 'templates/search/debug/ranking_models/%s.j2' % index_type)
     return os.path.exists(path)
 
 
 def collection_page_exists(dataset):
     current_dir = os.path.dirname(__file__)
-    path = os.path.join(current_dir, 'templates/search/debug/collections/%s.html' % dataset)
+    path = os.path.join(current_dir, 'templates/search/debug/collections/%s.j2' % dataset)
     return os.path.exists(path)
 
 
-@aiohttp_jinja2.template('home.html')
+@aiohttp_jinja2.template('home.j2')
 async def home(request):
     pass
 
 
-@aiohttp_jinja2.template('search.html')
+@aiohttp_jinja2.template('search.j2')
 async def search(request):
     start_time = time.time()
 
@@ -371,7 +375,7 @@ async def service_ner(request):
     })
 
 
-@aiohttp_jinja2.template('ll_api_outcome.html')
+@aiohttp_jinja2.template('ll_api_outcome.j2')
 async def evaluation_results_ll_api(request):
     task_id = request.GET.get('task_id')
     if task_id is None: return web.HTTPNotFound()
@@ -388,7 +392,7 @@ async def evaluation_results_ll_api(request):
     return web.json_response(data)
 
 
-@aiohttp_jinja2.template('evaluation.html')
+@aiohttp_jinja2.template('evaluation.j2')
 async def evaluation(request):
     if request.method == 'GET':
         return await evaluation_get(request)
@@ -398,7 +402,7 @@ async def evaluation(request):
         return await evaluation_delete(request)
 
 
-@aiohttp_jinja2.template('about.html')
+@aiohttp_jinja2.template('about.j2')
 async def about(request):
     pass
 
@@ -452,7 +456,7 @@ async def error_middleware(request, handler):
         return await handler(request)
     except ArmyAntException as e:
         response = {'error': str(e)}
-        return aiohttp_jinja2.render_template('error.html', request, response)
+        return aiohttp_jinja2.render_template('error.j2', request, response)
 
 
 def run_app(loop, host, port, path=None):
@@ -477,6 +481,7 @@ def run_app(loop, host, port, path=None):
         app,
         loader=jinja2.FileSystemLoader('army_ant/server/templates'),
         filters={
+            'results_to_json': results_to_json,
             'timestamp_to_date': timestamp_to_date,
             'params_id_to_str': params_id_to_str,
             'ranking_model_page_exists': ranking_model_page_exists,

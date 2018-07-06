@@ -5,8 +5,9 @@
     </div>
     <div class="column">
       <select class="form-select select-sm" id="eval-format" name="eval-format">
-        <option value="inex">INEX</option>
-        <option value="trec">TREC</option>
+        <option value="inex">INEX (Ad Hoc)</option>
+        <option value="inex-xer">INEX (XML Entity Ranking)</option>
+        <option value="trec">TREC (Common Core)</option>
         <option value="ll-api">Living Labs API</option>
       </select>
     </div>
@@ -20,7 +21,7 @@
     </div>
   </div>
 
-  <div class="form-group dynamic-block inex-block trec-block">
+  <div class="form-group dynamic-block inex-block inex-xer-block trec-block">
     <div class="col-1">
       <label class="form-label label-sm" for="topics">Topics</label>
     </div>
@@ -55,7 +56,7 @@
   </div>
 
   {% with is_evaluation=True %}
-  {% include 'search/engine.html' %}
+  {% include 'search/engine.j2' %}
   {% endwith %}
 
   <br>

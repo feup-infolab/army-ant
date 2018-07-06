@@ -1,4 +1,4 @@
-{% extends "home.html" %}
+{% extends "home.j2" %}
 {% block title %}
 {{ query if query else "Search"}}
 {% endblock %}
@@ -32,7 +32,7 @@
     </div>
   </div>
 
-  {% include 'search/engine.html' %}
+  {% include 'search/engine.j2' %}
 </form>
 
 {% if results|length > 0 %}
@@ -46,14 +46,14 @@
 
 {% if debug == 'on' %}
 
-{% include 'search/debug.html' %}
+{% include 'search/debug.j2' %}
 
 {% else %}
 
-{% include 'search/results.html' %}
+{% include 'search/results.j2' %}
 
 {% if offset is not none and pages > 1 %}
-{% include 'search/paginator.html' %}
+{% include 'search/paginator.j2' %}
 {% endif %}
 
 {% endif %}

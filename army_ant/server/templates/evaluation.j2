@@ -1,11 +1,11 @@
-{% extends "home.html" %}
+{% extends "home.j2" %}
 {% block title %}Evaluation{% endblock %}
 
 {% block content %}
 
 <h3>Evaluation</h3>
 
-{% include 'evaluation/form.html' %}
+{% include 'evaluation/form.j2' %}
 
 <div class="divider spaced"></div>
 
@@ -28,10 +28,10 @@
   </div>
 </div>
 
-{% include 'evaluation/download.html' %}
+{% include 'evaluation/download.j2' %}
 
 {% if tasks|length > 0 %}
-{% include 'evaluation/tasks.html' %}
+{% include 'evaluation/tasks.j2' %}
 {% endif %}
 
 <div id="empty-tasks" class="empty {% if tasks|length > 0 %} d-hide {% endif %}">

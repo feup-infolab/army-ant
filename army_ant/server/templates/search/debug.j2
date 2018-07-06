@@ -42,7 +42,7 @@
 
     <div class="panel-body">
       <div id="trace" class="tab-content d-hide">
-        {% include 'search/debug/trace.html' %}
+        {% include 'search/debug/trace.j2' %}
       </div>
 
       <div id="results" class="tab-content d-hide">
@@ -81,7 +81,7 @@
       <div id="score-explanation" class="tab-content container d-hide">
         <div class="column">
           {% if index_type|ranking_model_page_exists %}
-          {% include 'search/debug/ranking_models/%s.html' % index_type %}
+          {% include 'search/debug/ranking_models/%s.j2' % index_type %}
           {% else %}
           <span class="label label-warning">There is no information about this model.</span>
           {% endif %}
@@ -92,7 +92,7 @@
         <div class="container">
           <div class="column">
             {% if dataset|collection_page_exists %}
-            {% include 'search/debug/collections/%s.html' % dataset %}
+            {% include 'search/debug/collections/%s.j2' % dataset %}
             {% else %}
             <span class="label label-warning">There is no information about this collection.</span>
             {% endif %}
@@ -121,7 +121,7 @@
     });
 
     $(document).on('click', '[href="#score-components-plot"]', function(e) {
-      var visScoreComponents = new ScoreComponents({{ results }}, '#score-components-plot');
+      var visScoreComponents = new ScoreComponents({{ results|results_to_json }}, '#score-components-plot');
       visScoreComponents.render();
     });
   })();
