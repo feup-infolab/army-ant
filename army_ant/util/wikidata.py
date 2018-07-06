@@ -171,8 +171,8 @@ def get_wikidata_dump_entity_labels(dump_location, wikidata_class):
     res = g.query('''
         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
         PREFIX wd: <http://www.wikidata.org/entity/>
-        PREFIX wdt: <http://www.wikidata.org/prop/direct/> 
-        
+        PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
         SELECT DISTINCT (STR(?entityLabel) AS ?label)
         WHERE {
             ?entity wdt:P31 %s .

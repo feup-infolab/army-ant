@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4
+
+* Added a reader for TREC Washington Post Corpus for TREC 2018 Common Core Track.
+* Added Wikidata and DBpedia utility functions to retrieve entities and triples.
+* Added a Aho-Corasick method for named entity recognition based on string-searching within a dictionary of entities.
+* Added the option to select different retrieval tasks:
+  * Document retrieval;
+  * Entity retrieval;
+  * Term retrieval.
+* Changed the Hypergraph-of-Entity engine's search method to rank document nodes instead of entity nodes, when doing document retrieval.
+  * In the previous version of the Hypergraph-of-Entity, the document retrieval task was implemented as the ranking of entity nodes, which directly represented a document (e.g., Wikipedia concepts). We revised this process to rank document nodes, ensuring that the search process is generalizable. This will enable us to explicitly implement entity ranking as a task in the future.
+* Added a TREC evaluation option that currently processes a set of topics, but does not yet support model assessment based on a qrels relevance judgment file. Results are included in the ZIP file, following the TREC submission format for runs.
+
 ## 0.3.3
 
 * Improved the Hypergraph-of-Entity by switching `Document` hyperedges to undirected, adding node and hyperedge weights and introducing a new pruning approach.
