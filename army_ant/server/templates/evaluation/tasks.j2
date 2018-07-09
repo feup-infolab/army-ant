@@ -159,6 +159,13 @@
       <!-- END LL-API METADATA -->
 
       {% endif %}
+
+      {% if task.eval_format == "inex-xer" %}
+      <tr>
+        <th>Filter by ID Filename</th>
+        <td>{{ task.valid_ids_filename}}</td>
+      </tr>
+      {% endif %}
     </table>
 
     <!-- START DETAIL -->

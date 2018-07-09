@@ -257,6 +257,16 @@ async def evaluation_post(request):
         assessments_filename = None
         assessments_path = None
 
+    if len(data['valid_ids']) > 0:
+        with tempfile.NamedTemporaryFile(dir=os.path.join(request.app['defaults']['eval']['location'], 'spool'),
+                                         prefix='valid_ids_', delete=False) as fp:
+            fp.write(data['valid_ids'].file.read())
+            valid_ids_filename = data['valid_ids'].filename
+            valid_ids_path = fp.name
+    else:
+        valid_ids_filename = None
+        valid_ids_path = None
+
     manager = EvaluationTaskManager(
         request.app['defaults']['db']['location'],
         request.app['defaults']['db']['name'],
@@ -273,18 +283,20 @@ async def evaluation_post(request):
             ranking_params[param_name] = data.getall(k)
 
     manager.add_task(EvaluationTask(
-        index_location,
-        index_type,
-        data['eval-format'],
-        ranking_function,
-        ranking_params or None,
-        topics_filename,
-        topics_path,
-        assessments_filename,
-        assessments_path,
-        data['base-url'] if data['base-url'].strip() != '' else None,
-        data['api-key'] if data['api-key'].strip() != '' else None,
-        data['run-id']))
+        index_location=index_location,
+        index_type=index_type,
+        eval_format=data['eval-format'],
+        ranking_function=ranking_function,
+        ranking_params=ranking_params or None,
+        topics_filename=topics_filename,
+        topics_path=topics_path,
+        assessments_filename=assessments_filename,
+        assessments_path=assessments_path,
+        valid_ids_filename=valid_ids_filename,
+        valid_ids_path=valid_ids_path,
+        base_url=data['base-url'] if data['base-url'].strip() != '' else None,
+        api_key=data['api-key'] if data['api-key'].strip() != '' else None,
+        run_id=data['run-id']))
 
     error = None
     try:
@@ -464,7 +476,7 @@ async def error_middleware(request, handler):
 def run_app(loop, host, port, path=None):
     config = yaml.load(open('config.yaml'))
 
-    app = web.Application(client_max_size=1024 * 1024 * 4, middlewares=[error_middleware], loop=loop)
+    app = web.Application(client_max_size=50 * 1024 * 1024, middlewares=[error_middleware], loop=loop)
 
     app['defaults'] = config.get('defaults', {})
     app['engines'] = config.get('engines', [])

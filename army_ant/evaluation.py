@@ -199,8 +199,20 @@ class INEXEvaluator(FilesystemEvaluator):
 
         return topic_doc_judgements
 
+    def get_valid_ids(self):
+        if self.task.valid_ids_path and os.path.exists(self.task.valid_ids_path):
+            logger.info("Loading valid IDs to filter results")
+            valid_ids = set([])
+
+            with open(self.task.valid_ids_path, 'r') as f:
+                for line in f:
+                    valid_ids.add(line.strip())
+
+            return valid_ids
+
     async def get_topic_results(self, ranking_params=None, topic_filter=None):
         topic_doc_judgements = self.get_topic_assessments()
+        valid_ids = self.get_valid_ids()
 
         topics = etree.parse(self.task.topics_path)
 
@@ -243,10 +255,15 @@ class INEXEvaluator(FilesystemEvaluator):
             end_time = int(round((time.time() - start_time) * 1000))
             self.stats[params_id]['query_time'][topic_id] = end_time
 
+            results = engine_response['results']
+            if valid_ids:
+                logger.info("Filtering results (only %d IDs are valid)" % (len(valid_ids)))
+                results = [result for result in results if result['id'] in valid_ids]
+
             with open(os.path.join(o_results_path, '%s.csv' % topic_id), 'w', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow(['rank', 'score', 'doc_id', 'relevant'])
-                for i, result in zip(range(1, len(engine_response['results']) + 1), engine_response['results']):
+                for i, result in zip(range(1, len(results) + 1), results):
                     doc_id = result['id']
                     score = result['score']
                     relevant = topic_doc_judgements[topic_id][doc_id] > 0 if doc_id in topic_doc_judgements[
@@ -624,6 +641,7 @@ class EvaluationTaskStatus(IntEnum):
 class EvaluationTask(object):
     def __init__(self, index_location, index_type, eval_format, ranking_function=None, ranking_params=None,
                  topics_filename=None, topics_path=None, assessments_filename=None, assessments_path=None,
+                 valid_ids_filename=None, valid_ids_path=None,
                  base_url=None, api_key=None, run_id=None, status=EvaluationTaskStatus.WAITING,
                  topics_md5=None, assessments_md5=None, time=None, _id=None, results=None, stats=None):
         self.index_location = index_location
@@ -637,6 +655,8 @@ class EvaluationTask(object):
         self.assessments_filename = assessments_filename
         self.assessments_path = assessments_path
         self.assessments_md5 = assessments_md5 or (md5(assessments_path) if assessments_path else None)
+        self.valid_ids_filename = valid_ids_filename
+        self.valid_ids_path = valid_ids_path
         self.base_url = base_url
         self.api_key = api_key
         self.run_id = run_id

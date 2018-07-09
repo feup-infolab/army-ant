@@ -276,16 +276,18 @@ class CommandLineInterface(object):
             assessments_path = None
 
         task = EvaluationTask(
-            index_location,
-            index_type,
-            eval_format,
-            topics_filename,
-            topics_path,
-            assessments_filename,
-            assessments_path,
-            base_url,
-            api_key,
-            run_id)
+            index_location=index_location,
+            index_type=index_type,
+            eval_format=eval_format,
+            ranking_function=None,
+            ranking_params=None,
+            topics_filename=topics_filename,
+            topics_path=topics_path,
+            assessments_filename=assessments_filename,
+            assessments_path=assessments_path,
+            base_url=base_url,
+            api_key=api_key,
+            run_id=run_id)
 
         config = yaml.load(open('config.yaml'))
         db_location = config['default'].get('db', {}).get('location', 'localhost')
