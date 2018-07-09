@@ -8,7 +8,7 @@
 import logging
 from army_ant.setup import config_logger
 
-config_logger(logging.DEBUG)
+config_logger(logging.INFO)
 
 import asyncio
 import os

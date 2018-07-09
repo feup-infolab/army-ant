@@ -44,12 +44,18 @@ from army_ant.util.stats import gmean
 
 logger = logging.getLogger(__name__)
 
+#
+# TODO FIXME REQUIRES CRITICAL AND MASSIVE REFACTORING!
+# Evaluation metrics should be calculated in separate functions and reused by all evaluators.
+#
 
 class Evaluator(object):
     @staticmethod
     def factory(task, eval_location):
         if task.eval_format == 'inex':
-            return INEXEvaluator(task, eval_location)
+            return INEXEvaluator(task, eval_location, Index.RetrievalTask.document_retrieval)
+        if task.eval_format == 'inex-xer':
+            return INEXEvaluator(task, eval_location, Index.RetrievalTask.entity_retrieval)
         if task.eval_format == 'trec':
             return TRECEvaluator(task, eval_location)
         elif task.eval_format == 'll-api':
@@ -162,11 +168,12 @@ class TRECEvaluator(FilesystemEvaluator):
 
 
 class INEXEvaluator(FilesystemEvaluator):
-    def __init__(self, task, eval_location):
+    def __init__(self, task, eval_location, retrieval_task):
         super().__init__(task, eval_location)
 
         self.loop = asyncio.get_event_loop()
         self.index = Index.open(self.task.index_location, self.task.index_type, self.loop)
+        self.retrieval_task = retrieval_task
 
     def path_to_topic_id(self, path):
         return os.path.basename(os.path.splitext(path)[0])
@@ -181,10 +188,14 @@ class INEXEvaluator(FilesystemEvaluator):
 
         with open(self.task.assessments_path, 'r') as f:
             for line in f:
-                topic_id, _, doc_id, judgement, _ = line.split(' ', 4)
+                if self.retrieval_task == Index.RetrievalTask.entity_retrieval:
+                    topic_id, _, id, _, judgement = line.split(' ', 4)
+                else:
+                    topic_id, _, id, judgement, _ = line.split(' ', 4)
+
                 if not topic_id in topic_doc_judgements:
                     topic_doc_judgements[topic_id] = {}
-                topic_doc_judgements[topic_id][doc_id] = int(judgement)
+                topic_doc_judgements[topic_id][id] = int(judgement)
 
         return topic_doc_judgements
 
@@ -198,27 +209,37 @@ class INEXEvaluator(FilesystemEvaluator):
         o_results_path = os.path.join(self.o_results_path, params_id)
         if not os.path.exists(o_results_path): os.makedirs(o_results_path)
 
+        if self.retrieval_task == Index.RetrievalTask.entity_retrieval:
+            xpath_topic = '//inex_topic'
+            xpath_topic_id = '@topic_id'
+        else:
+            xpath_topic = '//topic'
+            xpath_topic_id = '@id'
+
         if not params_id in self.stats:
             self.stats[params_id] = {'ranking_params': ranking_params, 'query_time': {}}
 
-        for topic in topics.xpath('//topic'):
+        for topic in topics.xpath(xpath_topic):
             if self.interrupt:
                 logger.warning("Evaluation task was interruped")
                 break
 
-            topic_id = get_first(topic.xpath('@id'))
+            topic_id = get_first(topic.xpath(xpath_topic_id))
 
             if topic_filter and not topic_id in topic_filter:
                 logger.warning("Skipping topic '%s'" % topic_id)
                 continue
 
             query = get_first(topic.xpath('title/text()'))
+            if self.retrieval_task == Index.RetrievalTask.entity_retrieval:
+                categories = topic.xpath('categories/category/text()')
+                query += ' %s' % ' '.join(categories)
 
             logger.info("Obtaining results for query '%s' of topic '%s' using '%s' index at '%s'" % (
                 query, topic_id, self.task.index_type, self.task.index_location))
             start_time = time.time()
             engine_response = await self.index.search(
-                query, 0, 10000, Index.RetrievalTask.document_retrieval, self.task.ranking_function, ranking_params)
+                query, 0, 10000, self.retrieval_task, self.task.ranking_function, ranking_params)
             end_time = int(round((time.time() - start_time) * 1000))
             self.stats[params_id]['query_time'][topic_id] = end_time
 
@@ -461,11 +482,15 @@ class INEXEvaluator(FilesystemEvaluator):
 
     async def run_with_params(self, ranking_params=None):
         await self.get_topic_results(ranking_params=ranking_params)
+
         self.calculate_precision_recall(ranking_params=ranking_params)
+
         self.calculate_precision_at_n(n=10, ranking_params=ranking_params)
         self.calculate_precision_at_n(n=100, ranking_params=ranking_params)
         self.calculate_precision_at_n(n=1000, ranking_params=ranking_params)
+
         self.calculate_mean_average_precision(ranking_params=ranking_params)
+
         self.calculate_normalized_discounted_cumulative_gain_at_p(p=10, ranking_params=ranking_params)
         self.calculate_normalized_discounted_cumulative_gain_at_p(p=100, ranking_params=ranking_params)
         self.calculate_normalized_discounted_cumulative_gain_at_p(p=1000, ranking_params=ranking_params)
@@ -868,7 +893,7 @@ class EvaluationTaskManager(object):
     def clean_spool(self):
         valid_spool_filenames = set([])
         for task in self.db['evaluation_tasks'].find():
-            if task['eval_format'] in ('inex', 'trec'):
+            if task['eval_format'] in ('inex', 'inex-xer', 'trec'):
                 valid_spool_filenames.add(os.path.basename(task['topics_path']))
                 if 'assessment_path' in task:
                     valid_spool_filenames.add(os.path.basename(task['assessments_path']))
@@ -894,8 +919,8 @@ class EvaluationTaskManager(object):
 
         for filename in os.listdir(self.assessments_dirname):
             path = os.path.join(self.assessments_dirname, filename)
-            if not filename in valid_output_dirnames and len(
-                    filename) == 24:  # 24 is the MongoDB ObjectId default length
+            # 24 is the MongoDB ObjectId default length
+            if not filename in valid_output_dirnames and len(filename) == 24:
                 logger.warning("Removing unreferenced assessments directory '%s'" % path)
                 shutil.rmtree(path)
 
@@ -917,7 +942,7 @@ class EvaluationTaskManager(object):
                             self.running = e
                             status = await e.run()
 
-                            if task.eval_format in ('inex', 'trec'):
+                            if task.eval_format in ('inex', 'inex-xer', 'trec'):
                                 self.save(task, e.results, e.stats)
                                 self.running = None
                             elif task.eval_format == 'll-api':

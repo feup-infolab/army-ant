@@ -179,13 +179,13 @@
       var $detail = $task.find('.detail');
 
       if ($detail.hasClass('d-hide')) {
-        if (taskFormat == 'inex') {
+        if (taskFormat == 'inex' || taskFormat == 'inex-xer') {
           expandDetailsINEX($task, $detail);
         } else if (taskFormat == 'll-api') {
           expandDetailsLLAPI($task, $detail);
         }
       } else {
-        if (taskFormat == 'inex') {
+        if (taskFormat == 'inex' || taskFormat == 'inex-xer') {
           collapseDetailsINEX($task, $detail);
         } else if (taskFormat == 'll-api') {
           collapseDetailsLLAPI($task, $detail);
@@ -197,7 +197,7 @@
       var taskFormat = $task.data('format');
       var $detail = $task.find('.detail');
 
-      if (taskFormat == 'inex') {
+      if (taskFormat == 'inex' || taskFormat == 'inex-xer') {
         expandDetailsINEX($task, $detail);
       } else if (taskFormat == 'll-api') {
         expandDetailsLLAPI($task, $detail);
@@ -208,7 +208,7 @@
       var taskFormat = $task.data('format');
       var $detail = $task.find('.detail');
 
-      if (taskFormat == 'inex') {
+      if (taskFormat == 'inex' || taskFormat == 'inex-xer') {
         collapseDetailsINEX($task, $detail);
       } else if (taskFormat == 'll-api') {
         collapseDetailsLLAPI($task, $detail);
@@ -282,6 +282,7 @@
     function renderDetailsChart() {
       var tasks = {{ tasks }};
       for (var i=0; i < tasks.length; i++) {
+        if (tasks[i].results === undefined) continue;
         if (Object.keys(tasks[i].results).length < 2) continue;
 
         let $task = $('[data-id="' + tasks[i]._id + '"]');

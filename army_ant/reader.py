@@ -195,7 +195,8 @@ class INEXReader(Reader):
         return re.sub(r'\s+', ' ', ''.join(bdy.xpath('%s/text()' % self.doc_xpath)))
 
     def to_wikipedia_entity(self, page_id, label):
-        return Entity(label, "http://en.wikipedia.org/?curid=%s" % page_id)
+        #return Entity(label, "http://en.wikipedia.org/?curid=%s" % page_id)
+        return Entity(label, "WP%s" % page_id)
 
     def to_triples(self, page_id, title, bdy):
         triples = []
@@ -444,8 +445,7 @@ class TRECWashingtonPostReader(MongoDBReader):
         ))
 
         doc_id = doc['id']
-        #text = self.to_plain_text(doc, limit=3)
-        text = self.to_plain_text(doc)
+        text = self.to_plain_text(doc, limit=3)
         entities = self.ac_ner.extract(text)
 
         if self.include_ae_doc_profile:
