@@ -736,7 +736,7 @@ class EvaluationTaskManager(object):
         self.db['evaluation_tasks'].update_many(
             {'status': 2},
             {'$set': {'status': 1}})
-        if type(self.running) != LivingLabsEvaluator and self.running:
+        if not type(self.running) is LivingLabsEvaluator and self.running:
             self.running.remove_output()
 
     def queue(self):
@@ -895,7 +895,7 @@ class EvaluationTaskManager(object):
         for task in self.db['evaluation_tasks'].find():
             if task['eval_format'] in ('inex', 'inex-xer', 'trec'):
                 valid_spool_filenames.add(os.path.basename(task['topics_path']))
-                if 'assessment_path' in task:
+                if 'assessments_path' in task and task['assessments_path']:
                     valid_spool_filenames.add(os.path.basename(task['assessments_path']))
 
         for filename in os.listdir(self.spool_dirname):
