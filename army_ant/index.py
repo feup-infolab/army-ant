@@ -528,8 +528,8 @@ class GraphOfEntityBatch(PostgreSQLGraph, GraphOfEntity):
 
             data = {'type': 'entity', 'name': entity.label}
 
-            if entity.url:
-                data['url'] = entity.url
+            if entity.uri:
+                data['url'] = entity.uri
 
             if doc_id:
                 data['doc_id'] = doc_id
@@ -561,7 +561,7 @@ class GraphOfEntityBatch(PostgreSQLGraph, GraphOfEntity):
             self.create_edge_postgres(conn, self.next_edge_id, 'related_to', source_vertex_id, target_vertex_id)
             self.next_edge_id += 1
             metadata = {'name': e1.label}
-            if e1.url: metadata['url'] = e1.url
+            if e1.uri: metadata['url'] = e1.uri
             # yield Document(doc_id = doc.doc_id, metadata = metadata) # We're only indexing what has a doc_id / XXX
             # this was wrong, because entities never have a doc_id, unless they come from a doc, so just return doc,
             # right?
