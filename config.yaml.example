@@ -113,6 +113,17 @@ engines:
       type: goe
       location: localhost:8182/goe_inex_10t_nl
 
+  goe-inex-10t-nl-comp:
+    name: INEX 10T-NL - Graph of Entity (HGoE Compare Version)
+    message: >-
+      Don't forget to launch Gremlin Server with the "goe_inex_10t_nl_comp" graph
+      configured (e.g., "bin/gremlin-server.sh gremlin-server-neo4j.yaml").
+    db:
+      name: aa_inex
+    index:
+      type: goe
+      location: localhost:8182/goe_inex_10t_nl_comp
+
   lucene-inex-10t-nl:
     name: INEX 10T-NL - Lucene
     db:
