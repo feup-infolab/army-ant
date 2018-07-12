@@ -33,7 +33,8 @@ graphs: {
   gow_wikipedia: conf/neo4j-graph-of-word-wikipedia.properties,
   goe_wikipedia: conf/neo4j-graph-of-entity-wikipedia.properties,
   gow_inex_10t_nl: conf/neo4j-graph-of-word-inex-10t-nl.properties,
-  goe_inex_10t_nl: conf/neo4j-graph-of-entity-inex-10t-nl.properties}
+  goe_inex_10t_nl: conf/neo4j-graph-of-entity-inex-10t-nl.properties,
+  goe_inex_10t_nl_comp: conf/neo4j-graph-of-entity-inex-10t-nl-compare.properties}
   #gow_trec2017: conf/neo4j-graph-of-word-trec2017.properties,
   #goe_trec2017: conf/neo4j-graph-of-entity-trec2017.properties}
 plugins:
