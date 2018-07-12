@@ -23,9 +23,9 @@ sigmoid_idf <- function(N, n, alpha=-0.75) sigmoid((N^alpha)*(length(n)-n)/n)*2-
 prob_idf <- function(N, n) log10((N - n) / n)
 
 idf_funcs <- list(
-  'Sigmoid (α=-0.5)'=function(N, n) sigmoid_idf(N, n, alpha=-0.5),
-  'Sigmoid (α=-0.75)'=function(N, n) sigmoid_idf(N, n, alpha=-0.75),
-  'Sigmoid (α=-1)'=function(N, n) sigmoid_idf(N, n, alpha=-1),
+  'Sigmoid (α=N^-0.5)'=function(N, n) sigmoid_idf(N, n, alpha=-0.5),
+  'Sigmoid (α=N^-0.75)'=function(N, n) sigmoid_idf(N, n, alpha=-0.75),
+  'Sigmoid (α=N^-1)'=function(N, n) sigmoid_idf(N, n, alpha=-1),
   'Probabilistic'=prob_idf
 )
 
@@ -52,7 +52,7 @@ plot_funcs <- function(funcs, params) {
 #
 
 # Corpus size
-N <- 2200
+N <- 2000
 
 # Random uniform simulation of the number of documents a term appears in (not realistic)
 n <- sample(seq(0, N), 1e5, replace = T)
@@ -64,4 +64,4 @@ idf_p <- plot_funcs(idf_funcs, list(N=N, n=n)) +
   ylim(-0.25, 1.25)
 
 print(idf_p)
-ggsave(filename = "output/idf_funcs.pdf", plot = idf_p, width = 6, height = 3, device=cairo_pdf)
+ggsave(filename = "output/idf_funcs.pdf", plot = idf_p, width = 7, height = 3, device=cairo_pdf)
