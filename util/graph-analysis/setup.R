@@ -10,7 +10,8 @@ pacman::p_load(
   ggplot2,
   dplyr,
   logging,
-  sigmoid
+  sigmoid,
+  Cairo
 )
 
 basicConfig()

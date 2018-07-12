@@ -34,12 +34,12 @@ idf_funcs <- list(
 #
 
 plot_funcs <- function(funcs, params) {
-  data <- data.frame(n=n)
+  data <- data.frame(x=params$n)
   data <- do.call(rbind, lapply(names(funcs), function(func_name) {
-    cbind(data, func=func_name, val=do.call(funcs[[func_name]], params))
+    cbind(data, func=func_name, y=do.call(funcs[[func_name]], params))
   }))
   
-  ggplot(data, aes(x=n, y=val, color = func)) +
+  ggplot(data, aes(x=x, y=y, color = func)) +
     geom_line(size=1.1) +
     scale_color_discrete("Function") +
     xlab("x") +
@@ -57,4 +57,11 @@ N <- 2200
 # Random uniform simulation of the number of documents a term appears in (not realistic)
 n <- sample(seq(0, N), 1e5, replace = T)
 
-plot_funcs(idf_funcs, list(N=N, n=n)) + xlim(0, N)+ ylim(-0.25, 1.25)
+idf_p <- plot_funcs(idf_funcs, list(N=N, n=n)) +
+  xlab("Number of Documents") +
+  ylab("IDF") +
+  xlim(0, N) +
+  ylim(-0.25, 1.25)
+
+print(idf_p)
+ggsave(filename = "output/idf_funcs.pdf", plot = idf_p, width = 6, height = 3, device=cairo_pdf)
