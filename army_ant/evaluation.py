@@ -804,6 +804,7 @@ class EvaluationTaskManager(object):
 
             for task in tasks:
                 task = EvaluationTask(**task)
+                if not hasattr(task, 'results'): continue
                 for result in task.results.values():
                     values = [None] * len(headers)
                     if 'Run ID' in columns: values[columns.index('Run ID')] = task.run_id
