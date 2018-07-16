@@ -5,12 +5,20 @@ package armyant.structures;
  */
 public class Triple {
     public static class Instance {
+        private boolean isBlank;
         private String uri;
         private String label;
+
+        public Instance() {
+            this.uri = null;
+            this.label = null;
+            this.isBlank = true;
+        }
 
         public Instance(String uri, String label) {
             this.uri = uri;
             this.label = label;
+            this.isBlank = false;
         }
 
         public String getURI() {
@@ -27,6 +35,10 @@ public class Triple {
 
         public void setLabel(String label) {
             this.label = label;
+        }
+
+        public boolean isBlank() {
+            return isBlank;
         }
     }
 

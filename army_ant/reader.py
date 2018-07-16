@@ -16,6 +16,7 @@ import shutil
 import tarfile
 import tempfile
 import time
+import pandas as pd
 from urllib.error import URLError, HTTPError
 from urllib.parse import urljoin
 
@@ -39,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 class Reader(object):
     @staticmethod
-    def factory(source_path, source_reader, limit=None):
+    def factory(source_path, source_reader, features_location=None, limit=None):
         if source_reader == 'wikipedia_data':
             return WikipediaDataReader(source_path)
         elif source_reader == 'inex':
@@ -51,11 +52,13 @@ class Reader(object):
         elif source_reader == 'wapo':
             return TRECWashingtonPostReader(source_path)
         elif source_reader == 'wapo_doc_profile':
-            return TRECWashingtonPostReader(source_path, include_ae_doc_profile=True)
+            return TRECWashingtonPostReader(
+                source_path, features_location=features_location, include_ae_doc_profile=True)
         elif source_reader == 'wapo_dbpedia':
             return TRECWashingtonPostReader(source_path, include_dbpedia=True)
         elif source_reader == 'wapo_doc_profile_dbpedia':
-            return TRECWashingtonPostReader(source_path, include_ae_doc_profile=True, include_dbpedia=True)
+            return TRECWashingtonPostReader(
+                source_path, features_location=features_location, include_ae_doc_profile=True, include_dbpedia=True)
         elif source_reader == 'csv':
             return CSVReader(source_path)
         # elif source_reader == 'gremlin':
@@ -82,30 +85,40 @@ class Document(object):
         self.metadata = metadata
 
     def __repr__(self):
-        if self.triples is None:
-            triples = []
-        else:
-            triples = [str(triple) for triple in self.triples]
+        triples = [] if self.triples is None else [str(triple) for triple in self.triples]
+        metadata = [] if self.metadata is None else [str((k, v)) for k, v in self.metadata.items()]
 
-        if self.metadata is None:
-            metadata = []
-        else:
-            metadata = [str((k, v)) for k, v in self.metadata.items()]
-
-        return '-----------------\nDOC ID:\n%s\n\nTITLE:\n%s\n\nTEXT (%d chars):\n%s\n%s\n\nTRIPLES (%d):\n%s\n%s\n\nMETADATA:\n%s\n-----------------\n' % (
-            self.doc_id, self.title, len(self.text), self.text[0:2000], '[...]' if len(self.text) > 2000 else '',
-            len(triples), '\n\n'.join(triples[0:5]), '[...]' if len(triples) > 5 else '', '\n'.join(metadata))
+        return (
+            '-----------------\n'
+            'DOC ID:\n%s\n\n'
+            'TITLE:\n%s\n\n'
+            'TEXT (%d chars):\n%s\n%s\n\n'
+            'TRIPLES (%d):\n%s\n%s\n\n'
+            'METADATA:\n%s\n'
+            '-----------------\n'
+        ) % (
+            self.doc_id,
+            self.title,
+            len(self.text), self.text[0:2000], '[...]' if len(self.text) > 2000 else '',
+            len(triples), '\n\n'.join(triples[0:5]),
+            '[...]' if len(triples) > 5 else '', '\n'.join(metadata)
+        )
 
 
 class Entity(object):
-    def __init__(self, label, uri=None):
-        self.label = label
-        if uri:
-            self.uri = uri
+    def __init__(self, label=None, uri=None):
+        if label is None and uri is None:
+            self.is_blank = True
         else:
-            self.uri = '#%s' % label
+            self.is_blank = False
+            self.label = label
+            if uri:
+                self.uri = uri
+            else:
+                self.uri = '#%s' % label            
 
     def __repr__(self):
+        if self.is_blank: return "(blank node)"
         return "(%s, %s)" % (self.label, self.uri)
 
 
@@ -406,14 +419,26 @@ class MongoDBReader(Reader):
 
 
 class TRECWashingtonPostReader(MongoDBReader):
-    def __init__(self, source_path, include_ae_doc_profile=False, include_dbpedia=False):
+    def __init__(self, source_path, features_location=None, include_ae_doc_profile=False, include_dbpedia=False):
         super(TRECWashingtonPostReader, self).__init__(source_path)
 
         self.ac_ner = AhoCorasickEntityExtractor("/opt/army-ant/gazetteers/all.txt")
+        
         self.articles = self.db.articles.find({}, no_cursor_timeout=True)
         self.blog_posts = self.db.blog_posts.find({}, no_cursor_timeout=True)
+        
+        self.features_location = features_location
         self.include_ae_doc_profile = include_ae_doc_profile
         self.include_dbpedia = include_dbpedia
+
+        if include_ae_doc_profile:
+            ignored_features = ['NamedEntities', 'Language']            
+            
+            logger.info("Loading and preprocessing features from Antonio Espejo's document profile")
+            self.features = pd.read_csv(
+                os.path.join(self.features_location, 'features.tsv.gz'), sep='\t', index_col='id', compression='gzip')
+            for ignored_feature in ignored_features:
+                del self.features[ignored_feature]
 
     def to_plain_text(self, doc, limit=None):
         paragraphs = []
@@ -433,6 +458,15 @@ class TRECWashingtonPostReader(MongoDBReader):
     def to_washington_post_author_entity(self, author_name):
         return Entity(author_name, 'https://www.washingtonpost.com/people/%s' % (author_name.lower().replace(' ', '-')))
 
+    def parse_feature_array(feature_value):
+        parts = feature_value.split('~¨-*', 1)
+        if len(parts) >= 1:
+            parts = re.split(r'[, ]+', parts[1][1:-1])
+            a = []
+            for part in parts:
+                v, w = part.split(';', 1)
+                a.append((v[1:-1], float(w)))
+
     def build_triples(self, doc):
         triples = set([])
 
@@ -450,7 +484,22 @@ class TRECWashingtonPostReader(MongoDBReader):
 
         if self.include_ae_doc_profile:
             # TODO load Antonio Espejo's document profiles
-            raise ArmyAntException("Not implemented")
+            doc_features = self.features.loc[doc['id']]
+            for feature_name in doc_features.index:
+                if feature_name == 'Keywords':
+                    pass
+                elif feature_name == 'ReadingComplexity':
+                    feature_value = doc_features[feature_name].split('~', 1)[0]
+                elif feature_name == 'EmotionCategories':
+                    pass
+                else:
+                    feature_value = doc_features[feature_name]
+                
+                triples.add((
+                    Entity(),
+                    Entity(label=feature_name),
+                    Entity(label=feature_value)
+                ))
 
         if self.include_dbpedia:
             logger.debug("Fetching DBpedia triples for %d entities in document %s" % (len(entities), doc_id))
@@ -546,9 +595,10 @@ class CSVReader(Reader):
 if __name__ == '__main__':
     config_logger(logging.DEBUG)
 
-    r = TRECWashingtonPostReader('wapo_sample')
-    # c = 0
+    r = TRECWashingtonPostReader(
+        'wapo_sample', features_location='/opt/army-ant/features/wapo-sample', include_ae_doc_profile=True)
+    c = 0
     for doc in r:
         print(doc)
-        # c+=1
-        # if c % 10 == 0: sys.exit(0)
+        c+=1
+        if c % 10 == 0: sys.exit(0)

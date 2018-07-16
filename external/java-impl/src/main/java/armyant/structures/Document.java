@@ -75,8 +75,10 @@ public class Document {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
 
         Document document = (Document) o;
 
@@ -90,9 +92,6 @@ public class Document {
 
     @Override
     public String toString() {
-        return "Document{" +
-               (score != null ? "score=" + score : "") +
-               ", docID='" + docID + '\'' +
-               '}';
+        return "Document{" + (score != null ? "score=" + score : "") + ", docID='" + docID + '\'' + '}';
     }
 }

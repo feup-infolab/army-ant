@@ -143,7 +143,7 @@ class CommandLineInterface(object):
     def index(self, source_path, source_reader, index_location, index_type, features_location=None,
               db_location='localhost', db_name=None, db_type='mongo', limit=None):
         try:
-            reader = Reader.factory(source_path, source_reader, limit)
+            reader = Reader.factory(source_path, source_reader, features_location=features_location, limit=limit)
 
             loop = asyncio.get_event_loop()
             try:

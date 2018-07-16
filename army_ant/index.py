@@ -805,8 +805,13 @@ class HypergraphOfEntity(JavaIndex):
 
                 for s, p, o in doc.triples:
                     try:
+                        if s.is_blank:
+                            j_subject = HypergraphOfEntity.JTripleInstance()
+                        else:
+                            j_subject = HypergraphOfEntity.JTripleInstance(s.uri, s.label)
+
                         triples.append(HypergraphOfEntity.JTriple(
-                            HypergraphOfEntity.JTripleInstance(s.uri, s.label),
+                            j_subject,
                             HypergraphOfEntity.JTripleInstance(p.uri, p.label),
                             HypergraphOfEntity.JTripleInstance(o.uri, p.label)))
                     except:

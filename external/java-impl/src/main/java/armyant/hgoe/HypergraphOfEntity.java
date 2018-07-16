@@ -240,7 +240,9 @@ public class HypergraphOfEntity extends Engine {
         Set<Node> nodes = new HashSet<>();
 
         for (Triple triple : document.getTriples()) {
-            nodes.add(new EntityNode(triple.getSubject().getURI(), triple.getSubject().getLabel()));
+            if (!triple.getSubject().isBlank()) {
+                nodes.add(new EntityNode(triple.getSubject().getURI(), triple.getSubject().getLabel()));
+            }
             nodes.add(new EntityNode(triple.getObject().getURI(), triple.getObject().getLabel()));
         }
 
