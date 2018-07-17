@@ -471,10 +471,9 @@ class INEXEvaluator(FilesystemEvaluator):
 
         ndcgs = []
         for result_file in result_files:
-            topic_id = self.path_to_topic_id(result_file)
-
             dcg_parcels = []
             idcg_parcels = []
+
             with open(result_file, 'r') as rf:
                 reader = csv.DictReader(rf)
                 results = []

@@ -814,8 +814,9 @@ class HypergraphOfEntity(JavaIndex):
                             j_subject,
                             HypergraphOfEntity.JTripleInstance(p.uri, p.label),
                             HypergraphOfEntity.JTripleInstance(o.uri, o.label)))
-                    except:
+                    except Exception as e:
                         logger.warning("Triple (%s, %s, %s) skipped" % (s, p, o))
+                        logger.exception(e)
 
                 jDoc = HypergraphOfEntity.JDocument(
                     JString(doc.doc_id), doc.title, JString(doc.text), java.util.Arrays.asList(triples))
