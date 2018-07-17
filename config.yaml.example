@@ -46,6 +46,52 @@ engines:
             AE: [L, B, Disabled]
             N: [H1, H2, H3, Z, Disabled]
 
+  hgoe-wapo-sample:
+    name: WaPo Sample - Hypergraph-of-Entity
+    db:
+      name: aa_wapo
+    index:
+      type: hgoe
+      location: /opt/army-ant/indexes/wapo-sample/hgoe
+      preload: false
+    ranking:
+      default:
+        id: random_walk
+        params:
+          l: 2
+          r: 100
+      functions:
+        jaccard:
+          name: Jaccard Score
+        random_walk:
+          name: Random Walk Score
+          params:
+            l: [1, 2, 3, 4, 5, 6]
+            r: [10, 100, 250, 500, 750, 1000, 10000, 100000]
+
+  hgoe-doc_profile-wapo-sample:
+    name: WaPo Sample - Hypergraph-of-Entity (AE's Doc Profile)
+    db:
+      name: aa_wapo
+    index:
+      type: hgoe
+      location: /opt/army-ant/indexes/wapo-sample/hgoe-doc_profile
+      preload: false
+    ranking:
+      default:
+        id: random_walk
+        params:
+          l: 2
+          r: 100
+      functions:
+        jaccard:
+          name: Jaccard Score
+        random_walk:
+          name: Random Walk Score
+          params:
+            l: [1, 2, 3, 4, 5, 6]
+            r: [10, 100, 250, 500, 750, 1000, 10000, 100000]
+
   hgoe-dbpedia-wapo-sample:
     name: WaPo Sample - Hypergraph-of-Entity (DBpedia)
     db:
