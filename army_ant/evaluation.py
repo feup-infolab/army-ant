@@ -485,12 +485,13 @@ class INEXEvaluator(FilesystemEvaluator):
                     dcg_p = rel / math.log2(i + 1)
                     dcg_parcels.append(dcg_p)
 
-                for i in range(1, len(results) + 1):
-                    rel = results[i - 1]
-                    idcg_p = (2 ** rel - 1) / math.log2(i + 1)
+                ideal_results = sorted(results, reverse=True)
+                for i in range(1, min(len(ideal_results), p) + 1):
+                    rel = ideal_results[i - 1]
+                    idcg_p = rel / math.log2(i + 1)
                     idcg_parcels.append(idcg_p)
 
-                ndcg = safe_div(sum(dcg_parcels), len(idcg_parcels))
+                ndcg = safe_div(sum(dcg_parcels), sum(idcg_parcels))
                 ndcgs.append(ndcg)
 
         if not params_id in self.results: self.results[params_id] = {'ranking_params': ranking_params, 'metrics': {}}
