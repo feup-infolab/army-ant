@@ -13,25 +13,26 @@ import os
 import re
 import shelve
 import shutil
+import sys
 import tarfile
 import tempfile
 import time
-import pandas as pd
-from urllib.error import URLError, HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin
 
+import pandas as pd
 import requests
 import requests_cache
-from SPARQLWrapper.SPARQLExceptions import EndPointNotFound
 from bs4 import BeautifulSoup, SoupStrainer
 from lxml import etree
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 from requests.auth import HTTPBasicAuth
+from SPARQLWrapper.SPARQLExceptions import EndPointNotFound
 
 from army_ant.exception import ArmyAntException
 from army_ant.setup import config_logger
-from army_ant.util import inex, html_to_text, get_first
+from army_ant.util import get_first, html_to_text, inex
 from army_ant.util.dbpedia import fetch_dbpedia_triples
 from army_ant.util.text import AhoCorasickEntityExtractor
 
@@ -118,7 +119,7 @@ class Entity(object):
                 self.uri = '#%s' % label            
 
     def __repr__(self):
-        if self.is_blank: return "(blank node)"
+        if self.is_blank: return "[blank node]"
         return "(%s, %s)" % (self.label, self.uri)
 
 
@@ -234,8 +235,6 @@ class INEXReader(Reader):
 
     def __next__(self):
         url = None
-        entity = None
-        html = ''
 
         # Note that this for is only required in case the first element cannot be parsed.
         # If that happens, it skips to the next parsable item.
@@ -412,7 +411,7 @@ class MongoDBReader(Reader):
 
         try:
             self.client = MongoClient(db_host, db_port)
-        except ConnectionFailure as e:
+        except ConnectionFailure:
             raise ArmyAntException("Could not connect to MongoDB instance on %s:%s" % (db_host, db_port))
 
         self.db = self.client[db_name]
@@ -435,8 +434,8 @@ class TRECWashingtonPostReader(MongoDBReader):
             ignored_features = ['NamedEntities', 'Language']            
             
             logger.info("Loading and preprocessing features from Antonio Espejo's document profile")
-            self.features = pd.read_csv(
-                os.path.join(self.features_location, 'features.tsv.gz'), sep='\t', index_col='id', compression='gzip')
+            self.features = pd.read_csv(os.path.join(self.features_location, 'features.tsv.gz'),
+                                        sep='\t', index_col='id', na_filter=False, compression='gzip')
             for ignored_feature in ignored_features:
                 del self.features[ignored_feature]
 
@@ -458,14 +457,19 @@ class TRECWashingtonPostReader(MongoDBReader):
     def to_washington_post_author_entity(self, author_name):
         return Entity(author_name, 'https://www.washingtonpost.com/people/%s' % (author_name.lower().replace(' ', '-')))
 
-    def parse_feature_array(feature_value):
-        parts = feature_value.split('~¨-*', 1)
-        if len(parts) >= 1:
-            parts = re.split(r'[, ]+', parts[1][1:-1])
-            a = []
-            for part in parts:
-                v, w = part.split(';', 1)
-                a.append((v[1:-1], float(w)))
+    def parse_feature_array(self, feature_value, dicretized_version=False):
+        if dicretized_version:
+            if feature_value == 'null': return []
+            return feature_value.split('|')
+        else:
+            parts = feature_value.split('~¨-*', 1)
+            if len(parts) >= 1:
+                parts = re.split(r',\s+', parts[1][1:-1])
+                a = []
+                for part in parts:
+                    v, w = part.split(';', 1)
+                    a.append((v[1:-1], float(w)))
+                return a
 
     def build_triples(self, doc):
         triples = set([])
@@ -473,7 +477,7 @@ class TRECWashingtonPostReader(MongoDBReader):
         if not self.include_ae_doc_profile and not self.include_dbpedia: return list(triples)
 
         triples.add((
-            Entity(doc['id'], doc['article_url']),
+            Entity(),
             Entity('has_author'),
             self.to_washington_post_author_entity(doc['author'])
         ))
@@ -487,19 +491,26 @@ class TRECWashingtonPostReader(MongoDBReader):
             doc_features = self.features.loc[doc['id']]
             for feature_name in doc_features.index:
                 if feature_name == 'Keywords':
-                    pass
+                    # feature_values = sorted(self.parse_feature_array(doc_features[feature_name]), key=lambda kw: kw[1])
+                    # feature_values = [k for k, _ in feature_values[0:5]]
+                    feature_values = self.parse_feature_array(doc_features[feature_name], dicretized_version=True)
                 elif feature_name == 'ReadingComplexity':
-                    feature_value = doc_features[feature_name].split('~', 1)[0]
+                    feature_values = [doc_features[feature_name].split('~', 1)[0]]
                 elif feature_name == 'EmotionCategories':
-                    pass
+                    # feature_values = sorted(self.parse_feature_array(doc_features[feature_name]), key=lambda kw: kw[1])
+                    # feature_values = [k for k, w in feature_values if w >= 0.5]
+                    feature_values = self.parse_feature_array(doc_features[feature_name], dicretized_version=True)
                 else:
-                    feature_value = doc_features[feature_name]
+                    feature_values = [doc_features[feature_name]]
                 
-                triples.add((
-                    Entity(),
-                    Entity(label=feature_name),
-                    Entity(label=feature_value)
-                ))
+                if feature_values is None or len(feature_values) == 0: continue
+
+                for feature_value in feature_values:
+                    triples.add((
+                        Entity(),
+                        Entity(label=feature_name),
+                        Entity(label=feature_value)
+                    ))
 
         if self.include_dbpedia:
             logger.debug("Fetching DBpedia triples for %d entities in document %s" % (len(entities), doc_id))

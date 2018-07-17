@@ -813,7 +813,7 @@ class HypergraphOfEntity(JavaIndex):
                         triples.append(HypergraphOfEntity.JTriple(
                             j_subject,
                             HypergraphOfEntity.JTripleInstance(p.uri, p.label),
-                            HypergraphOfEntity.JTripleInstance(o.uri, p.label)))
+                            HypergraphOfEntity.JTripleInstance(o.uri, o.label)))
                     except:
                         logger.warning("Triple (%s, %s, %s) skipped" % (s, p, o))
 

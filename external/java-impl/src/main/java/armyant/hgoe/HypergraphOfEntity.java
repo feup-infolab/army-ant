@@ -248,6 +248,8 @@ public class HypergraphOfEntity extends Engine {
 
         Set<Integer> nodeIDs = new HashSet<>();
 
+        if (nodes.isEmpty()) return nodeIDs;
+
         RelatedToEdge relatedToEdge = new RelatedToEdge();
         int edgeID = createUndirectedEdge(relatedToEdge);
 
@@ -1394,7 +1396,7 @@ public class HypergraphOfEntity extends Engine {
                 Node node = nodeIndex.getKey(nodeID);
                 if (nodeClass.isInstance(node)) {
                     double nodeWeight = nodeWeights.getValueAsFloat(nodeID);
-                    summary.add("%10d %.2f %s", nodeID, nodeWeight, node.getName());
+                    summary.add("%10d %.4f %s", nodeID, nodeWeight, node.getName());
                 }
             }
 
@@ -1428,12 +1430,12 @@ public class HypergraphOfEntity extends Engine {
                                 .map(nodeID -> nodeIndex.getKey(nodeID).getName())
                                 .collect(Collectors.toSet());
 
-                        summary.add("%10d %.2f %s -> %s", edgeID, edgeWeight, tail, head);
+                        summary.add("%10d %.4f %s -> %s", edgeID, edgeWeight, tail, head);
                     } else {
                         Set<String> nodes = graph.getUndirectedHyperEdgeVertices(edgeID).stream()
                                 .map(nodeID -> nodeIndex.getKey(nodeID).getName())
                                 .collect(Collectors.toSet());
-                        summary.add("%10d %.2f %s", edgeID, edgeWeight, nodes);
+                        summary.add("%10d %.4f %s", edgeID, edgeWeight, nodes);
                     }
                 }
             }
