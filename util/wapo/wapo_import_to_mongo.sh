@@ -43,6 +43,8 @@ do
     mongoimport --db $db_name --collection articles --type json --maintainInsertionOrder $file
 done
 
+echo "===> Importing blog posts to MongoDB database $db_name"
+
 for file in $wapo_dir/data/TREC_blog_*
 do
     echo "===> $file"
