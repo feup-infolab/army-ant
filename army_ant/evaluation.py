@@ -49,6 +49,9 @@ logger = logging.getLogger(__name__)
 # Evaluation metrics should be calculated in separate functions and reused by all evaluators.
 #
 
+def dcg(rel, p):
+    return sum(rel[i-1] / math.log2(i + 1) for i in range(1, min(len(rel), p) + 1))
+
 class Evaluator(object):
     @staticmethod
     def factory(task, eval_location):
@@ -179,8 +182,6 @@ class INEXEvaluator(FilesystemEvaluator):
         return os.path.basename(os.path.splitext(path)[0])
 
     def get_topic_assessments(self):
-        logger.info("Loading topic assessments")
-
         topic_doc_judgements = {}
 
         if not os.path.exists(self.task.assessments_path):
@@ -461,6 +462,7 @@ class INEXEvaluator(FilesystemEvaluator):
             self.results[params_id]['metrics']['GMAP'] = gmean(avg_precisions)
 
     def calculate_normalized_discounted_cumulative_gain_at_p(self, p=10, ranking_params=None):
+        topic_doc_judgements = self.get_topic_assessments()
         params_id = ranking_params_to_params_id(ranking_params)
         o_results_path = os.path.join(self.o_results_path, params_id)
 
@@ -469,30 +471,19 @@ class INEXEvaluator(FilesystemEvaluator):
             for f in os.listdir(o_results_path)
             if os.path.isfile(os.path.join(o_results_path, f))]
 
+        ideal_rankings = {}
+        for topic_id, judgements in topic_doc_judgements.items():
+            ideal_rankings[topic_id] = sorted((judgement > 0 for judgement in judgements.values()), reverse=True)
+
         ndcgs = []
         for result_file in result_files:
-            dcg_parcels = []
-            idcg_parcels = []
+            topic_id = self.path_to_topic_id(result_file)
 
-            with open(result_file, 'r') as rf:
-                reader = csv.DictReader(rf)
-                results = []
-                for row in reader:
-                    results.append(row['relevant'] == 'True')
+            df = pd.read_csv(result_file)
 
-                for i in range(1, min(len(results), p) + 1):
-                    rel = results[i - 1]
-                    dcg_p = rel / math.log2(i + 1)
-                    dcg_parcels.append(dcg_p)
-
-                ideal_results = sorted(results, reverse=True)
-                for i in range(1, min(len(ideal_results), p) + 1):
-                    rel = ideal_results[i - 1]
-                    idcg_p = rel / math.log2(i + 1)
-                    idcg_parcels.append(idcg_p)
-
-                ndcg = safe_div(sum(dcg_parcels), sum(idcg_parcels))
-                ndcgs.append(ndcg)
+            dcg_p = dcg(df.relevant, p)
+            idcg_p = dcg(ideal_rankings[topic_id], p)
+            ndcgs.append(safe_div(dcg_p, idcg_p))
 
         if not params_id in self.results: self.results[params_id] = {'ranking_params': ranking_params, 'metrics': {}}
         self.results[params_id]['metrics']['NDCG@%d' % p] = safe_div(sum(ndcgs), len(ndcgs))
