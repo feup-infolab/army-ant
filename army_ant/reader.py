@@ -487,7 +487,6 @@ class TRECWashingtonPostReader(MongoDBReader):
         entities = self.ac_ner.extract(text)
 
         if self.include_ae_doc_profile:
-            # TODO load Antonio Espejo's document profiles
             doc_features = self.features.loc[doc['id']]
             for feature_name in doc_features.index:
                 if feature_name == 'Keywords':
