@@ -1029,7 +1029,7 @@ public class HypergraphOfEntity extends Engine {
         trace.goDown();
 
         for (Result result : resultSet) {
-            trace.add(result == null ? "NULL" : result.getName());
+            trace.add(result == null || result.getName() == null ? "NULL" : result.getName());
             trace.goDown();
             trace.add("score = %f", result.getScore());
             trace.add("id= %s", result.getID());
