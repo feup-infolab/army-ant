@@ -7,19 +7,27 @@
 
 import logging
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from lxml import etree
 
+from army_ant.exception import ArmyAntException
 from army_ant.index import Index
 from army_ant.util import get_first, os
-from army_ant.util.stats import kendall_w, gmean
+from army_ant.util.stats import gmean, kendall_w
 
 logger = logging.getLogger(__name__)
 
 
-async def random_walk_concordance_test(index_location, index_type, rw_length, rw_repeats, topics_path, output_path,
-                                       limit, repeats, method, force, loop):
+async def rws_rank_correlation(index_a_location, index_a_type, index_b_location, index_b_type,
+                               rw_length, rw_repeats, topics_path, output_path, limit, repeats,
+                               method, force, loop):
+    assert method in ('spearman')
+    raise ArmyAntException("Not implemented")
+
+
+async def rws_rank_concordance(index_location, index_type, rw_length, rw_repeats, topics_path, output_path,
+                               limit, repeats, method, force, loop):
     assert method in ('kendall_w')
 
     index = Index.open(index_location, index_type, loop)
@@ -56,7 +64,7 @@ async def random_walk_concordance_test(index_location, index_type, rw_length, rw
                         continue
 
                     result_set = await index.search(query, 0, limit, 'random_walk',
-                                                    { 'l': str(rw_length[i]), 'r': str(rw_repeats[j]) })
+                                                    {'l': str(rw_length[i]), 'r': str(rw_repeats[j])})
                     df = pd.DataFrame(columns=['score', 'doc_id'])
 
                     for result in result_set:

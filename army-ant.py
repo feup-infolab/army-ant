@@ -21,7 +21,7 @@ from json import JSONDecodeError
 import fire
 import yaml
 
-from army_ant.analysis import random_walk_concordance_test
+from army_ant.analysis import rws_rank_concordance, rws_rank_correlation
 from army_ant.database import Database
 from army_ant.evaluation import EvaluationTask, EvaluationTaskManager
 from army_ant.exception import ArmyAntException
@@ -40,13 +40,26 @@ logger = logging.getLogger(__name__)
 
 
 class CommandLineInterfaceAnalysis(object):
-    def rw_stability(self, index_location, index_type, rw_length, rw_repeats, topics_path, output_path,
-                     limit=1000, repeats=100, method='kendall_w', force=False):
+    def rws_rank_concordance(self, index_location, index_type, rw_length, rw_repeats, topics_path, output_path,
+                             limit=1000, repeats=100, method='kendall_w', force=False):
         loop = asyncio.get_event_loop()
         try:
             loop.run_until_complete(
-                random_walk_concordance_test(index_location, index_type, rw_length, rw_repeats, topics_path,
-                                             output_path, limit, repeats, method, force, loop))
+                rws_rank_concordance(index_location, index_type, rw_length, rw_repeats, topics_path, output_path,
+                                     limit, repeats, method, force, loop))
+        finally:
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.close()
+
+    def rws_rank_correlation(self, index_a_location, index_a_type, index_b_location, index_b_type,
+                             rw_length, rw_repeats, topics_path, output_path, limit=1000, repeats=100,
+                             method='kendall_w', force=False):
+        loop = asyncio.get_event_loop()
+        try:
+            loop.run_until_complete(
+                rws_rank_correlation(index_a_location, index_a_type, index_b_location, index_b_type,
+                                     rw_length, rw_repeats, topics_path, output_path, limit, repeats,
+                                     method, force, loop))
         finally:
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()
@@ -104,7 +117,8 @@ class CommandLineInterfaceExtras(object):
 
                 entities = fetch_dbpedia_entity_labels(DBpediaClass[class_name], offset=offset, limit=limit)
 
-                if len(entities) < 1: break
+                if len(entities) < 1:
+                    break
                 count += len(entities)
 
                 for entity in entities:
@@ -178,8 +192,10 @@ class CommandLineInterface(object):
                 try:
                     if interactive:
                         query = input('query> ')
-                        if query == r'\quit': break
-                        if query.strip() == '': continue
+                        if query == r'\quit':
+                            break
+                        if query.strip() == '':
+                            continue
 
                         ranking = re.match(r'\\set_ranking_(.*)', query)
                         if ranking:
@@ -211,7 +227,8 @@ class CommandLineInterface(object):
                     print("\\quit")
                     break
 
-                if not interactive: break
+                if not interactive:
+                    break
         finally:
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()
@@ -234,8 +251,10 @@ class CommandLineInterface(object):
                 try:
                     if interactive:
                         feature = input('feature> ')
-                        if feature == r'\quit': break
-                        if feature.strip() == '': continue
+                        if feature == r'\quit':
+                            break
+                        if feature.strip() == '':
+                            continue
 
                     index = Index.open(index_location, index_type, loop)
                     loop.run_until_complete(index.inspect(feature, workdir))
@@ -245,7 +264,8 @@ class CommandLineInterface(object):
                     print("\\quit")
                     break
 
-                if not interactive: break
+                if not interactive:
+                    break
         finally:
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()

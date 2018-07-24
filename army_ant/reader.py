@@ -431,7 +431,7 @@ class TRECWashingtonPostReader(MongoDBReader):
         self.include_dbpedia = include_dbpedia
 
         if include_ae_doc_profile:
-            ignored_features = ['NamedEntities', 'Language']            
+            ignored_features = ['Language', 'NamedEntities', 'SentimentAnalysis', 'EmotionCategories']
             
             logger.info("Loading and preprocessing features from Antonio Espejo's document profile")
             self.features = pd.read_csv(os.path.join(self.features_location, 'features.tsv.gz'),
@@ -485,6 +485,13 @@ class TRECWashingtonPostReader(MongoDBReader):
         doc_id = doc['id']
         text = self.to_plain_text(doc, limit=3)
         entities = self.ac_ner.extract(text)
+
+        for entity in entities:
+            triples.add((
+                Entity(),
+                Entity(label="mentions"),
+                Entity(label=entity)
+            ))
 
         if self.include_ae_doc_profile:
             doc_features = self.features.loc[doc['id']]

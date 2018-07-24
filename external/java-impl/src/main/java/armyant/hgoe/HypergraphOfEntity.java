@@ -133,7 +133,10 @@ public class HypergraphOfEntity extends Engine {
         this.reachabilityIndex = new HashMap<>();
         this.trace = new Trace();
 
-        logger.info("Using Hypergraph of Entity for {}", path);
+        String featuresStr = features.isEmpty() ? "no features"
+                : String.format("features: %s",
+                        String.join(", ", features.stream().map(Feature::toString).toArray(String[]::new)));
+        logger.info("Opening hypergraph-of-entity at {}, with {}", path, featuresStr);
 
         if (overwrite) {
             logger.info("Overwriting graph in {}, if it exists", path);
@@ -250,14 +253,17 @@ public class HypergraphOfEntity extends Engine {
 
         if (nodes.isEmpty()) return nodeIDs;
 
-        RelatedToEdge relatedToEdge = new RelatedToEdge();
-        int edgeID = createUndirectedEdge(relatedToEdge);
+        Integer edgeID = null;
+        if (!features.contains(Feature.SKIP_RELATED_TO)) {
+            RelatedToEdge relatedToEdge = new RelatedToEdge();
+            edgeID = createUndirectedEdge(relatedToEdge);
+        }
 
         for (Node node : nodes) {
             int entityNodeID = getOrCreateNode(node);
             nodeIDs.add(entityNodeID);
             synchronized (this) {
-                graph.addToUndirectedHyperEdge(edgeID, entityNodeID);
+                if (edgeID != null) graph.addToUndirectedHyperEdge(edgeID, entityNodeID);
             }
         }
 
@@ -1535,7 +1541,8 @@ public class HypergraphOfEntity extends Engine {
         SYNONYMS,
         CONTEXT,
         WEIGHT,
-        PRUNE
+        PRUNE,
+        SKIP_RELATED_TO
     }
 
     public enum Task {
