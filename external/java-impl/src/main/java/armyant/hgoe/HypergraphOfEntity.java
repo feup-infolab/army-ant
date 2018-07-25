@@ -883,7 +883,7 @@ public class HypergraphOfEntity extends Engine {
     // TODO Should follow Bellaachia2013 for random walks on hypergraphs (Equation 14)
     private grph.path.Path randomWalk(int startNodeID, int length, boolean useWeightBias) {
         grph.path.Path path = new ArrayListPath();
-        path.extend(startNodeID);
+        path.setSource(startNodeID);
         randomStep(startNodeID, length, path, useWeightBias);
         return path;
     }
@@ -948,22 +948,26 @@ public class HypergraphOfEntity extends Engine {
 
         for (int seedNodeID : seedNodeIDs) {
             Int2IntOpenHashMap atomVisits = new Int2IntOpenHashMap();
-            trace.add("From seed node: %s", nodeIndex.getKey(seedNodeID));
-            /*trace.goDown();
-            trace.add("Random walk with repeat (walkLength = %d, walkRepeats = %d)", walkLength, walkRepeats);
-            trace.goDown();*/
+            trace.add("From seed node %s", nodeIndex.getKey(seedNodeID));
+            trace.goDown();
 
             for (int i = 0; i < walkRepeats; i++) {
                 grph.path.Path randomPath = randomWalk(seedNodeID, walkLength, biased);
 
-                /*String messageRandomPath = Arrays.stream(randomPath.toVertexArray())
-                        .mapToObj(nodeID -> nodeIndex.getKey(nodeID).toString())
-                        .collect(Collectors.joining        //IntSet edgeIDs = graph.getEdgesIncidentTo(nodeID);
-(" -> "));
-                trace.add(messageRandomPath.replace("%", "%%"));
-                trace.goDown();*/
+                StringBuilder messageRandomPath = new StringBuilder();
+                for (int j = 0; j < randomPath.getNumberOfVertices(); j++) {
+                    if (j > 0) {
+                        messageRandomPath
+                            .append(" -> ")
+                            .append(edgeIndex.getKey(randomPath.getEdgeHeadingToVertexAt(j)).toString())
+                            .append(" -> ");
+                    }
+                    messageRandomPath.append(nodeIndex.getKey(randomPath.getVertexAt(j)).toString());
+                }
+                trace.add(messageRandomPath.toString().replace("%", "%%"));
+                //trace.goDown();
 
-                for (int j = 0; i < randomPath.getNumberOfVertices(); i++) {
+                for (int j = 0; j < randomPath.getNumberOfVertices(); j++) {
                     if (task == Task.DOCUMENT_RETRIEVAL) {
                         if (j > 0) {
                             atomVisits.addTo(randomPath.getEdgeHeadingToVertexAt(j), 1);
@@ -974,22 +978,25 @@ public class HypergraphOfEntity extends Engine {
                     }
 
                     if (logger.isTraceEnabled()) {
-                        logger.trace("Node in random path: {}", nodeIndex.getKey(randomPath.getVertexAt(j)).toString());
                         if (j > 0) {
                             logger.trace("Hyperedge in random path: {}",
                                     edgeIndex.getKey(randomPath.getEdgeHeadingToVertexAt(j)).toString());
                         }
+                        logger.trace("Node in random path: {}", nodeIndex.getKey(randomPath.getVertexAt(j)).toString());
                     }
                 }
 
                 //trace.goUp();
             }
 
-            //trace.goUp();
+            trace.goUp();
 
             int maxVisits = Arrays.stream(atomVisits.values().toIntArray()).max().orElse(0);
-            trace.goDown();
-            trace.add("max(visits) = %d", maxVisits);
+            trace.add("max(visits from seed node %s) = %d", nodeIndex.getKey(seedNodeID), maxVisits);
+
+            /*for (Map.Entry<Integer, Integer> entry : atomVisits.int2IntEntrySet()) {
+                System.out.println(nodeIndex.getKey(entry.getKey()).toString() + " -> " + entry.getValue());
+            }*/
 
             /*trace.add("Accumulating visit probability, weighted by seed node confidence");
             trace.goDown();*/
@@ -1011,8 +1018,8 @@ public class HypergraphOfEntity extends Engine {
                 trace.goUp();*/
             }
 
-            trace.add("%d visited nodes", atomVisits.size());
-            trace.goUp();
+            /*trace.add("%d visited nodes", atomVisits.size());
+            trace.goUp();*/
 
             /*trace.goUp();
             trace.goUp();*/
@@ -1023,11 +1030,10 @@ public class HypergraphOfEntity extends Engine {
         ResultSet resultSet = new ResultSet();
         resultSet.setTrace(trace);
 
-        trace.add("Weighted nodes");
-        trace.goDown();
-
         double maxCoverage = Arrays.stream(atomCoverage.values().toDoubleArray()).max().orElse(0d);
-        trace.add("max(coverage) = %f", maxCoverage);
+
+        trace.add("Weighted nodes [max(coverage) = %f]", maxCoverage);
+        trace.goDown();
 
         for (int atomID : weightedAtomVisitProbability.keySet()) {
             atomCoverage.compute(atomID, (k, v) -> v / maxCoverage);
@@ -1054,6 +1060,10 @@ public class HypergraphOfEntity extends Engine {
             }
         }
 
+        if (weightedAtomVisitProbability.isEmpty()) {
+            trace.add(Trace.EMPTY);
+        }
+
         trace.goUp();
 
         trace.add("Collecting results (task=%s)", task);
@@ -1067,6 +1077,10 @@ public class HypergraphOfEntity extends Engine {
             trace.add("name = %s", result.getName());
             trace.add("type = %s", result.getType());
             trace.goUp();
+        }
+
+        if (resultSet.isEmpty()) {
+            trace.add(Trace.EMPTY);
         }
 
         return resultSet;
@@ -1204,12 +1218,15 @@ public class HypergraphOfEntity extends Engine {
         Map<String, String> params = new HashMap<>();
         params.put("l", String.valueOf(DEFAULT_WALK_LENGTH));
         params.put("r", String.valueOf(DEFAULT_WALK_REPEATS));
-        return search(query, offset, limit, task, RankingFunction.RANDOM_WALK_SCORE, params);
+        return search(query, offset, limit, task, RankingFunction.RANDOM_WALK_SCORE, params, false);
     }
 
-    public ResultSet search(String query, int offset, int limit, Task task, RankingFunction function, Map<String, String> params) throws IOException {
+    public ResultSet search(String query, int offset, int limit, Task task, RankingFunction function,
+            Map<String, String> params, boolean debug) throws IOException {
         long start = System.currentTimeMillis();
-        trace.reset();
+        
+        trace.reset();        
+        trace.setEnabled(debug);
 
         List<String> tokens = analyze(query);
         IntSet queryTermNodeIDs = getQueryTermNodeIDs(tokens);

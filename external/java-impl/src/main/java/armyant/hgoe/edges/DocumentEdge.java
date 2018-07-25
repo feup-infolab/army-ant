@@ -44,7 +44,7 @@ public class DocumentEdge extends Edge implements RankableAtom {
 
     @Override
     public String toString() {
-        return "DocumentEdge{" + "docID='" + docID + '\'' + "title='" + title + '\'' + '}';
+        return "DocumentEdge{" + "docID='" + docID + '\'' + " title='" + title + '\'' + '}';
     }
 
     @Override

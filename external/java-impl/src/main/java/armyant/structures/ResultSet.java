@@ -14,6 +14,10 @@ public class ResultSet implements Iterator<Result>, Iterable<Result> {
     private Trace trace;
     private Iterator<Result> resultsIterator;
 
+    public static ResultSet empty() {
+        return new ResultSet();
+    }
+
     public ResultSet() {
         this(new TreeSet<>((a, b) -> Double.compare(b.getScore(), a.getScore())), null, null);
     }
@@ -108,8 +112,8 @@ public class ResultSet implements Iterator<Result>, Iterable<Result> {
         return resultsIterator.next();
     }
 
-    public static ResultSet empty() {
-        return new ResultSet();
+    public boolean isEmpty() {
+        return this.results.isEmpty();
     }
 
     @NotNull

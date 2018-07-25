@@ -1,6 +1,9 @@
 package armyant.hgoe;
 
+import armyant.hgoe.edges.DocumentEdge;
+import armyant.hgoe.edges.Edge;
 import armyant.hgoe.exceptions.HypergraphException;
+import armyant.hgoe.nodes.Node;
 import armyant.hgoe.nodes.TermNode;
 import armyant.structures.Document;
 import armyant.structures.Result;
@@ -139,6 +142,15 @@ public class HypergraphOfEntityTest {
 
     }
 
+    public void testAtomInstanceOf() {
+        Edge edge = new DocumentEdge();
+        Atom atom = edge;
+        assert atom instanceof RankableAtom;
+        assert atom instanceof Edge;
+        assert atom instanceof DocumentEdge;
+        assert !(atom instanceof Node);
+    }
+
     /**
      * Sandbox tests
      */
@@ -146,14 +158,15 @@ public class HypergraphOfEntityTest {
     // How does a Path work in Grph?
     public void testPath() {
         Path path = new ArrayListPath();
-        path.extend(10);
+        path.setSource(10);
         path.extend(1, 20);
         path.extend(2, 10);
         path.extend(3, 20);
         path.extend(30);
-        System.out.println(path);
-        System.out.println(path.getLength());
-        System.out.println(path.indexOfVertex(10));
+        System.out.println("Path: " + path);
+        System.out.println("Path length: " + path.getLength());
+        System.out.println("Index of vertex 20: " + path.indexOfVertex(20));
+        System.out.println("Edge leading to vertex 20: " + path.getEdgeHeadingToVertexAt(path.indexOfVertex(20)));
     }
 
     public void testWordNet() throws IOException {

@@ -119,7 +119,7 @@ class Index(object):
         """Indexes the documents and yields documents to store in the database."""
         raise ArmyAntException("Index not implemented for %s" % self.__class__.__name__)
 
-    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None):
+    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
         raise ArmyAntException("Search not implemented for %s" % self.__class__.__name__)
 
     async def inspect(self, feature, workdir='.'):
@@ -287,7 +287,7 @@ class GraphOfWord(GremlinServerIndex):
 
         await self.cluster.close()
 
-    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None):
+    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
         try:
             self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
         except ClientConnectorError as e:
@@ -370,7 +370,7 @@ class GraphOfEntity(GremlinServerIndex):
 
         await self.cluster.close()
 
-    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None):
+    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
         try:
             self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
         except ClientConnectorError as e:
@@ -850,7 +850,7 @@ class HypergraphOfEntity(JavaIndex):
         finally:
             shutdownJVM()
 
-    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None):
+    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
         if ranking_function:
             try:
                 ranking_function = HypergraphOfEntity.RankingFunction[ranking_function]
@@ -894,7 +894,7 @@ class HypergraphOfEntity(JavaIndex):
                 HypergraphOfEntity.INSTANCES[self.index_location] = hgoe
 
             task = HypergraphOfEntity.JTask.valueOf(task.value)
-            results = hgoe.search(query, offset, limit, task, ranking_function, ranking_params)
+            results = hgoe.search(query, offset, limit, task, ranking_function, ranking_params, debug)
             num_docs = results.getNumDocs()
             trace = results.getTrace()
             results = [Result(result.getScore(), result.getID(), result.getName(), result.getType())
@@ -977,7 +977,7 @@ class LuceneEngine(JavaIndex):
         finally:
             shutdownJVM()
 
-    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None):
+    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
         if ranking_function:
             try:
                 ranking_function = LuceneEngine.RankingFunction[ranking_function]
