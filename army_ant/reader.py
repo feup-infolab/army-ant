@@ -486,12 +486,12 @@ class TRECWashingtonPostReader(MongoDBReader):
         text = self.to_plain_text(doc, limit=3)
         entities = self.ac_ner.extract(text)
 
-        for entity in entities:
-            triples.add((
-                Entity(),
-                Entity(label="mentions"),
-                Entity(label=entity)
-            ))
+        # for entity in entities:
+        #     triples.add((
+        #         Entity(),
+        #         Entity(label="mentions"),
+        #         Entity(label=entity)
+        #     ))
 
         if self.include_ae_doc_profile:
             doc_features = self.features.loc[doc['id']]
