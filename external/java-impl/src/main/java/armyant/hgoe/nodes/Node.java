@@ -2,10 +2,12 @@ package armyant.hgoe.nodes;
 
 import java.io.Serializable;
 
+import armyant.hgoe.Atom;
+
 /**
  * Created by jldevezas on 2017-10-24.
  */
-public class Node implements Serializable {
+public class Node implements Atom, Serializable {
     protected String name;
 
     public Node() {

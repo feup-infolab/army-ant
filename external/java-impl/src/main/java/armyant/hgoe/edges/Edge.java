@@ -2,10 +2,12 @@ package armyant.hgoe.edges;
 
 import java.io.Serializable;
 
+import armyant.hgoe.Atom;
+
 /**
  * Created by jldevezas on 2017-10-24.
  */
-public class Edge implements Serializable {
+public class Edge implements Atom, Serializable {
     public Edge() {
     }
 

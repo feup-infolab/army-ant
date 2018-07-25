@@ -39,8 +39,19 @@
   {% include 'search/engine.j2' %}
 </form>
 
-{% if results|length > 0 %}
+{% if error %}
 
+<div class="container">
+  <div class="empty">
+    <div class="empty-icon">
+      <i class="icon icon-2x icon-stop"></i>
+    </div>
+    <h4 class="empty-title">Error</h4>
+    <p class="empty-subtitle">{{ error }}</p>
+  </div>
+</div>
+
+{% else %}
 
 <div class="container">
   <small>{{ numDocs }} results ({{ time|round(2) }} seconds)</small>
@@ -56,56 +67,11 @@
 
 {% include 'search/results.j2' %}
 
-{% if offset is not none and pages > 1 %}
-{% include 'search/paginator.j2' %}
 {% endif %}
 
 {% endif %}
 
 
-{% elif error %}
-
-
-<div class="container">
-  <div class="empty">
-    <div class="empty-icon">
-      <i class="icon icon-2x icon-stop"></i>
-    </div>
-    <h4 class="empty-title">Error</h4>
-    <p class="empty-subtitle">{{ error }}</p>
-  </div>
-</div>
-
-
-{% else %}
-
-
-<div class="container">
-  {% if query %}
-  <div class="empty">
-    <div class="empty-icon">
-      <i class="icon icon-2x icon-search"></i>
-    </div>
-    <h4 class="empty-title">No results found</h4>
-    <p class="empty-subtitle">Try to search for something else.</p>
-  </div>
-  {% else %}
-  <div class="empty">
-    <div class="empty-icon">
-      <i class="icon icon-2x icon-search"></i>
-    </div>
-    <h4 class="empty-title">Please insert a query in order to search for documents/entities.</h4>
-    <p class="empty-subtitle">
-      <b>You can also select a different engine or enable/disable learn mode.</b> If
-      there are no engines available in the drop down, please implement your own
-      first and index your document collection.
-    </p>
-  </div>
-  {% endif %}
-</div>
-
-
-{% endif %}
 
 <br>
 <br>

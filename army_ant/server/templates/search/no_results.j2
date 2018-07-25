@@ -1,0 +1,23 @@
+<div class="container">
+  {% if query %}
+  <div class="empty">
+    <div class="empty-icon">
+      <i class="icon icon-2x icon-search"></i>
+    </div>
+    <h4 class="empty-title">No results found</h4>
+    <p class="empty-subtitle">Try to search for something else.</p>
+  </div>
+  {% else %}
+  <div class="empty">
+    <div class="empty-icon">
+      <i class="icon icon-2x icon-search"></i>
+    </div>
+    <h4 class="empty-title">Please insert a query in order to search for documents/entities.</h4>
+    <p class="empty-subtitle">
+      <b>You can also select a different engine or enable/disable learn mode.</b> If
+      there are no engines available in the drop down, please implement your own
+      first and index your document collection.
+    </p>
+  </div>
+  {% endif %}
+</div>

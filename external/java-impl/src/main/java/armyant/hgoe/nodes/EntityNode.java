@@ -1,9 +1,11 @@
 package armyant.hgoe.nodes;
 
+import armyant.hgoe.RankableAtom;
+
 /**
  * Created by jldevezas on 2017-10-24.
  */
-public class EntityNode extends RankableNode {
+public class EntityNode extends Node implements RankableAtom {
     private String entityURI;
 
     public EntityNode() {

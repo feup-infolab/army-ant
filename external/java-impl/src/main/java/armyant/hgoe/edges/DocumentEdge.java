@@ -1,34 +1,50 @@
 package armyant.hgoe.edges;
 
-import armyant.hgoe.nodes.RankableNode;
+import armyant.hgoe.RankableAtom;
 
 /**
  * Created by jldevezas on 2017-10-24.
  */
-public class DocumentEdge extends Edge {
+public class DocumentEdge extends Edge implements RankableAtom {
     private String docID;
+    private String title;
 
     public DocumentEdge() {
     }
 
     public DocumentEdge(String docID) {
-        super();
-        this.docID = docID;
+        this(docID, null);
     }
 
-    public String getDocID() {
+    public DocumentEdge(String docID, String title) {
+        super();
+        this.docID = docID;
+        this.title = title;
+    }
+
+    @Override
+    public String getID() {
         return docID;
     }
 
-    public void setDocID(String docID) {
+    @Override
+    public void setID(String docID) {
         this.docID = docID;
     }
 
     @Override
+    public String getName() {
+        return title;
+    }
+
+    @Override
+    public void setName(String title) {
+        this.title = title;
+    }
+
+    @Override
     public String toString() {
-        return "DocumentEdge{" +
-               "docID='" + docID + '\'' +
-               '}';
+        return "DocumentEdge{" + "docID='" + docID + '\'' + "title='" + title + '\'' + '}';
     }
 
     @Override

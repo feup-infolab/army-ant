@@ -46,6 +46,8 @@
       </div>
 
       <div id="results" class="tab-content d-hide">
+        {% if results|length > 0 %}
+
         <table class="table table-striped table-hover">
           <thead>
             <tr>
@@ -72,6 +74,12 @@
             {% endfor %}
           </tbody>
         </table>
+
+        {% else %}
+
+        {% include 'search/no_results.j2' %}
+
+        {% endif %}
       </div>
 
       {% if index_type in ['gow', 'goe'] %}
