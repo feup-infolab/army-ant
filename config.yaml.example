@@ -214,14 +214,13 @@ engines:
           r: 100
           f: 0
       functions:
-        jaccard:
-          name: Jaccard Score
         random_walk:
           name: Random Walk Score
           params:
             l: [1, 2, 3, 4, 5, 6]
-            r: [10, 100, 250, 500, 750, 1000]
-            f: [0, 1, 2, 3, 4, 5, 10, 25, 50, 100, 125, 150, 175, 200, 300, 400, 500]
+            r: [10, 100, 250, 500, 750, 1000, 10000]
+            nf: [0, 10, 100, 500, 1000]
+            ef: [0, 10, 100, 500, 1000]
 
   hgoe-syns-context-10t-nl-inex-52t-nl:
     name: INEX 10T-NL - Hypergraph-of-Entity (Synonyms; Context 52T-NL)
@@ -242,14 +241,13 @@ engines:
           r: 100
           f: 0
       functions:
-        jaccard:
-          name: Jaccard Score
         random_walk:
           name: Random Walk Score
           params:
             l: [1, 2, 3, 4, 5, 6]
-            r: [10, 100, 250, 500, 750, 1000]
-            f: [0, 1, 2, 3, 4, 5, 10, 25, 50, 100, 125, 150, 175, 200, 300, 400, 500]
+            r: [10, 100, 250, 500, 750, 1000, 10000]
+            nf: [0, 10, 100, 500, 1000]
+            ef: [0, 10, 100, 500, 1000]
 
   hgoe-inex-30t-nl:
     name: INEX 30T-NL - Hypergraph of Entity
