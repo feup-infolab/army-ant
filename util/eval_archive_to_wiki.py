@@ -54,8 +54,3 @@ with ZipFile(sys.argv[1]) as f_zip:
         for row in df.iterrows():
             values = ['%%.%df' % decimal_places % d if type(d) is float else d for d in row[1:][0].values]
             print('| %s |' % ' | '.join(values) + (' ::: |' * 2) + (' |' * 2))
-        #doku_table = df.to_csv(index=False, float_format='%%.%df' % decimal_places, sep='|')
-        #for line in doku_table.split('\n')[1:]:
-        #    print(line)
-
-        #print(doku_table)
