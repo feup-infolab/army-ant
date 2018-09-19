@@ -41,25 +41,25 @@ logger = logging.getLogger(__name__)
 
 class CommandLineInterfaceAnalysis(object):
     def rws_rank_concordance(self, index_location, index_type, rw_length, rw_repeats, topics_path, output_path,
-                             limit=1000, repeats=100, method='kendall_w', force=False):
+                             cutoff=1000, repeats=100, method='kendall_w', force=False):
         loop = asyncio.get_event_loop()
         try:
             loop.run_until_complete(
                 rws_rank_concordance(index_location, index_type, rw_length, rw_repeats, topics_path, output_path,
-                                     limit, repeats, method, force, loop))
+                                     cutoff, repeats, method, force, loop))
         finally:
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()
 
     def rws_rank_correlation(self, index_a_location, index_a_type, index_b_location, index_b_type,
-                             rw_length, rw_repeats, topics_path, output_path, limit=1000, repeats=100,
-                             method='kendall_w', force=False):
+                             topics_path, output_path, cutoff=1000, repeats=100, method='spearman',
+                             force=False, **kwargs):
         loop = asyncio.get_event_loop()
         try:
             loop.run_until_complete(
                 rws_rank_correlation(index_a_location, index_a_type, index_b_location, index_b_type,
-                                     rw_length, rw_repeats, topics_path, output_path, limit, repeats,
-                                     method, force, loop))
+                                     rw_length, rw_repeats, rw_node_fatigue, rw_edge_fatigue, topics_path,
+                                     output_path, cutoff, repeats, method, force, loop))
         finally:
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()

@@ -10,6 +10,8 @@ import os
 import numpy as np
 import pandas as pd
 
+from scipy.stats import spearmanr
+
 from army_ant.exception import ArmyAntException
 from army_ant.util import FillMethod, fill_missing
 
@@ -31,6 +33,12 @@ def kendall_w(pd_dfs):
 
     return (12 * n * np.var(np.sum(rankings, axis=0))) / (m ** 2 * (n ** 3 - n))
 
+
+def spearman_rho(df_a, df_b):
+    dfs = fill_missing([df_a, df_b], 'doc_id', rank=FillMethod.INC_MAX, score=FillMethod.ZERO)
+    return round(spearmanr(dfs[0].sort_values('doc_id')['rank'], dfs[1].sort_values('doc_id')['rank']).correlation, 15)
+
+
 if __name__ == '__main__':
     dfs = [
         pd.DataFrame({'rank': [1, 2, 3], 'score': [10, 4, 2], 'doc_id': ['d1', 'd2', 'd3']}),
@@ -41,6 +49,7 @@ if __name__ == '__main__':
     #filled_dfs = fill_missing(dfs, 'doc_id', rank=FillMethod.INC_MAX, score=FillMethod.ZERO)
     #for df in filled_dfs: print(df)
     print("Kendall's W:", kendall_w(dfs))
+    print("Spearman's Rho:", spearman_rho(dfs[1], dfs[2]))
 
     # dir_path = '/opt/army-ant/analysis/inex-52t-nl-hgoe-rw_stability/l_2-r_100/topic_2010003'
     # dfs = [pd.read_csv(os.path.join(dir_path, filename)) for filename in os.listdir(dir_path)]
