@@ -30,7 +30,9 @@ async def rank_correlation(index_a_location, index_a_type, index_b_location, ind
 
     os.makedirs(output_path, exist_ok=True)
 
-    correlations = pd.DataFrame(columns=['l', 'r', 'topic_id'])
+    correlations = pd.DataFrame(columns=[
+        'topic_id', 'index_type_a', 'ranking_funtion_a', 'ranking_params_a', 'avg_num_results_a',
+        'index_type_b', 'ranking_funtion_b', 'ranking_params_b', 'avg_num_results_b', 'avg_rho'])
 
     for topic in topics.xpath('//topic'):
         topic_id = get_first(topic.xpath('@id'))
@@ -49,18 +51,18 @@ async def rank_correlation(index_a_location, index_a_type, index_b_location, ind
             filename_a = os.path.join(path, 'a_repeat_%%0%dd.csv' % len(str(repeats)) % repeat)
             filename_b = os.path.join(path, 'b_repeat_%%0%dd.csv' % len(str(repeats)) % repeat)
 
-            if not force and os.path.exists(filename_a):
+            if not force and os.path.exists(filename_a) and os.path.exists(filename_b):
                 df_a = pd.read_csv(filename_a)
                 num_results_a.append(len(df_a))
-                logger.warning("Loading existing file for repeat %d of index A: %s (use --force to recompute)" % (
+                logger.warning("Loaded existing file for repeat %d of index A: %s (use --force to recompute)" % (
                     repeat, filename_a))
-                continue
 
-            if not force and os.path.exists(filename_b):
                 df_b = pd.read_csv(filename_b)
                 num_results_b.append(len(df_b))
-                logger.warning("Loading existing file for repeat %d of index B: %s (use --force to recompute)" % (
+                logger.warning("Loaded existing file for repeat %d of index B: %s (use --force to recompute)" % (
                     repeat, filename_b))
+
+                rhos.append(spearman_rho(df_a, df_b))
                 continue
 
             result_set_a = await index_a.search(
@@ -123,13 +125,10 @@ async def rank_correlation(index_a_location, index_a_type, index_b_location, ind
     logger.info(
         "Saved correlations per topic (%d repeats) to %s" % (repeats, correlations_filename))
 
-    gmean_correlations = correlations[['l', 'r', 'avg_rho']] \
-        .groupby(['l', 'r']) \
-        .agg(lambda x: gmean(x.values))
-
-    gmean_correlations_filename = os.path.join(output_path, 'gmean_correlations-%d_repeats.csv' % repeats)
-    gmean_correlations.to_csv(gmean_correlations_filename)
-    logger.info("Saved geometric mean for correlations (%d repeats) to %s" % (repeats, gmean_correlations_filename))
+    mean_correlation = np.mean(correlations['avg_rho'])
+    mean_correlation_filename = os.path.join(output_path, 'mean_correlation-%d_repeats' % repeats)
+    open(mean_correlation_filename, 'w').write('%15f' % mean_correlation)
+    logger.info("Saved mean correlation (%d repeats) to %s" % (repeats, mean_correlation_filename))
 
 
 async def rws_rank_concordance(index_location, index_type, rw_length, rw_repeats, topics_path, output_path,
@@ -165,7 +164,7 @@ async def rws_rank_concordance(index_location, index_type, rw_length, rw_repeats
                         df = pd.read_csv(filename)
                         df_repeats.append(df)
                         num_results.append(len(df))
-                        logger.warning("Loading existing file for repeat %d: %s (use --force to recompute)" % (
+                        logger.warning("Loaded existing file for repeat %d: %s (use --force to recompute)" % (
                             repeat, filename))
                         continue
 
@@ -200,10 +199,10 @@ async def rws_rank_concordance(index_location, index_type, rw_length, rw_repeats
     logger.info(
         "Saved concordances per topic (%d repeats) to %s" % (repeats, correlations_filename))
 
-    gmean_correlations = correlations[['r', 'l', 'w']] \
+    mean_correlation = correlations[['r', 'l', 'w']] \
         .groupby(['l', 'r']) \
         .agg(lambda x: gmean(x.values))
 
-    gmean_correlations_filename = os.path.join(output_path, 'gmean_concordances-%d_repeats.csv' % repeats)
-    gmean_correlations.to_csv(gmean_correlations_filename)
-    logger.info("Saved geometric mean concordances (%d repeats) to %s" % (repeats, gmean_correlations_filename))
+    mean_correlation_filename = os.path.join(output_path, 'gmean_concordances-%d_repeats.csv' % repeats)
+    mean_correlation.to_csv(mean_correlation_filename)
+    logger.info("Saved geometric mean concordances (%d repeats) to %s" % (repeats, mean_correlation_filename))
