@@ -21,9 +21,9 @@ def gmean(values):
 
 
 def kendall_w(pd_dfs):
-    pd_dfs = fill_missing(pd_dfs, 'doc_id', rank=FillMethod.INC_MAX, score=FillMethod.ZERO)
+    pd_dfs = fill_missing(pd_dfs, 'id', rank=FillMethod.INC_MAX, score=FillMethod.ZERO)
 
-    rankings = np.stack([df.sort_values('doc_id')['rank'] for df in pd_dfs], axis=0)
+    rankings = np.stack([df.sort_values('id')['rank'] for df in pd_dfs], axis=0)
 
     if rankings.ndim != 2:
         raise ArmyAntException('Rankings matrix must be 2-dimensional')
@@ -35,18 +35,18 @@ def kendall_w(pd_dfs):
 
 
 def spearman_rho(df_a, df_b):
-    dfs = fill_missing([df_a, df_b], 'doc_id', rank=FillMethod.INC_MAX, score=FillMethod.ZERO)
-    return round(spearmanr(dfs[0].sort_values('doc_id')['rank'], dfs[1].sort_values('doc_id')['rank']).correlation, 15)
+    dfs = fill_missing([df_a, df_b], 'id', rank=FillMethod.INC_MAX, score=FillMethod.ZERO)
+    return round(spearmanr(dfs[0].sort_values('id')['rank'], dfs[1].sort_values('id')['rank']).correlation, 15)
 
 
 if __name__ == '__main__':
     dfs = [
-        pd.DataFrame({'rank': [1, 2, 3], 'score': [10, 4, 2], 'doc_id': ['d1', 'd2', 'd3']}),
-        pd.DataFrame({'rank': [1, 2, 3, 4], 'score': [20, 8, 4, 2], 'doc_id': ['d1', 'd2', 'd7', 'd3']}),
-        pd.DataFrame({'rank': [1, 2, 3], 'score': [100, 40, 20], 'doc_id': ['d2', 'd1', 'd3']}),
-        pd.DataFrame(columns=['rank', 'score', 'doc_id'])
+        pd.DataFrame({'rank': [1, 2, 3], 'score': [10, 4, 2], 'id': ['d1', 'd2', 'd3']}),
+        pd.DataFrame({'rank': [1, 2, 3, 4], 'score': [20, 8, 4, 2], 'id': ['d1', 'd2', 'd7', 'd3']}),
+        pd.DataFrame({'rank': [1, 2, 3], 'score': [100, 40, 20], 'id': ['d2', 'd1', 'd3']}),
+        pd.DataFrame(columns=['rank', 'score', 'id'])
     ]
-    #filled_dfs = fill_missing(dfs, 'doc_id', rank=FillMethod.INC_MAX, score=FillMethod.ZERO)
+    #filled_dfs = fill_missing(dfs, 'id', rank=FillMethod.INC_MAX, score=FillMethod.ZERO)
     #for df in filled_dfs: print(df)
     print("Kendall's W:", kendall_w(dfs))
     print("Spearman's Rho:", spearman_rho(dfs[1], dfs[2]))

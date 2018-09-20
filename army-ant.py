@@ -21,7 +21,7 @@ from json import JSONDecodeError
 import fire
 import yaml
 
-from army_ant.analysis import rws_rank_concordance, rws_rank_correlation
+from army_ant.analysis import rws_rank_concordance, rank_correlation
 from army_ant.database import Database
 from army_ant.evaluation import EvaluationTask, EvaluationTaskManager
 from army_ant.exception import ArmyAntException
@@ -40,26 +40,39 @@ logger = logging.getLogger(__name__)
 
 
 class CommandLineInterfaceAnalysis(object):
-    def rws_rank_concordance(self, index_location, index_type, rw_length, rw_repeats, topics_path, output_path,
-                             cutoff=1000, repeats=100, method='kendall_w', force=False):
+    def rank_concordance(self, index_location, index_type, rw_length, rw_repeats, topics_path, output_path,
+                         cutoff=1000, repeats=100, method='kendall_w', force=False):
         loop = asyncio.get_event_loop()
         try:
             loop.run_until_complete(
-                rws_rank_concordance(index_location, index_type, rw_length, rw_repeats, topics_path, output_path,
-                                     cutoff, repeats, method, force, loop))
+                rw_rank_concordance(index_location, index_type, rw_length, rw_repeats, topics_path, output_path,
+                                    cutoff, repeats, method, force, loop))
         finally:
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()
 
-    def rws_rank_correlation(self, index_a_location, index_a_type, index_b_location, index_b_type,
-                             topics_path, output_path, cutoff=1000, repeats=100, method='spearman',
-                             force=False, **kwargs):
+    def rank_correlation(self, index_a_location, index_a_type, index_b_location, index_b_type,
+                         ranking_function_a, ranking_function_b, topics_path, output_path,
+                         ranking_params_a="", ranking_params_b="", cutoff=1000, repeats=100,
+                         method='spearman', force=False):
+        try:
+            ranking_params_a = dict(tuple(param.split('=')) for param in ranking_params_a.split(','))
+        except:
+            logger.warning("Empty ranking parameters for %s" % ranking_function_a)
+            ranking_params_a = {}
+        
+        try:
+            ranking_params_b = dict(tuple(param.split('=')) for param in ranking_params_b.split(','))
+        except:
+            logger.warning("Empty ranking parameters for %s" % ranking_function_b)
+            ranking_params_b = {}
+        
         loop = asyncio.get_event_loop()
         try:
             loop.run_until_complete(
-                rws_rank_correlation(index_a_location, index_a_type, index_b_location, index_b_type,
-                                     rw_length, rw_repeats, rw_node_fatigue, rw_edge_fatigue, topics_path,
-                                     output_path, cutoff, repeats, method, force, loop))
+                rank_correlation(index_a_location, index_a_type, index_b_location, index_b_type,
+                                 ranking_function_a, ranking_function_b, ranking_params_a, ranking_params_b,
+                                 topics_path, output_path, cutoff, repeats, method, force, loop))
         finally:
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()
