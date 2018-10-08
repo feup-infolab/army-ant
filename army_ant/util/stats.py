@@ -39,6 +39,10 @@ def spearman_rho(df_a, df_b):
     return round(spearmanr(dfs[0].sort_values('id')['rank'], dfs[1].sort_values('id')['rank']).correlation, 15)
 
 
+def jaccard_index(df_a, df_b):
+    return len(set(df_a['id']) & set(df_b['id'])) / len(set(df_a['id']) | set(df_b['id']))
+
+
 if __name__ == '__main__':
     dfs = [
         pd.DataFrame({'rank': [1, 2, 3], 'score': [10, 4, 2], 'id': ['d1', 'd2', 'd3']}),
@@ -50,6 +54,7 @@ if __name__ == '__main__':
     #for df in filled_dfs: print(df)
     print("Kendall's W:", kendall_w(dfs))
     print("Spearman's Rho:", spearman_rho(dfs[1], dfs[2]))
+    print("Jaccard Index:", jaccard_index(dfs[1], dfs[2]))
 
     # dir_path = '/opt/army-ant/analysis/inex-52t-nl-hgoe-rw_stability/l_2-r_100/topic_2010003'
     # dfs = [pd.read_csv(os.path.join(dir_path, filename)) for filename in os.listdir(dir_path)]

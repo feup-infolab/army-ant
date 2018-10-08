@@ -14,7 +14,7 @@ from lxml import etree
 from army_ant.exception import ArmyAntException
 from army_ant.index import Index
 from army_ant.util import get_first, os
-from army_ant.util.stats import gmean, kendall_w, spearman_rho
+from army_ant.util.stats import gmean, kendall_w, spearman_rho, jaccard_index
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +44,7 @@ async def rank_correlation(index_a_location, index_a_type, index_b_location, ind
         os.makedirs(path, exist_ok=True)
 
         rhos = []
+        jaccards = []
         num_results_a = []
         num_results_b = []
 
@@ -53,59 +54,56 @@ async def rank_correlation(index_a_location, index_a_type, index_b_location, ind
 
             if not force and os.path.exists(filename_a) and os.path.exists(filename_b):
                 df_a = pd.read_csv(filename_a)
-                num_results_a.append(len(df_a))
                 logger.warning("Loaded existing file for repeat %d of index A: %s (use --force to recompute)" % (
                     repeat, filename_a))
 
                 df_b = pd.read_csv(filename_b)
-                num_results_b.append(len(df_b))
                 logger.warning("Loaded existing file for repeat %d of index B: %s (use --force to recompute)" % (
                     repeat, filename_b))
 
                 rhos.append(spearman_rho(df_a, df_b))
-                continue
+            else:
+                result_set_a = await index_a.search(
+                    query, 0, cutoff, task=Index.RetrievalTask.document_retrieval,
+                    ranking_function=ranking_fun_a, ranking_params=ranking_params_a)
+                df_a = pd.DataFrame(columns=['score', 'id'])
 
-            result_set_a = await index_a.search(
-                query, 0, cutoff, task=Index.RetrievalTask.document_retrieval,
-                ranking_function=ranking_fun_a, ranking_params=ranking_params_a)
-            df_a = pd.DataFrame(columns=['score', 'id'])
+                for result in result_set_a:
+                    df_a = df_a.append({
+                        'score': result.score,
+                        'id': result.id
+                    }, ignore_index=True)
 
-            for result in result_set_a:
-                df_a = df_a.append({
-                    'score': result.score,
-                    'id': result.id
-                }, ignore_index=True)
+                df_a.index += 1
+                df_a['rank'] = df_a.index
+                df_a = df_a[['rank', 'score', 'id']]
+                df_a.to_csv(filename_a, index=False)
 
-            df_a.index += 1
-            df_a['rank'] = df_a.index
-            df_a = df_a[['rank', 'score', 'id']]
-            df_a.to_csv(filename_a, index=False)
+                logger.info("Saved repeat %d for index A in %s" % (repeat, filename_a))
 
-            logger.info("Saved repeat %d for index A in %s" % (repeat, filename_a))
+                result_set_b = await index_b.search(
+                    query, 0, cutoff, task=Index.RetrievalTask.document_retrieval,
+                    ranking_function=ranking_fun_b, ranking_params=ranking_params_b)
+                df_b = pd.DataFrame(columns=['score', 'id'])
 
-            num_results_a.append(len(result_set_a))
+                for result in result_set_b:
+                    df_b = df_b.append({
+                        'score': result.score,
+                        'id': result.id
+                    }, ignore_index=True)
 
-            result_set_b = await index_b.search(
-                query, 0, cutoff, task=Index.RetrievalTask.document_retrieval,
-                ranking_function=ranking_fun_b, ranking_params=ranking_params_b)
-            df_b = pd.DataFrame(columns=['score', 'id'])
+                df_b.index += 1
+                df_b['rank'] = df_b.index
+                df_b = df_b[['rank', 'score', 'id']]
+                df_b.to_csv(filename_b, index=False)
 
-            for result in result_set_b:
-                df_b = df_b.append({
-                    'score': result.score,
-                    'id': result.id
-                }, ignore_index=True)
+                logger.info("Saved repeat %d for index B in %s" % (repeat, filename_b))
 
-            df_b.index += 1
-            df_b['rank'] = df_b.index
-            df_b = df_b[['rank', 'score', 'id']]
-            df_b.to_csv(filename_b, index=False)
-
-            logger.info("Saved repeat %d for index B in %s" % (repeat, filename_b))
-
-            num_results_b.append(len(result_set_b))
+            num_results_a.append(len(df_a))
+            num_results_b.append(len(df_b))
 
             rhos.append(spearman_rho(df_a, df_b))
+            jaccards.append(jaccard_index(df_a, df_b))
 
         correlations = correlations.append({
             'topic_id': topic_id,
@@ -117,7 +115,8 @@ async def rank_correlation(index_a_location, index_a_type, index_b_location, ind
             'ranking_funtion_b': ranking_fun_b,
             'ranking_params_b': '_'.join('_'.join(d) for d in ranking_params_b.items()),            
             'avg_num_results_b': np.mean(num_results_b),
-            'avg_rho': np.mean(rhos)
+            'avg_rho': np.mean(rhos),
+            'avg_jaccard': np.mean(jaccards)
         }, ignore_index=True)
 
     correlations_filename = os.path.join(output_path, 'correlations_per_topic-%d_repeats.csv' % repeats)
@@ -129,6 +128,11 @@ async def rank_correlation(index_a_location, index_a_type, index_b_location, ind
     mean_correlation_filename = os.path.join(output_path, 'mean_correlation-%d_repeats' % repeats)
     open(mean_correlation_filename, 'w').write('%15f' % mean_correlation)
     logger.info("Saved mean correlation (%d repeats) to %s" % (repeats, mean_correlation_filename))
+
+    mean_jaccard = np.mean(correlations['avg_jaccard'])
+    mean_jaccard_filename = os.path.join(output_path, 'mean_jaccard-%d_repeats' % repeats)
+    open(mean_jaccard_filename, 'w').write('%15f' % mean_jaccard)
+    logger.info("Saved mean Jaccard index (%d repeats) to %s" % (repeats, mean_jaccard_filename))
 
 
 async def rws_rank_concordance(index_location, index_type, rw_length, rw_repeats, topics_path, output_path,
