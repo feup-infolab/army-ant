@@ -119,7 +119,7 @@ async def rank_correlation(index_a_location, index_a_type, index_b_location, ind
             'avg_jaccard': np.mean(jaccards)
         }, ignore_index=True)
 
-    correlations_filename = os.path.join(output_path, 'correlations_per_topic-%d_repeats.csv' % repeats)
+    correlations_filename = os.path.join(output_path, 'comparison_per_topic-%d_repeats.csv' % repeats)
     correlations.to_csv(correlations_filename, index=False)
     logger.info(
         "Saved correlations per topic (%d repeats) to %s" % (repeats, correlations_filename))
