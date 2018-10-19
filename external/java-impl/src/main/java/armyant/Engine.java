@@ -10,7 +10,6 @@ import com.optimaize.langdetect.profiles.LanguageProfile;
 import com.optimaize.langdetect.profiles.LanguageProfileReader;
 import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.LowerCaseFilter;
@@ -158,6 +157,7 @@ public abstract class Engine {
         while (filter.incrementToken()) {
             tokens.add(attr.toString());
         }
+        filter.close();
 
         return tokens;
     }
