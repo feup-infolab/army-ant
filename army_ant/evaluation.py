@@ -191,6 +191,7 @@ class INEXEvaluator(FilesystemEvaluator):
             for line in f:
                 if self.retrieval_task == Index.RetrievalTask.entity_retrieval:
                     topic_id, _, id, _, judgement = line.split(' ', 4)
+                    if judgement == 2: judgment = 0
                 else:
                     topic_id, _, id, judgement, _ = line.split(' ', 4)
 

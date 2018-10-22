@@ -210,9 +210,10 @@ engines:
       default:
         id: random_walk
         params:
-          l: 3
-          r: 100
-          f: 0
+          l: 2
+          r: 1000
+          nf: 10
+          ef: 10
       functions:
         random_walk:
           name: Random Walk Score
