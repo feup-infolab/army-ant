@@ -45,8 +45,4 @@ EfficiencyChart.prototype.render = function() {
   };
 
   this.chart = c3.generate(config);
-
-  if (this.data[0].length > 5) {
-    $(this.selector).find('.c3-axis-x .tick text').css('display', 'none !important');
-  }
 }
