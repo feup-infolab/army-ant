@@ -85,4 +85,8 @@ EffectivenessChart.prototype.render = function(activeLengend) {
     this.chart.hide();
     this.chart.show(activeLengend);
   }
+
+  if (this.data[0].length > 5) {
+    $(this.selector).find('.c3-axis-x .tick text').css('display', 'none !important');
+  }
 }
