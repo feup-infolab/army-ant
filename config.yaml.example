@@ -5,11 +5,7 @@ defaults:
     type: mongo
   eval:
     metrics:
-      favorite:
-        - GMAP
-        - MAP
-        - NDCG@10
-        - P@10
+      favorite: [GMAP, MAP, NDCG@10, P@10]
     location: /opt/army-ant/eval
   service:
     ner:
