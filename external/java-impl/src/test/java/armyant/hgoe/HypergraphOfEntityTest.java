@@ -31,65 +31,65 @@ import java.util.*;
 @Test
 public class HypergraphOfEntityTest {
     public static final Document document1 = new Document(
-            "D1",
+        "D1",
 
-            "Semantic search",
+        "Semantic search",
 
-            "Semantic search seeks to improve search accuracy by understanding the searcher's intent and the " +
-            "contextual meaning of terms as they appear in the searchable dataspace, whether on the Web or within a " +
-            "closed system, to generate more relevant results.",
+        "Semantic search seeks to improve search accuracy by understanding the searcher's intent and the " +
+        "contextual meaning of terms as they appear in the searchable dataspace, whether on the Web or within a " +
+        "closed system, to generate more relevant results.",
 
-            Arrays.asList(
-                    new Triple(
-                            new Triple.Instance("http://example.com/Semantic_search", "Semantic search"),
-                            new Triple.Instance("http://example.com/related_to", "related_to"),
-                            new Triple.Instance("http://example.com/Search_engine_technology", "Search engine technology")
-                    ),
-                    new Triple(
-                            new Triple.Instance("http://example.com/Semantic_search", "Semantic search"),
-                            new Triple.Instance("http://example.com/related_to", "related_to"),
-                            new Triple.Instance("http://example.com/Intention", "Intention")
-                    ),
-                    new Triple(
-                            new Triple.Instance("http://example.com/Semantic_search", "Semantic search"),
-                            new Triple.Instance("http://example.com/related_to", "related_to"),
-                            new Triple.Instance("http://example.com/Context_(language_use)", "Context (language use)")
-                    ),
-                    new Triple(
-                            new Triple.Instance("http://example.com/Semantic_search", "Semantic search"),
-                            new Triple.Instance("http://example.com/related_to", "related_to"),
-                            new Triple.Instance("http://example.com/World_Wide_Web", "World Wide Web")
-                    )
-            )
+        Arrays.asList(
+                new Triple(
+                        new Triple.Instance("http://example.com/Semantic_search", "Semantic search"),
+                        new Triple.Instance("http://example.com/related_to", "related_to"),
+                        new Triple.Instance("http://example.com/Search_engine_technology", "Search engine technology")
+                ),
+                new Triple(
+                        new Triple.Instance("http://example.com/Semantic_search", "Semantic search"),
+                        new Triple.Instance("http://example.com/related_to", "related_to"),
+                        new Triple.Instance("http://example.com/Intention", "Intention")
+                ),
+                new Triple(
+                        new Triple.Instance("http://example.com/Semantic_search", "Semantic search"),
+                        new Triple.Instance("http://example.com/related_to", "related_to"),
+                        new Triple.Instance("http://example.com/Context_(language_use)", "Context (language use)")
+                ),
+                new Triple(
+                        new Triple.Instance("http://example.com/Semantic_search", "Semantic search"),
+                        new Triple.Instance("http://example.com/related_to", "related_to"),
+                        new Triple.Instance("http://example.com/World_Wide_Web", "World Wide Web")
+                )
+        )
     );
     public static final Document document2 = new Document(
-            "D2",
+        "D2",
 
-            "Search engine technology",
+        "Search engine technology",
 
-            "A search engine is an information retrieval software program that discovers, crawls, transforms and " +
-            "stores information for retrieval and presentation in response to user queries.",
+        "A search engine is an information retrieval software program that discovers, crawls, transforms and " +
+        "stores information for retrieval and presentation in response to user queries.",
 
-            Arrays.asList(
-                    new Triple(
-                            new Triple.Instance("http://example.org/Search_engine_technology", "Search engine technology"),
-                            new Triple.Instance("http://example.org/related_to", "related_to"),
-                            new Triple.Instance("http://example.org/Search_engine", "Search engine")
-                    )
-            )
+        Arrays.asList(
+                new Triple(
+                        new Triple.Instance("http://example.org/Search_engine_technology", "Search engine technology"),
+                        new Triple.Instance("http://example.org/related_to", "related_to"),
+                        new Triple.Instance("http://example.org/Search_engine", "Search engine")
+                )
+        )
     );
     public static final Document document3 = new Document(
-            "D3",
+        "D3",
 
-            "Unreachable",
+        "Unreachable",
 
-            "Unreachable people.",
+        "Unreachable people.",
 
-            Collections.singletonList(new Triple(
-                    new Triple.Instance("http://example.org/Unreachable_Me", "Unreachable Me"),
-                    new Triple.Instance("http://example.org/related_to", "related_to"),
-                    new Triple.Instance("http://example.org/Unreachable_You", "Unreachable You")
-            ))
+        Collections.singletonList(new Triple(
+                new Triple.Instance("http://example.org/Unreachable_Me", "Unreachable Me"),
+                new Triple.Instance("http://example.org/related_to", "related_to"),
+                new Triple.Instance("http://example.org/Unreachable_You", "Unreachable You")
+        ))
     );
     private static String dbPath = "/tmp/hgoe-inmemory";
 

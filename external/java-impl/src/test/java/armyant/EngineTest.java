@@ -3,13 +3,33 @@ package armyant;
 import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+
+import java.util.Collections;
+
 import org.testng.annotations.Test;
+
+import armyant.hgoe.HypergraphOfEntity;
+import armyant.hgoe.exceptions.HypergraphException;
+import armyant.structures.Document;
 
 /**
  * Created by jldevezas on 2018-04-05.
  */
 @Test
 public class EngineTest {
+    public static final Document document4 = new Document(
+        "D4",
+
+        "This has URLs",
+
+        "This document has a link to http://google.com and a more specific link to " +
+        "https://www.google.com/?q=someplace#data",
+
+        Collections.emptyList()
+    );
+
+    private static String dbPath = "/tmp/hgoe-inmemory";
+
     private static final int RANDOM_ITERATIONS = 50_000_000;
     private static final Int2FloatOpenHashMap valuesProbs = new Int2FloatOpenHashMap();
 
@@ -56,5 +76,10 @@ public class EngineTest {
 
         System.out.println(String.format(
                 "Took %,dms to sample %,d random elements uniformly at random", end - start, RANDOM_ITERATIONS));
+    }
+
+    public void testRemoveURLs() throws HypergraphException {
+        HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
+        System.out.println(hgoe.removeURLs(document4.getText()));
     }
 }

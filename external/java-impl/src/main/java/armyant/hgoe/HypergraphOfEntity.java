@@ -231,7 +231,7 @@ public class HypergraphOfEntity extends Engine {
         Set<Integer> targetEntityNodeIDs = indexEntities(document);
         addNodesToUndirectedHyperEdge(edgeID, targetEntityNodeIDs);
 
-        List<String> tokens = analyze(document.getText());
+        List<String> tokens = analyze(removeURLs(document.getText()));
         if (tokens.isEmpty()) return;
 
         Set<Integer> targetTermNodeIDs = tokens.stream().map(token -> {

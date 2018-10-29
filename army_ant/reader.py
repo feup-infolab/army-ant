@@ -51,15 +51,16 @@ class Reader(object):
         elif source_reader == 'living_labs':
             return LivingLabsReader(source_path, limit)
         elif source_reader == 'wapo':
-            return TRECWashingtonPostReader(source_path)
+            return TRECWashingtonPostReader(source_path, limit=limit)
         elif source_reader == 'wapo_doc_profile':
             return TRECWashingtonPostReader(
-                source_path, features_location=features_location, include_ae_doc_profile=True)
+                source_path, features_location=features_location, include_ae_doc_profile=True, limit=limit)
         elif source_reader == 'wapo_dbpedia':
-            return TRECWashingtonPostReader(source_path, include_dbpedia=True)
+            return TRECWashingtonPostReader(source_path, include_dbpedia=True, limit=limit)
         elif source_reader == 'wapo_doc_profile_dbpedia':
             return TRECWashingtonPostReader(
-                source_path, features_location=features_location, include_ae_doc_profile=True, include_dbpedia=True)
+                source_path, features_location=features_location, include_ae_doc_profile=True, include_dbpedia=True,
+                limit=limit)
         elif source_reader == 'csv':
             return CSVReader(source_path)
         # elif source_reader == 'gremlin':
@@ -418,10 +419,12 @@ class MongoDBReader(Reader):
 
 
 class TRECWashingtonPostReader(MongoDBReader):
-    def __init__(self, source_path, features_location=None, include_ae_doc_profile=False, include_dbpedia=False):
+    def __init__(
+            self, source_path, features_location=None, include_ae_doc_profile=False,
+            include_dbpedia=False, limit=None):
         super(TRECWashingtonPostReader, self).__init__(source_path)
 
-        self.ac_ner = AhoCorasickEntityExtractor("/opt/army-ant/gazetteers/all.txt")
+        self.ac_ner = None
         
         self.articles = self.db.articles.find({}, no_cursor_timeout=True)
         self.blog_posts = self.db.blog_posts.find({}, no_cursor_timeout=True)
@@ -429,6 +432,8 @@ class TRECWashingtonPostReader(MongoDBReader):
         self.features_location = features_location
         self.include_ae_doc_profile = include_ae_doc_profile
         self.include_dbpedia = include_dbpedia
+        self.limit = limit
+        self.counter = 0
 
         if include_ae_doc_profile:
             ignored_features = ['Language', 'NamedEntities', 'SentimentAnalysis', 'EmotionCategories']
@@ -444,7 +449,7 @@ class TRECWashingtonPostReader(MongoDBReader):
 
         for content in doc['contents']:
             if content and 'subtype' in content and content['subtype'] == 'paragraph':
-                text = re.sub(r'<.*?>', '', content['content'])
+                text = re.sub(r'<.*?>', ' ', content['content'])
                 paragraphs.append(text)
                 if limit and len(paragraphs) >= limit:
                     break
@@ -475,6 +480,9 @@ class TRECWashingtonPostReader(MongoDBReader):
         triples = set([])
 
         if not self.include_ae_doc_profile and not self.include_dbpedia: return list(triples)
+
+        if self.ac_ner is None:
+            self.ac_ner = AhoCorasickEntityExtractor("/opt/army-ant/gazetteers/all.txt")
 
         triples.add((
             Entity(),
@@ -554,6 +562,9 @@ class TRECWashingtonPostReader(MongoDBReader):
         return list(triples)
 
     def __next__(self):
+        if self.counter >= self.limit:
+            raise StopIteration
+
         try:
             doc = next(self.articles)
         except StopIteration:
@@ -565,6 +576,8 @@ class TRECWashingtonPostReader(MongoDBReader):
 
             text = self.to_plain_text(doc)
             triples = self.build_triples(doc)
+
+            self.counter += 1
 
             return Document(
                 doc_id=doc['id'],

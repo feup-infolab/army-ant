@@ -31,6 +31,8 @@ import java.io.InputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by jldevezas on 2017-11-10.
@@ -40,6 +42,7 @@ public abstract class Engine {
 
     private static final int MIN_TOKEN_LENGTH = 3;
     private static final XoRoShiRo128PlusRandom RNG = new XoRoShiRo128PlusRandom();
+    private static Pattern urlPattern = Pattern.compile("http[s]?://[^ \n\r]+");
 
     private LanguageDetector languageDetector;
 
@@ -94,12 +97,12 @@ public abstract class Engine {
     public void close() throws Exception {
     }
 
-    protected String formatMillis(float millis) {
+    public String formatMillis(float millis) {
         if (millis >= 1000) return formatMillis((long) millis);
         return String.format("%.2fms", millis);
     }
 
-    protected String formatMillis(long millis) {
+    public String formatMillis(long millis) {
         Duration duration = new Duration(millis); // in milliseconds
         PeriodFormatter formatter = new PeriodFormatterBuilder()
                 .appendDays()
@@ -116,7 +119,7 @@ public abstract class Engine {
         return formatter.print(duration.toPeriod());
     }
 
-    private CharArraySet getStopwords(String language) {
+    public CharArraySet getStopwords(String language) {
         StringWriter writer = new StringWriter();
 
         logger.debug("Fetching stopwords for {} language", language);
@@ -138,7 +141,7 @@ public abstract class Engine {
         }
     }
 
-    protected List<String> analyze(String text) throws IOException {
+    public List<String> analyze(String text) throws IOException {
         AttributeFactory factory = AttributeFactory.DEFAULT_ATTRIBUTE_FACTORY;
 
         StandardTokenizer tokenizer = new StandardTokenizer(factory);
@@ -160,5 +163,10 @@ public abstract class Engine {
         filter.close();
 
         return tokens;
+    }
+
+    public String removeURLs(String text) {
+        Matcher matcher = urlPattern.matcher(text);
+        return matcher.replaceAll("");
     }
 }
