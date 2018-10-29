@@ -40,7 +40,10 @@ def timestamp_to_date(timestamp):
 
 
 def results_to_json(results):
-    return json.dumps([r.__dict__ for r in results])
+    try:
+        return json.dumps([r.__dict__ for r in results])
+    except:
+        return json.dumps(results)
 
 
 def serialize_json(obj):
