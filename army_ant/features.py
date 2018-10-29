@@ -11,12 +11,13 @@ from collections import OrderedDict
 
 import igraph
 import langdetect
+from nltk.stem import SnowballStemmer
 from gensim.models import Word2Vec
 from langdetect.lang_detect_exception import LangDetectException
 
 from army_ant.exception import ArmyAntException
 from army_ant.util.text import split_sentences, get_pos_tagger, remove_by_pos_tag, filter_tokens, slot_urls, \
-    normalize_text, slot_numbers, SLOT_PREFIX, tokenize, slot_time
+    normalize_text, slot_numbers, SLOT_PREFIX, tokenize, slot_time, slot_money
 
 logger = logging.getLogger(__name__)
 
@@ -52,18 +53,24 @@ class Word2VecSimilarityNetwork(FeatureExtractor):
         text = normalize_text(text)
         text = slot_urls(text)
         text = slot_time(text)
+        text = slot_money(text)
         text = slot_numbers(text)
         return text
 
     def build_sentence_dataset(self):
         logging.info("Extracting sentences from documents")
 
+        stemmer = SnowballStemmer('english')
+
         self.sentences = []
         self.vocabulary = set([])
         pos_taggers = {}
+
+        # Tags to remove: parts-of-speech, such as verbs, result a similarity network that is too dense.
         filter_tags = {
             'pt': ['V', 'PCP', 'VAUX', 'PREP', 'CUR', 'NUM', 'PREP|+', 'NPROP', 'PROPESS', 'ART', 'KS', 'ADV'],
-            'en': ['VB', 'VBP']}
+            'en': ['VB', 'VBP']
+        }
 
         doc_count = 0
         for doc in self.reader:
@@ -78,17 +85,23 @@ class Word2VecSimilarityNetwork(FeatureExtractor):
                 pos_taggers[lang] = get_pos_tagger('%s-%s.pickle' % (self.pos_tagger_model_path_basename, lang), lang)
 
             for sentence in split_sentences(text):
-                tokens = remove_by_pos_tag(
-                    pos_taggers[lang], tokenize(sentence),
-                    tags=filter_tags.get(lang, filter_tags['en']))
+                # Removing verbs has low impact on vocabularity size.
+                #tokens = remove_by_pos_tag(
+                #    pos_taggers[lang], tokenize(sentence),
+                #    tags=filter_tags.get(lang, filter_tags['en']))
+                tokens = tokenize(sentence)
 
                 tokenized_sentence = []
 
+                # Remove stopwords based on lang.
                 for token in filter_tokens(tokens, lang):
                     if not token.startswith(SLOT_PREFIX):
                         token = token.lower()
 
                     if len(token) < 3: continue
+
+                    # Stemming has a higher impact on vocabulary size.
+                    token = stemmer.stem(token)
 
                     tokenized_sentence.append(token)
                     self.vocabulary.add(token)

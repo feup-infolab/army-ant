@@ -1,7 +1,6 @@
 #!/bin/sh
 
 ./army-ant.py inspect \
-    --index-location "/opt/army-ant/indexes/wapo-sample" \
-    --index-type "hgoe" \
-    --feature "list-hyperedges" \
-    | less
+    --index-location "/opt/army-ant/indexes/wapo-sample-context" \
+    --index-type "hgoe:context" \
+    --feature "summary"

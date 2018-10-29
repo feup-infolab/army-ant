@@ -15,7 +15,9 @@ import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.LowerCaseFilter;
 import org.apache.lucene.analysis.StopFilter;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.en.PorterStemFilter;
 import org.apache.lucene.analysis.miscellaneous.LengthFilter;
+import org.apache.lucene.analysis.pattern.PatternReplaceFilter;
 import org.apache.lucene.analysis.standard.StandardFilter;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
@@ -30,8 +32,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.util.*;
-import java.util.regex.Matcher;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 /**
@@ -42,7 +48,13 @@ public abstract class Engine {
 
     private static final int MIN_TOKEN_LENGTH = 3;
     private static final XoRoShiRo128PlusRandom RNG = new XoRoShiRo128PlusRandom();
-    private static Pattern urlPattern = Pattern.compile("http[s]?://[^ \n\r]+");
+    
+    private static Pattern urlPattern = Pattern.compile("http[s]?://[^\\s]+");
+    private static Pattern timePattern = Pattern.compile(
+        "(\\d{1,2}:\\d{2}(:\\d{2})?)|(\\d{1,2}h(\\d{2}(m|(m\\d{1,2}s))?)?)|(\\d{1,2}(pm|am|PM|AM))");
+    private static Pattern moneyPattern = Pattern.compile("([$€£]\\d*\\.?\\d+)|(\\d*\\.\\d+[$€£])");
+    private static Pattern numPattern = Pattern.compile("\\d*\\.\\d+");
+
 
     private LanguageDetector languageDetector;
 
@@ -153,6 +165,11 @@ public abstract class Engine {
         filter = new LowerCaseFilter(filter);
         filter = new StopFilter(filter, getStopwords(language));
         filter = new LengthFilter(filter, MIN_TOKEN_LENGTH, Integer.MAX_VALUE);
+        filter = new PatternReplaceFilter(filter, urlPattern, "SLOT_URL", true);
+        filter = new PatternReplaceFilter(filter, timePattern, "SLOT_TIME", true);
+        filter = new PatternReplaceFilter(filter, moneyPattern, "SLOT_MONEY", true);
+        filter = new PatternReplaceFilter(filter, numPattern, "SLOT_NUM", true);
+        filter = new PorterStemFilter(filter);
         filter.reset();
 
         List<String> tokens = new ArrayList<>();
@@ -163,10 +180,5 @@ public abstract class Engine {
         filter.close();
 
         return tokens;
-    }
-
-    public String removeURLs(String text) {
-        Matcher matcher = urlPattern.matcher(text);
-        return matcher.replaceAll("");
     }
 }

@@ -22,11 +22,12 @@ from unidecode import unidecode
 
 logger = logging.getLogger(__name__)
 
-SLOT_PREFIX = 'SLOT_'
+SLOT_PREFIX = 'SLOT'
 
 url_regex = re.compile(r'http[s]?://[^\s]+')
-num_regex = re.compile(r'\d+')
 time_regex = re.compile(r'(\d{1,2}:\d{2}(:\d{2})?)|(\d{1,2}h(\d{2}(m|(m\d{1,2}s))?)?)|(\d{1,2}(pm|am|PM|AM))')
+money_regex = re.compile(r'([$€£]\d*\.?\d+)|(\d*\.\d+[$€£])')
+num_regex = re.compile(r'\d*\.\d+')
 
 tokenizer = WordPunctTokenizer()
 
@@ -36,15 +37,17 @@ def normalize_text(text):
 
 
 def slot_urls(text, prefix=SLOT_PREFIX):
-    return url_regex.sub('%sURL' % prefix, text)
+    return url_regex.sub('%s_URL' % prefix, text)
 
 
 def slot_time(text, prefix=SLOT_PREFIX):
-    return time_regex.sub('%sTIME' % prefix, text)
+    return time_regex.sub('%s_TIME' % prefix, text)
 
+def slot_money(text, prefix=SLOT_PREFIX):
+    return money_regex.sub('%s_MONEY' % prefix, text)
 
 def slot_numbers(text, prefix=SLOT_PREFIX):
-    return num_regex.sub(' %sNUM ' % prefix, text)
+    return num_regex.sub('%s_NUM' % prefix, text)
 
 
 def detect_language(text):
@@ -146,6 +149,7 @@ def get_pos_tagger(model_path, lang='pt'):
     return pos_tagger
 
 
+# TODO integrate into filter_tokens
 def remove_by_pos_tag(pos_tagger, tokens, tags):
     filtered_tokens = []
     tagged_tokens = pos_tagger.tag(tokens)
