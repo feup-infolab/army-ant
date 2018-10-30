@@ -562,7 +562,7 @@ class TRECWashingtonPostReader(MongoDBReader):
         return list(triples)
 
     def __next__(self):
-        if self.counter >= self.limit:
+        if not self.limit is None and self.counter >= self.limit:
             raise StopIteration
 
         try:
