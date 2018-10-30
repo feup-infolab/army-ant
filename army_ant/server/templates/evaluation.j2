@@ -179,16 +179,16 @@
       var $detail = $task.find('.detail');
 
       if ($detail.hasClass('d-hide')) {
-        if (taskFormat == 'inex' || taskFormat == 'inex-xer') {
-          expandDetailsINEX($task, $detail);
-        } else if (taskFormat == 'll-api') {
+        if (taskFormat == 'll-api') {
           expandDetailsLLAPI($task, $detail);
+        } else {
+          expandDetails($task, $detail);
         }
       } else {
-        if (taskFormat == 'inex' || taskFormat == 'inex-xer') {
-          collapseDetailsINEX($task, $detail);
-        } else if (taskFormat == 'll-api') {
+        if (taskFormat == 'll-api') {
           collapseDetailsLLAPI($task, $detail);
+        } else {
+          collapseDetails($task, $detail);
         }
       }
     }
@@ -197,10 +197,10 @@
       var taskFormat = $task.data('format');
       var $detail = $task.find('.detail');
 
-      if (taskFormat == 'inex' || taskFormat == 'inex-xer') {
-        expandDetailsINEX($task, $detail);
-      } else if (taskFormat == 'll-api') {
+      if (taskFormat == 'll-api') {
         expandDetailsLLAPI($task, $detail);
+      } else {
+        expandDetails($task, $detail);
       }
     }
 
@@ -208,19 +208,19 @@
       var taskFormat = $task.data('format');
       var $detail = $task.find('.detail');
 
-      if (taskFormat == 'inex' || taskFormat == 'inex-xer') {
-        collapseDetailsINEX($task, $detail);
-      } else if (taskFormat == 'll-api') {
+      if (taskFormat == 'll-api') {
         collapseDetailsLLAPI($task, $detail);
+      } else {
+        collapseDetails($task, $detail);
       }
     }
 
-    function expandDetailsINEX($task, $detail) {
+    function expandDetails($task, $detail) {
       $task.find('.expand-btn i.icon').removeClass('icon-plus').addClass('icon-minus');
       $detail.removeClass('d-hide');
     }
 
-    function collapseDetailsINEX($task, $detail) {
+    function collapseDetails($task, $detail) {
       $task.find('.expand-btn i.icon').removeClass('icon-minus').addClass('icon-plus');
       $detail.addClass('d-hide');
     }
