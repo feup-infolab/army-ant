@@ -220,8 +220,9 @@ public class HypergraphOfEntity extends Engine {
 
     private void indexDocument(Document document) throws IOException {
         DocumentEdge documentEdge = new DocumentEdge(document.getDocID(), document.getTitle());
-        int edgeID = getOrCreateUndirectedEdge(documentEdge);
+        int documentEdgeID = getOrCreateUndirectedEdge(documentEdge);
 
+        // Deprecated, because the probability of visiting a document node is minimal.
         /*DocumentNode documentNode = new DocumentNode(document.getDocID(), document.getTitle());
         int sourceDocumentNodeID = getOrCreateNode(documentNode);
         synchronized (this) {
@@ -229,16 +230,38 @@ public class HypergraphOfEntity extends Engine {
         }*/
 
         Set<Integer> targetEntityNodeIDs = indexEntities(document);
-        addNodesToUndirectedHyperEdge(edgeID, targetEntityNodeIDs);
+        addNodesToUndirectedHyperEdge(documentEdgeID, targetEntityNodeIDs);
 
-        List<String> tokens = analyze(document.getText());
-        if (tokens.isEmpty()) return;
+        if (features.contains(Feature.SENTENCES)) {
+            logger.debug("Creating sentence hyperedges for document {}", document.getDocID());
+            
+            List<List<String>> sentenceTokens = analyzePerSentence(document.getText());
+            Set<Integer> targetTermNodeIDs = new HashSet<>();
+            
+            for (List<String> tokens : sentenceTokens) {
+                SentenceEdge sentenceEdge = new SentenceEdge();
+                int sentenceEdgeID = getOrCreateUndirectedEdge(sentenceEdge);
+                
+                Set<Integer> targetSentenceTermNodeIDs = tokens.stream().map(token -> {
+                    TermNode termNode = new TermNode(token);
+                    return getOrCreateNode(termNode);
+                }).collect(Collectors.toSet());
+                addNodesToUndirectedHyperEdge(sentenceEdgeID, targetSentenceTermNodeIDs);
 
-        Set<Integer> targetTermNodeIDs = tokens.stream().map(token -> {
-            TermNode termNode = new TermNode(token);
-            return getOrCreateNode(termNode);
-        }).collect(Collectors.toSet());
-        addNodesToUndirectedHyperEdge(edgeID, targetTermNodeIDs);
+                targetTermNodeIDs.addAll(targetSentenceTermNodeIDs);
+            }
+
+            addNodesToUndirectedHyperEdge(documentEdgeID, targetTermNodeIDs);
+        } else {
+            List<String> tokens = analyze(document.getText());
+            if (tokens.isEmpty()) return;
+
+            Set<Integer> targetTermNodeIDs = tokens.stream().map(token -> {
+                TermNode termNode = new TermNode(token);
+                return getOrCreateNode(termNode);
+            }).collect(Collectors.toSet());
+            addNodesToUndirectedHyperEdge(documentEdgeID, targetTermNodeIDs);
+        }
 
         numDocs++;
     }
@@ -1619,6 +1642,7 @@ public class HypergraphOfEntity extends Engine {
     }
 
     public enum Feature {
+        SENTENCES,
         SYNONYMS,
         CONTEXT,
         WEIGHT,

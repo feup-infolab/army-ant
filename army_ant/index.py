@@ -753,6 +753,7 @@ class JavaIndex(Index):
 
 class HypergraphOfEntity(JavaIndex):
     class Feature(Enum):
+        sents = 'SENTENCES'
         syns = 'SYNONYMS'
         context = 'CONTEXT'
         weight = 'WEIGHT'

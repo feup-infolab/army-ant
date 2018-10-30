@@ -9,6 +9,9 @@ import com.optimaize.langdetect.ngram.NgramExtractors;
 import com.optimaize.langdetect.profiles.LanguageProfile;
 import com.optimaize.langdetect.profiles.LanguageProfileReader;
 import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
+import opennlp.tools.sentdetect.SentenceDetectorME;
+import opennlp.tools.sentdetect.SentenceModel;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.lucene.analysis.CharArraySet;
@@ -25,9 +28,12 @@ import org.apache.lucene.util.AttributeFactory;
 import org.joda.time.Duration;
 import org.joda.time.format.PeriodFormatter;
 import org.joda.time.format.PeriodFormatterBuilder;
+import org.python.modules.synchronize;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -57,6 +63,7 @@ public abstract class Engine {
 
 
     private LanguageDetector languageDetector;
+    private SentenceDetectorME sentenceDetector;
 
     public Engine() {
         try {
@@ -67,6 +74,8 @@ public abstract class Engine {
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
         }
+
+        this.sentenceDetector = null;
     }
 
     public static Integer sampleUniformlyAtRandom(int[] elementIDs) {
@@ -180,5 +189,23 @@ public abstract class Engine {
         filter.close();
 
         return tokens;
+    }
+
+    public synchronized List<List<String>> analyzePerSentence(String text) throws IOException {
+        if (this.sentenceDetector == null) {
+            logger.info("Loading OpenNLP sentence detector model for English");
+            InputStream modelIn = getClass().getResourceAsStream("/opennlp/en-sent.bin");
+            SentenceModel model = new SentenceModel(modelIn);
+            this.sentenceDetector = new SentenceDetectorME(model);
+        }
+
+        List<List<String>> sentenceTokens = new ArrayList<>();
+        if (text == null) return sentenceTokens;
+        
+        for (String sentence : sentenceDetector.sentDetect(text)) {
+            sentenceTokens.add(analyze(sentence));
+        }
+          
+        return sentenceTokens;
     }
 }
