@@ -484,7 +484,7 @@ class TRECWashingtonPostReader(MongoDBReader):
 
         doc_id = doc['id']
         text = self.to_plain_text(doc, limit=3)
-        entities = entites.union(self.ac_ner.extract(text))
+        entities = entities.union(Entity(entity_name) for entity_name in self.ac_ner.extract(text))
         entities.add(self.to_washington_post_author_entity(doc['author']))
 
         if self.include_ae_doc_profile:
@@ -506,7 +506,7 @@ class TRECWashingtonPostReader(MongoDBReader):
                 if feature_values is None or len(feature_values) == 0: continue
 
                 for feature_value in feature_values:
-                    entities.add(feature_value)
+                    entities.add(Entity(feature_value))
 
         if self.include_dbpedia:
             logger.debug("Fetching DBpedia triples for %d entities in document %s" % (len(entities), doc_id))
@@ -518,7 +518,7 @@ class TRECWashingtonPostReader(MongoDBReader):
 
             while True:
                 try:
-                    dbpedia_triples = list(fetch_dbpedia_triples(entities))
+                    dbpedia_triples = list(fetch_dbpedia_triples([entity.label for entity in entities]))
                     break
                 except:
                     if retries_left > 0:

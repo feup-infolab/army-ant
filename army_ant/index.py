@@ -760,6 +760,8 @@ class HypergraphOfEntity(JavaIndex):
         weight = 'WEIGHT'
         prune = 'PRUNE'
         skip_related_to = 'SKIP_RELATED_TO'
+        related_to_by_doc = 'RELATED_TO_BY_DOC'
+        related_to_by_subj = 'RELATED_TO_BY_SUBJ'
 
     class RankingFunction(Enum):
         entity_weight = 'ENTITY_WEIGHT'
