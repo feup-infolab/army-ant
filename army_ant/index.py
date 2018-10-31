@@ -19,7 +19,7 @@ import psycopg2
 import yaml
 from aiogremlin import Cluster
 from aiohttp.client_exceptions import ClientConnectorError
-from jpype import *
+from jpype import isJVMStarted, startJVM, JClass, JPackage, JString, java, shutdownJVM, JavaException
 
 from army_ant.exception import ArmyAntException
 from army_ant.reader import Document, Entity
@@ -229,6 +229,7 @@ class GremlinServerIndex(ServiceIndex):
     def __init__(self, reader, index_location, loop):
         super().__init__(reader, index_location, loop)
         self.graph = self.index_path if self.index_path else 'graph'
+        self.client = None
 
     async def get_or_create_vertex(self, vertex_name, data=None):
         result_set = await self.client.submit(
@@ -290,7 +291,7 @@ class GraphOfWord(GremlinServerIndex):
     async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
         try:
             self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
-        except ClientConnectorError as e:
+        except ClientConnectorError:
             raise ArmyAntException("Could not connect to Gremlin Server on %s:%s" % (self.index_host, self.index_port))
 
         self.client = await self.cluster.connect()
@@ -325,7 +326,7 @@ class GraphOfEntity(GremlinServerIndex):
                 source_vertex = await self.get_or_create_vertex(e1.label, data={'doc_id': doc.doc_id, 'url': e1.url,
                                                                                 'type': 'entity'})
                 target_vertex = await self.get_or_create_vertex(e2.label, data={'url': e2.url, 'type': 'entity'})
-                edge = await self.get_or_create_edge(source_vertex, target_vertex, edge_type=rel)
+                await self.get_or_create_edge(source_vertex, target_vertex, edge_type=rel)
                 yield Document(doc_id=doc.doc_id, metadata={'url': e1.url, 'name': e1.label})
                 # yield Document(doc_id = e2.url, metadata = { 'url': e2.url, 'name': e2.label }) # We're only
                 # indexing what has a doc_id
@@ -373,7 +374,7 @@ class GraphOfEntity(GremlinServerIndex):
     async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
         try:
             self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)
-        except ClientConnectorError as e:
+        except ClientConnectorError:
             raise ArmyAntException("Could not connect to Gremlin Server on %s:%s" % (self.index_host, self.index_port))
 
         self.client = await self.cluster.connect()
@@ -449,7 +450,7 @@ class PostgreSQLGraph(object):
         result_set = await self.client.submit(
             load_gremlin_script('load_graphson'),
             {'graphsonPath': graphson_path, 'indexPath': self.index_path})
-        results = await result_set.all()
+        await result_set.all()
 
         await self.cluster.close()
 
@@ -748,7 +749,7 @@ class JavaIndex(Index):
     armyant = JPackage('armyant')
     JDocument = armyant.structures.Document
     JTriple = armyant.structures.Triple
-    JTripleInstance = JClass("armyant.structures.Triple$Instance")
+    JEntity = armyant.structures.Entity
 
 
 class HypergraphOfEntity(JavaIndex):
@@ -787,14 +788,15 @@ class HypergraphOfEntity(JavaIndex):
     async def index(self, features_location=None):
         try:
             index_features_str = ':'.join([index_feature.value for index_feature in self.index_features])
-            features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value) for index_feature in
-                        self.index_features]
+            features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value)
+                        for index_feature in self.index_features]
 
             if HypergraphOfEntity.Feature.context in self.index_features:
                 if features_location is None:
                     raise ArmyAntException("Must provide a features_location pointing to a directory")
                 if not 'word2vec_simnet.graphml.gz' in os.listdir(features_location):
-                    raise ArmyAntException("Must provide a 'word2vec_simnet.graphml.gz' file within features directory")
+                    raise ArmyAntException(
+                        "Must provide a 'word2vec_simnet.graphml.gz' file within features directory")
 
             hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(
                 self.index_location, java.util.Arrays.asList(features), features_location, True)
@@ -803,25 +805,29 @@ class HypergraphOfEntity(JavaIndex):
             for doc in self.reader:
                 logger.debug("Preloading document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
 
+                entities = []
+                for entity in doc.entities:
+                    try:
+                        entities.append(HypergraphOfEntity.JEntity(entity.label, entity.uri))
+                    except Exception as e:
+                        logger.warning("Entity %s skipped" % entity)
+                        logger.exception(e)                            
+                
                 triples = []
-
                 for s, p, o in doc.triples:
                     try:
-                        if s.is_blank:
-                            j_subject = HypergraphOfEntity.JTripleInstance()
-                        else:
-                            j_subject = HypergraphOfEntity.JTripleInstance(s.uri, s.label)
-
-                        triples.append(HypergraphOfEntity.JTriple(
-                            j_subject,
-                            HypergraphOfEntity.JTripleInstance(p.uri, p.label),
-                            HypergraphOfEntity.JTripleInstance(o.uri, o.label)))
+                        triples.append(
+                            HypergraphOfEntity.JTriple(
+                                HypergraphOfEntity.JEntity(s.label, s.uri),
+                                HypergraphOfEntity.JEntity(p.label, p.uri),
+                                HypergraphOfEntity.JEntity(o.label, o.uri)))
                     except Exception as e:
                         logger.warning("Triple (%s, %s, %s) skipped" % (s, p, o))
                         logger.exception(e)
 
                 jDoc = HypergraphOfEntity.JDocument(
-                    JString(doc.doc_id), doc.title, JString(doc.text), java.util.Arrays.asList(triples))
+                    JString(doc.doc_id), doc.title, JString(doc.text), java.util.Arrays.asList(triples),
+                    java.util.Arrays.asList(entities))
                 corpus.append(jDoc)
 
                 if len(corpus) % (HypergraphOfEntity.BLOCK_SIZE // 10) == 0:
@@ -939,19 +945,29 @@ class LuceneEngine(JavaIndex):
             for doc in self.reader:
                 logger.debug("Preloading document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
 
+                entities = []
+                for entity in doc.entities:
+                    try:
+                        entities.append(HypergraphOfEntity.JEntity(entity.label, entity.uri))
+                    except Exception as e:
+                        logger.warning("Entity %s skipped" % entity)
+                        logger.exception(e)                            
+                
                 triples = []
-
                 for s, p, o in doc.triples:
                     try:
-                        triples.append(LuceneEngine.JTriple(
-                            LuceneEngine.JTripleInstance(s.uri, s.label),
-                            LuceneEngine.JTripleInstance(p.uri, p.label),
-                            LuceneEngine.JTripleInstance(o.uri, p.label)))
-                    except:
+                        triples.append(
+                            HypergraphOfEntity.JTriple(
+                                HypergraphOfEntity.JEntity(s.label, s.uri),
+                                HypergraphOfEntity.JEntity(p.label, p.uri),
+                                HypergraphOfEntity.JEntity(o.label, o.uri)))
+                    except Exception as e:
                         logger.warning("Triple (%s, %s, %s) skipped" % (s, p, o))
+                        logger.exception(e)
 
                 jDoc = LuceneEngine.JDocument(
-                    JString(doc.doc_id), doc.title, JString(doc.text), java.util.Arrays.asList(triples))
+                    JString(doc.doc_id), doc.title, JString(doc.text), java.util.Arrays.asList(triples),
+                    java.util.Arrays.asList(entities))
                 corpus.append(jDoc)
                 if len(corpus) % (LuceneEngine.BLOCK_SIZE // 10) == 0:
                     logger.info("%d documents preloaded" % len(corpus))

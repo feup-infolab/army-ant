@@ -79,14 +79,16 @@ class Reader(object):
 
 
 class Document(object):
-    def __init__(self, doc_id, title=None, text=None, triples=None, metadata=None):
+    def __init__(self, doc_id, title=None, text=None, entities=None, triples=None, metadata=None):
         self.doc_id = doc_id
         self.title = title
         self.text = text
+        self.entities = entities
         self.triples = triples
         self.metadata = metadata
 
     def __repr__(self):
+        entities = [] if self.entities is None else [str(entities) for entity in self.entities]
         triples = [] if self.triples is None else [str(triple) for triple in self.triples]
         metadata = [] if self.metadata is None else [str((k, v)) for k, v in self.metadata.items()]
 
@@ -95,6 +97,7 @@ class Document(object):
             'DOC ID:\n%s\n\n'
             'TITLE:\n%s\n\n'
             'TEXT (%d chars):\n%s\n%s\n\n'
+            'ENTITIES (%d):\n%s\n'
             'TRIPLES (%d):\n%s\n%s\n\n'
             'METADATA:\n%s\n'
             '-----------------\n'
@@ -102,26 +105,20 @@ class Document(object):
             self.doc_id,
             self.title,
             len(self.text), self.text[0:2000], '[...]' if len(self.text) > 2000 else '',
+            len(entities), ', '.join(entities[0:5]),
             len(triples), '\n\n'.join(triples[0:5]),
             '[...]' if len(triples) > 5 else '', '\n'.join(metadata)
         )
 
 
 class Entity(object):
-    def __init__(self, label=None, uri=None):
-        if label is None and uri is None:
-            self.is_blank = True
-        else:
-            self.is_blank = False
-            self.label = label
-            if uri:
-                self.uri = uri
-            else:
-                self.uri = '#%s' % label            
+    def __init__(self, label, uri=None):
+        self.label = label
+        self.uri = uri
 
     def __repr__(self):
-        if self.is_blank: return "[blank node]"
-        return "(%s, %s)" % (self.label, self.uri)
+        if self.uri: return "(%s, %s)" % (self.label, self.uri)
+        return "%s" % self.label
 
 
 class WikipediaDataReader(Reader):
@@ -477,29 +474,18 @@ class TRECWashingtonPostReader(MongoDBReader):
                 return a
 
     def build_triples(self, doc):
+        entities = set([])
         triples = set([])
 
-        if not self.include_ae_doc_profile and not self.include_dbpedia: return list(triples)
+        if not self.include_ae_doc_profile and not self.include_dbpedia: return list(entities), list(triples)
 
         if self.ac_ner is None:
             self.ac_ner = AhoCorasickEntityExtractor("/opt/army-ant/gazetteers/all.txt")
 
-        triples.add((
-            Entity(),
-            Entity('has_author'),
-            self.to_washington_post_author_entity(doc['author'])
-        ))
-
         doc_id = doc['id']
         text = self.to_plain_text(doc, limit=3)
-        entities = self.ac_ner.extract(text)
-
-        # for entity in entities:
-        #     triples.add((
-        #         Entity(),
-        #         Entity(label="mentions"),
-        #         Entity(label=entity)
-        #     ))
+        entities = entites.union(self.ac_ner.extract(text))
+        entities.add(self.to_washington_post_author_entity(doc['author']))
 
         if self.include_ae_doc_profile:
             doc_features = self.features.loc[doc['id']]
@@ -520,11 +506,7 @@ class TRECWashingtonPostReader(MongoDBReader):
                 if feature_values is None or len(feature_values) == 0: continue
 
                 for feature_value in feature_values:
-                    triples.add((
-                        Entity(),
-                        Entity(label=feature_name),
-                        Entity(label=feature_value)
-                    ))
+                    entities.add(feature_value)
 
         if self.include_dbpedia:
             logger.debug("Fetching DBpedia triples for %d entities in document %s" % (len(entities), doc_id))
@@ -542,13 +524,14 @@ class TRECWashingtonPostReader(MongoDBReader):
                     if retries_left > 0:
                         retry_wait += 10 * (max_retries - retries_left + 1)
                         logger.exception(
-                            "Error retrieving triples for %d entities in document %s, retrying in %d seconds (%d retries left)" % (
-                                len(entities), doc_id, retry_wait, retries_left))
+                            "Error retrieving triples for %d entities in document %s, retrying in %d seconds" \
+                            " (%d retries left)" % (len(entities), doc_id, retry_wait, retries_left))
                         retries_left -= 1
                         time.sleep(retry_wait)
                     else:
-                        logger.exception("Could not retrieve triples for %d entities in document %s, giving up (returning %d cached triples)" % (
-                            len(entities), doc_id, len(triples)))
+                        logger.exception(
+                            "Could not retrieve triples for %d entities in document %s, giving up (returning " \
+                            "%d cached triples)" % (len(entities), doc_id, len(triples)))
                         dbpedia_triples = []
                         break
 
@@ -559,7 +542,7 @@ class TRECWashingtonPostReader(MongoDBReader):
                     Entity(ol, o)
                 ))
 
-        return list(triples)
+        return list(entities), list(triples)
 
     def __next__(self):
         if not self.limit is None and self.counter >= self.limit:
@@ -575,7 +558,7 @@ class TRECWashingtonPostReader(MongoDBReader):
             logger.debug("Reading %s" % doc['id'])
 
             text = self.to_plain_text(doc)
-            triples = self.build_triples(doc)
+            entities, triples = self.build_triples(doc)
 
             self.counter += 1
 
@@ -583,6 +566,7 @@ class TRECWashingtonPostReader(MongoDBReader):
                 doc_id=doc['id'],
                 title=doc['title'],
                 text=text,
+                entities=entities,
                 triples=triples,
                 metadata={'url': doc['article_url'], 'name': doc['title']})
 

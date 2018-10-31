@@ -151,7 +151,7 @@ public abstract class Engine {
         try {
             InputStream inputStream = getClass().getResourceAsStream(filename);
             if (inputStream == null) {
-                logger.warn("Could not load '{}' stopwords, using 'en' as default", language);
+                //logger.warn("Could not load '{}' stopwords, using 'en' as default", language);
                 inputStream = getClass().getResourceAsStream(defaultFilename);
             }
             IOUtils.copy(inputStream, writer, "UTF-8");

@@ -45,8 +45,8 @@ class CommandLineInterfaceAnalysis(object):
         loop = asyncio.get_event_loop()
         try:
             loop.run_until_complete(
-                rw_rank_concordance(index_location, index_type, rw_length, rw_repeats, topics_path, output_path,
-                                    cutoff, repeats, method, force, loop))
+                rws_rank_concordance(index_location, index_type, rw_length, rw_repeats, topics_path, output_path,
+                                     cutoff, repeats, method, force, loop))
         finally:
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()

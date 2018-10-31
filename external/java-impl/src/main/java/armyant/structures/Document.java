@@ -11,17 +11,27 @@ public class Document {
     private String docID;
     private String title;
     private String text;
+    private List<Entity> entities;
     private List<Triple> triples;
 
     public Document(String docID, String title, String text, List<Triple> triples) {
-        this(null, docID, title, text, triples);
+        this(null, docID, title, text, triples, null);
+    }
+
+    public Document(String docID, String title, String text, List<Triple> triples, List<Entity> entities) {
+        this(null, docID, title, text, triples, entities);
     }
 
     public Document(Double score, String docID, String title, String text, List<Triple> triples) {
+        this(score, docID, title, text, triples, null);
+    }
+
+    public Document(Double score, String docID, String title, String text, List<Triple> triples, List<Entity> entities) {
         this.score = score;
         this.docID = docID;
         this.title = title;
         this.text = text;
+        this.entities = entities;
         this.triples = triples;
     }
 
@@ -67,10 +77,30 @@ public class Document {
 
     public void addTriple(Triple triple) {
         if (this.triples == null) {
-            this.triples = new ArrayList<Triple>();
+            this.triples = new ArrayList<>();
         }
 
         this.triples.add(triple);
+    }
+
+    public List<Entity> getEntities() {
+        return entities;
+    }
+
+    public void setEntities(List<Entity> entities) {
+        this.entities = entities;
+    }
+
+    public void addEntity(Entity entity) {
+        if (this.entities == null) {
+            this.entities = new ArrayList<>();
+        }
+
+        this.entities.add(entity);
+    }
+
+    public boolean hasEntities() {
+        return this.entities != null && this.entities.size() > 0;
     }
 
     @Override

@@ -34,6 +34,7 @@ import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.io.IoCore;
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
 import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils;
+import org.python.modules.synchronize;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
@@ -266,31 +267,38 @@ public class HypergraphOfEntity extends Engine {
         numDocs++;
     }
 
+    // TODO paste here the previous version of indexEntities() for testing (and then discard it permanently)
+
     private Set<Integer> indexEntities(Document document) {
-        Set<Node> nodes = new HashSet<>();
-
-        for (Triple triple : document.getTriples()) {
-            if (!triple.getSubject().isBlank()) {
-                nodes.add(new EntityNode(triple.getSubject().getURI(), triple.getSubject().getLabel()));
-            }
-            nodes.add(new EntityNode(triple.getObject().getURI(), triple.getObject().getLabel()));
-        }
-
         Set<Integer> nodeIDs = new HashSet<>();
 
-        if (nodes.isEmpty()) return nodeIDs;
-
-        Integer edgeID = null;
-        if (!features.contains(Feature.SKIP_RELATED_TO)) {
-            RelatedToEdge relatedToEdge = new RelatedToEdge();
-            edgeID = createUndirectedEdge(relatedToEdge);
+        if (document.hasEntities()) {
+            for (Entity entity : document.getEntities()) {
+                EntityNode entityNode = new EntityNode(entity);
+                nodeIDs.add(getOrCreateNode(entityNode));
+            }
         }
 
-        for (Node node : nodes) {
-            int entityNodeID = getOrCreateNode(node);
-            nodeIDs.add(entityNodeID);
-            synchronized (this) {
-                if (edgeID != null) graph.addToUndirectedHyperEdge(edgeID, entityNodeID);
+        Map<EntityNode, Integer> edgeIDs = new HashMap<>();
+        for (Triple triple : document.getTriples()) {
+            EntityNode subjectNode = new EntityNode(triple.getSubject());
+            EntityNode objectNode = new EntityNode(triple.getObject());
+            
+            if (!document.hasEntities()) {
+                nodeIDs.add(getOrCreateNode(subjectNode));
+                nodeIDs.add(getOrCreateNode(objectNode));
+            }
+
+            if (!features.contains(Feature.SKIP_RELATED_TO)) {
+                Integer edgeID = edgeIDs.get(subjectNode);
+                if (edgeID == null) {
+                    edgeID = createUndirectedEdge(new RelatedToEdge());
+                    edgeIDs.put(subjectNode, edgeID);
+                }
+                
+                synchronized(this) {
+                    graph.addToUndirectedHyperEdge(edgeID, this.nodeIndex.get(objectNode));
+                }
             }
         }
 
@@ -1631,14 +1639,14 @@ public class HypergraphOfEntity extends Engine {
 
     private enum PerSeedScoreMethod {
         DIJKSTA,
-        ALL_PATHS
+        ALL_PATHS,
     }
 
     public enum RankingFunction {
         ENTITY_WEIGHT,
         JACCARD_SCORE,
         RANDOM_WALK_SCORE,
-        BIASED_RANDOM_WALK_SCORE
+        BIASED_RANDOM_WALK_SCORE,
     }
 
     public enum Feature {
@@ -1647,12 +1655,12 @@ public class HypergraphOfEntity extends Engine {
         CONTEXT,
         WEIGHT,
         PRUNE,
-        SKIP_RELATED_TO
+        SKIP_RELATED_TO,
     }
 
     public enum Task {
         DOCUMENT_RETRIEVAL,
         ENTITY_RETRIEVAL,
-        TERM_RETRIEVAL
+        TERM_RETRIEVAL,
     }
 }
