@@ -283,7 +283,7 @@ public class HypergraphOfEntity extends Engine {
         for (Triple triple : document.getTriples()) {
             EntityNode subjectNode = new EntityNode(triple.getSubject());
             EntityNode objectNode = new EntityNode(triple.getObject());
-            
+
             if (!document.hasEntities()) {
                 nodeIDs.add(getOrCreateNode(subjectNode));
                 nodeIDs.add(getOrCreateNode(objectNode));
@@ -295,7 +295,7 @@ public class HypergraphOfEntity extends Engine {
                     edgeID = createUndirectedEdge(new RelatedToEdge());
                     edgeIDs.put(subjectNode, edgeID);
                 }
-                
+
                 synchronized(this) {
                     graph.addToUndirectedHyperEdge(edgeID, this.nodeIndex.get(objectNode));
                 }

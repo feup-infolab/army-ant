@@ -811,8 +811,8 @@ class HypergraphOfEntity(JavaIndex):
                         entities.append(HypergraphOfEntity.JEntity(entity.label, entity.uri))
                     except Exception as e:
                         logger.warning("Entity %s skipped" % entity)
-                        logger.exception(e)                            
-                
+                        logger.exception(e)
+
                 triples = []
                 for s, p, o in doc.triples:
                     try:
@@ -951,8 +951,8 @@ class LuceneEngine(JavaIndex):
                         entities.append(HypergraphOfEntity.JEntity(entity.label, entity.uri))
                     except Exception as e:
                         logger.warning("Entity %s skipped" % entity)
-                        logger.exception(e)                            
-                
+                        logger.exception(e)
+
                 triples = []
                 for s, p, o in doc.triples:
                     try:
