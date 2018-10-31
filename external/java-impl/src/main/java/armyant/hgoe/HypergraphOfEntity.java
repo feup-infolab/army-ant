@@ -34,7 +34,6 @@ import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.io.IoCore;
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
 import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils;
-import org.python.modules.synchronize;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
@@ -74,6 +73,7 @@ public class HypergraphOfEntity extends Engine {
 
     private List<Feature> features;
     private String featuresPath;
+    private EntityIndexingStrategy entityIndexingStrategy;
     private File directory;
     private InMemoryGrph graph;
     private NumericalProperty nodeWeights;
@@ -105,11 +105,21 @@ public class HypergraphOfEntity extends Engine {
         this(path, features, featuresPath, false);
     }
 
-    public HypergraphOfEntity(String path, List<Feature> features, String featuresPath, boolean overwrite) throws HypergraphException {
+    public HypergraphOfEntity(String path, List<Feature> features, String featuresPath, boolean overwrite)
+            throws HypergraphException {
         super();
 
         this.features = features;
         this.featuresPath = featuresPath;
+
+        if (this.features.contains(Feature.RELATED_TO_BY_DOC)) {
+            this.entityIndexingStrategy = EntityIndexingStrategy.DOCUMENT_COOCCURRENCE;
+        } else if (this.features.contains(Feature.RELATED_TO_BY_SUBJ)) {
+            this.entityIndexingStrategy = EntityIndexingStrategy.GROUP_BY_SUBJECT;
+        } else {
+            // Default here
+            this.entityIndexingStrategy = EntityIndexingStrategy.GROUP_BY_SUBJECT;
+        }
 
         this.directory = new File(path);
         if (directory.exists()) {
@@ -267,9 +277,36 @@ public class HypergraphOfEntity extends Engine {
         numDocs++;
     }
 
-    // TODO paste here the previous version of indexEntities() for testing (and then discard it permanently)
+    private Set<Integer> indexEntitiesUsingDocumentCooccurrence(Document document) {
+        Set<Node> nodes = new HashSet<>();
 
-    private Set<Integer> indexEntities(Document document) {
+        for (Triple triple : document.getTriples()) {
+            nodes.add(new EntityNode(triple.getSubject()));
+            nodes.add(new EntityNode(triple.getObject()));
+        }
+
+        Set<Integer> nodeIDs = new HashSet<>();
+
+        if (nodes.isEmpty()) return nodeIDs;
+
+        Integer edgeID = null;
+        if (!features.contains(Feature.SKIP_RELATED_TO)) {
+            RelatedToEdge relatedToEdge = new RelatedToEdge();
+            edgeID = createUndirectedEdge(relatedToEdge);
+        }
+
+        for (Node node : nodes) {
+            int entityNodeID = getOrCreateNode(node);
+            nodeIDs.add(entityNodeID);
+            synchronized (this) {
+                if (edgeID != null) graph.addToUndirectedHyperEdge(edgeID, entityNodeID);
+            }
+        }
+
+        return nodeIDs;
+    }
+
+    private Set<Integer> indexEntitiesUsingGroupingBySubject(Document document) {
         Set<Integer> nodeIDs = new HashSet<>();
 
         if (document.hasEntities()) {
@@ -283,10 +320,12 @@ public class HypergraphOfEntity extends Engine {
         for (Triple triple : document.getTriples()) {
             EntityNode subjectNode = new EntityNode(triple.getSubject());
             EntityNode objectNode = new EntityNode(triple.getObject());
+            int subjectNodeID = getOrCreateNode(subjectNode);
+            int objectNodeID = getOrCreateNode(objectNode);
 
             if (!document.hasEntities()) {
-                nodeIDs.add(getOrCreateNode(subjectNode));
-                nodeIDs.add(getOrCreateNode(objectNode));
+                nodeIDs.add(subjectNodeID);
+                nodeIDs.add(objectNodeID);
             }
 
             if (!features.contains(Feature.SKIP_RELATED_TO)) {
@@ -303,6 +342,17 @@ public class HypergraphOfEntity extends Engine {
         }
 
         return nodeIDs;
+    }
+
+    private Set<Integer> indexEntities(Document document) {
+        switch (this.entityIndexingStrategy) {
+            case DOCUMENT_COOCCURRENCE:
+                return indexEntitiesUsingDocumentCooccurrence(document);
+            case GROUP_BY_SUBJECT:
+                return indexEntitiesUsingGroupingBySubject(document);
+        }
+
+        return new HashSet<>();
     }
 
     private void linkTextAndKnowledge() {
@@ -1642,6 +1692,11 @@ public class HypergraphOfEntity extends Engine {
         ALL_PATHS,
     }
 
+    private enum EntityIndexingStrategy {
+        DOCUMENT_COOCCURRENCE,
+        GROUP_BY_SUBJECT,
+    }
+
     public enum RankingFunction {
         ENTITY_WEIGHT,
         JACCARD_SCORE,
@@ -1656,6 +1711,8 @@ public class HypergraphOfEntity extends Engine {
         WEIGHT,
         PRUNE,
         SKIP_RELATED_TO,
+        RELATED_TO_BY_DOC,
+        RELATED_TO_BY_SUBJ,
     }
 
     public enum Task {
