@@ -949,13 +949,14 @@ class LuceneEngine(JavaIndex):
             for doc in self.reader:
                 logger.debug("Preloading document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
 
-                entities = []
-                for entity in doc.entities:
-                    try:
-                        entities.append(HypergraphOfEntity.JEntity(entity.label, entity.uri))
-                    except Exception as e:
-                        logger.warning("Entity %s skipped" % entity)
-                        logger.exception(e)
+                if doc.entities:
+                    entities = []
+                    for entity in doc.entities:
+                        try:
+                            entities.append(HypergraphOfEntity.JEntity(entity.label, entity.uri))
+                        except Exception as e:
+                            logger.warning("Entity %s skipped" % entity)
+                            logger.exception(e)
 
                 triples = []
                 for s, p, o in doc.triples:
