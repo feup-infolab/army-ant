@@ -256,13 +256,13 @@ class INEXReader(Reader):
                         retry_wait += 10 * (max_retries - retries_left + 1)
                         logger.exception(
                             "Error retrieving triples for %d entities in document %s, retrying in %d seconds" \
-                            " (%d retries left)" % (len(entities), doc_id, retry_wait, retries_left))
+                            " (%d retries left)" % (len(entities), page_id, retry_wait, retries_left))
                         retries_left -= 1
                         time.sleep(retry_wait)
                     else:
                         logger.exception(
                             "Could not retrieve triples for %d entities in document %s, giving up (returning " \
-                            "%d cached triples)" % (len(entities), doc_id, len(triples)))
+                            "%d cached triples)" % (len(entities), page_id, len(triples)))
                         dbpedia_triples = []
                         break
 
