@@ -103,7 +103,7 @@ def fetch_dbpedia_triples(entity_labels, ignored_properties=None):
 
     sparql = SPARQLWrapper(dbpedia_sparql_url)
 
-    for entity_uris_chunk in chunks(list(entity_uris), 100):
+    for entity_uris_chunk in chunks(list(entity_uris), 50):
         query = '''
                 SELECT ?s ?sLabel ?p ?pLabel ?o ?oLabel
                 WHERE {
