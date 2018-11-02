@@ -118,7 +118,7 @@ def fetch_dbpedia_triples(entity_labels, ignored_properties=None):
                 }
             ''' % ' '.join(entity_uris_chunk)
 
-        print(query)
+        # print(query)
         sparql.setQuery(query)
         sparql.setReturnFormat(JSON)
 
