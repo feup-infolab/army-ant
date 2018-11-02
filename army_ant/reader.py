@@ -240,7 +240,7 @@ class INEXReader(Reader):
             triples.add((subj, pred, obj))
 
         if self.include_dbpedia:
-            logger.debug("Fetching DBpedia triples for %d entities in document %s" % (len(entities), doc_id))
+            logger.debug("Fetching DBpedia triples for %d entities in document %s" % (len(entities), page_id))
 
             max_retries = 10
 
