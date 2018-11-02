@@ -5,7 +5,7 @@ import urllib.parse
 from enum import Enum
 
 import yaml
-from SPARQLWrapper import SPARQLWrapper, JSON
+from SPARQLWrapper import SPARQLWrapper, JSON, POSTDIRECTLY
 from joblib import Memory
 from pymongo import MongoClient
 
@@ -118,8 +118,10 @@ def fetch_dbpedia_triples(entity_labels, ignored_properties=None):
 
     # print(query)
     sparql.setQuery(query)
-
+    sparql.setRequestMethod(POSTDIRECTLY)
+    sparql.setMethod('POST')
     sparql.setReturnFormat(JSON)
+
     result = sparql.query()
     data = result.response.read()
     # print(data.decode('utf-8'))
