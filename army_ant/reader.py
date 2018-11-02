@@ -45,9 +45,13 @@ class Reader(object):
         if source_reader == 'wikipedia_data':
             return WikipediaDataReader(source_path)
         elif source_reader == 'inex':
-            return INEXReader(source_path, limit)
+            return INEXReader(source_path, include_dbpedia=False, limit=limit)
+        elif source_reader == 'inex_dbpedia':
+            return INEXReader(source_path, include_dbpedia=True, limit=limit)
         elif source_reader == 'inex_dir':
-            return INEXDirectoryReader(source_path)
+            return INEXDirectoryReader(source_path, include_dbpedia=False)
+        elif source_reader == 'inex_dir_dbpedia':
+            return INEXDirectoryReader(source_path, include_dbpedia=True)
         elif source_reader == 'living_labs':
             return LivingLabsReader(source_path, limit)
         elif source_reader == 'wapo':
@@ -173,8 +177,9 @@ class WikipediaDataReader(Reader):
 
 
 class INEXReader(Reader):
-    def __init__(self, source_path, limit=None, title_index=None):
+    def __init__(self, source_path, include_dbpedia=False, limit=None, title_index=None):
         super(INEXReader, self).__init__(source_path)
+        self.include_dbpedia = include_dbpedia
         self.limit = limit
 
         self.counter = 0
@@ -229,6 +234,40 @@ class INEXReader(Reader):
                 Entity('related_to'),
                 self.to_wikipedia_entity(related_id, related_title)))
 
+        if self.include_dbpedia:
+            logger.debug("Fetching DBpedia triples for %d entities in document %s" % (len(entities), doc_id))
+
+            max_retries = 10
+
+            retries_left = max_retries
+            retry_wait = 0
+
+            while True:
+                try:
+                    dbpedia_triples = list(fetch_dbpedia_triples([entity.label for entity in entities]))
+                    break
+                except:
+                    if retries_left > 0:
+                        retry_wait += 10 * (max_retries - retries_left + 1)
+                        logger.exception(
+                            "Error retrieving triples for %d entities in document %s, retrying in %d seconds" \
+                            " (%d retries left)" % (len(entities), doc_id, retry_wait, retries_left))
+                        retries_left -= 1
+                        time.sleep(retry_wait)
+                    else:
+                        logger.exception(
+                            "Could not retrieve triples for %d entities in document %s, giving up (returning " \
+                            "%d cached triples)" % (len(entities), doc_id, len(triples)))
+                        dbpedia_triples = []
+                        break
+
+            for (s, sl), (p, pl), (o, ol) in dbpedia_triples:
+                triples.add((
+                    Entity(sl, s),
+                    Entity(pl, p),
+                    Entity(ol, o)
+                ))
+
         return triples
 
     def __next__(self):
@@ -273,7 +312,7 @@ class INEXReader(Reader):
 
 
 class INEXDirectoryReader(Reader):
-    def __init__(self, source_path, use_memory=False):
+    def __init__(self, source_path, include_dbpedia=False, use_memory=False):
         super(INEXDirectoryReader, self).__init__(source_path)
 
         self.use_memory = use_memory
@@ -314,7 +353,9 @@ class INEXDirectoryReader(Reader):
             "Finished indexing titles by doc_id for %d documents in all archives in %s" % (num_docs, source_path))
 
         inex_iterators = [
-            iter(INEXReader(file_path, title_index=title_index if use_memory else title_index_path))
+            iter(INEXReader(
+                file_path, include_dbpedia=include_dbpedia,
+                title_index=title_index if use_memory else title_index_path))
             for file_path in file_paths
         ]
         self.it = itertools.chain(*inex_iterators)
