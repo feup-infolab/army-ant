@@ -47,6 +47,11 @@ def md5(filename):
     return hash_md5.hexdigest()
 
 
+def chunks(l, n):
+    for i in range(0, len(l), n):
+        yield l[i:i+n]
+
+
 def get_first(lst, default=None):
     return next(iter(lst or []), default)
 

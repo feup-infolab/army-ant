@@ -8,6 +8,7 @@ import yaml
 from SPARQLWrapper import SPARQLWrapper, JSON, POSTDIRECTLY
 from joblib import Memory
 from pymongo import MongoClient
+from army_ant.util import chunks
 
 logger = logging.getLogger(__name__)
 
@@ -102,61 +103,60 @@ def fetch_dbpedia_triples(entity_labels, ignored_properties=None):
 
     sparql = SPARQLWrapper(dbpedia_sparql_url)
 
-    query = '''
-            SELECT ?s ?sLabel ?p ?pLabel ?o ?oLabel
-            WHERE {
-              VALUES ?s { %s }
-              ?s ?p ?o .
-              ?s rdfs:label ?sLabel .
-              ?p rdfs:label ?pLabel .
-              ?o rdfs:label ?oLabel .
-              FILTER (langMatches(lang(?sLabel), 'en')
-                && langMatches(lang(?pLabel), 'en')
-                && langMatches(lang(?oLabel), 'en'))
-            }
-        ''' % ' '.join(entity_uris)
+    for entity_uris_chunk in chunks(list(entity_uris), 100):
+        query = '''
+                SELECT ?s ?sLabel ?p ?pLabel ?o ?oLabel
+                WHERE {
+                VALUES ?s { %s }
+                ?s ?p ?o .
+                ?s rdfs:label ?sLabel .
+                ?p rdfs:label ?pLabel .
+                ?o rdfs:label ?oLabel .
+                FILTER (langMatches(lang(?sLabel), 'en')
+                    && langMatches(lang(?pLabel), 'en')
+                    && langMatches(lang(?oLabel), 'en'))
+                }
+            ''' % ' '.join(entity_uris_chunk)
 
-    # print(query)
-    sparql.setQuery(query)
-    sparql.setRequestMethod(POSTDIRECTLY)
-    sparql.setMethod('POST')
-    sparql.setReturnFormat(JSON)
+        print(query)
+        sparql.setQuery(query)
+        sparql.setReturnFormat(JSON)
 
-    result = sparql.query()
-    data = result.response.read()
-    # print(data.decode('utf-8'))
-    data = json.loads(data.decode('utf-8'))
+        result = sparql.query()
+        data = result.response.read()
+        # print(data.decode('utf-8'))
+        data = json.loads(data.decode('utf-8'))
 
-    cache_data = {}
+        cache_data = {}
 
-    for binding in data['results']['bindings']:
-        if ignored_properties and binding['p']['value'] in ignored_properties: continue
+        for binding in data['results']['bindings']:
+            if ignored_properties and binding['p']['value'] in ignored_properties: continue
 
-        s = (binding['s']['value'], binding['sLabel']['value'])
-        p = (binding['p']['value'], binding['pLabel']['value'])
-        o = (binding['o']['value'], binding['oLabel']['value'])
+            s = (binding['s']['value'], binding['sLabel']['value'])
+            p = (binding['p']['value'], binding['pLabel']['value'])
+            o = (binding['o']['value'], binding['oLabel']['value'])
 
-        if not s in cache_data: cache_data[s] = []
+            if not s in cache_data: cache_data[s] = []
 
-        cache_data[s].append({
-            'predicate': { 'uri': p[0], 'label': p[1] },
-            'object': { 'uri': o[0], 'label': o[1] }
-        })
+            cache_data[s].append({
+                'predicate': { 'uri': p[0], 'label': p[1] },
+                'object': { 'uri': o[0], 'label': o[1] }
+            })
 
-        triples.add((s, p, o))
+            triples.add((s, p, o))
 
-    for k, v in cache_data.items():
-        cache.insert({
-            'uri': k[0],
-            'label': k[1],
-            'triples': v
-        })
+        for k, v in cache_data.items():
+            cache.insert({
+                'uri': k[0],
+                'label': k[1],
+                'triples': v
+            })
 
-    for entity_label in set(entity_labels).difference(cache_data.keys()):
-        cache.insert({
-            'label': entity_label,
-            'triples': []
-        })
+        for entity_label in set(entity_labels).difference(cache_data.keys()):
+            cache.insert({
+                'label': entity_label,
+                'triples': []
+            })
 
     return list(triples)
 
