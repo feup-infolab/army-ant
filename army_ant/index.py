@@ -808,8 +808,8 @@ class HypergraphOfEntity(JavaIndex):
             for doc in self.reader:
                 logger.debug("Preloading document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
 
+                entities = []
                 if doc.entities:
-                    entities = []
                     for entity in doc.entities:
                         try:
                             entities.append(HypergraphOfEntity.JEntity(entity.label, entity.uri))
@@ -949,8 +949,8 @@ class LuceneEngine(JavaIndex):
             for doc in self.reader:
                 logger.debug("Preloading document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
 
+                entities = []
                 if doc.entities:
-                    entities = []
                     for entity in doc.entities:
                         try:
                             entities.append(HypergraphOfEntity.JEntity(entity.label, entity.uri))
