@@ -215,8 +215,10 @@ class INEXReader(Reader):
         #return Entity(label, "http://en.wikipedia.org/?curid=%s" % page_id)
         return Entity(label, "WP%s" % page_id)
 
-    def to_triples(self, page_id, title, bdy):
-        triples = []
+    def build_triples(self, page_id, title, bdy):
+        entities = set([])
+        triples = set([])
+
         for link in bdy.xpath('//link'):
             related_id = get_first(link.xpath('@xlink:href', namespaces={'xlink': 'http://www.w3.org/1999/xlink'}))
             if related_id is None: continue
@@ -229,10 +231,13 @@ class INEXReader(Reader):
             if related_title is None: continue
             related_title = related_title.replace('\n', ' ').strip()
 
-            triples.append((
-                self.to_wikipedia_entity(page_id, title),
-                Entity('related_to'),
-                self.to_wikipedia_entity(related_id, related_title)))
+            subj = self.to_wikipedia_entity(page_id, title)
+            pred = Entity('related_to')
+            obj = self.to_wikipedia_entity(related_id, related_title)
+
+            entities.add(subj)
+            entities.add(obj)
+            triples.add((subj, pred, obj))
 
         if self.include_dbpedia:
             logger.debug("Fetching DBpedia triples for %d entities in document %s" % (len(entities), doc_id))
@@ -268,7 +273,7 @@ class INEXReader(Reader):
                     Entity(ol, o)
                 ))
 
-        return triples
+        return list(entities), list(triples)
 
     def __next__(self):
         url = None
@@ -299,11 +304,14 @@ class INEXReader(Reader):
 
             url = self.to_wikipedia_entity(page_id, title).uri
 
+            entities, triples = self.build_triples(page_id, title, bdy)
+
             return Document(
                 doc_id=page_id,
                 title=title,
                 text=self.to_plain_text(bdy),
-                triples=self.to_triples(page_id, title, bdy),
+                entities=entities,
+                triples=triples,
                 metadata={'url': url, 'name': title})
 
         self.tar.close()
