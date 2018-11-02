@@ -733,6 +733,7 @@ class JavaIndex(Index):
         args_message = 'the following additional arguments: %s' % OTHER_ARGS
     else:
         args_message = 'no additional arguments'
+        OTHER_ARGS = ''
 
     logger.info("Starting JVM with %s MB of heap and %s" % (MEMORY_MB, args_message))
 
