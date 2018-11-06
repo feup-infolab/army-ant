@@ -7,21 +7,8 @@
 import networkx as nx
 import sys
 
-from dataclasses import dataclass
 from enum import Enum
 
-# Requires Python 3.7.x (install it with pyenv)
-@dataclass
-class Item(object):
-    id: int
-    asin: str
-    title: str
-    group: Group
-    sales_rank: int
-    similar: List[int]
-    categories: List[Category]
-    reviews: List[Review]
-    avg_rating: float
 
 class Group(Enum):
     baby_product = 'Baby Product'
@@ -34,6 +21,20 @@ class Group(Enum):
     toy = 'Toy'
     video = 'Video'
     video_games = 'Video Games'
+
+
+class Item(object):
+    def __init__(self, id, asin, title, group, sales_rank, similar, categories, reviews, avg_rating):
+        self.id = id
+        self.asin = asin
+        self.title = title
+        self.group = group
+        self.sales_rank = sales_rank
+        self.similar = similar
+        self.categories = categories
+        self.reviews = reviews
+        self.avg_rating = avg_rating
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
