@@ -172,7 +172,6 @@ class ProductTransformer(Transformer):
 
 # XXX The fucking parser took me the whole day to code... This tooks me 30 mins. #FML
 def parse_product(data):
-    print(data)
     data = data.split("\n")
     product = {}
     for line in data:
