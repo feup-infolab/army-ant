@@ -1,0 +1,75 @@
+start: id asin (discontinued_product | product)
+
+discontinued_product: "discontinued product" NEWLINE
+
+product: title group sales_rank similar categories reviews
+
+id: "Id: " INT NEWLINE
+
+asin_value: /[0-9A-Za-z]+/
+
+asin: "ASIN: " asin_value NEWLINE
+
+title: "title: " /[^\n]+/ NEWLINE
+
+group: "group: " /[A-Za-z ]+/ NEWLINE
+
+sales_rank: "salesrank: " INT NEWLINE
+
+similar: empty_similar
+    | ("similar: " similar_count similar_asins)
+
+empty_similar: "similar: 0" NEWLINE
+
+similar_count: INT
+
+similar_asins: [asin_value+] NEWLINE
+
+categories: empty_categories
+    | ("categories: " category_count category_hierarchies)
+
+empty_categories: "categories: 0" NEWLINE
+
+category_count: INT NEWLINE
+
+category_hierarchies: [category_hierarchy+]
+
+category_hierarchy: [("|" (unnamed_category | category))+] NEWLINE
+
+unnamed_category: "[" INT "]"
+
+category: /[^\[]+/ "[" INT "]"
+
+reviews: empty_reviews
+    | (review_summary review_items)
+
+empty_reviews: "reviews:" "total: 0" "downloaded: 0" "avg_rating: 0\n"
+
+review_total: "total: " INT
+
+review_downloaded: "downloaded: " INT
+
+review_avg_rating: "avg rating: " NUMBER
+
+review_summary: "reviews:" review_total review_downloaded review_avg_rating NEWLINE
+
+review_items: [review*]
+
+review: date customer rating votes helpful NEWLINE
+
+date: /\d{4}-\d{1,2}-\d{1,2}/
+
+customer: "cutomer: " /[0-9A-Z]+/
+
+rating: "rating: " INT
+
+votes: "votes: " INT
+
+helpful: "helpful: " INT
+
+%ignore WS_INLINE
+
+%import common.WS_INLINE
+%import common.NEWLINE
+%import common.INT
+%import common.NUMBER
