@@ -5,7 +5,7 @@
 # 2018-11-06
 
 import networkx as nx
-import sys, os, gzip, datetime, itertools
+import sys, os, gzip, datetime, itertools, re
 
 from enum import Enum
 from lark import Lark, Transformer, Tree
@@ -112,7 +112,6 @@ def list_to_category_hierarchy(cat_lst):
 
 
 class ProductTransformer(Transformer):
-    #start = dict
     start = dict
     discontinued_product = lambda self, t: ('product', {})
     product = lambda self, lst: ('product', dict(lst))
@@ -153,21 +152,98 @@ class ProductTransformer(Transformer):
     helpful = lambda self, t: ('helpful', int(t[0].value))
 
 
-def parse_product(data):
-    tree = product_parser.parse(data)
-    tree = ProductTransformer().transform(tree)
+# XXX Unfortunately, the Lark grammar doesn't work as it should when there are too many reviews
+# def parse_product(data):
+#     tree = product_parser.parse(data)
+#     tree = ProductTransformer().transform(tree)
 
-    if tree['product']:
-        return Product(
-            id = tree['id'],
-            asin = tree['asin'],
-            title = tree['product']['title'],
-            group = tree['product']['group'],
-            sales_rank = tree['product']['sales_rank'],
-            similar = tree['product']['similar'],
-            categories = tree['product']['categories'],
-            reviews = tree['product']['reviews']['items'],
-            avg_rating = tree['product']['reviews']['summary']['avg_rating'])
+#     if tree['product']:
+#         return Product(
+#             id = tree['id'],
+#             asin = tree['asin'],
+#             title = tree['product']['title'],
+#             group = tree['product']['group'],
+#             sales_rank = tree['product']['sales_rank'],
+#             similar = tree['product']['similar'],
+#             categories = tree['product']['categories'],
+#             reviews = tree['product']['reviews']['items'],
+#             avg_rating = tree['product']['reviews']['summary']['avg_rating'])
+
+
+# XXX The fucking parser took me the whole day to code... This tooks me 30 mins. #FML
+def parse_product(data):
+    print(data)
+    data = data.split("\n")
+    product = {}
+    for line in data:
+        line = line.strip()
+        
+        if line.startswith('Id:'):
+            _, id = re.split(r'\s+', line)
+            product['id'] = int(id)
+        
+        elif line.startswith('ASIN:'):
+            _, asin = re.split(r'\s+', line)
+            product['asin'] = asin
+
+        elif line == 'discontinued product':
+            return
+        
+        elif line.startswith('title:'):
+            _, title = re.split(r'\s+', line, 1)
+            product['title'] = title
+        
+        elif line.startswith('group:'):
+            _, group = re.split(r'\s+', line, 1)
+            product['group'] = Group(group)
+        
+        elif line.startswith('salesrank:'):
+            _, sales_rank = re.split(r'\s+', line, 1)
+            product['sales_rank'] = int(sales_rank)
+        
+        elif line.startswith('similar:'):
+            similar = re.split(r'\s+', line)
+            product['similar'] = similar[2:]
+        
+        elif line.startswith('|'):
+            category_strs = line.split('|')[1:]
+            categories = []
+            for category_str in category_strs:
+                m = re.match(r'(.*)\[(\d+)\]', category_str)
+                if m:
+                    categories.append(Category(int(m.group(2)), m.group(1)))
+            if not 'categories' in product:
+                product['categories'] = []
+            product['categories'].append(list_to_category_hierarchy(categories))
+
+        elif line.startswith("reviews"):
+            m = re.match(r'.*avg rating:\s+(\d+(?:\.\d+)?)', line)
+            if m:
+                product['avg_rating'] = float(m.group(1))
+
+        elif re.match(r'\d{4}-\d{1,2}-\d{1,2}', line):
+            m = re.match(
+                r'(\d{4}-\d{1,2}-\d{1,2})\s+cutomer:\s+([^ ]+)\s+rating:\s+(\d+)\s+votes:\s+(\d+)\s+helpful:\s+(\d+)',
+                line)
+            if m:
+                review = Review(
+                    datetime.datetime.strptime(m.group(1), '%Y-%m-%d').date(),
+                    m.group(2),
+                    int(m.group(3)),
+                    int(m.group(4)),
+                    int(m.group(5))
+                )
+                if not 'reviews' in product:
+                    product['reviews'] = []
+                product['reviews'].append(review)
+
+        if not 'categories' in product:
+            product['categories'] = []
+
+        if not 'reviews' in product:
+            product['reviews'] = []
+                
+    return Product(**product)
 
 
 def get_products(path):
@@ -209,4 +285,5 @@ if __name__ == '__main__':
         sys.exit(1)
 
     for product in resolve_product_similars(get_products(sys.argv[1])):
+    #for product in get_products(sys.argv[1]):
         print(product)
