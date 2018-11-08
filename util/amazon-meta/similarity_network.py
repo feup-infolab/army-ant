@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# build_similarity_graph.py
+# similarity_graph.py
 # José Devezas <joseluisdevezas@gmail.com>
 # 2018-11-06
 
@@ -48,6 +48,15 @@ class Product:
         self.reviews = reviews
 
         self.avg_rating = float(avg_rating)
+
+    def basic_attributes(self):
+        return {
+            'id': self.id,
+            'asin': self.asin,
+            'title': self.title,
+            'group': self.group.name,
+            'salesrank': self.sales_rank
+        }
 
     def __repr__(self):
         return "product\n" \
@@ -170,7 +179,7 @@ class ProductTransformer(Transformer):
 #             avg_rating = tree['product']['reviews']['summary']['avg_rating'])
 
 
-# XXX The fucking parser took me the whole day to code... This tooks me 30 mins. #FML
+# The fucking parser took me the whole day to code... This only took me 30 mins. #FML
 def parse_product(data):
     data = data.split("\n")
     product = {}
@@ -180,6 +189,7 @@ def parse_product(data):
         if line.startswith('Id:'):
             _, id = re.split(r'\s+', line)
             product['id'] = int(id)
+            print("==> Parsing product %d" % product['id'])
         
         elif line.startswith('ASIN:'):
             _, asin = re.split(r'\s+', line)
@@ -273,9 +283,27 @@ def resolve_product_similars(products):
     idx = index_products_by_asin(it)
 
     for product in idx.values():
-        product.similar = [idx.get(asin) for asin in product.similar if product.similar]
+        print("==> Resolving similar for product %d" % product.id)
+        product.similar = filter(lambda p: p, [idx.get(asin) for asin in product.similar if product.similar])
     
     return products
+
+
+def build_similarity_graph(proucts, path):
+    g = nx.Graph()
+
+    for product in products:
+        if product is None:
+            continue
+
+        print("==> Processing neighborhood of product %d" % product.id)
+        g.add_node(product.asin, product.basic_attributes())
+        for similar in product.similar:
+            g.add_edge(product.asin, similar.asin)
+
+    print("==> Saving graph to %s" % path)
+    nx.write_gml(g, path)
+
     
 
 if __name__ == '__main__':
@@ -283,6 +311,8 @@ if __name__ == '__main__':
         print("Usage: %s INPUT_DATASET OUTPUT_GML_GZ" % sys.argv[0])
         sys.exit(1)
 
-    for product in resolve_product_similars(get_products(sys.argv[1])):
-    #for product in get_products(sys.argv[1]):
-        print(product)
+    # products = itertools.islice(get_products(sys.argv[1]), 10)
+    products = get_products(sys.argv[1])
+    products = resolve_product_similars(products)
+    build_similarity_graph(products, sys.argv[2])
+    print("==> Done")
