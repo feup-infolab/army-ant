@@ -55,7 +55,8 @@ class Product:
             'asin': self.asin,
             'title': self.title,
             'group': self.group.name,
-            'salesrank': self.sales_rank
+            'salesrank': self.sales_rank,
+            'avgrating': self.avg_rating
         }
 
     def __repr__(self):
