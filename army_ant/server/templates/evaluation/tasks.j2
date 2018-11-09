@@ -136,12 +136,22 @@
 
       <!-- START INEX METADATA -->
       <tr>
-        <th>Topics Filename</th>
-        <td>{{ task.topics_filename}}</td>
+        <th>Topics Path</th>
+        <td>
+          <div class="columns">
+            <div class="column">{{ task.topics_path }}</div>
+            <div class="column text-right">{{ task.topics_filename }}</div>
+          </div>
+        </td>
       </tr>
       <tr>
-        <th>Assessments Filename</th>
-        <td>{{ task.assessments_filename }}</td>
+        <th>Assessments Path</th>
+        <td>
+          <div class="columns">
+            <div class="column">{{ task.assessments_path }}</div>
+            <div class="column text-right">{{ task.assessments_filename }}</div>
+          </div>
+        </td>
       </tr>
       <!-- END INEX METADATA -->
 
