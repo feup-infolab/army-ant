@@ -291,7 +291,7 @@ def resolve_product_similars(products):
 
 
 def build_similarity_graph(proucts, path):
-    g = nx.Graph()
+    g = nx.DiGraph()
 
     for product in products:
         if product is None:
