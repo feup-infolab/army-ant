@@ -9,12 +9,15 @@ pacman::p_load(
 # PageRank (Simulation)
 #
 
-page_rank_simulation <- function(g, d=0.85, steps=10000, PR = NULL) {
+page_rank_simulation <- function(g, d=0.85, steps=1000, PR = NULL) {
   for (i in 1:vcount(g)) {
     cat("==> Walking", steps, "random steps from node", i, "\n")
     PR <- page_rank_simulation_iter(g, i, d=d, steps=steps, PR = PR)
   }
-  PR / norm(as.matrix(PR))
+  list(
+    iterations=steps*vcount(g),
+    vector=PR / norm(as.matrix(PR))
+  )
 }
 
 page_rank_simulation_iter <- function(g, start, d, steps, PR = NULL) {
@@ -24,6 +27,8 @@ page_rank_simulation_iter <- function(g, start, d, steps, PR = NULL) {
     sample(1:vcount(g), 1)
   }
   
+  PR[start] <- PR[start] + 1
+  
   for (i in 1:steps) {
     if (runif(1) >= d) {
       # Teleport.
@@ -31,8 +36,11 @@ page_rank_simulation_iter <- function(g, start, d, steps, PR = NULL) {
     } else {
       # Choose a random outgoing vertex.
       out_v <- as.numeric(adjacent_vertices(g, start, mode = "out")[[1]])
-      if (length(out_v) > 0) {
+      if (length(out_v) > 1) {
         start <- sample(out_v, 1)
+      } else if (length(out_v) == 1) {
+        # sample() won't work for vectors with a single value.
+        start <- out_v
       } else {
         # It's a sink. Teleport.
         start <- teleport()
@@ -52,11 +60,15 @@ page_rank_simulation_iter <- function(g, start, d, steps, PR = NULL) {
 #
 
 # This strategy is based on the fact that the primary eigenvector, corresponding to the highest eigenvalue,
-# when multiplied by the original (stochatic) matrix, will result in the primary eigenvector again. Moreover,
-# the primary eigenvalue of a Markov Matrix is always one.
+# when multiplied by the original (stochatic) matrix, will result in the primary eigenvector again, since
+# the primary eigenvalue of a Markov (or stochastic) matrix is always one.
+#
+# $A v_1 = \lambda_1 v_1, \lambda_1 = 1 if is_stochastic(M)$
 page_rank_power_iteration <- function(g, d=0.85, eps=0.0001) {
-  M <- as.matrix(as_adj(g))
+  # Columns must represent outgoing links
+  M <- t(as.matrix(as_adj(g)))
   M <- scale(M, center=FALSE, scale=colSums(M))
+  M[is.nan(M)] <- 0
   N <- vcount(g)
   v <- as.matrix(runif(N))
   v <- v / norm(v)
@@ -68,6 +80,7 @@ page_rank_power_iteration <- function(g, d=0.85, eps=0.0001) {
     if (norm(v - last_v, "2") <= eps) break;
     last_v <- v
     v <- M_hat %*% v
+    v <- v / norm(v)
     iter <- iter + 1
   }
   
@@ -91,12 +104,16 @@ fatigued_transition_probability <- function(nf, method="zero", ...) {
   eval(parse(text=sprintf("%s(...)", method)))
 }
 
-fatigued_page_rank_simulation <- function(g, d=0.85, steps=10000, PR = NULL, NF = NULL) {
+fatigued_page_rank_simulation <- function(g, d=0.85, steps=1000, PR = NULL, NF = NULL) {
   for (i in 1:vcount(g)) {
     cat("==> Walking", steps, "random steps from node", i, "\n")
     PR <- fatigued_page_rank_simulation_iter(g, i, d=d, steps=steps, PR = PR, NF = NF)
   }
-  PR / norm(as.matrix(PR))
+  
+  list(
+    iterations=steps * vcount(g),
+    vector=PR / norm(as.matrix(PR))
+  )
 }
 
 # Note: In RWS, there is no teleport, so the process would end when no outgoing vertices are available.
@@ -108,7 +125,7 @@ fatigued_page_rank_simulation_iter <- function(g, start, d, steps, PR = NULL, NF
   teleport <- function() {
     non_fatigued <- which(NF != 0)
     if (length(non_fatigued) > 0) {
-      sample(which(NF != 0), 1)
+      sample(non_fatigued, 1)
     } else {
       # Stay in current node.
       start
@@ -123,8 +140,11 @@ fatigued_page_rank_simulation_iter <- function(g, start, d, steps, PR = NULL, NF
       # Choose a random non-fatigued outgoing vertex.
       out_v <- as.numeric(adjacent_vertices(g, start, mode = "out")[[1]])
       out_v <- out_v[which(NF[out_v] == 0)]
-      if (length(out_v) > 0) {
+      if (length(out_v) > 1) {
         start <- sample(out_v, 1)
+      } else if (length(out_v) == 1) {
+        # sample() won't work for vectors with a single value.
+        start <- out_v
       } else {
         # It's a sink. Teleport to a non-fatigued node.
         start <- teleport()
@@ -142,14 +162,64 @@ fatigued_page_rank_simulation_iter <- function(g, start, d, steps, PR = NULL, NF
 
 # -------------------------------------------------------------------------------------------------------------------#
 #
+# Fatigued PageRank (Power Iteration)
+#
+
+fatigued_page_rank_power_iteration <- function(g, d=0.85, eps=0.0001) {
+  # Columns must represent outgoing links
+  M <- t(as.matrix(as_adj(g)))
+  M <- scale(M, center=FALSE, scale=colSums(M))
+  M[is.nan(M)] <- 0
+  N <- vcount(g)
+  v <- as.matrix(runif(N))
+  v <- v / norm(v)
+  last_v <- matrix(1, N) * 100
+  M_hat <- d * M + (1 - d) / N * matrix(1, N, N)
+  
+  iter <- 0
+  repeat {
+    if (norm(v - last_v, "2") <= eps) break;
+    last_v <- v
+    v <- M_hat %*% v
+    v <- v / norm(v)
+    iter <- iter + 1
+  }
+  
+  list(
+    iterations=iter,
+    vector=as.numeric(v)
+  )
+}
+
+
+# -------------------------------------------------------------------------------------------------------------------#
+#
 # TESTS
 #
 
 #g <- make_graph("Zachary")
-#V(g)$pr <- page_rank(g)$vector
-#V(g)$pr_sim <- page_rank_simulation(g)
-V(g)$fpr_sim <- fatigued_page_rank_simulation(g)
-#cor(V(g)$pr, V(g)$pr_sim)
+g <- make_graph(c(1,2, 2,3, 3,2, 4,2, 4,3, 3,1, 4,5, 5,3, 3,6, 6,7, 7,8, 8,1, 8,3))
+
+V(g)$pr <- page_rank(g)$vector
+
+pr_sim <- page_rank_simulation(g)
+V(g)$pr_sim <- pr_sim$vector
+V(g)$pr_sim_iter <- pr_sim$iterations
+
+pr_iter <- page_rank_power_iteration(g)
+V(g)$pr_iter <- pr_iter$vector
+V(g)$pr_iter_iter <- pr_iter$iterations
+
+fpr_sim <- fatigued_page_rank_simulation(g)
+V(g)$fpr_sim <- fpr_sim$vector
+V(g)$fpr_sim_iter <- fpr_sim$iterations
+
+cor(V(g)$pr, V(g)$pr_sim, method="pearson")
+cor(V(g)$pr, V(g)$pr_sim, method="spearman")
+cor(V(g)$pr, V(g)$pr_iter, method="pearson")
+cor(V(g)$pr, V(g)$pr_iter, method="spearman")
+cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
+cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
 
 
 # -------------------------------------------------------------------------------------------------------------------#
