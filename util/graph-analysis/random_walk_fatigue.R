@@ -4,6 +4,11 @@ pacman::p_load(
   igraph
 )
 
+# -------------------------------------------------------------------------------------------------------------------#
+#
+# PageRank (Simulation)
+#
+
 page_rank_simulation <- function(g, d=0.85, steps=10000, PR = NULL) {
   for (i in 1:vcount(g)) {
     cat("==> Walking", steps, "random steps from node", i, "\n")
@@ -40,6 +45,45 @@ page_rank_simulation_iter <- function(g, start, d, steps, PR = NULL) {
   PR
 }
 
+
+# -------------------------------------------------------------------------------------------------------------------#
+#
+# PageRank (Power Iteration)
+#
+
+# This strategy is based on the fact that the primary eigenvector, corresponding to the highest eigenvalue,
+# when multiplied by the original (stochatic) matrix, will result in the primary eigenvector again. Moreover,
+# the primary eigenvalue of a Markov Matrix is always one.
+page_rank_power_iteration <- function(g, d=0.85, eps=0.0001) {
+  M <- as.matrix(as_adj(g))
+  M <- scale(M, center=FALSE, scale=colSums(M))
+  N <- vcount(g)
+  v <- as.matrix(runif(N))
+  v <- v / norm(v)
+  last_v <- matrix(1, N) * 100
+  M_hat <- d * M + (1 - d) / N * matrix(1, N, N)
+
+  iter <- 0
+  repeat {
+    if (norm(v - last_v, "2") <= eps) break;
+    last_v <- v
+    v <- M_hat %*% v
+    iter <- iter + 1
+  }
+  
+  list(
+    iterations=iter,
+    vector=as.numeric(v)
+  )
+}
+
+
+
+# -------------------------------------------------------------------------------------------------------------------#
+#
+# Fatigued PageRank (Simulation)
+#
+
 fatigued_transition_probability <- function(nf, method="zero", ...) {
   zero <- function() 0
   constant <- function(k=0.25) k
@@ -55,6 +99,8 @@ fatigued_page_rank_simulation <- function(g, d=0.85, steps=10000, PR = NULL, NF 
   PR / norm(as.matrix(PR))
 }
 
+# Note: In RWS, there is no teleport, so the process would end when no outgoing vertices are available.
+# This means that we cannot directly compare FPR with RWS.
 fatigued_page_rank_simulation_iter <- function(g, start, d, steps, PR = NULL, NF = NULL) {
   if (is.null(PR)) PR <- rep(0, vcount(g))
   if (is.null(NF)) NF <- rep(0, vcount(g))
@@ -93,7 +139,11 @@ fatigued_page_rank_simulation_iter <- function(g, start, d, steps, PR = NULL, NF
   PR
 }
 
+
+# -------------------------------------------------------------------------------------------------------------------#
+#
 # TESTS
+#
 
 #g <- make_graph("Zachary")
 #V(g)$pr <- page_rank(g)$vector
@@ -101,7 +151,11 @@ fatigued_page_rank_simulation_iter <- function(g, start, d, steps, PR = NULL, NF
 V(g)$fpr_sim <- fatigued_page_rank_simulation(g)
 #cor(V(g)$pr, V(g)$pr_sim)
 
+
+# -------------------------------------------------------------------------------------------------------------------#
+#
 # MAIN
+#
 
 #graph_path <- gzfile("/opt/army-ant/output/amazon-meta-simnet.gml.gz")
 #g <- read.graph(graph_path, format = "gml")
@@ -109,6 +163,6 @@ V(g)$fpr_sim <- fatigued_page_rank_simulation(g)
 #V(g)$pr_sim <- page_rank_simulation(g)
 #V(g)$fpr <- fatigued_page_rank(g)
 
-# TODO Extract ranks before correlating?
+# TODO Extract ranks before correlating? Nope. Spearman does this already!
 #cor(V(g)$pr, V(g)$fpr, method = "spearman")
 
