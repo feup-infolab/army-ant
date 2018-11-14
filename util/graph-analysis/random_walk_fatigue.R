@@ -167,20 +167,73 @@ fatigued_page_rank_simulation_iter <- function(g, start, d, nf, steps, PR = NULL
 
 # For now, nf is ignored. There is instead a probability of a node being fatigued, depending on its in-degree.
 # This must be revised to also depend on the number of cycles of node fatigue (nf).
-fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001) {
+fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fatigue_method='1ordT', ...) {
+  stopifnot(fatigue_method %in% c("1ord", "2ord"))
+
+  first_order_fatigue <- function(M, ...) {
+    kwargs <- list(...)
+    lambda <- ifelse("lambda" %in% kwargs, kwargs$lambda, 0.85)
+    teleport <- ifelse("teleport" %in% kwargs, kwargs$teleport, FALSE)
+    N <- nrow(M)
+
+    P_i <- rowSums(M)
+    P_i <- 1 - 1 / (P_i + 1)
+    P_i <- matrix(rep(P_i, length(P_i)), length(P_i), length(P_i))
+    diag(P_i) <- 0
+
+    if (teleport) {
+      lambda * P_i + (1 - lambda) / N * matrix(1, N, N)
+    } else {
+      P_i
+    }
+  }
+
+  second_order_fatigue <- function(M, ...) {
+    kwargs <- list(...)
+    lambda <- ifelse("lambda" %in% kwargs, kwargs$lambda, 0.85)
+    teleport <- ifelse("teleport" %in% kwargs, kwargs$teleport, FALSE)
+    N <- nrow(M)
+
+    P_i <- rowSums(M)
+    P_i <- 1 - 1 / (P_i + 1)
+
+    # Always consider teleport or else, without smoothing, we'll have "stupid" zeros.
+    P_i <- lambda * P_i + (1 - lambda) / N
+
+    P_Ni <- apply(M, 1, function(row) prod(P_i[which(row > 0)]))
+
+    P_Ni_i <- vapply(1:vcount(g), function(i) {
+      p <- rep((1 - lambda) / N, vcount(g))
+      rw_visits <- table(random_walk(g, start=i, steps=100))
+      p[as.integer(names(rw_visits))] <- lambda * (1 - 1 / (rw_visits + 1)) + p[as.integer(names(rw_visits))]
+      prod(p)
+    }, 1)
+
+    NF <- (P_i * P_Ni_i) / P_Ni
+    NF <- matrix(rep(NF, length(NF)), length(NF), length(NF))
+    diag(NF) <- 0
+    NF
+  }
+
   # Columns must represent outgoing links
   M <- t(as.matrix(as_adj(g)))
-  NF <- rowSums(M)
-  NF <- NF / max(NF)
-  NF <- matrix(rep(NF, length(NF)), length(NF), length(NF))
-  diag(NF) <- 0
+  
+  if (fatigue_method == '1ord') {
+    NF <- first_order_fatigue(M, ...)
+  } else if (fatigue_method == '2ord') {
+    NF <- second_order_fatigue(M, ...)
+  }
+
   M <- scale(M, center=FALSE, scale=colSums(M))
   M[is.nan(M)] <- 0
+  
   N <- vcount(g)
+  
   v <- as.matrix(runif(N))
   v <- v / norm(v)
   last_v <- matrix(1, N) * 100
-  M_hat <- (d * M + (1-d)/N * matrix(1, N, N)) * NF
+  
+  M_hat <- (d * M + (1-d)/N * matrix(1, N, N)) * (1 - NF)
   
   iter <- 0
   repeat {
@@ -204,34 +257,36 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001) {
 #
 
 #g <- make_graph("Zachary")
-#g <- make_graph(c(1,2, 2,3, 3,2, 4,2, 4,3, 3,1, 4,5, 5,3, 3,6, 6,7, 7,8, 8,1, 8,3))
-g <- make_graph(c(1,2, 2,4, 4,3, 3,2))
+# g <- make_graph(c(1,2, 2,3, 3,2, 4,2, 4,3, 3,1, 4,5, 5,3, 3,6, 6,7, 7,8, 8,1, 8,3))
+#g <- make_graph(c(1,2, 2,4, 4,3, 3,2))
 
-V(g)$pr <- page_rank(g)$vector
+# V(g)$pr <- page_rank(g)$vector
+# 
+# pr_sim <- page_rank_simulation(g)
+# V(g)$pr_sim <- pr_sim$vector
+# V(g)$pr_sim_iter <- pr_sim$iterations
+# cor(V(g)$pr, V(g)$pr_sim, method="pearson")
+# cor(V(g)$pr, V(g)$pr_sim, method="spearman")
+# 
+# pr_iter <- page_rank_power_iteration(g)
+# V(g)$pr_iter <- pr_iter$vector
+# V(g)$pr_iter_iter <- pr_iter$iterations
+# cor(V(g)$pr, V(g)$pr_iter, method="pearson")
+# cor(V(g)$pr, V(g)$pr_iter, method="spearman")
+# 
+# fpr_sim <- fatigued_page_rank_simulation(g)
+# V(g)$fpr_sim <- fpr_sim$vector
+# V(g)$fpr_sim_iter <- fpr_sim$iterations
+# cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
+# cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
 
-pr_sim <- page_rank_simulation(g)
-V(g)$pr_sim <- pr_sim$vector
-V(g)$pr_sim_iter <- pr_sim$iterations
-cor(V(g)$pr, V(g)$pr_sim, method="pearson")
-cor(V(g)$pr, V(g)$pr_sim, method="spearman")
-
-pr_iter <- page_rank_power_iteration(g)
-V(g)$pr_iter <- pr_iter$vector
-V(g)$pr_iter_iter <- pr_iter$iterations
-cor(V(g)$pr, V(g)$pr_iter, method="pearson")
-cor(V(g)$pr, V(g)$pr_iter, method="spearman")
-
-fpr_sim <- fatigued_page_rank_simulation(g)
-V(g)$fpr_sim <- fpr_sim$vector
-V(g)$fpr_sim_iter <- fpr_sim$iterations
-cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
-cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
-
-fpr_iter <- fatigued_page_rank_power_iteration(g)
+fpr_iter <- fatigued_page_rank_power_iteration(g, fatigue_method = "2ord")
 V(g)$fpr_iter <- fpr_iter$vector
 V(g)$fpr_iter_iter <- fpr_iter$iterations
 cor(V(g)$fpr_sim, V(g)$fpr_iter, method="pearson")
 cor(V(g)$fpr_sim, V(g)$fpr_iter, method="spearman")
+cor(V(g)$pr, V(g)$fpr_iter, method="pearson")
+cor(V(g)$pr, V(g)$fpr_iter, method="spearman")
 
 
 # -------------------------------------------------------------------------------------------------------------------#
