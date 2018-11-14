@@ -173,7 +173,7 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
   first_order_fatigue <- function(M, ...) {
     kwargs <- list(...)
     lambda <- ifelse("lambda" %in% kwargs, kwargs$lambda, 0.85)
-    teleport <- ifelse("teleport" %in% kwargs, kwargs$teleport, FALSE)
+    teleport <- ifelse(is.null(kwargs$teleport), FALSE, kwargs$teleport)
     N <- nrow(M)
 
     P_i <- rowSums(M)
@@ -190,8 +190,7 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
 
   second_order_fatigue <- function(M, ...) {
     kwargs <- list(...)
-    lambda <- ifelse("lambda" %in% kwargs, kwargs$lambda, 0.85)
-    teleport <- ifelse("teleport" %in% kwargs, kwargs$teleport, FALSE)
+    lambda <- ifelse(is.null(kwargs$lambda), 0.85, kwargs$lambda)
     N <- nrow(M)
 
     P_i <- rowSums(M)
@@ -204,8 +203,14 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
 
     P_Ni_i <- vapply(1:vcount(g), function(i) {
       p <- rep((1 - lambda) / N, vcount(g))
-      rw_visits <- table(random_walk(g, start=i, steps=100))
-      p[as.integer(names(rw_visits))] <- lambda * (1 - 1 / (rw_visits + 1)) + p[as.integer(names(rw_visits))]
+      rw_visits <- as.data.frame(table(random_walk(g, start=i, steps=100)), stringsAsFactors=FALSE)
+      # rw_visits <- replicate(
+      #   100,
+      #   as.data.frame(table(random_walk(g, start=i, steps=3)), stringsAsFactors=FALSE),
+      #   simplify = FALSE)
+      # rw_visits <- do.call(rbind, rw_visits)
+      # rw_visits <- aggregate(Freq~Var1, rw_visits, sum)
+      p[as.integer(rw_visits$Var1)] <- lambda * (1 - 1 / (rw_visits$Freq + 1)) + p[as.integer(rw_visits$Var1)]
       prod(p)
     }, 1)
 
@@ -285,6 +290,8 @@ V(g)$fpr_iter <- fpr_iter$vector
 V(g)$fpr_iter_iter <- fpr_iter$iterations
 cor(V(g)$fpr_sim, V(g)$fpr_iter, method="pearson")
 cor(V(g)$fpr_sim, V(g)$fpr_iter, method="spearman")
+cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
+cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
 cor(V(g)$pr, V(g)$fpr_iter, method="pearson")
 cor(V(g)$pr, V(g)$fpr_iter, method="spearman")
 
