@@ -13,9 +13,10 @@ options(scipen=50)
 #
 
 page_rank_simulation <- function(g, d=0.85, steps=10000, PR = NULL) {
-  i <- sample(vcount(g), 1)
-  cat("==> Walking", steps, "random steps from node", i, "with teleport\n")
-  PR <- page_rank_simulation_iter(g, start=i, d=d, steps=steps, PR = PR)
+  for (i in 1:vcount(g)) {
+    cat("==> Walking", steps, "random steps from node", i, "with teleport\n")
+    PR <- page_rank_simulation_iter(g, start=i, d=d, steps=steps, PR = PR)
+  }
 
   list(
     iterations=steps*vcount(g),
@@ -329,14 +330,12 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
 g <- read_graph(gzfile("~/Data/facebook_combined.txt.gz"), format = "edgelist")
 
 V(g)$pr <- page_rank(g)$vector
-V(g)$pr <- -log(V(g)$pr+0.00000001)
-V(g)$pr <- as.double(V(g)$pr / max(V(g)$pr))
- 
-# pr_sim <- page_rank_simulation(g, steps=10000)
-# V(g)$pr_sim <- pr_sim$vector
-# V(g)$pr_sim_iter <- pr_sim$iterationsq
-# cor(V(g)$pr, V(g)$pr_sim, method="pearson")
-# cor(V(g)$pr, V(g)$pr_sim, method="spearman")
+
+pr_sim <- page_rank_simulation(g, steps=1000)
+V(g)$pr_sim <- pr_sim$vector
+V(g)$pr_sim_iter <- pr_sim$iterationsq
+cor(V(g)$pr, V(g)$pr_sim, method="pearson")
+cor(V(g)$pr, V(g)$pr_sim, method="spearman")
 
 # pr_iter <- page_rank_power_iteration(g)
 # V(g)$pr_iter <- pr_iter$vector
@@ -344,10 +343,8 @@ V(g)$pr <- as.double(V(g)$pr / max(V(g)$pr))
 # cor(V(g)$pr, V(g)$pr_iter, method="pearson")
 # cor(V(g)$pr, V(g)$pr_iter, method="spearman")
  
-fpr_sim <- fatigued_page_rank_simulation(g, steps=100, use_teleport = FALSE)
+fpr_sim <- fatigued_page_rank_simulation(g, steps=1000, use_teleport = FALSE)
 V(g)$fpr_sim <- fpr_sim$vector
-V(g)$fpr_sim <- -log(V(g)$fpr_sim+0.00000001)
-V(g)$fpr_sim <- as.double(V(g)$fpr_sim / max(V(g)$fpr_sim))
 V(g)$fpr_sim_iter <- fpr_sim$iterations
 cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
 cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
@@ -370,7 +367,7 @@ cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
 # cor(V(g)$pr, V(g)$fpr_iter, method="pearson")
 # cor(V(g)$pr, V(g)$fpr_iter, method="spearman")
 
-write_graph(g, file = "~/facebook_combined-with_pr_and_fpr.gml", format = "gml")
+write_graph(g, file = "~/facebook_combined-with_pr_and_fpr.graphml", format = "graphml")
 
 
 # -------------------------------------------------------------------------------------------------------------------#
