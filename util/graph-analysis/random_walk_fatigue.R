@@ -5,17 +5,18 @@ pacman::p_load(
 )
 
 options(stringsAsFactors=FALSE)
+options(scipen=50)
 
 # -------------------------------------------------------------------------------------------------------------------#
 #
 # PageRank (Simulation)
 #
 
-page_rank_simulation <- function(g, d=0.85, steps=1000, PR = NULL) {
-  for (i in 1:vcount(g)) {
-    cat("==> Walking", steps, "random steps from node", i, "with teleport\n")
-    PR <- page_rank_simulation_iter(g, i, d=d, steps=steps, PR = PR)
-  }
+page_rank_simulation <- function(g, d=0.85, steps=10000, PR = NULL) {
+  i <- sample(vcount(g), 1)
+  cat("==> Walking", steps, "random steps from node", i, "with teleport\n")
+  PR <- page_rank_simulation_iter(g, start=i, d=d, steps=steps, PR = PR)
+
   list(
     iterations=steps*vcount(g),
     vector=PR / norm(as.matrix(PR))
@@ -106,26 +107,25 @@ fatigued_transition_probability <- function(nf, method="zero", ...) {
   eval(parse(text=sprintf("%s(...)", method)))
 }
 
-fatigued_page_rank_simulation <- function(g, d=0.85, nf=10, steps=1000, PR = NULL, NF = NULL) {
+fatigued_page_rank_simulation <- function(g, d=0.85, nf=10, steps=1000, use_teleport=FALSE, FPR = NULL) {
   for (i in 1:vcount(g)) {
-    cat("==> Walking", steps, "random steps from node", i, "with teleport and fatigue\n")
-    PR <- fatigued_page_rank_simulation_iter(g, i, d=d, nf=nf, steps=steps, PR = PR, NF = NF)
+    teleport_str <- ifelse(use_teleport, "teleport", "without teleport")
+    cat("==> Walking", steps, "random steps from node", i, "with fatigue and", teleport_str, "\n")
+    FPR <- fatigued_page_rank_simulation_iter(g, i, d=d, nf=nf, steps=steps, use_teleport = use_teleport, FPR = FPR)
   }
+
+  FPR$vector <- FPR$vector / norm(as.matrix(FPR$vector))
   
-  list(
-    iterations=steps * vcount(g),
-    vector=PR / norm(as.matrix(PR))
-  )
+  FPR
 }
 
 # Note: In RWS, there is no teleport, so the process would end when no outgoing vertices are available.
 # This means that we cannot directly compare FPR with RWS.
-fatigued_page_rank_simulation_iter <- function(g, start, d, nf, steps, PR = NULL, NF = NULL) {
-  if (is.null(PR)) PR <- rep(0, vcount(g))
-  if (is.null(NF)) NF <- rep(0, vcount(g))
-  
+fatigued_page_rank_simulation_iter <- function(g, start, d, nf, steps, use_teleport=FALSE, FPR = NULL) {
+  if (is.null(FPR)) FPR <- list(vector=rep(0, vcount(g)), NF=rep(0, vcount(g)), iterations=0)
+
   teleport <- function() {
-    non_fatigued <- which(NF != 0)
+    non_fatigued <- which(FPR$NF == 0)
     if (length(non_fatigued) > 0) {
       sample(non_fatigued, 1)
     } else {
@@ -135,30 +135,50 @@ fatigued_page_rank_simulation_iter <- function(g, start, d, nf, steps, PR = NULL
   }
   
   for (i in 1:steps) {
-    if (runif(1) >= d) {
-      # Teleport to a non-fatigued node.
-      start <- teleport()
+    if (use_teleport) {
+      # WITH TELEPORT
+
+      if (runif(1) >= d) {
+        # Teleport to a non-fatigued node.
+        start <- teleport()
+      } else {
+        # Choose a random non-fatigued outgoing vertex.
+        out_v <- as.numeric(adjacent_vertices(g, start, mode = "out")[[1]])
+        out_v <- out_v[which(FPR$NF[out_v] == 0)]
+        if (length(out_v) > 1) {
+          start <- sample(out_v, 1)
+        } else if (length(out_v) == 1) {
+          # sample() won't work for vectors with a single value.
+          start <- out_v
+        } else {
+          # It's a sink. Teleport to a non-fatigued node.
+          start <- teleport()
+        }
+      }
     } else {
+      # WITHOUT TELEPORT
+
       # Choose a random non-fatigued outgoing vertex.
       out_v <- as.numeric(adjacent_vertices(g, start, mode = "out")[[1]])
-      out_v <- out_v[which(NF[out_v] == 0)]
+      out_v <- out_v[which(FPR$NF[out_v] == 0)]
       if (length(out_v) > 1) {
         start <- sample(out_v, 1)
       } else if (length(out_v) == 1) {
         # sample() won't work for vectors with a single value.
         start <- out_v
       } else {
-        # It's a sink. Teleport to a non-fatigued node.
-        start <- teleport()
+        # It's a sink. Finish.
+        break
       }
     }
-    
-    PR[start] <- PR[start] + 1
-    NF[NF > 0] <- NF[NF > 0] - rep(1, length(NF[NF > 0]))
-    NF[start] <- nf
+
+    FPR$vector[start] <- FPR$vector[start] + 1
+    FPR$NF[FPR$NF > 0] <- FPR$NF[FPR$NF > 0] - rep(1, length(FPR$NF[FPR$NF > 0]))
+    FPR$NF[start] <- nf
+    FPR$iterations <- FPR$iterations + 1
   }
   
-  PR
+  FPR
 }
 
 
@@ -303,31 +323,43 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
 # TESTS
 #
 
-#g <- make_graph("Zachary")
+# g <- make_graph("Zachary")
 # g <- make_graph(c(1,2, 2,3, 3,2, 4,2, 4,3, 3,1, 4,5, 5,3, 3,6, 6,7, 7,8, 8,1, 8,3))
-#g <- make_graph(c(1,2, 2,4, 4,3, 3,2))
+# g <- make_graph(c(1,2, 2,4, 4,3, 3,2))
 g <- read_graph(gzfile("~/Data/facebook_combined.txt.gz"), format = "edgelist")
 
 V(g)$pr <- page_rank(g)$vector
+V(g)$pr <- -log(V(g)$pr+0.00000001)
+V(g)$pr <- as.double(V(g)$pr / max(V(g)$pr))
  
-# pr_sim <- page_rank_simulation(g, steps=1000)
+# pr_sim <- page_rank_simulation(g, steps=10000)
 # V(g)$pr_sim <- pr_sim$vector
-# V(g)$pr_sim_iter <- pr_sim$iterations
+# V(g)$pr_sim_iter <- pr_sim$iterationsq
 # cor(V(g)$pr, V(g)$pr_sim, method="pearson")
 # cor(V(g)$pr, V(g)$pr_sim, method="spearman")
-# 
+
 # pr_iter <- page_rank_power_iteration(g)
 # V(g)$pr_iter <- pr_iter$vector
 # V(g)$pr_iter_iter <- pr_iter$iterations
 # cor(V(g)$pr, V(g)$pr_iter, method="pearson")
 # cor(V(g)$pr, V(g)$pr_iter, method="spearman")
-# 
-fpr_sim <- fatigued_page_rank_simulation(g, steps=100)
+ 
+fpr_sim <- fatigued_page_rank_simulation(g, steps=100, use_teleport = FALSE)
 V(g)$fpr_sim <- fpr_sim$vector
+V(g)$fpr_sim <- -log(V(g)$fpr_sim+0.00000001)
+V(g)$fpr_sim <- as.double(V(g)$fpr_sim / max(V(g)$fpr_sim))
 V(g)$fpr_sim_iter <- fpr_sim$iterations
 cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
 cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
-# 
+
+# l <- layout.fruchterman.reingold(g)
+# plot(g, layout=l, vertex.size=V(g)$pr * 100, vertex.label=round(V(g)$pr, 2), vertex.label.dist=3)
+# title("PR")
+# plot(g, layout=l, vertex.size=V(g)$pr_sim * 100, vertex.label=round(V(g)$pr_sim, 2), vertex.label.dist=3)
+# title("PR Sim")
+# plot(g, layout=l, vertex.size=V(g)$fpr_sim * 100, vertex.label=round(V(g)$fpr_sim, 2), vertex.label.dist=3)
+# title("FPR")
+
 # fpr_iter <- fatigued_page_rank_power_iteration(g, fatigue_method = "2ord", teleport=TRUE)
 # V(g)$fpr_iter <- fpr_iter$vector
 # V(g)$fpr_iter_iter <- fpr_iter$iterations
@@ -338,7 +370,7 @@ cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
 # cor(V(g)$pr, V(g)$fpr_iter, method="pearson")
 # cor(V(g)$pr, V(g)$fpr_iter, method="spearman")
 
-# write_graph(g, file = "~/facebook_combined-with_pr_and_fpr.gml", format = "gml")
+write_graph(g, file = "~/facebook_combined-with_pr_and_fpr.gml", format = "gml")
 
 
 # -------------------------------------------------------------------------------------------------------------------#
