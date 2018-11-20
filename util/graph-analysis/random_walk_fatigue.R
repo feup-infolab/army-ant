@@ -333,7 +333,7 @@ V(g)$pr <- page_rank(g)$vector
 
 pr_sim <- page_rank_simulation(g, steps=1000)
 V(g)$pr_sim <- pr_sim$vector
-V(g)$pr_sim_iter <- pr_sim$iterationsq
+V(g)$pr_sim_iter <- pr_sim$iterations
 cor(V(g)$pr, V(g)$pr_sim, method="pearson")
 cor(V(g)$pr, V(g)$pr_sim, method="spearman")
 
