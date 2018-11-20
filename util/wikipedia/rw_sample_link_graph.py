@@ -86,6 +86,7 @@ try:
         else:
             visiting_node = starting_node
 
+        print("    visited = %d (%.2f%%)" % (len(visited), len(visited) / n * 100))
         print("    stagnant = %d" % continuous_stagnant_steps)
         print("    |V| = %d" % g.number_of_nodes())
         print("    |E| = %d" % g.number_of_edges())
