@@ -52,6 +52,7 @@ g = nx.DiGraph()
 starting_node = requests.head('https://en.wikipedia.org/wiki/Special:Random', allow_redirects=True).url
 seed = starting_node
 prev_visited_len = 0
+retries = 0
 visited = set([])
 
 while len(visited) < n:
@@ -71,14 +72,18 @@ while len(visited) < n:
     prev_visited_len = len(visited)
     visited.add(current)
 
-    if prev_visited_len == len(visited):
+    if prev_visited_len == len(visited) and retries > 10:
         starting_node = seed = np.random.choice(list(links))
         print("    Switched starting node to %s" % starting_node)
-    if np.random.random() <= 0.85:
+    elif np.random.random() <= 0.85:
         seed = np.random.choice(list(links))
     else:
         seed = starting_node
+        retries = 0
 
+    if prev_visited_len == len(visited): retries += 1
+
+    print("    retries = %d" % retries)
     print("    |V| = %d" % g.number_of_nodes())
     print("    |E| = %d" % g.number_of_edges())
 
