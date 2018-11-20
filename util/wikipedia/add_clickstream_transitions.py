@@ -51,7 +51,9 @@ with shelve.open(shelve_path) as db, gzip.open(clickstream_path, 'rt') as cs:
             if type == 'link':
                 if not prev in db:
                     db[prev] = {}
-                db[prev][curr] = n
+                entry = db[prev]
+                entry[curr] = n
+                db[prev] = entry
                 
                 c += 1
                 if c % 100000 == 0:
