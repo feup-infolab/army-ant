@@ -50,42 +50,61 @@ if len(sys.argv) > 3:
 g = nx.DiGraph()
 
 starting_node = requests.head('https://en.wikipedia.org/wiki/Special:Random', allow_redirects=True).url
-seed = starting_node
+visiting_node = starting_node
 prev_visited_len = 0
-retries = 0
+continuous_stagnant_steps = 0
 visited = set([])
 
-while len(visited) < n:
-    print("==> Seed node:", seed)
+try:
+    while len(visited) < n:
+        print("==> Visiting node:", visiting_node)
 
-    response = requests.get(urllib.parse.urljoin('https://en.wikipedia.org/wiki/', seed))
-    soup = BeautifulSoup(response.text, 'html.parser')
+        response = requests.get(urllib.parse.urljoin('https://en.wikipedia.org/wiki/', visiting_node))
+        soup = BeautifulSoup(response.text, 'html.parser')
 
-    current = url_to_title(response.url)
-    links = set(
-        url_to_title(a.attrs['href'])
-        for a in soup.find_all(article_wiki_anchor))
+        current = url_to_title(response.url)
+        links = set(
+            url_to_title(a.attrs['href'])
+            for a in soup.find_all(article_wiki_anchor))
 
-    for link in links:
-        g.add_edge(current, link)
+        for link in links:
+            g.add_edge(current, link)
 
-    prev_visited_len = len(visited)
-    visited.add(current)
+        prev_visited_len = len(visited)
+        visited.add(current)
 
-    if prev_visited_len == len(visited) and retries > 10:
-        starting_node = seed = np.random.choice(list(links))
-        print("    Switched starting node to %s" % starting_node)
-    elif np.random.random() <= 0.85:
-        seed = np.random.choice(list(links))
-    else:
-        seed = starting_node
-        retries = 0
+        if prev_visited_len == len(visited):
+            continuous_stagnant_steps += 1
+        else:
+            continuous_stagnant_steps = 0
 
-    if prev_visited_len == len(visited): retries += 1
+        if prev_visited_len == len(visited) and continuous_stagnant_steps > 5:
+            starting_node = visiting_node = np.random.choice(list(links))
+            print("    Switched starting node to %s" % starting_node)
+        elif np.random.random() <= 0.85:
+            visiting_node = np.random.choice(list(links))
+        else:
+            visiting_node = starting_node
 
-    print("    retries = %d" % retries)
-    print("    |V| = %d" % g.number_of_nodes())
-    print("    |E| = %d" % g.number_of_edges())
+        print("    stagnant = %d" % continuous_stagnant_steps)
+        print("    |V| = %d" % g.number_of_nodes())
+        print("    |E| = %d" % g.number_of_edges())
 
-print("==> Saving graph to %s" % path)
-nx.write_graphml(g, path)
+    print("==> Saving graph to %s" % path)
+    nx.write_graphml(g, path)
+except KeyboardInterrupt:
+    print("\nCtrl+C received...")
+
+    try:
+        while True:
+            answer = input("Save collected graph? [yn] ").lower()
+            if not answer in ('y', 'n'): continue
+            if answer == 'y':
+                print("==> Saving graph with |V| = %d and |E| = %d to %s" % (
+                    g.number_of_nodes(), g.number_of_edges(), path))
+                nx.write_graphml(g, path)
+            else:
+                print("==> Collected graph discarded")
+            break
+    except KeyboardInterrupt:
+        print("\n==> Collected graph discarded")
