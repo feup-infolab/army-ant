@@ -77,7 +77,8 @@ while len(visited) < n:
     else:
         seed = starting_node
 
-    print("    |V| = %d" % len(g))
+    print("    |V| = %d" % g.number_of_nodes())
+    print("    |E| = %d" % g.number_of_edges())
 
 print("==> Saving graph to %s" % path)
 nx.write_graphml(g, path)
