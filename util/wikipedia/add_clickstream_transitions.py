@@ -71,7 +71,7 @@ with shelve.open(shelve_path) as db, gzip.open(clickstream_path, 'rt') as cs:
             g[source][target]['transitions'] = db[source][target]
         c += 1
         if c % 10000 == 0:
-            print("    %d (%.2f) edges processed" % (c, c / g.number_of_edges() * 100))
+            print("    %d (%.2f%%) edges processed" % (c, c / g.number_of_edges() * 100))
     print("    %d (%.2f%%) edges processed" % (c, c / g.number_of_edges() * 100))
 
     print("==> Saving to %s" % out_graphml_path)
