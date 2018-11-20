@@ -4,7 +4,7 @@ nltk==3.2.1
 html5lib==0.999999999
 pymongo==2.9.4
 lxml==3.7.3
-psycopg2==2.7.1
+psycopg2==2.20.1
 requests-cache==0.4.13
 gensim==2.2.0
 numpy==1.14.0
@@ -20,6 +20,7 @@ joblib==0.11
 SPARQLWrapper==1.8.2
 rdflib==4.2.2
 pyahocorasick==1.1.8
+networkx==2.2
 
 #aiogremlin==3.2.4
 #aiocache==0.8.0

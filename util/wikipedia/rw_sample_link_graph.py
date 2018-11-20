@@ -4,9 +4,11 @@
 # José Devezas <joseluisdevezas@gmail.com>
 # 2018-11-20
 #
-# Random Walk Wikipedia links graph sampling as defined in:
+# Random walk sampling of the Wikipedia links graph, as defined in:
+#
 # Leskovec, J. & Faloutsos, C. Sampling from large graphs. Proceedings of the Twelfth ACM SIGKDD International
 # Conference on Knowledge Discovery and Data Mining, Philadelphia, PA, USA, August 20-23, 2006, 2006 , 631-636
+#
 
 import re
 import sys
