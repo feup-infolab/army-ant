@@ -59,16 +59,20 @@ with shelve.open(shelve_path) as db, gzip.open(clickstream_path, 'rt') as cs:
 
         print("    %d transitions indexed" % c)
 
-    print("==> Loading GraphML")
+    print("==> Loading GraphML from %s" % in_graphml_path)
     g = nx.read_graphml(in_graphml_path)
 
     print("==> Adding transitions attribute to existing edges")
+    c = 0
     for source, target in g.edges():
         if not source in db or not target in db[source]:
-            print(source, target)
             g[source][target]['transitions'] = 0
         else:
             g[source][target]['transitions'] = db[source][target]
+        c += 1
+        if c % 10000 == 0:
+            print("    %d (%.2f) edges processed" % (c, c / g.number_of_edges() * 100))
+    print("    %d (%.2f%%) edges processed" % (c, c / g.number_of_edges() * 100))
 
     print("==> Saving to %s" % out_graphml_path)
     nx.write_graphml(g, out_graphml_path)
