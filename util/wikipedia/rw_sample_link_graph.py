@@ -49,13 +49,15 @@ if len(sys.argv) > 3:
 
 g = nx.DiGraph()
 
-starting_node = requests.head('https://en.wikipedia.org/wiki/Special:Random', allow_redirects=True).url
+starting_node = url_to_title(requests.head('https://en.wikipedia.org/wiki/Special:Random', allow_redirects=True).url)
 visiting_node = starting_node
 prev_visited_len = 0
 continuous_stagnant_steps = 0
 visited = set([])
 
 try:
+    max_continuous_stagnant_steps = 100
+
     while len(visited) < n:
         print("==> Visiting node:", visiting_node)
 
@@ -67,9 +69,6 @@ try:
             url_to_title(a.attrs['href'])
             for a in soup.find_all(article_wiki_anchor))
 
-        for link in links:
-            g.add_edge(current, link)
-
         prev_visited_len = len(visited)
         visited.add(current)
 
@@ -78,7 +77,7 @@ try:
         else:
             continuous_stagnant_steps = 0
 
-        if prev_visited_len == len(visited) and continuous_stagnant_steps > 5:
+        if prev_visited_len == len(visited) and continuous_stagnant_steps > max_continuous_stagnant_steps:
             starting_node = visiting_node = np.random.choice(list(links))
             print("    Switched starting node to %s" % starting_node)
         elif np.random.random() <= 0.85:
@@ -86,8 +85,19 @@ try:
         else:
             visiting_node = starting_node
 
+        # CHOOSE ONE:
+
+        # 1. Also collect neighborhood of visited nodes.
+        # for link in links:
+        #     if current != link:
+        #         g.add_edge(current, link)
+
+        # 2. Strictly follow the RW method in Leskovec and Faloutsos (2006).
+        if current != visiting_node:
+            g.add_edge(current, visiting_node)
+
         print("    visited = %d (%.2f%%)" % (len(visited), len(visited) / n * 100))
-        print("    stagnant = %d" % continuous_stagnant_steps)
+        print("    stagnant = %d / %d" % (continuous_stagnant_steps, max_continuous_stagnant_steps))
         print("    |V| = %d" % g.number_of_nodes())
         print("    |E| = %d" % g.number_of_edges())
 
