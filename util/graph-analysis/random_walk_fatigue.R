@@ -5,7 +5,6 @@ pacman::p_load(
 )
 
 options(stringsAsFactors=FALSE)
-options(scipen=50)
 
 # -------------------------------------------------------------------------------------------------------------------#
 #
@@ -321,21 +320,22 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
 
 # -------------------------------------------------------------------------------------------------------------------#
 #
-# TESTS
+# MAIN
 #
 
 # g <- make_graph("Zachary")
 # g <- make_graph(c(1,2, 2,3, 3,2, 4,2, 4,3, 3,1, 4,5, 5,3, 3,6, 6,7, 7,8, 8,1, 8,3))
 # g <- make_graph(c(1,2, 2,4, 4,3, 3,2))
-g <- read_graph(gzfile("~/Data/facebook_combined.txt.gz"), format = "edgelist")
+# g <- read_graph(gzfile("~/Data/facebook_combined.txt.gz"), format = "edgelist")
+g <- read.graph(gzfile("~/Data/wikipedia/wikipedia-sample-with_neighbors-20181120.graphml.gz"), "graphml")
 
 V(g)$pr <- page_rank(g)$vector
 
-pr_sim <- page_rank_simulation(g, steps=1000)
-V(g)$pr_sim <- pr_sim$vector
-V(g)$pr_sim_iter <- pr_sim$iterations
-cor(V(g)$pr, V(g)$pr_sim, method="pearson")
-cor(V(g)$pr, V(g)$pr_sim, method="spearman")
+# pr_sim <- page_rank_simulation(g, steps=1000)
+# V(g)$pr_sim <- pr_sim$vector
+# V(g)$pr_sim_iter <- pr_sim$iterations
+# cor(V(g)$pr, V(g)$pr_sim, method="pearson")
+# cor(V(g)$pr, V(g)$pr_sim, method="spearman")
 
 # pr_iter <- page_rank_power_iteration(g)
 # V(g)$pr_iter <- pr_iter$vector
@@ -367,19 +367,4 @@ cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
 # cor(V(g)$pr, V(g)$fpr_iter, method="pearson")
 # cor(V(g)$pr, V(g)$fpr_iter, method="spearman")
 
-write_graph(g, file = "~/facebook_combined-with_pr_and_fpr.graphml", format = "graphml")
-
-
-# -------------------------------------------------------------------------------------------------------------------#
-#
-# MAIN
-#
-
-#g <- read.graph(gzfile("/opt/army-ant/output/amazon-meta-simnet.gml.gz"), format = "gml")
-#V(g)$pr <- page_rank(g, directed = TRUE)$vector
-#V(g)$pr_sim <- page_rank_simulation(g)
-#V(g)$fpr <- fatigued_page_rank(g)
-
-# TODO Extract ranks before correlating? Nope. Spearman does this already!
-#cor(V(g)$pr, V(g)$fpr, method = "spearman")
-
+# write_graph(g, file = "~/facebook_combined-with_pr_and_fpr.graphml", format = "graphml")
