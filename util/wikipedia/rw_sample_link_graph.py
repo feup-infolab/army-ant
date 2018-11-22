@@ -58,7 +58,7 @@ visited = set([])
 try:
     max_continuous_stagnant_steps = 100
 
-    while len(visited) < n:
+    while len(visited) + 1 < n:
         print("==> Visiting node:", visiting_node)
 
         response = requests.get(urllib.parse.urljoin('https://en.wikipedia.org/wiki/', visiting_node))
@@ -82,19 +82,10 @@ try:
             print("    Switched starting node to %s" % starting_node)
         elif np.random.random() <= 0.85:
             visiting_node = np.random.choice(list(links))
+            if current != visiting_node:
+                g.add_edge(current, visiting_node)
         else:
             visiting_node = starting_node
-
-        # CHOOSE ONE:
-
-        # 1. Also collect neighborhood of visited nodes.
-        # for link in links:
-        #     if current != link:
-        #         g.add_edge(current, link)
-
-        # 2. Strictly follow the RW method in Leskovec and Faloutsos (2006).
-        if current != visiting_node:
-            g.add_edge(current, visiting_node)
 
         print("    visited = %d (%.2f%%)" % (len(visited), len(visited) / n * 100))
         print("    stagnant = %d / %d" % (continuous_stagnant_steps, max_continuous_stagnant_steps))
