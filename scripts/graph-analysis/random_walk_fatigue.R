@@ -1,7 +1,10 @@
 if (!require("pacman")) install.packages("pacman")
 
 pacman::p_load(
-  igraph
+  igraph,
+  ggplot2,
+  tidyr,
+  dplyr
 )
 
 options(stringsAsFactors=FALSE)
@@ -317,20 +320,39 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
   )
 }
 
+plot_replicas_histogram <- function(df) {
+  p <- ggplot(NULL, aes(x=value, fill=key)) +
+    scale_x_continuous() +
+    scale_y_log10() +
+    scale_fill_discrete("Replica") +
+    xlab("Metric") +
+    ylab("Frequency")
+
+  for (i in 1:ncol(df)) {
+    data <- df[, i, drop=FALSE] %>% gather() %>% filter(value > 0)
+    p <- p + geom_histogram(
+      bins = 20,
+      data = data,
+      alpha = 0.25)
+  }
+
+  p
+}
+
 
 # -------------------------------------------------------------------------------------------------------------------#
 #
 # MAIN
 #
 
-# g <- make_graph("Zachary")
-# g <- make_graph(c(1,2, 2,3, 3,2, 4,2, 4,3, 3,1, 4,5, 5,3, 3,6, 6,7, 7,8, 8,1, 8,3))
-# g <- make_graph(c(1,2, 2,4, 4,3, 3,2))
-# g <- read_graph(gzfile("~/Data/facebook_combined.txt.gz"), format = "edgelist")
-#g <- read.graph(
-#  gzfile("~/Data/wikipedia/wikipedia-sample-rw_leskovec_faloutsos-with_transitions-20181122.graphml.gz"), "graphml")
+#g <- make_graph("Zachary")
+#g <- make_graph(c(1,2, 2,3, 3,2, 4,2, 4,3, 3,1, 4,5, 5,3, 3,6, 6,7, 7,8, 8,1, 8,3))
+#g <- make_graph(c(1,2, 2,4, 4,3, 3,2))
+#g <- read_graph(gzfile("~/Data/facebook_combined.txt.gz"), format = "edgelist")
+# g <- read.graph(
+#   gzfile("~/Data/wikipedia/wikipedia-sample-rw_leskovec_faloutsos-with_transitions-20181122.graphml.gz"), "graphml")
 
-V(g)$pr <- page_rank(g)$vector
+# V(g)$pr <- page_rank(g)$vector
 
 # pr_sim <- page_rank_simulation(g, steps=1000)
 # V(g)$pr_sim <- pr_sim$vector
@@ -344,11 +366,21 @@ V(g)$pr <- page_rank(g)$vector
 # cor(V(g)$pr, V(g)$pr_iter, method="pearson")
 # cor(V(g)$pr, V(g)$pr_iter, method="spearman")
  
-fpr_sim <- fatigued_page_rank_simulation(g, steps=1000, use_teleport = FALSE)
-V(g)$fpr_sim <- fpr_sim$vector
-V(g)$fpr_sim_iter <- fpr_sim$iterations
-cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
-cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
+# fpr_sim <- replicate(25, fatigued_page_rank_simulation(g, steps=1000, use_teleport = FALSE), simplify = FALSE)
+# V(g)$fpr_sim <- fpr_sim[[1]]$vector
+# V(g)$fpr_sim_iter <- fpr_sim[[1]]$iterations
+# cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
+# cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
+
+fpr_sim_df <- as.data.frame(do.call(cbind, lapply(fpr_sim[1:10], function(d) d$vector)))
+names(fpr_sim_df) <- sprintf("replica_%.2d", 1:10)
+plot_replicas_histogram(fpr_sim_df) + scale_x_continuous(limits=c(0, 0.0025))
+plot_replicas_histogram(data.frame(PageRank=V(g)$pr))+ scale_x_continuous(limits=c(0, 0.0025))
+
+cor(strength(g, mode = "in"), V(g)$pr, method = "pearson")
+cor(strength(g, mode = "in"), V(g)$pr, method = "spearman")
+summary(sapply(fpr_sim, function(r) cor(strength(g, mode = "in"), r$vector, method = "pearson")))
+summary(sapply(fpr_sim, function(r) cor(strength(g, mode = "in"), r$vector, method = "spearman")))
 
 # l <- layout.fruchterman.reingold(g)
 # plot(g, layout=l, vertex.size=V(g)$pr * 100, vertex.label=round(V(g)$pr, 2), vertex.label.dist=3)
