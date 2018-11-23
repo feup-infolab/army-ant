@@ -327,8 +327,8 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
 # g <- make_graph(c(1,2, 2,3, 3,2, 4,2, 4,3, 3,1, 4,5, 5,3, 3,6, 6,7, 7,8, 8,1, 8,3))
 # g <- make_graph(c(1,2, 2,4, 4,3, 3,2))
 # g <- read_graph(gzfile("~/Data/facebook_combined.txt.gz"), format = "edgelist")
-g <- read.graph(
-  gzfile("~/Data/wikipedia/wikipedia-sample-rw_leskovec_faloutsos-with_transitions-20181122.graphml.gz"), "graphml")
+#g <- read.graph(
+#  gzfile("~/Data/wikipedia/wikipedia-sample-rw_leskovec_faloutsos-with_transitions-20181122.graphml.gz"), "graphml")
 
 V(g)$pr <- page_rank(g)$vector
 
