@@ -61,7 +61,10 @@ idf_p <- plot_funcs(idf_funcs, list(N=N, n=n)) +
   xlab("Number of Documents") +
   ylab("IDF") +
   xlim(0, N) +
-  ylim(-0.25, 1.25)
+  ylim(-0.25, 1.25) +
+  #theme(legend.title = element_blank()) +
+  guides(color = guide_legend(nrow=2, byrow=TRUE))
 
-print(idf_p)
-ggsave(filename = "output/idf_funcs.pdf", plot = idf_p, width = 7, height = 3, device=cairo_pdf)
+show(idf_p)
+#ggsave(filename = "output/idf_funcs.pdf", plot = idf_p, width = 7, height = 3, device=cairo_pdf)
+ggsave(filename = "output/idf_funcs.pdf", plot = idf_p, width = 4.5, height = 3)
