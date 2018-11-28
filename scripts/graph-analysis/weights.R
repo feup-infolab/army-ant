@@ -17,7 +17,7 @@ plot_weights_per_type <- function(data) {
     geom_bar(stat = 'identity') +
     facet_wrap(~Type) +
     scale_x_continuous(breaks=seq(0, 1.0, 0.2)) +
-    scale_y_continuous(label=scales::percent) +
+    scale_y_continuous(label=percent) +
     xlab("Weight") +
     ylab("Frequency")
 }
@@ -39,6 +39,8 @@ edges[which(edges$Type == 'RelatedToEdge'), 'Type'] <- 'related_to'
 edges[which(edges$Type == 'SynonymEdge'), 'Type'] <- 'synonym'
 
 plot_weights_per_type(nodes)
-ggsave("output/node_weight_distr.pdf", width = 7, height = 2.5)
+#ggsave("output/node_weight_distr.pdf", width = 7, height = 2.5)
+ggsave("output/node_weight_distr.pdf", width = 5, height = 2)
 plot_weights_per_type(edges)
-ggsave("output/hyperedge_weight_distr.pdf", width = 7, height = 4.5)
+#ggsave("output/hyperedge_weight_distr.pdf", width = 7, height = 4.5)
+ggsave("output/hyperedge_weight_distr.pdf", width = 5, height = 3.5)
