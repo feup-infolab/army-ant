@@ -12,14 +12,19 @@ import logging
 import os
 import re
 import signal
+from collections import Counter, defaultdict
 from enum import Enum
+from statistics import mean, variance
 
 import jpype
+import pandas as pd
 import psycopg2
 import yaml
 from aiogremlin import Cluster
 from aiohttp.client_exceptions import ClientConnectorError
-from jpype import isJVMStarted, startJVM, JClass, JPackage, JString, java, shutdownJVM, JavaException
+from jpype import (JavaException, JClass, JPackage, JString, isJVMStarted,
+                   java, shutdownJVM, startJVM)
+from sklearn.preprocessing import MinMaxScaler
 
 from army_ant.exception import ArmyAntException
 from army_ant.reader import Document, Entity
@@ -61,6 +66,8 @@ class Index(object):
             return HypergraphOfEntity(reader, index_location, index_features, loop)
         elif index_type == 'lucene':
             return LuceneEngine(reader, index_location, loop)
+        elif index_type == 'tfr':
+            return TensorFlowRanking(reader, index_location, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 
@@ -89,6 +96,8 @@ class Index(object):
             return HypergraphOfEntity(None, index_location, index_features, loop)
         elif index_type == 'lucene':
             return LuceneEngine(None, index_location, loop)
+        elif index_type == 'tfr':
+            return TensorFlowRanking(None, index_location, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 
@@ -1038,3 +1047,87 @@ class LuceneEngine(JavaIndex):
             logger.error("Java Exception: %s" % e.stacktrace())
 
         return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()), trace_ascii=trace.toASCII())
+
+class TensorFlowRanking(Index):
+    COLUMNS = ['label', 'qid', '1', '2', '3', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14']
+
+    def load_topics(self, features_location):
+        topics = {}
+
+        with open(os.path.join(features_location, 'topics.txt'), 'r') as f:
+            for line in f:
+                topic_id, query = line.strip().split('\t')
+                topics[topic_id] = query
+
+        return topics
+
+    def load_qrels(self, features_location):
+        qrels = defaultdict(lambda: {})
+
+        with open(os.path.join(features_location, 'qrels.txt'), 'r') as f:
+            for line in f:
+                topic_id, _, doc_id, score, _ = line.split(' ', 4)
+                score = int(score)
+                qrels[doc_id][topic_id] = 1 if score > 0 else 0
+        
+        return qrels
+
+    def get_features(self, doc, topic_id, query, score):
+        doc_tokens = self.analyze(doc.text)
+        query_tokens = self.analyze(query)
+
+        covered_query_term_number = sum(1 for query_token in query_tokens if query_token in doc_tokens)
+        covered_query_term_ratio = covered_query_term_number / len(query_tokens)
+        stream_length = len(doc_tokens)
+        tf = Counter(doc_tokens)
+        query_tf = [tf[query_token] for query_token in query_tokens]
+
+        # TODO Incomplete subset of traditional learning-to-rank features from https://arxiv.org/abs/1803.05127
+        return pd.Series([
+            score,
+            topic_id,
+            covered_query_term_number,
+            covered_query_term_ratio,
+            stream_length,
+            sum(query_tf),
+            min(query_tf),
+            max(query_tf),
+            mean(query_tf),
+            variance(query_tf),
+            sum(tf.values()) / stream_length,
+            min(tf.values()) / stream_length,
+            max(tf.values()) / stream_length,
+            mean(tf.values()) / stream_length,
+            variance(tf.values()) / stream_length
+        ], index=TensorFlowRanking.COLUMNS)
+
+    async def index(self, features_location=None):
+        if not features_location:
+            raise ArmyAntException("Must provide a features location with topics.txt and qrels.txt files")
+
+        topics = self.load_topics(features_location)
+        qrels = self.load_qrels(features_location)
+
+        os.mkdir(self.index_location)
+
+        features = pd.DataFrame(columns=TensorFlowRanking.COLUMNS)
+        
+        c = 0
+        for doc in self.reader:
+            for topic_id, score in qrels[doc.doc_id].items():
+                doc_features = self.get_features(doc, topic_id, topics[topic_id], score)
+                features = features.append(doc_features, ignore_index=True)
+            c += 1
+            yield doc
+            if c % 3 == 0: break
+        
+        scaler = MinMaxScaler(feature_range=[-1, 1])
+        features.ix[:, 2:features.shape[1]] = scaler.fit_transform(features.ix[:, 2:features.shape[1]])
+        features.ix[:, 1:features.shape[1]] = features.ix[:, 1:features.shape[1]] \
+            .apply(lambda row: features.columns[1:len(features.columns)].str.cat(row.astype(str), sep=':'), axis='columns')
+        print(features)
+        features.to_csv(os.path.join(self.index_location, 'train.txt'), header=False, index=False, sep=' ')
+        
+
+    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
+        raise ArmyAntException("Search not implemented for %s" % self.__class__.__name__)

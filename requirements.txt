@@ -4,7 +4,7 @@ nltk==3.2.1
 html5lib==0.999999999
 pymongo==2.9.4
 lxml==3.7.3
-psycopg2==2.20.1
+psycopg2-binary==2.7.6.1
 requests-cache==0.4.13
 gensim==2.2.0
 numpy==1.14.0
@@ -33,3 +33,5 @@ gremlinpython==3.2.6
 aiohttp==2.3.6
 aiohttp_jinja2==0.14.0
 jinja2==2.10
+tensorflow==1.12.0
+tensorflow_ranking==0.1.0
