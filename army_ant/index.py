@@ -12,6 +12,7 @@ import logging
 import os
 import re
 import signal
+import sqlite3
 from collections import Counter, defaultdict
 from enum import Enum
 from statistics import mean, variance
@@ -19,6 +20,8 @@ from statistics import mean, variance
 import jpype
 import pandas as pd
 import psycopg2
+import tensorflow as tf_vector
+import tensorflow_ranking as tfr
 import yaml
 from aiogremlin import Cluster
 from aiohttp.client_exceptions import ClientConnectorError
@@ -1049,7 +1052,157 @@ class LuceneEngine(JavaIndex):
         return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()), trace_ascii=trace.toASCII())
 
 class TensorFlowRanking(Index):
-    COLUMNS = ['label', 'qid', '1', '2', '3', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14']
+    COLUMNS = ['label', 'qid', '1', '2', '5', '6', '7', '8', '9', '3', '10', '11', '12', '13', '14']
+    LOSS = 'pairwise_logistic_loss'
+    LIST_SIZE = 100
+    NUM_FEATURES = 136
+    BATCH_SIZE = 32
+    HIDDEN_LAYER_DIMS = ['20', '10']
+
+    def __init__(self, reader, index_location, loop):
+        super().__init__(reader, index_location, loop)
+        
+        if not os.path.exists(self.index_location):
+            os.mkdir(self.index_location)
+
+        self.db_path = os.path.join(self.index_location, 'features.sq3')
+        self.db = sqlite3.connect(self.db_path)
+        
+        c = self.db.cursor()
+        
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS vocabulary (
+                term_id INTEGER PRIMARY KEY, term TEXT UNIQUE NOT NULL)
+        """)
+        
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS document_term_frequencies (
+                doc_id TEXT, term_id INTEGER, count INTEGER)
+        """)
+
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS document_features (
+                doc_id TEXT, stream_length INTEGER, norm_sum_tf INTEGER, norm_min_tf INTEGER, norm_max_tf INTEGER,
+                norm_mean_tf REAL, norm_variance_tf REAL)
+        """)
+
+        # c.execute("""
+        #     CREATE TABLE IF NOT EXISTS query_features (
+        #         query TEXT, covered_term_number INTEGER, covered_term_ratio REAL, sum_tf INTEGER,
+        #         min_tf INTEGER, max_tf INTEGER, mean_tf REAL, variance_tf REAL)
+        # """)
+        
+        self.db.commit()
+
+    def input_fn(self, path):
+        train_dataset = tf_vector.data.Dataset.from_generator(
+            tfr.data.libsvm_generator(path, TensorFlowRanking.NUM_FEATURES, TensorFlowRanking.LIST_SIZE),
+            output_types=(
+                {str(k): tf_vector.float32 for k in range(1,TensorFlowRanking.NUM_FEATURES+1)},
+                tf_vector.float32
+            ),
+            output_shapes=(
+                {str(k): tf_vector.TensorShape([TensorFlowRanking.LIST_SIZE, 1])
+                    for k in range(1,TensorFlowRanking.NUM_FEATURES+1)},
+                tf_vector.TensorShape([TensorFlowRanking.LIST_SIZE])
+            )
+        )
+
+        train_dataset = train_dataset.shuffle(1000).repeat().batch(TensorFlowRanking.BATCH_SIZE)
+        return train_dataset.make_one_shot_iterator().get_next()
+
+    def example_feature_columns(self):
+        """Returns the example feature columns."""
+        feature_names = [
+            "%d" % (i + 1) for i in range(0, TensorFlowRanking.NUM_FEATURES)
+        ]
+        return {
+            name: tf_vector.feature_column.numeric_column(
+                name, shape=(1,), default_value=0.0) for name in feature_names
+        }
+
+    def make_score_fn(self):
+        """Returns a scoring function to build `EstimatorSpec`."""
+
+        def _score_fn(context_features, group_features, mode, params, config):
+            """Defines the network to score a documents."""
+            del params
+            del config
+            # Define input layer.
+            example_input = [
+                tf_vector.layers.flatten(group_features[name])
+                for name in sorted(self.example_feature_columns())
+            ]
+            input_layer = tf_vector.concat(example_input, 1)
+
+            cur_layer = input_layer
+            for i, layer_width in enumerate(int(d) for d in TensorFlowRanking.HIDDEN_LAYER_DIMS):
+                cur_layer = tf_vector.layers.dense(
+                    cur_layer,
+                    units=layer_width,
+                    activation="tanh")
+
+            logits = tf_vector.layers.dense(cur_layer, units=1)
+            return logits
+
+        return _score_fn
+
+    def eval_metric_fns(self):
+        """Returns a dict from name to metric functions.
+
+        This can be customized as follows. Care must be taken when handling padded
+        lists.
+
+        def _auc(labels, predictions, features):
+            is_label_valid = tf_reshape(tf.greater_equal(labels, 0.), [-1, 1])
+            clean_labels = tf.boolean_mask(tf.reshape(labels, [-1, 1], is_label_valid)
+            clean_pred = tf.boolean_maks(tf.reshape(predictions, [-1, 1], is_label_valid)
+            return tf.metrics.auc(clean_labels, tf.sigmoid(clean_pred), ...)
+        metric_fns["auc"] = _auc
+
+        Returns:
+            A dict mapping from metric name to a metric function with above signature.
+        """
+        metric_fns = {}
+        metric_fns.update({
+            "metric/ndcg@%d" % topn: tfr.metrics.make_ranking_metric_fn(
+                tfr.metrics.RankingMetricKey.NDCG, topn=topn)
+            for topn in [1, 3, 5, 10]
+        })
+
+        return metric_fns
+
+    def get_estimator(self, hparams):
+        """Create a ranking estimator.
+
+        Args:
+            hparams: (tf.contrib.training.HParams) a hyperparameters object.
+
+        Returns:
+            tf.learn `Estimator`.
+        """
+        def _train_op_fn(loss):
+            """Defines train op used in ranking head."""
+            return tf_vector.contrib.layers.optimize_loss(
+                loss=loss,
+                global_step=tf_vector.train.get_global_step(),
+                learning_rate=hparams.learning_rate,
+                optimizer="Adagrad")
+
+        ranking_head = tfr.head.create_ranking_head(
+            loss_fn=tfr.losses.make_loss_fn(TensorFlowRanking.LOSS),
+            eval_metric_fns=self.eval_metric_fns(),
+            train_op_fn=_train_op_fn)
+
+        return tf_vector.estimator.Estimator(
+            model_fn=tfr.model.make_groupwise_ranking_fn(
+                group_score_fn=self.make_score_fn(),
+                group_size=1,
+                transform_fn=None,
+                ranking_head=ranking_head),
+            model_dir = os.path.join(self.index_location, 'model'),
+            params=hparams)
+
 
     def load_topics(self, features_location):
         topics = {}
@@ -1072,34 +1225,119 @@ class TensorFlowRanking(Index):
         
         return qrels
 
-    def get_features(self, doc, topic_id, query, score):
-        doc_tokens = self.analyze(doc.text)
+    def compute_document_features(self, doc):
+        c = self.db.cursor()
+
+        tf_vector_query = """
+            SELECT term, count FROM document_term_frequencies
+            JOIN vocabulary USING (term_id)
+            WHERE doc_id = '%s'
+        """ % doc.doc_id
+
+        tf_vector = dict((term, count) for term, count in c.execute(tf_vector_query))
+
+        features_query = """
+            SELECT stream_length, norm_sum_tf, norm_min_tf, norm_max_tf, norm_mean_tf, norm_variance_tf
+            FROM document_features
+            WHERE doc_id = '%s'
+        """ % doc.doc_id
+
+        c.execute(features_query)
+        features = c.fetchone()
+        if features: features = list(features)
+        
+        if len(tf_vector) <= 0 or features is None:
+            logger.info("Computing features for document %s" % doc.doc_id)
+
+            doc_tokens = self.analyze(doc.text)
+            tf_vector = Counter(doc_tokens)
+
+            stream_length = len(doc_tokens)
+
+            vocab_query = """
+                INSERT INTO vocabulary (term)
+                SELECT '%s'
+                WHERE NOT EXISTS (SELECT 1 FROM vocabulary WHERE term = '%s')
+            """
+
+            dtf_query = """
+                INSERT INTO document_term_frequencies (doc_id, term_id, count)
+                SELECT '%s', term_id, %d
+                FROM vocabulary
+                WHERE term = '%s'
+            """
+
+            for term, count in tf_vector.items():
+                c.execute(vocab_query % (term, term))
+                c.execute(dtf_query % (doc.doc_id, count, term))
+
+            features = [
+                stream_length,
+                sum(tf_vector.values()) / stream_length,
+                min(tf_vector.values()) / stream_length,
+                max(tf_vector.values()) / stream_length,
+                mean(tf_vector.values()) / stream_length,
+                variance(tf_vector.values()) / stream_length
+            ]
+
+            features_query = """
+                INSERT INTO document_features (
+                    doc_id, stream_length, norm_sum_tf, norm_min_tf, norm_max_tf, norm_mean_tf, norm_variance_tf
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """
+
+            c.execute(features_query, [doc.doc_id] + features)
+        else:
+            logger.info("Found features for document %s" % doc.doc_id)
+
+        self.db.commit()
+
+        return features
+
+    def compute_query_features(self, query, doc_id):
+        c = self.db.cursor()
+
         query_tokens = self.analyze(query)
 
-        covered_query_term_number = sum(1 for query_token in query_tokens if query_token in doc_tokens)
-        covered_query_term_ratio = covered_query_term_number / len(query_tokens)
-        stream_length = len(doc_tokens)
-        tf = Counter(doc_tokens)
-        query_tf = [tf[query_token] for query_token in query_tokens]
+        tf_query = """
+            SELECT term, count FROM document_term_frequencies
+            JOIN vocabulary USING (term_id)
+            WHERE doc_id = '%s' AND term in (%s)
+        """ % (doc_id, ', '.join(["'%s'" % query_token for query_token in query_tokens]))
 
-        # TODO Incomplete subset of traditional learning-to-rank features from https://arxiv.org/abs/1803.05127
-        return pd.Series([
-            score,
-            topic_id,
+        tf = {}
+        for term, count in c.execute(tf_query):
+            tf[term] = count
+
+        covered_query_term_number = len(tf)
+        covered_query_term_ratio = covered_query_term_number / len(query_tokens)
+
+        features = [
             covered_query_term_number,
             covered_query_term_ratio,
-            stream_length,
-            sum(query_tf),
-            min(query_tf),
-            max(query_tf),
-            mean(query_tf),
-            variance(query_tf),
-            sum(tf.values()) / stream_length,
-            min(tf.values()) / stream_length,
-            max(tf.values()) / stream_length,
-            mean(tf.values()) / stream_length,
-            variance(tf.values()) / stream_length
-        ], index=TensorFlowRanking.COLUMNS)
+            sum(tf.values()),
+            min(tf.values(), default=0),
+            max(tf.values(), default=0),
+            0 if len(tf) <= 0 else mean(tf.values()),
+            0 if len(tf) <= 2 else variance(tf.values())
+        ]
+
+        return features
+
+    def compute_web_features(self, doc):
+        pass
+
+    def compute_features(self, doc, query, topic_id, score):
+        """
+        This function computes query dependent and independent features. It is used during training, but stores
+        query-independent features in a sqlite database to be used during prediction.
+        """
+        
+        # TODO Incomplete subset of traditional learning-to-rank features from https://arxiv.org/abs/1803.05127
+        doc_features = self.compute_document_features(doc)
+        query_features = self.compute_query_features(query, doc.doc_id)
+
+        return pd.Series([score, topic_id] + query_features + doc_features, index=TensorFlowRanking.COLUMNS)
 
     async def index(self, features_location=None):
         if not features_location:
@@ -1108,26 +1346,94 @@ class TensorFlowRanking(Index):
         topics = self.load_topics(features_location)
         qrels = self.load_qrels(features_location)
 
-        os.mkdir(self.index_location)
+        features_filename = os.path.join(self.index_location, 'train.txt')
 
-        features = pd.DataFrame(columns=TensorFlowRanking.COLUMNS)
+        if not os.path.exists(features_filename):
+            logger.info("Computing features")
+            features = pd.DataFrame(columns=TensorFlowRanking.COLUMNS)
+            
+            for doc in self.reader:
+                for topic_id, score in qrels[doc.doc_id].items():
+                    query = topics[topic_id]
+                    query_doc_features = self.compute_features(doc, query, topic_id, score)
+                    features = features.append(query_doc_features, ignore_index=True)
+                yield doc
+            
+            logger.info("Scaling features")
+            scaler = MinMaxScaler(feature_range=[-1, 1])
+            features.ix[:, 2:features.shape[1]] = scaler.fit_transform(features.ix[:, 2:features.shape[1]])
+            
+            logger.info("Sorting by qid")
+            features = features.sort_values(by=['qid'])
+
+            logger.info("Prepending column name")
+            features.ix[:, 1:features.shape[1]] = features.ix[:, 1:features.shape[1]].apply(
+                lambda row: features.columns[1:len(features.columns)].str.cat(row.astype(str), sep=':'), axis='columns')
+
+            features.to_csv(features_filename, header=False, index=False, sep=' ')
+            logger.info("Saved features to %s" % features_filename)
+        else:
+            logger.warning("Using features file %s (to recompute, delete it and rerun)" % features_filename)
+
+        logger.info("Training model")
         
-        c = 0
-        for doc in self.reader:
-            for topic_id, score in qrels[doc.doc_id].items():
-                doc_features = self.get_features(doc, topic_id, topics[topic_id], score)
-                features = features.append(doc_features, ignore_index=True)
-            c += 1
-            yield doc
-            if c % 3 == 0: break
-        
-        scaler = MinMaxScaler(feature_range=[-1, 1])
-        features.ix[:, 2:features.shape[1]] = scaler.fit_transform(features.ix[:, 2:features.shape[1]])
-        features.ix[:, 1:features.shape[1]] = features.ix[:, 1:features.shape[1]] \
-            .apply(lambda row: features.columns[1:len(features.columns)].str.cat(row.astype(str), sep=':'), axis='columns')
-        print(features)
-        features.to_csv(os.path.join(self.index_location, 'train.txt'), header=False, index=False, sep=' ')
-        
+        tf_vector.enable_eager_execution()
+        tf_vector.executing_eagerly()
+
+        hparams = tf_vector.contrib.training.HParams(learning_rate=0.05)
+        ranker = self.get_estimator(hparams)
+        ranker.train(input_fn=lambda: self.input_fn(features_filename), steps=100)
+
+    def get_features(self, query):
+        c = self.db.cursor()
+
+        doc_features_query = """
+            SELECT doc_id, stream_length, norm_sum_tf, norm_min_tf, norm_max_tf, norm_mean_tf, norm_variance_tf
+            FROM document_features
+        """
+
+        features = pd.DataFrame(columns=TensorFlowRanking.COLUMNS[2:])
+
+        for doc_features in c.execute(doc_features_query):
+            doc_id = doc_features[0]
+            query_features = self.compute_query_features(query, doc_id)
+            query_doc_features = pd.Series(query_features + list(doc_features[1:]), index=TensorFlowRanking.COLUMNS[2:])
+            features = features.append(query_doc_features, ignore_index=True)
+            break
+
+        return features
 
     async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
-        raise ArmyAntException("Search not implemented for %s" % self.__class__.__name__)
+        logger.info("Fetching features")
+        features = self.get_features(query)
+
+        logger.info("Scaling features")
+        scaler = MinMaxScaler(feature_range=[-1, 1])
+        features = scaler.fit_transform(features)
+
+        hparams = tf_vector.contrib.training.HParams(learning_rate=0.05)
+        ranker = self.get_estimator(hparams)
+        scores = ranker.predict(features)
+        for score in scores:
+            print(score)
+
+        # results = []
+        # num_docs = 0
+        # trace = None
+        # try:
+        #     if self.index_location in LuceneEngine.INSTANCES:
+        #         lucene = LuceneEngine.INSTANCES[self.index_location]
+        #     else:
+        #         lucene = LuceneEngine.JLuceneEngine(self.index_location)
+        #         LuceneEngine.INSTANCES[self.index_location] = lucene
+
+        #     results = lucene.search(query, offset, limit, ranking_function, ranking_params)
+        #     num_docs = results.getNumDocs()
+        #     trace = results.getTrace()
+        #     results = [Result(result.getScore(), result.getID(), result.getName(), result.getType())
+        #                for result in itertools.islice(results, offset, offset + limit)]
+        # except JavaException as e:
+        #     logger.error("Java Exception: %s" % e.stacktrace())
+
+        # return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()), trace_ascii=trace.toASCII())
+        return ResultSet([], 0)
