@@ -20,7 +20,7 @@ from statistics import mean, variance
 import jpype
 import pandas as pd
 import psycopg2
-import tensorflow as tf_vector
+import tensorflow as tf
 import tensorflow_ranking as tfr
 import yaml
 from aiogremlin import Cluster
@@ -1067,6 +1067,9 @@ class TensorFlowRanking(Index):
 
         self.db_path = os.path.join(self.index_location, 'features.sq3')
         self.db = sqlite3.connect(self.db_path)
+
+        tf.enable_eager_execution()
+        tf.executing_eagerly()
         
         c = self.db.cursor()
         
@@ -1095,16 +1098,16 @@ class TensorFlowRanking(Index):
         self.db.commit()
 
     def input_fn(self, path):
-        train_dataset = tf_vector.data.Dataset.from_generator(
+        train_dataset = tf.data.Dataset.from_generator(
             tfr.data.libsvm_generator(path, TensorFlowRanking.NUM_FEATURES, TensorFlowRanking.LIST_SIZE),
             output_types=(
-                {str(k): tf_vector.float32 for k in range(1,TensorFlowRanking.NUM_FEATURES+1)},
-                tf_vector.float32
+                {str(k): tf.float32 for k in range(1,TensorFlowRanking.NUM_FEATURES+1)},
+                tf.float32
             ),
             output_shapes=(
-                {str(k): tf_vector.TensorShape([TensorFlowRanking.LIST_SIZE, 1])
+                {str(k): tf.TensorShape([TensorFlowRanking.LIST_SIZE, 1])
                     for k in range(1,TensorFlowRanking.NUM_FEATURES+1)},
-                tf_vector.TensorShape([TensorFlowRanking.LIST_SIZE])
+                tf.TensorShape([TensorFlowRanking.LIST_SIZE])
             )
         )
 
@@ -1117,7 +1120,7 @@ class TensorFlowRanking(Index):
             "%d" % (i + 1) for i in range(0, TensorFlowRanking.NUM_FEATURES)
         ]
         return {
-            name: tf_vector.feature_column.numeric_column(
+            name: tf.feature_column.numeric_column(
                 name, shape=(1,), default_value=0.0) for name in feature_names
         }
 
@@ -1130,19 +1133,19 @@ class TensorFlowRanking(Index):
             del config
             # Define input layer.
             example_input = [
-                tf_vector.layers.flatten(group_features[name])
+                tf.layers.flatten(group_features[name])
                 for name in sorted(self.example_feature_columns())
             ]
-            input_layer = tf_vector.concat(example_input, 1)
+            input_layer = tf.concat(example_input, 1)
 
             cur_layer = input_layer
             for i, layer_width in enumerate(int(d) for d in TensorFlowRanking.HIDDEN_LAYER_DIMS):
-                cur_layer = tf_vector.layers.dense(
+                cur_layer = tf.layers.dense(
                     cur_layer,
                     units=layer_width,
                     activation="tanh")
 
-            logits = tf_vector.layers.dense(cur_layer, units=1)
+            logits = tf.layers.dense(cur_layer, units=1)
             return logits
 
         return _score_fn
@@ -1183,9 +1186,9 @@ class TensorFlowRanking(Index):
         """
         def _train_op_fn(loss):
             """Defines train op used in ranking head."""
-            return tf_vector.contrib.layers.optimize_loss(
+            return tf.contrib.layers.optimize_loss(
                 loss=loss,
-                global_step=tf_vector.train.get_global_step(),
+                global_step=tf.train.get_global_step(),
                 learning_rate=hparams.learning_rate,
                 optimizer="Adagrad")
 
@@ -1194,7 +1197,7 @@ class TensorFlowRanking(Index):
             eval_metric_fns=self.eval_metric_fns(),
             train_op_fn=_train_op_fn)
 
-        return tf_vector.estimator.Estimator(
+        return tf.estimator.Estimator(
             model_fn=tfr.model.make_groupwise_ranking_fn(
                 group_score_fn=self.make_score_fn(),
                 group_size=1,
@@ -1228,13 +1231,13 @@ class TensorFlowRanking(Index):
     def compute_document_features(self, doc):
         c = self.db.cursor()
 
-        tf_vector_query = """
+        tf_query = """
             SELECT term, count FROM document_term_frequencies
             JOIN vocabulary USING (term_id)
             WHERE doc_id = '%s'
         """ % doc.doc_id
 
-        tf_vector = dict((term, count) for term, count in c.execute(tf_vector_query))
+        tf_vector = dict((term, count) for term, count in c.execute(tf_query))
 
         features_query = """
             SELECT stream_length, norm_sum_tf, norm_min_tf, norm_max_tf, norm_mean_tf, norm_variance_tf
@@ -1377,10 +1380,7 @@ class TensorFlowRanking(Index):
 
         logger.info("Training model")
         
-        tf_vector.enable_eager_execution()
-        tf_vector.executing_eagerly()
-
-        hparams = tf_vector.contrib.training.HParams(learning_rate=0.05)
+        hparams = tf.contrib.training.HParams(learning_rate=0.05)
         ranker = self.get_estimator(hparams)
         ranker.train(input_fn=lambda: self.input_fn(features_filename), steps=100)
 
@@ -1394,12 +1394,14 @@ class TensorFlowRanking(Index):
 
         features = pd.DataFrame(columns=TensorFlowRanking.COLUMNS[2:])
 
+        i = 0
         for doc_features in c.execute(doc_features_query):
             doc_id = doc_features[0]
             query_features = self.compute_query_features(query, doc_id)
             query_doc_features = pd.Series(query_features + list(doc_features[1:]), index=TensorFlowRanking.COLUMNS[2:])
             features = features.append(query_doc_features, ignore_index=True)
-            break
+            i+=1
+            if i % 5 == 0: break
 
         return features
 
@@ -1409,11 +1411,13 @@ class TensorFlowRanking(Index):
 
         logger.info("Scaling features")
         scaler = MinMaxScaler(feature_range=[-1, 1])
-        features = scaler.fit_transform(features)
+        features.ix[:, :] = scaler.fit_transform(features)
 
-        hparams = tf_vector.contrib.training.HParams(learning_rate=0.05)
+        print(features)
+
+        hparams = tf.contrib.training.HParams(learning_rate=0.05)
         ranker = self.get_estimator(hparams)
-        scores = ranker.predict(features)
+        scores = ranker.predict(tf.data.Dataset.from_tensor_slices(features))
         for score in scores:
             print(score)
 
