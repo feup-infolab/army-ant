@@ -18,6 +18,7 @@ from enum import Enum
 from statistics import mean, variance
 
 import jpype
+import numpy as np
 import pandas as pd
 import psycopg2
 import tensorflow as tf
@@ -27,7 +28,10 @@ from aiogremlin import Cluster
 from aiohttp.client_exceptions import ClientConnectorError
 from jpype import (JavaException, JClass, JPackage, JString, isJVMStarted,
                    java, shutdownJVM, startJVM)
+from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
+from tensorflow.python.client import session
+from tensorflow.python.training import checkpoint_utils, saver
 
 from army_ant.exception import ArmyAntException
 from army_ant.reader import Document, Entity
@@ -1068,6 +1072,8 @@ class TensorFlowRanking(Index):
         self.db_path = os.path.join(self.index_location, 'features.sq3')
         self.db = sqlite3.connect(self.db_path)
 
+        self.scaler_filename = os.path.join(self.index_location, "scaler.pickle")
+
         tf.enable_eager_execution()
         tf.executing_eagerly()
         
@@ -1355,22 +1361,27 @@ class TensorFlowRanking(Index):
             logger.info("Computing features")
             features = pd.DataFrame(columns=TensorFlowRanking.COLUMNS)
             
+            count = 0
             for doc in self.reader:
                 for topic_id, score in qrels[doc.doc_id].items():
                     query = topics[topic_id]
                     query_doc_features = self.compute_features(doc, query, topic_id, score)
                     features = features.append(query_doc_features, ignore_index=True)
                 yield doc
+                count += 1
+                if count % 5 == 0: break
             
             logger.info("Scaling features")
             scaler = MinMaxScaler(feature_range=[-1, 1])
-            features.ix[:, 2:features.shape[1]] = scaler.fit_transform(features.ix[:, 2:features.shape[1]])
+            features.iloc[:, 2:features.shape[1]] = scaler.fit_transform(features.iloc[:, 2:features.shape[1]])
+            joblib.dump(scaler, self.scaler_filename)
+            logger.info("Saved scaler to %s" % self.scaler_filename)
             
             logger.info("Sorting by qid")
             features = features.sort_values(by=['qid'])
 
             logger.info("Prepending column name")
-            features.ix[:, 1:features.shape[1]] = features.ix[:, 1:features.shape[1]].apply(
+            features.iloc[:, 1:features.shape[1]] = features.iloc[:, 1:features.shape[1]].apply(
                 lambda row: features.columns[1:len(features.columns)].str.cat(row.astype(str), sep=':'), axis='columns')
 
             features.to_csv(features_filename, header=False, index=False, sep=' ')
@@ -1384,7 +1395,7 @@ class TensorFlowRanking(Index):
         ranker = self.get_estimator(hparams)
         ranker.train(input_fn=lambda: self.input_fn(features_filename), steps=100)
 
-    def get_features(self, query):
+    def get_features(self, query, limit=None):
         c = self.db.cursor()
 
         doc_features_query = """
@@ -1394,30 +1405,61 @@ class TensorFlowRanking(Index):
 
         features = pd.DataFrame(columns=TensorFlowRanking.COLUMNS[2:])
 
-        i = 0
+        count = 0
         for doc_features in c.execute(doc_features_query):
             doc_id = doc_features[0]
             query_features = self.compute_query_features(query, doc_id)
             query_doc_features = pd.Series(query_features + list(doc_features[1:]), index=TensorFlowRanking.COLUMNS[2:])
             features = features.append(query_doc_features, ignore_index=True)
-            i+=1
-            if i % 5 == 0: break
+            
+            if limit:
+                count += 1
+                if count % limit == 0:
+                    break
 
         return features
 
-    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
+    def predict_data_fn(self, query):
+        def sample_or_pad_vector(v):
+            if len(v) < TensorFlowRanking.LIST_SIZE:
+                return np.pad(v, (0,TensorFlowRanking.LIST_SIZE - len(v)), 'constant', constant_values=(0,0))
+            
+            if len(v) > TensorFlowRanking.LIST_SIZE:
+                return np.random.choice(v, TensorFlowRanking.LIST_SIZE)
+
+            return v
+
         logger.info("Fetching features")
-        features = self.get_features(query)
+        features = self.get_features(query, 10)
 
-        logger.info("Scaling features")
-        scaler = MinMaxScaler(feature_range=[-1, 1])
-        features.ix[:, :] = scaler.fit_transform(features)
+        logger.info("Scaling features using scaler from %s" % self.scaler_filename)
+        scaler = joblib.load(self.scaler_filename)
+        features.iloc[:, :] = scaler.fit_transform(features)
 
-        print(features)
+        dataset = dict(zip(
+            map(str, range(1, len(features.columns) + 1)),
+            np.apply_along_axis(
+                sample_or_pad_vector, 1,
+                np.split(features.values[np.newaxis].T, 1)[0])
+        ))
 
+        dataset = { k: tf.convert_to_tensor(v) for k, v in dataset.items() }
+        zeros = dict(zip(
+            map(str, range(len(features.columns) + 1, TensorFlowRanking.NUM_FEATURES)),
+            np.zeros((100, 1))
+        ))
+        zeros = { k: tf.convert_to_tensor(v) for k, v in zeros.items() }
+        dataset.update(zeros)
+
+        print(dataset)
+
+        return (dataset, None)
+
+    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
         hparams = tf.contrib.training.HParams(learning_rate=0.05)
         ranker = self.get_estimator(hparams)
-        scores = ranker.predict(tf.data.Dataset.from_tensor_slices(features))
+
+        scores = ranker.predict(input_fn=lambda: self.predict_data_fn(query))
         for score in scores:
             print(score)
 
