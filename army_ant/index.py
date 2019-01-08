@@ -1065,7 +1065,7 @@ class TensorFlowRanking(Index):
 
     def __init__(self, reader, index_location, loop):
         super().__init__(reader, index_location, loop)
-        
+
         if not os.path.exists(self.index_location):
             os.mkdir(self.index_location)
 
@@ -1090,9 +1090,9 @@ class TensorFlowRanking(Index):
         """)
 
         c.execute("""
-            CREATE TABLE IF NOT EXISTS document_features (
-                doc_id TEXT, stream_length INTEGER, norm_sum_tf INTEGER, norm_min_tf INTEGER, norm_max_tf INTEGER,
-                norm_mean_tf REAL, norm_variance_tf REAL)
+            CREATE TABLE IF NOT EXISTS document_features2 (
+                doc_id TEXT PRIMARY KEY, stream_length INTEGER, norm_sum_tf INTEGER, norm_min_tf INTEGER,
+                norm_max_tf INTEGER, norm_mean_tf REAL, norm_variance_tf REAL)
         """)
 
         # c.execute("""
@@ -1361,15 +1361,12 @@ class TensorFlowRanking(Index):
             logger.info("Computing features")
             features = pd.DataFrame(columns=TensorFlowRanking.COLUMNS)
             
-            count = 0
             for doc in self.reader:
                 for topic_id, score in qrels[doc.doc_id].items():
                     query = topics[topic_id]
                     query_doc_features = self.compute_features(doc, query, topic_id, score)
                     features = features.append(query_doc_features, ignore_index=True)
                 yield doc
-                count += 1
-                if count % 5 == 0: break
             
             logger.info("Scaling features")
             scaler = MinMaxScaler(feature_range=[-1, 1])
@@ -1395,7 +1392,10 @@ class TensorFlowRanking(Index):
         ranker = self.get_estimator(hparams)
         ranker.train(input_fn=lambda: self.input_fn(features_filename), steps=100)
 
-    def get_features(self, query, limit=None):
+    def get_features(self, query, doc_ids=None):
+        logger.info("Getting features for %s" % (
+            "all documents" if doc_ids is None else "%d documents" % len(doc_ids)))
+
         c = self.db.cursor()
 
         doc_features_query = """
@@ -1403,23 +1403,66 @@ class TensorFlowRanking(Index):
             FROM document_features
         """
 
+        if doc_ids:
+            doc_features_query += "\nWHERE doc_id IN (%s)" % ', '.join("'%s'" % doc_id for doc_id in doc_ids)
+
+        doc_features_query += "\nORDER BY doc_id"
+
         features = pd.DataFrame(columns=TensorFlowRanking.COLUMNS[2:])
 
-        count = 0
         for doc_features in c.execute(doc_features_query):
             doc_id = doc_features[0]
             query_features = self.compute_query_features(query, doc_id)
-            query_doc_features = pd.Series(query_features + list(doc_features[1:]), index=TensorFlowRanking.COLUMNS[2:])
+            query_doc_features = pd.Series(
+                query_features + list(doc_features[1:]),
+                index=TensorFlowRanking.COLUMNS[2:])
             features = features.append(query_doc_features, ignore_index=True)
-            
-            if limit:
-                count += 1
-                if count % limit == 0:
-                    break
 
         return features
 
-    def predict_data_fn(self, query):
+    def get_doc_ids(self, limit=None):
+        logger.info("Getting doc_ids for %s" % (
+            "all documents" if limit is None else "the %d first documents" % limit))
+
+        c = self.db.cursor()
+
+        doc_features_query = """
+            SELECT doc_id
+            FROM document_features
+            ORDER BY doc_id
+        """
+
+        if limit: doc_features_query += "\nLIMIT %d" % limit
+
+        doc_ids = []
+
+        for row in c.execute(doc_features_query):
+            doc_ids.append(row[0])
+
+        return doc_ids
+
+    def predict_data_fn(self, query, doc_ids=None):
+        """
+        We generate the data structure for prediction. The alternative would be to have a test set in-disk, but
+        we obviouly don't have labels for unknown queries.
+
+        returns (X, Y=None)
+        X = [
+            // Array of queries (size=1 for single query prediction)
+            {
+                // Dictionary of features (size=NUM_FEATURES / padded with zeros)
+                'feature_name': [
+                    // Column array of feature values for each instance
+                    // (size=LIST_SIZE / padded with zeros to scale up or sampled to scale down)
+                    [1.2],
+                    [2.3],
+                    [3.1],
+                    ...
+                ]
+            }
+        ]
+        """
+
         def sample_or_pad_vector(v):
             if len(v) < TensorFlowRanking.LIST_SIZE:
                 return np.pad(v, (0,TensorFlowRanking.LIST_SIZE - len(v)), 'constant', constant_values=(0,0))
@@ -1430,7 +1473,7 @@ class TensorFlowRanking(Index):
             return v
 
         logger.info("Fetching features")
-        features = self.get_features(query, 10)
+        features = self.get_features(query, doc_ids)
 
         logger.info("Scaling features using scaler from %s" % self.scaler_filename)
         scaler = joblib.load(self.scaler_filename)
@@ -1443,15 +1486,13 @@ class TensorFlowRanking(Index):
                 np.split(features.values[np.newaxis].T, 1)[0])
         ))
 
-        dataset = { k: tf.convert_to_tensor(v) for k, v in dataset.items() }
+        dataset = { k: tf.convert_to_tensor(v, dtype=tf.float32) for k, v in dataset.items() }
         zeros = dict(zip(
-            map(str, range(len(features.columns) + 1, TensorFlowRanking.NUM_FEATURES)),
-            np.zeros((100, 1))
+            map(str, range(len(features.columns) + 1, TensorFlowRanking.NUM_FEATURES + 1)),
+            [np.zeros((100, 1))] * (TensorFlowRanking.NUM_FEATURES - len(features.columns))
         ))
-        zeros = { k: tf.convert_to_tensor(v) for k, v in zeros.items() }
+        zeros = { k: tf.convert_to_tensor(v, dtype=tf.float32) for k, v in zeros.items() }
         dataset.update(zeros)
-
-        print(dataset)
 
         return (dataset, None)
 
@@ -1459,27 +1500,12 @@ class TensorFlowRanking(Index):
         hparams = tf.contrib.training.HParams(learning_rate=0.05)
         ranker = self.get_estimator(hparams)
 
-        scores = ranker.predict(input_fn=lambda: self.predict_data_fn(query))
-        for score in scores:
-            print(score)
+        doc_ids = self.get_doc_ids()
+        results = ranker.predict(input_fn=lambda: self.predict_data_fn(query, doc_ids))
+        results = zip([next(results)[0] for i in range(offset+limit)], doc_ids[:(offset+limit)])
+        results = list(sorted(results, key=lambda d: -d[0]))
 
-        # results = []
-        # num_docs = 0
-        # trace = None
-        # try:
-        #     if self.index_location in LuceneEngine.INSTANCES:
-        #         lucene = LuceneEngine.INSTANCES[self.index_location]
-        #     else:
-        #         lucene = LuceneEngine.JLuceneEngine(self.index_location)
-        #         LuceneEngine.INSTANCES[self.index_location] = lucene
+        results = [Result(result[0], result[1], result[1], 'document')
+                   for result in itertools.islice(results, offset, offset + limit)]
 
-        #     results = lucene.search(query, offset, limit, ranking_function, ranking_params)
-        #     num_docs = results.getNumDocs()
-        #     trace = results.getTrace()
-        #     results = [Result(result.getScore(), result.getID(), result.getName(), result.getType())
-        #                for result in itertools.islice(results, offset, offset + limit)]
-        # except JavaException as e:
-        #     logger.error("Java Exception: %s" % e.stacktrace())
-
-        # return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()), trace_ascii=trace.toASCII())
-        return ResultSet([], 0)
+        return ResultSet(results, len(results))
