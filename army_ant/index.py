@@ -874,8 +874,6 @@ class HypergraphOfEntity(JavaIndex):
             hgoe.save()
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
-        finally:
-            shutdownJVM()
 
     async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
         if ranking_function:
@@ -1012,8 +1010,6 @@ class LuceneEngine(JavaIndex):
             lucene.close()
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
-        finally:
-            shutdownJVM()
 
     async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
         if ranking_function:

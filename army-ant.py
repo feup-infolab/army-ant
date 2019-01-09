@@ -20,6 +20,7 @@ from json import JSONDecodeError
 
 import fire
 import yaml
+from jpype import isJVMStarted, shutdownJVM
 
 from army_ant.analysis import rws_rank_concordance, rank_correlation
 from army_ant.database import Database
@@ -354,3 +355,4 @@ class CommandLineInterface(object):
 
 if __name__ == '__main__':
     fire.Fire(CommandLineInterface)
+    if isJVMStarted(): shutdownJVM()
