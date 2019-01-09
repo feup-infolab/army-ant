@@ -1,16 +1,23 @@
 package armyant;
 
-import armyant.structures.Document;
-import armyant.structures.ResultSet;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.regex.Pattern;
+
 import com.optimaize.langdetect.LanguageDetector;
 import com.optimaize.langdetect.LanguageDetectorBuilder;
 import com.optimaize.langdetect.i18n.LdLocale;
 import com.optimaize.langdetect.ngram.NgramExtractors;
 import com.optimaize.langdetect.profiles.LanguageProfile;
 import com.optimaize.langdetect.profiles.LanguageProfileReader;
-import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
-import opennlp.tools.sentdetect.SentenceDetectorME;
-import opennlp.tools.sentdetect.SentenceModel;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.NotImplementedException;
@@ -28,23 +35,14 @@ import org.apache.lucene.util.AttributeFactory;
 import org.joda.time.Duration;
 import org.joda.time.format.PeriodFormatter;
 import org.joda.time.format.PeriodFormatterBuilder;
-import org.python.modules.synchronize;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.regex.Pattern;
+import armyant.structures.Document;
+import armyant.structures.ResultSet;
+import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
+import opennlp.tools.sentdetect.SentenceDetectorME;
+import opennlp.tools.sentdetect.SentenceModel;
 
 /**
  * Created by jldevezas on 2017-11-10.
@@ -118,12 +116,12 @@ public abstract class Engine {
     public void close() throws Exception {
     }
 
-    public String formatMillis(float millis) {
+    public static String formatMillis(float millis) {
         if (millis >= 1000) return formatMillis((long) millis);
         return String.format("%.2fms", millis);
     }
 
-    public String formatMillis(long millis) {
+    public static String formatMillis(long millis) {
         Duration duration = new Duration(millis); // in milliseconds
         PeriodFormatter formatter = new PeriodFormatterBuilder()
                 .appendDays()

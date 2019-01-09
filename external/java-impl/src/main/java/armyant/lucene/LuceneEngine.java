@@ -1,16 +1,17 @@
 package armyant.lucene;
 
-import armyant.Engine;
-import armyant.structures.Document;
-import armyant.structures.Result;
-import armyant.structures.ResultSet;
-import armyant.structures.Trace;
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.Collection;
+import java.util.Map;
+
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.document.FieldType;
 import org.apache.lucene.document.StringField;
-import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
@@ -19,16 +20,22 @@ import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.similarities.*;
+import org.apache.lucene.search.similarities.AfterEffect;
+import org.apache.lucene.search.similarities.BM25Similarity;
+import org.apache.lucene.search.similarities.BasicModel;
+import org.apache.lucene.search.similarities.ClassicSimilarity;
+import org.apache.lucene.search.similarities.DFRSimilarity;
+import org.apache.lucene.search.similarities.Normalization;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.Collection;
-import java.util.Map;
+import armyant.Engine;
+import armyant.structures.Document;
+import armyant.structures.Result;
+import armyant.structures.ResultSet;
+import armyant.structures.Trace;
 
 /**
  * Created by jldevezas on 2017-12-19.
@@ -36,19 +43,31 @@ import java.util.Map;
 public class LuceneEngine extends Engine {
     private static final Logger logger = LoggerFactory.getLogger(LuceneEngine.class);
 
-    private String path;
-    private Analyzer analyzer;
-    private Directory directory;
-    private IndexWriter writer;
+    public static FieldType DEFAULT_FIELD_TYPE;
 
-    private long counter = 0;
-    private long totalTime = 0;
-    private float avgTimePerDocument = 0;
+    static {
+        DEFAULT_FIELD_TYPE = new FieldType();
+        DEFAULT_FIELD_TYPE.setIndexOptions(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS);
+        DEFAULT_FIELD_TYPE.setTokenized(true);
+        DEFAULT_FIELD_TYPE.setStored(true);
+        DEFAULT_FIELD_TYPE.setStoreTermVectors(true);
+        DEFAULT_FIELD_TYPE.setStoreTermVectorPositions(true);
+        DEFAULT_FIELD_TYPE.freeze();
+    }
+
+    protected String path;
+    protected Analyzer analyzer;
+    protected Directory directory;
+    protected IndexWriter writer;
+
+    protected long counter = 0;
+    protected long totalTime = 0;
+    protected float avgTimePerDocument = 0;
 
     public LuceneEngine(String path) throws Exception {
         this.path = path;
         directory = FSDirectory.open(Paths.get(path));
-        analyzer = new StandardAnalyzer();
+        analyzer = new StandardAnalyzer();        
     }
 
     public void open() throws Exception {
@@ -63,9 +82,9 @@ public class LuceneEngine extends Engine {
         org.apache.lucene.document.Document luceneDocument = new org.apache.lucene.document.Document();
         luceneDocument.add(new StringField("doc_id", document.getDocID(), Field.Store.YES));
         if (document.getTitle() != null) {
-            luceneDocument.add(new TextField("title", document.getTitle(), Field.Store.YES));
+            luceneDocument.add(new Field("title", document.getTitle(), DEFAULT_FIELD_TYPE));
         }
-        luceneDocument.add(new TextField("text", document.getText(), Field.Store.YES));
+        luceneDocument.add(new Field("text", document.getText(), DEFAULT_FIELD_TYPE));
         writer.addDocument(luceneDocument);
 
         long time = System.currentTimeMillis() - startTime;

@@ -6,6 +6,7 @@ import armyant.hgoe.exceptions.HypergraphException;
 import armyant.hgoe.nodes.Node;
 import armyant.hgoe.nodes.TermNode;
 import armyant.structures.Document;
+import armyant.structures.Entity;
 import armyant.structures.Result;
 import armyant.structures.ResultSet;
 import armyant.structures.Triple;
@@ -41,24 +42,24 @@ public class HypergraphOfEntityTest {
 
         Arrays.asList(
                 new Triple(
-                        new Triple.Instance("http://example.com/Semantic_search", "Semantic search"),
-                        new Triple.Instance("http://example.com/related_to", "related_to"),
-                        new Triple.Instance("http://example.com/Search_engine_technology", "Search engine technology")
+                        new Entity("http://example.com/Semantic_search", "Semantic search"),
+                        new Entity("http://example.com/related_to", "related_to"),
+                        new Entity("http://example.com/Search_engine_technology", "Search engine technology")
                 ),
                 new Triple(
-                        new Triple.Instance("http://example.com/Semantic_search", "Semantic search"),
-                        new Triple.Instance("http://example.com/related_to", "related_to"),
-                        new Triple.Instance("http://example.com/Intention", "Intention")
+                        new Entity("http://example.com/Semantic_search", "Semantic search"),
+                        new Entity("http://example.com/related_to", "related_to"),
+                        new Entity("http://example.com/Intention", "Intention")
                 ),
                 new Triple(
-                        new Triple.Instance("http://example.com/Semantic_search", "Semantic search"),
-                        new Triple.Instance("http://example.com/related_to", "related_to"),
-                        new Triple.Instance("http://example.com/Context_(language_use)", "Context (language use)")
+                        new Entity("http://example.com/Semantic_search", "Semantic search"),
+                        new Entity("http://example.com/related_to", "related_to"),
+                        new Entity("http://example.com/Context_(language_use)", "Context (language use)")
                 ),
                 new Triple(
-                        new Triple.Instance("http://example.com/Semantic_search", "Semantic search"),
-                        new Triple.Instance("http://example.com/related_to", "related_to"),
-                        new Triple.Instance("http://example.com/World_Wide_Web", "World Wide Web")
+                        new Entity("http://example.com/Semantic_search", "Semantic search"),
+                        new Entity("http://example.com/related_to", "related_to"),
+                        new Entity("http://example.com/World_Wide_Web", "World Wide Web")
                 )
         )
     );
@@ -72,9 +73,9 @@ public class HypergraphOfEntityTest {
 
         Arrays.asList(
                 new Triple(
-                        new Triple.Instance("http://example.org/Search_engine_technology", "Search engine technology"),
-                        new Triple.Instance("http://example.org/related_to", "related_to"),
-                        new Triple.Instance("http://example.org/Search_engine", "Search engine")
+                        new Entity("http://example.org/Search_engine_technology", "Search engine technology"),
+                        new Entity("http://example.org/related_to", "related_to"),
+                        new Entity("http://example.org/Search_engine", "Search engine")
                 )
         )
     );
@@ -86,9 +87,9 @@ public class HypergraphOfEntityTest {
         "Unreachable people.",
 
         Collections.singletonList(new Triple(
-                new Triple.Instance("http://example.org/Unreachable_Me", "Unreachable Me"),
-                new Triple.Instance("http://example.org/related_to", "related_to"),
-                new Triple.Instance("http://example.org/Unreachable_You", "Unreachable You")
+                new Entity("http://example.org/Unreachable_Me", "Unreachable Me"),
+                new Entity("http://example.org/related_to", "related_to"),
+                new Entity("http://example.org/Unreachable_You", "Unreachable You")
         ))
     );
     private static String dbPath = "/tmp/hgoe-inmemory";

@@ -1055,9 +1055,9 @@ class LuceneEngine(JavaIndex):
 
         return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()), trace_ascii=trace.toASCII())
 
-class TensorFlowRanking(Index):
+class OldTensorFlowRanking(Index):
     COLUMNS = ['label', 'qid', '1', '2', '5', '6', '7', '8', '9', '3', '10', '11', '12', '13', '14']
-    LOSS = 'pairwise_logistic_loss'
+    LOSS = 'list_mle_loss'
     LIST_SIZE = 100
     NUM_FEATURES = 136
     BATCH_SIZE = 32
@@ -1500,12 +1500,33 @@ class TensorFlowRanking(Index):
         hparams = tf.contrib.training.HParams(learning_rate=0.05)
         ranker = self.get_estimator(hparams)
 
-        doc_ids = self.get_doc_ids()
+        k = 100
+        doc_ids = self.get_doc_ids(limit=k) # FIXME replace with regular search function (e.g., BM25)
         results = ranker.predict(input_fn=lambda: self.predict_data_fn(query, doc_ids))
-        results = zip([next(results)[0] for i in range(offset+limit)], doc_ids[:(offset+limit)])
-        results = list(sorted(results, key=lambda d: -d[0]))
+        results = zip([next(results)[0] for i in range(k)], doc_ids)
+        results = list(sorted(results, key=lambda d: -d[0]))[offset:(offset + limit)]
 
         results = [Result(result[0], result[1], result[1], 'document')
                    for result in itertools.islice(results, offset, offset + limit)]
 
         return ResultSet(results, len(results))
+
+class TensorFlowRanking(Index):
+    JLearningToRankHelper = JavaIndex.armyant.lucene.LuceneLearningToRankHelper
+
+    def __init__(self, reader, index_location, loop):
+        super()
+        self.lucene_index_location = os.path.join(index_location, 'lucene')
+        self.lucene_engine = LuceneEngine(reader, self.lucene_index_location, loop)
+
+    async def index(self, features_location=None):
+        async for doc in self.lucene_engine.index(features_location=features_location):
+            yield doc
+        
+        ltr_helper = TensorFlowRanking.JLearningToRankHelper(self.lucene_index_location)
+        ltr_helper.computeDocumentFeatures()
+
+    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
+        return await self.lucene_engine.search(
+            query, offset, limit,
+            task=task, ranking_function=ranking_function, ranking_params=ranking_params, debug=debug)
