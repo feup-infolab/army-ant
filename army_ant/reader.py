@@ -83,10 +83,11 @@ class Reader(object):
 
 
 class Document(object):
-    def __init__(self, doc_id, title=None, text=None, entities=None, triples=None, metadata=None):
+    def __init__(self, doc_id, title=None, text=None, links=None, entities=None, triples=None, metadata=None):
         self.doc_id = doc_id
         self.title = title
         self.text = text
+        self.links = links
         self.entities = entities
         self.triples = triples
         self.metadata = metadata
@@ -187,6 +188,8 @@ class INEXReader(Reader):
         self.doc_xpath = '//bdy/descendant-or-self::*[not(ancestor-or-self::template) and not(self::caption)]'
         self.tar = tarfile.open(source_path, 'r|bz2')
 
+        self.href_to_page_id_re = re.compile(r".*/(\d+)\.xml.*")
+
         if title_index:
             if type(title_index) is str:
                 logger.info("Using provided title index %s for %s" % (title_index, source_path))
@@ -212,17 +215,23 @@ class INEXReader(Reader):
         return re.sub(r'\s+', ' ', ''.join(bdy.xpath('%s/text()' % self.doc_xpath)))
 
     def to_wikipedia_entity(self, page_id, label):
-        #return Entity(label, "http://en.wikipedia.org/?curid=%s" % page_id)
-        return Entity(label, "WP%s" % page_id)
+        return Entity(label, "https://en.wikipedia.org/wiki/%s" % label.replace(' ', '_'))
+        #return Entity(label, "https://en.wikipedia.org/?curid=%s" % page_id)
+        #return Entity(label, "WP%s" % page_id)
 
     def build_triples(self, page_id, title, bdy):
+        links = set([])
         entities = set([])
         triples = set([])
 
         for link in bdy.xpath('//link'):
-            related_id = get_first(link.xpath('@xlink:href', namespaces={'xlink': 'http://www.w3.org/1999/xlink'}))
-            if related_id is None: continue
-            related_id = inex.xlink_to_page_id(related_id)
+            href = get_first(link.xpath('@xlink:href', namespaces={'xlink': 'http://www.w3.org/1999/xlink'}))
+            if href is None: continue
+
+            link_match = self.href_to_page_id_re.match(href)
+            if link_match: links.add(link_match.group(1))
+
+            related_id = inex.xlink_to_page_id(href)
 
             link_text = get_first(link.xpath('text()'))
             if link_text and len(link_text) < 3: link_text = None
@@ -273,7 +282,7 @@ class INEXReader(Reader):
                     Entity(ol, o)
                 ))
 
-        return list(entities), list(triples)
+        return list(links), list(entities), list(triples)
 
     def __next__(self):
         url = None
@@ -304,12 +313,13 @@ class INEXReader(Reader):
 
             url = self.to_wikipedia_entity(page_id, title).uri
 
-            entities, triples = self.build_triples(page_id, title, bdy)
+            links, entities, triples = self.build_triples(page_id, title, bdy)
 
             return Document(
                 doc_id=page_id,
                 title=title,
                 text=self.to_plain_text(bdy),
+                links=links,
                 entities=entities,
                 triples=triples,
                 metadata={'url': url, 'name': title})
@@ -363,7 +373,7 @@ class INEXDirectoryReader(Reader):
         inex_iterators = [
             iter(INEXReader(
                 file_path, include_dbpedia=include_dbpedia,
-                title_index=title_index if use_memory else title_index_path))
+                title_index=title_index if use_memory else title_index_path, limit=1)) # DELETEME limit
             for file_path in file_paths
         ]
         self.it = itertools.chain(*inex_iterators)

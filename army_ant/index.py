@@ -9,14 +9,16 @@ import configparser
 import itertools
 import json
 import logging
+import math
 import os
 import re
 import signal
 import sqlite3
-from collections import Counter, defaultdict
+from collections import Counter, OrderedDict, defaultdict
 from enum import Enum
 from statistics import mean, variance
 
+import igraph
 import jpype
 import numpy as np
 import pandas as pd
@@ -26,8 +28,8 @@ import tensorflow_ranking as tfr
 import yaml
 from aiogremlin import Cluster
 from aiohttp.client_exceptions import ClientConnectorError
-from jpype import (JavaException, JClass, JPackage, JString, isJVMStarted,
-                   java, shutdownJVM, startJVM)
+from jpype import (JavaException, JBoolean, JClass, JDouble, JPackage, JString,
+                   isJVMStarted, java, shutdownJVM, startJVM)
 from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.python.client import session
@@ -996,12 +998,13 @@ class LuceneEngine(JavaIndex):
                     lucene.indexCorpus(java.util.Arrays.asList(corpus))
                     corpus = []
 
-                yield Document(
-                    doc_id=doc.doc_id,
-                    metadata={
-                        'url': doc.metadata.get('url'),
-                        'name': doc.metadata.get('name')
-                    })
+                # yield Document(
+                #     doc_id=doc.doc_id,
+                #     metadata={
+                #         'url': doc.metadata.get('url'),
+                #         'name': doc.metadata.get('name')
+                #     })
+                yield doc
 
             if len(corpus) > 0:
                 logger.info("Indexing batch of %d documents" % len(corpus))
@@ -1508,19 +1511,142 @@ class OldTensorFlowRanking(Index):
         return ResultSet(results, len(results))
 
 class TensorFlowRanking(Index):
+    FEATURES = ['num_query_terms', 'norm_num_query_terms', 'idf', 'sum_query_tf', 'min_query_tf', 'max_query_tf',
+                'avg_query_tf', 'var_query_tf', 'stream_length', 'sum_norm_tf', 'min_norm_tf', 'max_norm_tf',
+                'avg_norm_tf', 'var_norm_tf', 'url_slashes', 'url_length', 'indegree', 'outdegree', 'pagerank',
+                'tf_idf', 'bm25', 'lm_jelinek_mercer', 'lm_dirichlet']
+    LOSS = 'list_mle_loss'
+    LIST_SIZE = 100
+    NUM_FEATURES = 136
+    BATCH_SIZE = 32
+    HIDDEN_LAYER_DIMS = ['20', '10']
+
     JLearningToRankHelper = JavaIndex.armyant.lucene.LuceneLearningToRankHelper
 
     def __init__(self, reader, index_location, loop):
         super()
         self.lucene_index_location = os.path.join(index_location, 'lucene')
         self.lucene_engine = LuceneEngine(reader, self.lucene_index_location, loop)
+        self.graph = OrderedDict()
+        self.web_features = {}
+
+    def load_topics(self, features_location):
+        topics = {}
+
+        with open(os.path.join(features_location, 'topics.txt'), 'r') as f:
+            for line in f:
+                topic_id, query = line.strip().split('\t')
+                topics[topic_id] = query
+
+        return topics
+
+    def load_qrels(self, features_location):
+        qrels = defaultdict(lambda: {})
+
+        with open(os.path.join(features_location, 'qrels.txt'), 'r') as f:
+            for line in f:
+                topic_id, _, doc_id, score, _ = line.split(' ', 4)
+                score = int(score)
+                qrels[topic_id][doc_id] = 1 if score > 0 else 0
+
+        return qrels
+
+    def process_web_features(self, doc):
+        if not doc.doc_id in self.web_features: self.web_features[doc.doc_id] = {}
+        self.web_features[doc.doc_id]['url_slashes'] = doc.metadata['url'].count('/')
+        self.web_features[doc.doc_id]['url_length'] = len(doc.metadata['url'])
+        self.graph[doc.doc_id] = doc.links
 
     async def index(self, features_location=None):
+        if not features_location:
+            raise ArmyAntException("Must provide a features location with topics.txt and qrels.txt files")
+
+        topics = self.load_topics(features_location)
+        qrels = self.load_qrels(features_location)
+
+        #
+        # Index and compute document and web features
+        #
+
         async for doc in self.lucene_engine.index(features_location=features_location):
+            self.process_web_features(doc)
             yield doc
         
+        logger.info("Building graph and computing graph-based features")
+        self.graph = igraph.Graph.TupleList([(k, v) for k, vs in self.graph.items() for v in vs], directed=True)
+        indegree = self.graph.indegree()
+        outdegree = self.graph.outdegree()
+        pagerank = self.graph.pagerank()
+
+        logger.info("Updating Lucene index with web features")
+        j_document_features = java.util.HashMap()
+        for v in self.graph.vs.select(name_in=self.web_features.keys()):
+            j_features = java.util.LinkedHashMap()
+
+            for feature_name, feature_value in self.web_features[v['name']].items():
+                j_features.put(feature_name, float(feature_value))
+
+            j_features.put('indegree', float(indegree[v.index]))
+            j_features.put('outdegree', float(outdegree[v.index]))
+            j_features.put('pagerank', float(pagerank[v.index]))
+
+            j_document_features.put(v['name'], j_features)
+
         ltr_helper = TensorFlowRanking.JLearningToRankHelper(self.lucene_index_location)
         ltr_helper.computeDocumentFeatures()
+        ltr_helper.updateDocumentFeatures(j_document_features)
+
+        #
+        # Compute query features for topics and qrels and prepare the training set
+        #
+        # train = (X, Y)
+        # X = [
+        #     // Array of queries (size=1 for single query prediction)
+        #     {
+        #         // Dictionary of features (size=NUM_FEATURES / padded with zeros)
+        #         'feature_name': [
+        #             // List of batches (size=BATCH_SIZE)
+        #             [
+        #                // Column array of feature values for each instance (list of lists of single element)
+        #                // (size=LIST_SIZE / padded with zeros to scale up or sampled to scale down)
+        #                [1.2],
+        #                [2.3],
+        #                [3.1],
+        #                ...
+        #             ]
+        #         ]
+        #     }
+        # ]
+        #
+        # // Y = None for prediction
+        # Y = [
+        #     // List of batches (size=BATCH_SIZE)
+        #     [
+        #         // List of labels (scores) using -1 for paddings (size=LIST_SIZE)
+        #     ]
+        # ]
+
+        features = pd.DataFrame(columns=['doc_id', 'qid'] + TensorFlowRanking.FEATURES)
+        for topic_id, doc_scores in qrels.items():
+            query = topics[topic_id]
+
+            j_doc_ids = java.util.ArrayList()
+            for doc_id in doc_scores.keys():
+                j_doc_ids.add(doc_id)
+
+            j_doc_query_features = ltr_helper.computeQueryDocumentFeatures(query, j_doc_ids, True)
+            for entry in j_doc_query_features.entrySet():
+                j_features = entry.getValue()
+                features = features.append(
+                    pd.Series(
+                        data=[doc_id, topic_id] + [0 if v.isNaN() else v for v in j_features.values()], # FIXME NaNs
+                        index=['doc_id', 'qid'] + [v for v in j_features.keySet()]),
+                    ignore_index=True)
+        print(features)
+
+        X = []
+        Y = []
+        train = (X, Y)
 
     async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
         return await self.lucene_engine.search(

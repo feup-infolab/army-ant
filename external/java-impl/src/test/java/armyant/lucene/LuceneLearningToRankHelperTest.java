@@ -23,7 +23,7 @@ public class LuceneLearningToRankHelperTest {
     }
 
     public void testComputeQueryDocumentFeatures() throws Exception {
-        String query = "rock music";
+        String query = "great rock music";
         
         ResultSet results = ltrHelper.search(query, 0, 10);
         
@@ -32,6 +32,6 @@ public class LuceneLearningToRankHelperTest {
             docIDs.add(result.getID());
         }
         
-        ltrHelper.computeQueryDocumentFeatures("rock music", docIDs);
+        ltrHelper.computeQueryDocumentFeatures(query, docIDs);
     }
 }
