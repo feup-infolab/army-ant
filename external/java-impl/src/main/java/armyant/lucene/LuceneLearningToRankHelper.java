@@ -48,44 +48,27 @@ public class LuceneLearningToRankHelper extends LuceneEngine {
         super(path);
     }
 
-    public Map<String, Map<String, Float>> computeQueryDocumentFeatures(String query, List<String> filterByDocID)
-            throws IOException, ParseException {
-        return computeQueryDocumentFeatures(query, filterByDocID, true);
-    }
-
-    /**
-     * Iterate over the filtered documents and compute query-dependent features.
-     * 
-     * @throws ParseException
-     */
-    public Map<String, Map<String, Float>> computeQueryDocumentFeatures(
-            String query, List<String> filterByDocID, boolean includeDocumentFeatures)
+    public Map<String, Map<String, Float>> computeQueryDocumentFeaturesBatch(
+            IndexReader reader, IndexSearcher searcher, String query, List<String> queryTerms, List<String> batch)
             throws IOException, ParseException {
 
         Map<String, Map<String, Float>> docQueryFeatures = new HashMap<>();
+        Query baseQuery;
+        int maxResults;
 
-        ArrayList<String> queryTerms = new ArrayList<>();
-        TokenStream stream = this.analyzer.tokenStream("text", query);
-        stream.reset();
-        while (stream.incrementToken()) {
-            queryTerms.add(stream.getAttribute(CharTermAttribute.class).toString());
-        }
-        stream.close();
-
-        IndexReader reader = DirectoryReader.open(directory);
-        IndexSearcher searcher = new IndexSearcher(reader);
-
-        List<List<String>> batches = ListUtils.partition(filterByDocID, 1000);
-        logger.info("Split into {} batches of 1000 documents", batches.size());
-
-        for (List<String> batch : batches) {
+        if (batch == null || batch.isEmpty()) {
+            logger.warn("Considering all documents");
+            baseQuery = new QueryParser("text", this.analyzer).parse("*");
+            maxResults = reader.numDocs();
+        } else {
             BooleanQuery.Builder baseQueryBuilder = new BooleanQuery.Builder();
             for (String docID : batch) {
                 baseQueryBuilder.add(new TermQuery(new Term("doc_id", docID)), BooleanClause.Occur.SHOULD);
             }
-            Query baseQuery = baseQueryBuilder.build();
+            baseQuery = baseQueryBuilder.build();
+            maxResults = batch.size();
 
-            TopDocs hits = searcher.search(baseQuery, batch.size());
+            TopDocs hits = searcher.search(baseQuery, maxResults);
 
             for (ScoreDoc scoreDoc : hits.scoreDocs) {
                 Document doc = reader.document(scoreDoc.doc);
@@ -132,7 +115,7 @@ public class LuceneLearningToRankHelper extends LuceneEngine {
                 docQueryFeatures.get(docID).put("min_query_tf", minQueryTF);
                 docQueryFeatures.get(docID).put("max_query_tf", maxQueryTF);
                 docQueryFeatures.get(docID).put("avg_query_tf", avgQueryTF);
-                docQueryFeatures.get(docID).put("var_query_tf", varQueryTF);
+                docQueryFeatures.get(docID).put("var_query_tf", Float.isNaN(varQueryTF) ? 0 : varQueryTF);
 
                 // Query-independent features (document and web)
                 for (IndexableField field : doc.getFields()) {
@@ -144,12 +127,12 @@ public class LuceneLearningToRankHelper extends LuceneEngine {
             QueryParser queryParser = new QueryParser("text", this.analyzer);
             Query lQuery = new BooleanQuery.Builder()
                 .add(baseQuery, BooleanClause.Occur.MUST)
-                .add(queryParser.parse(query), BooleanClause.Occur.MUST)
+                .add(queryParser.parse(query), BooleanClause.Occur.SHOULD)
                 .build();
 
             // TF-IDF
             searcher.setSimilarity(new ClassicSimilarity());
-            hits = searcher.search(lQuery, filterByDocID.size());
+            hits = searcher.search(lQuery, maxResults);
 
             for (ScoreDoc scoreDoc : hits.scoreDocs) {
                 Document doc = reader.document(scoreDoc.doc);
@@ -159,7 +142,7 @@ public class LuceneLearningToRankHelper extends LuceneEngine {
 
             // BM25
             searcher.setSimilarity(new BM25Similarity());
-            hits = searcher.search(lQuery, filterByDocID.size());
+            hits = searcher.search(lQuery, maxResults);
 
             for (ScoreDoc scoreDoc : hits.scoreDocs) {
                 Document doc = reader.document(scoreDoc.doc);
@@ -173,7 +156,7 @@ public class LuceneLearningToRankHelper extends LuceneEngine {
             // applied to ad hoc information retrieval." ACM SIGIR Forum. Vol. 51. No. 2. ACM, 2017.
             // http://www.iro.umontreal.ca/~nie/IFT6255/zhai-lafferty.pdf
             searcher.setSimilarity(new LMJelinekMercerSimilarity(0.7f));
-            hits = searcher.search(lQuery, filterByDocID.size());
+            hits = searcher.search(lQuery, maxResults);
 
             for (ScoreDoc scoreDoc : hits.scoreDocs) {
                 Document doc = reader.document(scoreDoc.doc);
@@ -183,7 +166,7 @@ public class LuceneLearningToRankHelper extends LuceneEngine {
 
             // LM-Dirichlet
             searcher.setSimilarity(new LMDirichletSimilarity());
-            hits = searcher.search(lQuery, filterByDocID.size());
+            hits = searcher.search(lQuery, maxResults);
 
             for (ScoreDoc scoreDoc : hits.scoreDocs) {
                 Document doc = reader.document(scoreDoc.doc);
@@ -198,6 +181,47 @@ public class LuceneLearningToRankHelper extends LuceneEngine {
                 }
                 System.out.println();
             }*/
+        }
+
+        return docQueryFeatures;
+    }
+
+    public Map<String, Map<String, Float>> computeQueryDocumentFeatures(String query)
+            throws IOException, ParseException {
+        return computeQueryDocumentFeatures(query, null);
+    }
+
+    /**
+     * Iterate over the filtered documents and compute query-dependent features.
+     *
+     * @throws ParseException
+     */
+    public Map<String, Map<String, Float>> computeQueryDocumentFeatures(String query, List<String> filterByDocID)
+            throws IOException, ParseException {
+
+        Map<String, Map<String, Float>> docQueryFeatures = new HashMap<>();
+
+        ArrayList<String> queryTerms = new ArrayList<>();
+        TokenStream stream = this.analyzer.tokenStream("text", query);
+        stream.reset();
+        while (stream.incrementToken()) {
+            queryTerms.add(stream.getAttribute(CharTermAttribute.class).toString());
+        }
+        stream.close();
+
+        IndexReader reader = DirectoryReader.open(directory);
+        IndexSearcher searcher = new IndexSearcher(reader);
+
+        if (filterByDocID == null) {
+            computeQueryDocumentFeaturesBatch(reader, searcher, query, queryTerms, null);
+        } else {
+            List<List<String>> batches = ListUtils.partition(filterByDocID, 1000);
+            logger.info("Split into {} batches of 1000 documents", batches.size());
+
+            // Notice that batches cannot overlap (i.e., a docID must only be listed once).
+            for (List<String> batch : batches) {
+                docQueryFeatures.putAll(computeQueryDocumentFeaturesBatch(reader, searcher, query, queryTerms, batch));
+            }
         }
 
         reader.close();
@@ -218,7 +242,7 @@ public class LuceneLearningToRankHelper extends LuceneEngine {
             if (liveDocs != null && !liveDocs.get(docID)) continue;
 
             Terms terms = reader.getTermVector(docID, "text");
-            
+
             ArrayList<Integer> termFrequencies = new ArrayList<>();
             TermsEnum termsEnum = terms.iterator();
             while (termsEnum.next() != null) {
@@ -267,7 +291,7 @@ public class LuceneLearningToRankHelper extends LuceneEngine {
 
     /**
      * Updates/creates fields, but only for existing documents.
-     * 
+     *
      * @param docFeatures
      * @throws Exception
      */
@@ -290,7 +314,7 @@ public class LuceneLearningToRankHelper extends LuceneEngine {
             for (ScoreDoc scoreDoc : hits.scoreDocs) {
                 Document doc = reader.document(scoreDoc.doc);
                 String docID = doc.get("doc_id");
-                
+
                 if (!docFeatures.containsKey(docID)) {
                     logger.warn("Document {} not found in index, ignoring", docID);
                     continue;

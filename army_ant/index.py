@@ -1075,14 +1075,14 @@ class OldTensorFlowRanking(Index):
 
         tf.enable_eager_execution()
         tf.executing_eagerly()
-        
+
         c = self.db.cursor()
-        
+
         c.execute("""
             CREATE TABLE IF NOT EXISTS vocabulary (
                 term_id INTEGER PRIMARY KEY, term TEXT UNIQUE NOT NULL)
         """)
-        
+
         c.execute("""
             CREATE TABLE IF NOT EXISTS document_term_frequencies (
                 doc_id TEXT, term_id INTEGER, count INTEGER)
@@ -1099,7 +1099,7 @@ class OldTensorFlowRanking(Index):
         #         query TEXT, covered_term_number INTEGER, covered_term_ratio REAL, sum_tf INTEGER,
         #         min_tf INTEGER, max_tf INTEGER, mean_tf REAL, variance_tf REAL)
         # """)
-        
+
         self.db.commit()
 
     def input_fn(self, path):
@@ -1230,7 +1230,7 @@ class OldTensorFlowRanking(Index):
                 topic_id, _, doc_id, score, _ = line.split(' ', 4)
                 score = int(score)
                 qrels[doc_id][topic_id] = 1 if score > 0 else 0
-        
+
         return qrels
 
     def compute_document_features(self, doc):
@@ -1253,7 +1253,7 @@ class OldTensorFlowRanking(Index):
         c.execute(features_query)
         features = c.fetchone()
         if features: features = list(features)
-        
+
         if len(tf_vector) <= 0 or features is None:
             logger.info("Computing features for document %s" % doc.doc_id)
 
@@ -1340,7 +1340,7 @@ class OldTensorFlowRanking(Index):
         This function computes query dependent and independent features. It is used during training, but stores
         query-independent features in a sqlite database to be used during prediction.
         """
-        
+
         # TODO Incomplete subset of traditional learning-to-rank features from https://arxiv.org/abs/1803.05127
         doc_features = self.compute_document_features(doc)
         query_features = self.compute_query_features(query, doc.doc_id)
@@ -1359,20 +1359,20 @@ class OldTensorFlowRanking(Index):
         if not os.path.exists(features_filename):
             logger.info("Computing features")
             features = pd.DataFrame(columns=TensorFlowRanking.COLUMNS)
-            
+
             for doc in self.reader:
                 for topic_id, score in qrels[doc.doc_id].items():
                     query = topics[topic_id]
                     query_doc_features = self.compute_features(doc, query, topic_id, score)
                     features = features.append(query_doc_features, ignore_index=True)
                 yield doc
-            
+
             logger.info("Scaling features")
             scaler = MinMaxScaler(feature_range=[-1, 1])
             features.iloc[:, 2:features.shape[1]] = scaler.fit_transform(features.iloc[:, 2:features.shape[1]])
             joblib.dump(scaler, self.scaler_filename)
             logger.info("Saved scaler to %s" % self.scaler_filename)
-            
+
             logger.info("Sorting by qid")
             features = features.sort_values(by=['qid'])
 
@@ -1386,7 +1386,7 @@ class OldTensorFlowRanking(Index):
             logger.warning("Using features file %s (to recompute, delete it and rerun)" % features_filename)
 
         logger.info("Training model")
-        
+
         hparams = tf.contrib.training.HParams(learning_rate=0.05)
         ranker = self.get_estimator(hparams)
         ranker.train(input_fn=lambda: self.input_fn(features_filename), steps=100)
@@ -1465,7 +1465,7 @@ class OldTensorFlowRanking(Index):
         def sample_or_pad_vector(v):
             if len(v) < TensorFlowRanking.LIST_SIZE:
                 return np.pad(v, (0,TensorFlowRanking.LIST_SIZE - len(v)), 'constant', constant_values=(0,0))
-            
+
             if len(v) > TensorFlowRanking.LIST_SIZE:
                 return np.random.choice(v, TensorFlowRanking.LIST_SIZE)
 
@@ -1524,11 +1524,12 @@ class TensorFlowRanking(Index):
     JLearningToRankHelper = JavaIndex.armyant.lucene.LuceneLearningToRankHelper
 
     def __init__(self, reader, index_location, loop):
-        super()
+        super().__init__(reader, index_location, loop)
         self.lucene_index_location = os.path.join(index_location, 'lucene')
         self.lucene_engine = LuceneEngine(reader, self.lucene_index_location, loop)
         self.graph = OrderedDict()
         self.web_features = {}
+        self.scaler_filename = os.path.join(index_location, "scaler.pickle")
 
     def load_topics(self, features_location):
         topics = {}
@@ -1557,21 +1558,7 @@ class TensorFlowRanking(Index):
         self.web_features[doc.doc_id]['url_length'] = len(doc.metadata['url'])
         self.graph[doc.doc_id] = doc.links
 
-    async def index(self, features_location=None):
-        if not features_location:
-            raise ArmyAntException("Must provide a features location with topics.txt and qrels.txt files")
-
-        topics = self.load_topics(features_location)
-        qrels = self.load_qrels(features_location)
-
-        #
-        # Index and compute document and web features
-        #
-
-        async for doc in self.lucene_engine.index(features_location=features_location):
-            self.process_web_features(doc)
-            yield doc
-        
+    def j_build_graph_based_features(self):
         logger.info("Building graph and computing graph-based features")
         self.graph = igraph.Graph.TupleList([(k, v) for k, vs in self.graph.items() for v in vs], directed=True)
         indegree = self.graph.indegree()
@@ -1579,7 +1566,7 @@ class TensorFlowRanking(Index):
         pagerank = self.graph.pagerank()
 
         logger.info("Updating Lucene index with web features")
-        j_document_features = java.util.HashMap()
+        j_graph_based_features = java.util.HashMap()
         for v in self.graph.vs.select(name_in=self.web_features.keys()):
             j_features = java.util.LinkedHashMap()
 
@@ -1590,43 +1577,15 @@ class TensorFlowRanking(Index):
             j_features.put('outdegree', float(outdegree[v.index]))
             j_features.put('pagerank', float(pagerank[v.index]))
 
-            j_document_features.put(v['name'], j_features)
+            j_graph_based_features.put(v['name'], j_features)
 
-        ltr_helper = TensorFlowRanking.JLearningToRankHelper(self.lucene_index_location)
-        ltr_helper.computeDocumentFeatures()
-        ltr_helper.updateDocumentFeatures(j_document_features)
+        return j_graph_based_features
 
-        #
-        # Compute query features for topics and qrels and prepare the training set
-        #
-        # train = (X, Y)
-        # X = [
-        #     // Array of queries (size=1 for single query prediction)
-        #     {
-        #         // Dictionary of features (size=NUM_FEATURES / padded with zeros)
-        #         'feature_name': [
-        #             // List of batches (size=BATCH_SIZE)
-        #             [
-        #                // Column array of feature values for each instance (list of lists of single element)
-        #                // (size=LIST_SIZE / padded with zeros to scale up or sampled to scale down)
-        #                [1.2],
-        #                [2.3],
-        #                [3.1],
-        #                ...
-        #             ]
-        #         ]
-        #     }
-        # ]
-        #
-        # // Y = None for prediction
-        # Y = [
-        #     // List of batches (size=BATCH_SIZE)
-        #     [
-        #         // List of labels (scores) using -1 for paddings (size=LIST_SIZE)
-        #     ]
-        # ]
+    def build_train_set(self, ltr_helper, topics, qrels):
+        """Compute query features for topics and qrels and prepare the training set."""
 
-        features = pd.DataFrame(columns=['doc_id', 'qid'] + TensorFlowRanking.FEATURES)
+        train_set = pd.DataFrame(columns=['label', 'qid', 'doc_id'] + TensorFlowRanking.FEATURES)
+
         for topic_id, doc_scores in qrels.items():
             query = topics[topic_id]
 
@@ -1634,21 +1593,200 @@ class TensorFlowRanking(Index):
             for doc_id in doc_scores.keys():
                 j_doc_ids.add(doc_id)
 
-            j_doc_query_features = ltr_helper.computeQueryDocumentFeatures(query, j_doc_ids, True)
+            j_doc_query_features = ltr_helper.computeQueryDocumentFeatures(query, j_doc_ids)
             for entry in j_doc_query_features.entrySet():
+                doc_id = entry.getKey()
+                label = float(doc_scores[doc_id])
                 j_features = entry.getValue()
-                features = features.append(
-                    pd.Series(
-                        data=[doc_id, topic_id] + [0 if v.isNaN() else v for v in j_features.values()], # FIXME NaNs
-                        index=['doc_id', 'qid'] + [v for v in j_features.keySet()]),
-                    ignore_index=True)
-        print(features)
 
-        X = []
-        Y = []
-        train = (X, Y)
+                train_set = train_set.append(
+                    pd.Series(
+                        data=[label, topic_id, doc_id] + [v.floatValue() for v in j_features.values()],
+                        index=['label', 'qid', 'doc_id'] + [v for v in j_features.keySet()]),
+                    ignore_index=True)
+
+        train_set = train_set.fillna(0)
+
+        logger.info("Scaling features")
+        scaler = MinMaxScaler(feature_range=[-1, 1])
+        train_set.iloc[:, 3:train_set.shape[1]] = scaler.fit_transform(train_set.iloc[:, 3:train_set.shape[1]])
+        joblib.dump(scaler, self.scaler_filename)
+        logger.info("Saved scaler to %s" % self.scaler_filename)
+
+        logger.info("Sorting by qid")
+        train_set = train_set.sort_values(by=['qid'])
+
+        # train_set.to_csv('/tmp/features.csv')
+
+        return train_set
+
+    def build_predict_set(self, ltr_helper, query):
+        """Compute query features for topics and qrels and prepare the training set."""
+
+        doc_ids = []
+        predict_set = pd.DataFrame(columns=TensorFlowRanking.FEATURES)
+        j_doc_query_features = ltr_helper.computeQueryDocumentFeatures(query)
+
+        for entry in j_doc_query_features.entrySet():
+            doc_id = entry.getKey()
+            j_features = entry.getValue()
+
+            doc_ids.append(doc_id)
+
+            predict_set = predict_set.append(
+                pd.Series(
+                    data=[v.floatValue() for v in j_features.values()],
+                    index=[v for v in j_features.keySet()]),
+                ignore_index=True)
+
+        logger.info("Scaling features using scaler from %s" % self.scaler_filename)
+        scaler = joblib.load(self.scaler_filename)
+        predict_set.iloc[:, :] = scaler.fit_transform(predict_set)
+
+        return doc_ids, predict_set
+
+    def pandas_generator(self, dataset):
+        num_features = TensorFlowRanking.NUM_FEATURES
+        list_size = TensorFlowRanking.LIST_SIZE
+
+        def inner_generator():
+            columns = ['label', 'qid', 'doc_id'] + [str(v) for v in range(1, num_features+1)]
+            for qid, group in dataset.groupby('qid'):
+                x = pd.DataFrame(columns=columns)
+
+                rand_idx = np.random.choice(len(group), min(list_size, len(group)))
+                for row in group.iloc[rand_idx, :].values:
+                    doc_features = np.pad(row, (0, num_features - len(row) + 3), 'constant', constant_values=(0, 0))
+                    x = x.append(pd.Series(data=doc_features, index=columns), ignore_index=True)
+
+                if len(x) < list_size:
+                    zeros = pd.DataFrame([[-1] + [0] * (num_features + 2)], columns=columns)
+                    x = pd.concat([x] + [zeros] * (list_size - len(x)))
+
+                # features = np.array([ [[d] for d in v] for v in x.iloc[:, 3:].values ], dtype=np.float32)
+                # features = dict((str(k), v) for k, v in enumerate(features, 1))
+                features = dict((str(k), np.array([[d] for d in v], dtype=np.float32))
+                                for k, v in x.iloc[:, 3:].to_dict('list').items())
+                labels = np.array(x['label'].values, dtype=np.float32)
+
+                yield features, labels
+
+        return inner_generator
+
+    def input_fn(self, pd_generator):
+        train_set = tf.data.Dataset.from_generator(
+            pd_generator,
+            output_types=(
+                { str(k): tf.float32 for k in range(1, TensorFlowRanking.NUM_FEATURES + 1) },
+                tf.float32
+            ),
+            output_shapes=(
+                { str(k): tf.TensorShape([TensorFlowRanking.LIST_SIZE, 1])
+                  for k in range(1, TensorFlowRanking.NUM_FEATURES + 1) },
+                tf.TensorShape([TensorFlowRanking.LIST_SIZE])
+            )
+        )
+
+        train_set = train_set.shuffle(1000).repeat().batch(TensorFlowRanking.BATCH_SIZE)
+        return train_set.make_one_shot_iterator().get_next()
+
+    def example_feature_columns(self):
+        feature_names = ["%d" % (i + 1) for i in range(0, TensorFlowRanking.NUM_FEATURES)]
+        return { name: tf.feature_column.numeric_column(name, shape=(1,), default_value=0.0)
+                 for name in feature_names }
+
+    def make_score_fn(self):
+        def _score_fn(context_features, group_features, mode, params, config):
+            del params
+            del config
+            example_input = [tf.layers.flatten(group_features[name])
+                             for name in sorted(self.example_feature_columns())]
+            input_layer = tf.concat(example_input, 1)
+
+            cur_layer = input_layer
+            for i, layer_width in enumerate(int(d) for d in TensorFlowRanking.HIDDEN_LAYER_DIMS):
+                cur_layer = tf.layers.dense(
+                    cur_layer,
+                    units=layer_width,
+                    activation="tanh")
+
+            logits = tf.layers.dense(cur_layer, units=1)
+            return logits
+
+        return _score_fn
+
+    def eval_metric_fns(self):
+        metric_fns = {}
+        metric_fns.update({
+            "metric/ndcg@%d" % topn: tfr.metrics.make_ranking_metric_fn(tfr.metrics.RankingMetricKey.NDCG, topn=topn)
+            for topn in [1, 3, 5, 10]
+        })
+
+        return metric_fns
+
+    def get_estimator(self, hparams):
+        def _train_op_fn(loss):
+            return tf.contrib.layers.optimize_loss(
+                loss=loss,
+                global_step=tf.train.get_global_step(),
+                learning_rate=hparams.learning_rate,
+                optimizer="Adagrad")
+
+        ranking_head = tfr.head.create_ranking_head(
+            loss_fn=tfr.losses.make_loss_fn(TensorFlowRanking.LOSS),
+            eval_metric_fns=self.eval_metric_fns(),
+            train_op_fn=_train_op_fn)
+
+        return tf.estimator.Estimator(
+            model_fn=tfr.model.make_groupwise_ranking_fn(
+                group_score_fn=self.make_score_fn(),
+                group_size=1,
+                transform_fn=None,
+                ranking_head=ranking_head),
+            model_dir = os.path.join(self.index_location, 'model'),
+            params=hparams)
+
+    async def index(self, features_location=None):
+        if not features_location:
+            raise ArmyAntException("Must provide a features location with topics.txt and qrels.txt files")
+
+        topics = self.load_topics(features_location)
+        qrels = self.load_qrels(features_location)
+
+        async for doc in self.lucene_engine.index(features_location=features_location):
+            self.process_web_features(doc)
+            yield doc
+
+        ltr_helper = TensorFlowRanking.JLearningToRankHelper(self.lucene_index_location)
+        ltr_helper.computeDocumentFeatures()
+        j_graph_based_features = self.j_build_graph_based_features()
+        ltr_helper.updateDocumentFeatures(j_graph_based_features)
+        train_set = self.build_train_set(ltr_helper, topics, qrels)
+
+        print(train_set)
+
+        pd_train_generator = self.pandas_generator(train_set)
+
+        logger.info("Training model")
+        hparams = tf.contrib.training.HParams(learning_rate=0.05)
+        ranker = self.get_estimator(hparams)
+        ranker.train(input_fn=lambda: self.input_fn(pd_train_generator), steps=100)
 
     async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
+        # hparams = tf.contrib.training.HParams(learning_rate=0.05)
+        # ranker = self.get_estimator(hparams)
+
+        # k = 100
+        # doc_ids = self.get_doc_ids(limit=k) # FIXME replace with regular search function (e.g., BM25)
+        # results = ranker.predict(input_fn=lambda: self.predict_data_fn(query, doc_ids))
+        # results = zip([next(results)[0] for i in range(k)], doc_ids)
+        # results = list(sorted(results, key=lambda d: -d[0]))[offset:(offset + limit)]
+
+        # results = [Result(result[0], result[1], result[1], 'document')
+        #            for result in itertools.islice(results, offset, offset + limit)]
+
+        # return ResultSet(results, len(results))
+
         return await self.lucene_engine.search(
             query, offset, limit,
             task=task, ranking_function=ranking_function, ranking_params=ranking_params, debug=debug)

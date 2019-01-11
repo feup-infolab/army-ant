@@ -373,7 +373,7 @@ class INEXDirectoryReader(Reader):
         inex_iterators = [
             iter(INEXReader(
                 file_path, include_dbpedia=include_dbpedia,
-                title_index=title_index if use_memory else title_index_path, limit=1)) # DELETEME limit
+                title_index=title_index if use_memory else title_index_path))
             for file_path in file_paths
         ]
         self.it = itertools.chain(*inex_iterators)
@@ -481,10 +481,10 @@ class TRECWashingtonPostReader(MongoDBReader):
         super(TRECWashingtonPostReader, self).__init__(source_path)
 
         self.ac_ner = None
-        
+
         self.articles = self.db.articles.find({}, no_cursor_timeout=True)
         self.blog_posts = self.db.blog_posts.find({}, no_cursor_timeout=True)
-        
+
         self.features_location = features_location
         self.include_ae_doc_profile = include_ae_doc_profile
         self.include_dbpedia = include_dbpedia
@@ -493,7 +493,7 @@ class TRECWashingtonPostReader(MongoDBReader):
 
         if include_ae_doc_profile:
             ignored_features = ['Language', 'NamedEntities', 'SentimentAnalysis', 'EmotionCategories']
-            
+
             logger.info("Loading and preprocessing features from Antonio Espejo's document profile")
             self.features = pd.read_csv(os.path.join(self.features_location, 'features.tsv.gz'),
                                         sep='\t', index_col='id', na_filter=False, compression='gzip')
@@ -561,7 +561,7 @@ class TRECWashingtonPostReader(MongoDBReader):
                     feature_values = self.parse_feature_array(doc_features[feature_name], dicretized_version=True)
                 else:
                     feature_values = [doc_features[feature_name]]
-                
+
                 if feature_values is None or len(feature_values) == 0: continue
 
                 for feature_value in feature_values:
