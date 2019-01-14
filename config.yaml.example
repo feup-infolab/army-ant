@@ -475,6 +475,34 @@ engines:
             AE: [L, B, Disabled]
             N: [H1, H2, H3, Z, Disabled]
 
+  tfr-inex-3t-nl:
+    name: INEX 3T-NL - TFR Lucene Reranker
+    db:
+      name: aa_inex
+    index:
+      type: tfr
+      location: /opt/army-ant/indexes/inex-3t-nl/tfr
+    ranking:
+      default:
+        id: tf_idf
+        #params:
+          #k1: 1.2
+          #b: 0.75
+      functions:
+        tf_idf:
+          name: TF-IDF
+        bm25:
+          name: BM25
+          params:
+            k1: [1, 1.2, 1.8]
+            b: [0.5, 0.75, 1]
+        dfr:
+          name: DFR
+          params:
+            BM: [BE, G, P, D, In, Ine, IF]
+            AE: [L, B, Disabled]
+            N: [H1, H2, H3, Z, Disabled]
+
   gow-trec2017:
     name: TREC 2017 - Graph of Word
     message: >-

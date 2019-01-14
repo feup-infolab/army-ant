@@ -61,13 +61,13 @@ class CommandLineInterfaceAnalysis(object):
         except:
             logger.warning("Empty ranking parameters for %s" % ranking_function_a)
             ranking_params_a = {}
-        
+
         try:
             ranking_params_b = dict(tuple(param.split('=')) for param in ranking_params_b.split(','))
         except:
             logger.warning("Empty ranking parameters for %s" % ranking_function_b)
             ranking_params_b = {}
-        
+
         loop = asyncio.get_event_loop()
         try:
             loop.run_until_complete(
@@ -355,4 +355,3 @@ class CommandLineInterface(object):
 
 if __name__ == '__main__':
     fire.Fire(CommandLineInterface)
-    if isJVMStarted(): shutdownJVM()

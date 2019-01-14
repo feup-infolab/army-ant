@@ -20,6 +20,7 @@ import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.similarities.AfterEffect;
 import org.apache.lucene.search.similarities.BM25Similarity;
 import org.apache.lucene.search.similarities.BasicModel;
@@ -67,7 +68,7 @@ public class LuceneEngine extends Engine {
     public LuceneEngine(String path) throws Exception {
         this.path = path;
         directory = FSDirectory.open(Paths.get(path));
-        analyzer = new StandardAnalyzer();        
+        analyzer = new StandardAnalyzer();
     }
 
     public void open() throws Exception {
@@ -159,18 +160,18 @@ public class LuceneEngine extends Engine {
 
         QueryParser parser = new QueryParser("text", analyzer);
         Query luceneQuery = parser.parse(query);
-        ScoreDoc[] hits = searcher.search(luceneQuery, offset + limit).scoreDocs;
+        TopDocs hits = searcher.search(luceneQuery, offset + limit);
 
         ResultSet results = new ResultSet();
-        results.setNumDocs((long) hits.length);
+        results.setNumDocs((long) hits.totalHits);
         results.setTrace(new Trace());
 
-        int end = Math.min(offset + limit, hits.length);
+        int end = Math.min(offset + limit, hits.scoreDocs.length);
         for (int i = offset; i < end; i++) {
-            org.apache.lucene.document.Document doc = searcher.doc(hits[i].doc);
+            org.apache.lucene.document.Document doc = searcher.doc(hits.scoreDocs[i].doc);
             String docID = doc.get("doc_id");
             String title = doc.get("title");
-            results.addResult(new Result(hits[i].score, docID, title));
+            results.addResult(new Result(hits.scoreDocs[i].score, docID, title));
         }
 
         reader.close();

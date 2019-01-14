@@ -1809,9 +1809,9 @@ class TensorFlowRanking(Index):
 
         results = ranker.predict(input_fn=lambda: (predict_set, None))
         results = zip([next(results)[0] for i in range(k)], doc_ids)
-        results = list(sorted(results, key=lambda d: -d[0]))[offset:(offset + limit)]
+        results = sorted(results, key=lambda d: -d[0])
 
         results = [Result(result[0], result[1], result[1], 'document')
                    for result in itertools.islice(results, offset, offset + limit)]
 
-        return ResultSet(results, len(results))
+        return ResultSet(results, len(doc_ids))
