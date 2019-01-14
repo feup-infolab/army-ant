@@ -77,38 +77,48 @@ public class LuceneLearningToRankHelper extends LuceneEngine {
             String docID = doc.get("doc_id");
             if (!docQueryFeatures.containsKey(docID)) docQueryFeatures.put(docID, new LinkedHashMap<>());
 
-            Terms terms = reader.getTermVector(scoreDoc.doc, "text");
-
-            TermsEnum termsEnum = terms.iterator();
-
             float idf = 0;
             float numQueryTerms = 0;
             float numDocsWithQueryTerms = 0;
             float sumQueryTF = 0;
-            float minQueryTF = Integer.MAX_VALUE;
-            float maxQueryTF = Integer.MIN_VALUE;
-            ArrayList<Long> queryTermFrequencies = new ArrayList<>();
+            float minQueryTF = 0;
+            float maxQueryTF = 0;
+            float normNumQueryTerms = 0;
+            float avgQueryTF = 0;
+            float varQueryTF = 0;
 
-            for (String queryTerm : queryTerms) {
-                if (termsEnum.seekExact(new BytesRef(queryTerm.getBytes())) && termsEnum.docFreq() > 0) {
-                    numQueryTerms += 1;
-                    numDocsWithQueryTerms += termsEnum.docFreq();
+            Terms terms = reader.getTermVector(scoreDoc.doc, "text");
 
-                    long tf = termsEnum.totalTermFreq();
-                    sumQueryTF += tf;
-                    if (tf < minQueryTF) minQueryTF = tf;
-                    if (tf > maxQueryTF) maxQueryTF = tf;
-                    queryTermFrequencies.add(tf);
+            if (terms != null && terms.size() > 0) {
+                minQueryTF = Integer.MAX_VALUE;
+                maxQueryTF = Integer.MIN_VALUE;
+                ArrayList<Long> queryTermFrequencies = new ArrayList<>();
+
+                TermsEnum termsEnum = terms.iterator();
+
+                for (String queryTerm : queryTerms) {
+                    if (termsEnum.seekExact(new BytesRef(queryTerm.getBytes())) && termsEnum.docFreq() > 0) {
+                        numQueryTerms += 1;
+                        numDocsWithQueryTerms += termsEnum.docFreq();
+
+                        long tf = termsEnum.totalTermFreq();
+                        sumQueryTF += tf;
+                        if (tf < minQueryTF) minQueryTF = tf;
+                        if (tf > maxQueryTF) maxQueryTF = tf;
+                        queryTermFrequencies.add(tf);
+                    }
+
+                    if (numDocsWithQueryTerms > 0) idf = 1f / numDocsWithQueryTerms;
                 }
 
-                if (numDocsWithQueryTerms > 0) idf = 1f / numDocsWithQueryTerms;
-            }
+                normNumQueryTerms = (float) numQueryTerms / queryTerms.size();
+                avgQueryTF = (float) sumQueryTF / queryTerms.size();
 
-            float normNumQueryTerms = (float) numQueryTerms / queryTerms.size();
-            float avgQueryTF = (float) sumQueryTF / queryTerms.size();
-            float varQueryTF = (float) queryTermFrequencies.stream()
-                .mapToDouble(tf -> Math.pow(tf - avgQueryTF, 2))
-                .sum() / queryTermFrequencies.size();
+                final float avg = avgQueryTF;
+                varQueryTF = (float) queryTermFrequencies.stream()
+                    .mapToDouble(tf -> Math.pow(tf - avg, 2))
+                    .sum() / queryTermFrequencies.size();
+            }
 
             docQueryFeatures.get(docID).put("num_query_terms", numQueryTerms);
             docQueryFeatures.get(docID).put("norm_num_query_terms", normNumQueryTerms);
@@ -242,30 +252,41 @@ public class LuceneLearningToRankHelper extends LuceneEngine {
         for (int docID = 0; docID < reader.maxDoc(); docID++) {
             if (liveDocs != null && !liveDocs.get(docID)) continue;
 
+            long streamLength = 0;
+            double sumNormTF = 0;
+            double minNormTF = 0;
+            double maxNormTF = 0;
+            double avgNormTF = 0;
+            double varNormTF = 0;
+
             Terms terms = reader.getTermVector(docID, "text");
 
-            ArrayList<Integer> termFrequencies = new ArrayList<>();
-            TermsEnum termsEnum = terms.iterator();
-            while (termsEnum.next() != null) {
-                termFrequencies.add((int) termsEnum.totalTermFreq());
+            if (terms != null && terms.size() > 0) {
+                ArrayList<Integer> termFrequencies = new ArrayList<>();
+                TermsEnum termsEnum = terms.iterator();
+                while (termsEnum.next() != null) {
+                    termFrequencies.add((int) termsEnum.totalTermFreq());
+                }
+
+                streamLength = termFrequencies.stream().mapToInt(d -> d).sum();
+                minNormTF = Double.MAX_VALUE;
+                maxNormTF = Double.MIN_VALUE;
+
+                for (double tf : termFrequencies) {
+                    double normTF = tf / streamLength;
+                    sumNormTF += normTF;
+                    if (normTF < minNormTF) minNormTF = normTF;
+                    if (normTF > maxNormTF) maxNormTF = normTF;
+                }
+
+                avgNormTF = sumNormTF / termFrequencies.size();
+
+                final double avg = avgNormTF;
+                final long len = streamLength;
+                varNormTF = termFrequencies.stream()
+                    .mapToDouble(tf -> Math.pow(tf / len - avg, 2))
+                    .sum() / termFrequencies.size();
             }
-
-            long streamLength = termFrequencies.stream().mapToInt(d -> d).sum();
-            double sumNormTF = 0;
-            double minNormTF = Double.MAX_VALUE;
-            double maxNormTF = Double.MIN_VALUE;
-
-            for (double tf : termFrequencies) {
-                double normTF = tf / streamLength;
-                sumNormTF += normTF;
-                if (normTF < minNormTF) minNormTF = normTF;
-                if (normTF > maxNormTF) maxNormTF = normTF;
-            }
-
-            double avgNormTF = sumNormTF / termFrequencies.size();
-            double varNormTF = termFrequencies.stream()
-                .mapToDouble(tf -> Math.pow(tf / streamLength - avgNormTF, 2))
-                .sum() / termFrequencies.size();
 
             Document doc = reader.document(docID);
 
