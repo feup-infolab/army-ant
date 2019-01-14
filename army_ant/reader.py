@@ -93,7 +93,7 @@ class Document(object):
         self.metadata = metadata
 
     def __repr__(self):
-        entities = [] if self.entities is None else [str(entities) for entity in self.entities]
+        entities = [] if self.entities is None else [str(entity) for entity in self.entities]
         triples = [] if self.triples is None else [str(triple) for triple in self.triples]
         metadata = [] if self.metadata is None else [str((k, v)) for k, v in self.metadata.items()]
 
