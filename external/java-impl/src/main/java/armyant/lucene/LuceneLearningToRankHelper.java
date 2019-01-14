@@ -27,6 +27,7 @@ import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
@@ -58,7 +59,7 @@ public class LuceneLearningToRankHelper extends LuceneEngine {
 
         if (batch == null || batch.isEmpty()) {
             logger.warn("Considering all documents");
-            baseQuery = new QueryParser("text", this.analyzer).parse("*");
+            baseQuery = new MatchAllDocsQuery();
             maxResults = reader.numDocs();
         } else {
             BooleanQuery.Builder baseQueryBuilder = new BooleanQuery.Builder();
@@ -67,121 +68,121 @@ public class LuceneLearningToRankHelper extends LuceneEngine {
             }
             baseQuery = baseQueryBuilder.build();
             maxResults = batch.size();
-
-            TopDocs hits = searcher.search(baseQuery, maxResults);
-
-            for (ScoreDoc scoreDoc : hits.scoreDocs) {
-                Document doc = reader.document(scoreDoc.doc);
-                String docID = doc.get("doc_id");
-                if (!docQueryFeatures.containsKey(docID)) docQueryFeatures.put(docID, new LinkedHashMap<>());
-
-                Terms terms = reader.getTermVector(scoreDoc.doc, "text");
-
-                TermsEnum termsEnum = terms.iterator();
-
-                float idf = 0;
-                float numQueryTerms = 0;
-                float numDocsWithQueryTerms = 0;
-                float sumQueryTF = 0;
-                float minQueryTF = Integer.MAX_VALUE;
-                float maxQueryTF = Integer.MIN_VALUE;
-                ArrayList<Long> queryTermFrequencies = new ArrayList<>();
-
-                for (String queryTerm : queryTerms) {
-                    if (termsEnum.seekExact(new BytesRef(queryTerm.getBytes())) && termsEnum.docFreq() > 0) {
-                        numQueryTerms += 1;
-                        numDocsWithQueryTerms += termsEnum.docFreq();
-
-                        long tf = termsEnum.totalTermFreq();
-                        sumQueryTF += tf;
-                        if (tf < minQueryTF) minQueryTF = tf;
-                        if (tf > maxQueryTF) maxQueryTF = tf;
-                        queryTermFrequencies.add(tf);
-                    }
-
-                    if (numDocsWithQueryTerms > 0) idf = 1f / numDocsWithQueryTerms;
-                }
-
-                float normNumQueryTerms = (float) numQueryTerms / queryTerms.size();
-                float avgQueryTF = (float) sumQueryTF / queryTerms.size();
-                float varQueryTF = (float) queryTermFrequencies.stream()
-                    .mapToDouble(tf -> Math.pow(tf - avgQueryTF, 2))
-                    .sum() / queryTermFrequencies.size();
-
-                docQueryFeatures.get(docID).put("num_query_terms", numQueryTerms);
-                docQueryFeatures.get(docID).put("norm_num_query_terms", normNumQueryTerms);
-                docQueryFeatures.get(docID).put("idf", idf);
-                docQueryFeatures.get(docID).put("sum_query_tf", sumQueryTF);
-                docQueryFeatures.get(docID).put("min_query_tf", minQueryTF);
-                docQueryFeatures.get(docID).put("max_query_tf", maxQueryTF);
-                docQueryFeatures.get(docID).put("avg_query_tf", avgQueryTF);
-                docQueryFeatures.get(docID).put("var_query_tf", Float.isNaN(varQueryTF) ? 0 : varQueryTF);
-
-                // Query-independent features (document and web)
-                for (IndexableField field : doc.getFields()) {
-                    if (NON_FEATURE_FIELDS.contains(field.name())) continue;
-                    docQueryFeatures.get(docID).put(field.name(), field.numericValue().floatValue());
-                }
-            }
-
-            QueryParser queryParser = new QueryParser("text", this.analyzer);
-            Query lQuery = new BooleanQuery.Builder()
-                .add(baseQuery, BooleanClause.Occur.MUST)
-                .add(queryParser.parse(query), BooleanClause.Occur.SHOULD)
-                .build();
-
-            // TF-IDF
-            searcher.setSimilarity(new ClassicSimilarity());
-            hits = searcher.search(lQuery, maxResults);
-
-            for (ScoreDoc scoreDoc : hits.scoreDocs) {
-                Document doc = reader.document(scoreDoc.doc);
-                String docID = doc.get("doc_id");
-                docQueryFeatures.get(docID).put("tf_idf", scoreDoc.score);
-            }
-
-            // BM25
-            searcher.setSimilarity(new BM25Similarity());
-            hits = searcher.search(lQuery, maxResults);
-
-            for (ScoreDoc scoreDoc : hits.scoreDocs) {
-                Document doc = reader.document(scoreDoc.doc);
-                String docID = doc.get("doc_id");
-                docQueryFeatures.get(docID).put("bm25", scoreDoc.score);
-            }
-
-            // LM-JelinekMercer(lambda=0.7)
-            // Lambda was set according to an intuition from Figure 1 in
-            // Zhai, Chengxiang, and John Lafferty. "A study of smoothing methods for language models
-            // applied to ad hoc information retrieval." ACM SIGIR Forum. Vol. 51. No. 2. ACM, 2017.
-            // http://www.iro.umontreal.ca/~nie/IFT6255/zhai-lafferty.pdf
-            searcher.setSimilarity(new LMJelinekMercerSimilarity(0.7f));
-            hits = searcher.search(lQuery, maxResults);
-
-            for (ScoreDoc scoreDoc : hits.scoreDocs) {
-                Document doc = reader.document(scoreDoc.doc);
-                String docID = doc.get("doc_id");
-                docQueryFeatures.get(docID).put("lm_jelinek_mercer", scoreDoc.score);
-            }
-
-            // LM-Dirichlet
-            searcher.setSimilarity(new LMDirichletSimilarity());
-            hits = searcher.search(lQuery, maxResults);
-
-            for (ScoreDoc scoreDoc : hits.scoreDocs) {
-                Document doc = reader.document(scoreDoc.doc);
-                String docID = doc.get("doc_id");
-                docQueryFeatures.get(docID).put("lm_dirichlet", scoreDoc.score);
-            }
-
-            /*for (Map.Entry<String, Map<String,Float>> entry : docQueryFeatures.entrySet()) {
-                System.out.println("docID: " + entry.getKey());
-                for (Map.Entry<String, Float> featuresEntry : entry.getValue().entrySet()) {
-                    System.out.println(featuresEntry.getKey() + ": " + featuresEntry.getValue());
-                }
-                System.out.println();
-            }*/
         }
+
+        TopDocs hits = searcher.search(baseQuery, maxResults);
+
+        for (ScoreDoc scoreDoc : hits.scoreDocs) {
+            Document doc = reader.document(scoreDoc.doc);
+            String docID = doc.get("doc_id");
+            if (!docQueryFeatures.containsKey(docID)) docQueryFeatures.put(docID, new LinkedHashMap<>());
+
+            Terms terms = reader.getTermVector(scoreDoc.doc, "text");
+
+            TermsEnum termsEnum = terms.iterator();
+
+            float idf = 0;
+            float numQueryTerms = 0;
+            float numDocsWithQueryTerms = 0;
+            float sumQueryTF = 0;
+            float minQueryTF = Integer.MAX_VALUE;
+            float maxQueryTF = Integer.MIN_VALUE;
+            ArrayList<Long> queryTermFrequencies = new ArrayList<>();
+
+            for (String queryTerm : queryTerms) {
+                if (termsEnum.seekExact(new BytesRef(queryTerm.getBytes())) && termsEnum.docFreq() > 0) {
+                    numQueryTerms += 1;
+                    numDocsWithQueryTerms += termsEnum.docFreq();
+
+                    long tf = termsEnum.totalTermFreq();
+                    sumQueryTF += tf;
+                    if (tf < minQueryTF) minQueryTF = tf;
+                    if (tf > maxQueryTF) maxQueryTF = tf;
+                    queryTermFrequencies.add(tf);
+                }
+
+                if (numDocsWithQueryTerms > 0) idf = 1f / numDocsWithQueryTerms;
+            }
+
+            float normNumQueryTerms = (float) numQueryTerms / queryTerms.size();
+            float avgQueryTF = (float) sumQueryTF / queryTerms.size();
+            float varQueryTF = (float) queryTermFrequencies.stream()
+                .mapToDouble(tf -> Math.pow(tf - avgQueryTF, 2))
+                .sum() / queryTermFrequencies.size();
+
+            docQueryFeatures.get(docID).put("num_query_terms", numQueryTerms);
+            docQueryFeatures.get(docID).put("norm_num_query_terms", normNumQueryTerms);
+            docQueryFeatures.get(docID).put("idf", idf);
+            docQueryFeatures.get(docID).put("sum_query_tf", sumQueryTF);
+            docQueryFeatures.get(docID).put("min_query_tf", minQueryTF);
+            docQueryFeatures.get(docID).put("max_query_tf", maxQueryTF);
+            docQueryFeatures.get(docID).put("avg_query_tf", avgQueryTF);
+            docQueryFeatures.get(docID).put("var_query_tf", Float.isNaN(varQueryTF) ? 0 : varQueryTF);
+
+            // Query-independent features (document and web)
+            for (IndexableField field : doc.getFields()) {
+                if (NON_FEATURE_FIELDS.contains(field.name())) continue;
+                docQueryFeatures.get(docID).put(field.name(), field.numericValue().floatValue());
+            }
+        }
+
+        QueryParser queryParser = new QueryParser("text", this.analyzer);
+        Query lQuery = new BooleanQuery.Builder()
+            .add(baseQuery, BooleanClause.Occur.MUST)
+            .add(queryParser.parse(query), BooleanClause.Occur.SHOULD)
+            .build();
+
+        // TF-IDF
+        searcher.setSimilarity(new ClassicSimilarity());
+        hits = searcher.search(lQuery, maxResults);
+
+        for (ScoreDoc scoreDoc : hits.scoreDocs) {
+            Document doc = reader.document(scoreDoc.doc);
+            String docID = doc.get("doc_id");
+            docQueryFeatures.get(docID).put("tf_idf", scoreDoc.score);
+        }
+
+        // BM25
+        searcher.setSimilarity(new BM25Similarity());
+        hits = searcher.search(lQuery, maxResults);
+
+        for (ScoreDoc scoreDoc : hits.scoreDocs) {
+            Document doc = reader.document(scoreDoc.doc);
+            String docID = doc.get("doc_id");
+            docQueryFeatures.get(docID).put("bm25", scoreDoc.score);
+        }
+
+        // LM-JelinekMercer(lambda=0.7)
+        // Lambda was set according to an intuition from Figure 1 in
+        // Zhai, Chengxiang, and John Lafferty. "A study of smoothing methods for language models
+        // applied to ad hoc information retrieval." ACM SIGIR Forum. Vol. 51. No. 2. ACM, 2017.
+        // http://www.iro.umontreal.ca/~nie/IFT6255/zhai-lafferty.pdf
+        searcher.setSimilarity(new LMJelinekMercerSimilarity(0.7f));
+        hits = searcher.search(lQuery, maxResults);
+
+        for (ScoreDoc scoreDoc : hits.scoreDocs) {
+            Document doc = reader.document(scoreDoc.doc);
+            String docID = doc.get("doc_id");
+            docQueryFeatures.get(docID).put("lm_jelinek_mercer", scoreDoc.score);
+        }
+
+        // LM-Dirichlet
+        searcher.setSimilarity(new LMDirichletSimilarity());
+        hits = searcher.search(lQuery, maxResults);
+
+        for (ScoreDoc scoreDoc : hits.scoreDocs) {
+            Document doc = reader.document(scoreDoc.doc);
+            String docID = doc.get("doc_id");
+            docQueryFeatures.get(docID).put("lm_dirichlet", scoreDoc.score);
+        }
+
+        /*for (Map.Entry<String, Map<String,Float>> entry : docQueryFeatures.entrySet()) {
+            System.out.println("docID: " + entry.getKey());
+            for (Map.Entry<String, Float> featuresEntry : entry.getValue().entrySet()) {
+                System.out.println(featuresEntry.getKey() + ": " + featuresEntry.getValue());
+            }
+            System.out.println();
+        }*/
 
         return docQueryFeatures;
     }
@@ -213,7 +214,7 @@ public class LuceneLearningToRankHelper extends LuceneEngine {
         IndexSearcher searcher = new IndexSearcher(reader);
 
         if (filterByDocID == null) {
-            computeQueryDocumentFeaturesBatch(reader, searcher, query, queryTerms, null);
+            docQueryFeatures.putAll(computeQueryDocumentFeaturesBatch(reader, searcher, query, queryTerms, null));
         } else {
             List<List<String>> batches = ListUtils.partition(filterByDocID, 1000);
             logger.info("Split into {} batches of 1000 documents", batches.size());

@@ -1620,12 +1620,19 @@ class TensorFlowRanking(Index):
 
         return train_set
 
-    def build_predict_set(self, ltr_helper, query):
+    def build_predict_set(self, ltr_helper, query, filter_by_doc_id=None):
         """Compute query features for topics and qrels and prepare the training set."""
+
+        if filter_by_doc_id is None:
+            j_doc_query_features = ltr_helper.computeQueryDocumentFeatures(query)
+        else:
+            j_doc_ids = java.util.ArrayList()
+            for doc_id in filter_by_doc_id:
+                j_doc_ids.add(doc_id)
+            j_doc_query_features = ltr_helper.computeQueryDocumentFeatures(query, j_doc_ids)
 
         doc_ids = []
         predict_set = pd.DataFrame(columns=TensorFlowRanking.FEATURES)
-        j_doc_query_features = ltr_helper.computeQueryDocumentFeatures(query)
 
         for entry in j_doc_query_features.entrySet():
             doc_id = entry.getKey()
@@ -1639,9 +1646,22 @@ class TensorFlowRanking(Index):
                     index=[v for v in j_features.keySet()]),
                 ignore_index=True)
 
-        logger.info("Scaling features using scaler from %s" % self.scaler_filename)
-        scaler = joblib.load(self.scaler_filename)
-        predict_set.iloc[:, :] = scaler.fit_transform(predict_set)
+        if len(predict_set) != 0:
+            logger.info("Scaling features using scaler from %s" % self.scaler_filename)
+            scaler = joblib.load(self.scaler_filename)
+            predict_set.iloc[:, :] = scaler.fit_transform(predict_set)
+
+            num_docs = predict_set.shape[0]
+            predict_set = predict_set.to_dict(orient='list', into=OrderedDict)
+
+            if len(predict_set) < TensorFlowRanking.NUM_FEATURES:
+                for k in range(len(predict_set)+1, TensorFlowRanking.NUM_FEATURES+1):
+                    predict_set[k] = [0] * num_docs
+
+            predict_set = { str(k): np.array([[d] for d in v], dtype=np.float32)
+                            for k, v in enumerate(predict_set.values(), 1) }
+        else:
+            logger.warning("Prediction set is empty")
 
         return doc_ids, predict_set
 
@@ -1663,11 +1683,11 @@ class TensorFlowRanking(Index):
                     zeros = pd.DataFrame([[-1] + [0] * (num_features + 2)], columns=columns)
                     x = pd.concat([x] + [zeros] * (list_size - len(x)))
 
-                # features = np.array([ [[d] for d in v] for v in x.iloc[:, 3:].values ], dtype=np.float32)
-                # features = dict((str(k), v) for k, v in enumerate(features, 1))
-                features = dict((str(k), np.array([[d] for d in v], dtype=np.float32))
-                                for k, v in x.iloc[:, 3:].to_dict('list').items())
+                features = { str(k): np.array([[d] for d in v], dtype=np.float32)
+                             for k, v in x.iloc[:, 3:].to_dict('list').items() }
                 labels = np.array(x['label'].values, dtype=np.float32)
+                if np.any(np.isnan(labels)):
+                    labels = None
 
                 yield features, labels
 
@@ -1763,7 +1783,7 @@ class TensorFlowRanking(Index):
         ltr_helper.updateDocumentFeatures(j_graph_based_features)
         train_set = self.build_train_set(ltr_helper, topics, qrels)
 
-        print(train_set)
+        # print(train_set)
 
         pd_train_generator = self.pandas_generator(train_set)
 
@@ -1773,20 +1793,25 @@ class TensorFlowRanking(Index):
         ranker.train(input_fn=lambda: self.input_fn(pd_train_generator), steps=100)
 
     async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
-        # hparams = tf.contrib.training.HParams(learning_rate=0.05)
-        # ranker = self.get_estimator(hparams)
+        hparams = tf.contrib.training.HParams(learning_rate=0.05)
+        ranker = self.get_estimator(hparams)
 
-        # k = 100
-        # doc_ids = self.get_doc_ids(limit=k) # FIXME replace with regular search function (e.g., BM25)
-        # results = ranker.predict(input_fn=lambda: self.predict_data_fn(query, doc_ids))
-        # results = zip([next(results)[0] for i in range(k)], doc_ids)
-        # results = list(sorted(results, key=lambda d: -d[0]))[offset:(offset + limit)]
+        k = 1000
+        ltr_helper = TensorFlowRanking.JLearningToRankHelper(self.lucene_index_location)
+        doc_ids = [result.id for result in ltr_helper.search(
+            query, 0, k, task=task, ranking_function=ranking_function, ranking_params=ranking_params, debug=debug)]
 
-        # results = [Result(result[0], result[1], result[1], 'document')
-        #            for result in itertools.islice(results, offset, offset + limit)]
+        logger.info("Using %d documents for reranking" % len(doc_ids))
 
-        # return ResultSet(results, len(results))
+        doc_ids, predict_set = self.build_predict_set(ltr_helper, query, filter_by_doc_id=doc_ids)
 
-        return await self.lucene_engine.search(
-            query, offset, limit,
-            task=task, ranking_function=ranking_function, ranking_params=ranking_params, debug=debug)
+        # print(predict_set)
+
+        results = ranker.predict(input_fn=lambda: (predict_set, None))
+        results = zip([next(results)[0] for i in range(k)], doc_ids)
+        results = list(sorted(results, key=lambda d: -d[0]))[offset:(offset + limit)]
+
+        results = [Result(result[0], result[1], result[1], 'document')
+                   for result in itertools.islice(results, offset, offset + limit)]
+
+        return ResultSet(results, len(results))
