@@ -21,6 +21,7 @@ SPARQLWrapper==1.8.2
 rdflib==4.2.2
 pyahocorasick==1.1.8
 networkx==2.2
+scikit-learn=0.20.2
 
 #aiogremlin==3.2.4
 #aiocache==0.8.0
