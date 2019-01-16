@@ -1088,7 +1088,7 @@ class TensorFlowRanking(Index):
 
         with open(os.path.join(features_location, 'qrels.txt'), 'r') as f:
             for line in f:
-                topic_id, _, doc_id, score, _ = line.split(' ', 4)
+                topic_id, _, doc_id, score = line.strip().split(' ', 4)[:4]
                 score = int(score)
                 qrels[topic_id][doc_id] = 1 if score > 0 else 0
 

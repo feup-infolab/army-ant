@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# topics_to_csv.py
+# xml_topics_to_csv.py
 # José Devezas <joseluisdevezas@gmail.com>
 # 2019-01-03
 
