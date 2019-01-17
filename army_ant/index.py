@@ -1098,12 +1098,12 @@ class TensorFlowRanking(Index):
         if not doc.doc_id in self.web_features: self.web_features[doc.doc_id] = {}
         self.web_features[doc.doc_id]['url_slashes'] = doc.metadata['url'].count('/')
         self.web_features[doc.doc_id]['url_length'] = len(doc.metadata['url'])
-        self.graph[doc.doc_id] = doc.links
+        self.graph[doc.doc_id] = doc.links or []
 
     def j_build_graph_based_features(self):
         logger.info("Building graph and computing graph-based features")
         self.graph = igraph.Graph.TupleList(
-            [(k, v) for k, vs in self.graph.items() for v in vs if vs is not None],
+            [(k, v) for k, vs in self.graph.items() for v in vs],
             directed=True)
         indegree = self.graph.indegree()
         outdegree = self.graph.outdegree()
