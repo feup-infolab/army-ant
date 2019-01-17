@@ -1102,7 +1102,9 @@ class TensorFlowRanking(Index):
 
     def j_build_graph_based_features(self):
         logger.info("Building graph and computing graph-based features")
-        self.graph = igraph.Graph.TupleList([(k, v) for k, vs in self.graph.items() for v in vs], directed=True)
+        self.graph = igraph.Graph.TupleList(
+            [(k, v) for k, vs in self.graph.items() for v in vs if vs is not None],
+            directed=True)
         indegree = self.graph.indegree()
         outdegree = self.graph.outdegree()
         pagerank = self.graph.pagerank()

@@ -250,6 +250,8 @@ public class LuceneLearningToRankHelper extends LuceneEngine {
 
         Bits liveDocs = MultiFields.getLiveDocs(reader);
         for (int docID = 0; docID < reader.maxDoc(); docID++) {
+            long startTime = System.currentTimeMillis();
+
             if (liveDocs != null && !liveDocs.get(docID)) continue;
 
             long streamLength = 0;
@@ -288,6 +290,7 @@ public class LuceneLearningToRankHelper extends LuceneEngine {
                     .sum() / termFrequencies.size();
             }
 
+            // TODO move to the top and add log with progress
             Document doc = reader.document(docID);
 
             doc.removeFields("stream_length");
@@ -305,6 +308,19 @@ public class LuceneLearningToRankHelper extends LuceneEngine {
             doc.add(new StoredField("var_norm_tf", varNormTF));
 
             writer.updateDocument(new Term("doc_id", doc.get("doc_id")), doc);
+
+            long time = System.currentTimeMillis() - startTime;
+            totalTime += time;
+
+            counter++;
+            avgTimePerDocument = counter > 1 ? (avgTimePerDocument * (counter - 1) + time) / counter : time;
+
+            if (counter % 100 == 0) {
+                logger.info(
+                        "Features extracted from {} documents in {} ({}/doc, {} docs/h)",
+                        counter, formatMillis(totalTime), formatMillis(avgTimePerDocument),
+                        counter * 3600000 / totalTime);
+            }
         }
 
         close();
