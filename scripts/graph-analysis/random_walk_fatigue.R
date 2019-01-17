@@ -4,10 +4,22 @@ pacman::p_load(
   igraph,
   ggplot2,
   tidyr,
-  dplyr
+  dplyr,
+  foreach,
+  logging
 )
 
+basicConfig()
+
 options(stringsAsFactors=FALSE)
+
+if (Sys.info()[["sysname"]] == "Windows") {
+  loginfo("Using doParallel for parallelization")
+  doParallel::registerDoParallel(cores = parallel::detectCores() - 1)
+} else {
+  loginfo("Using doMC for parallelization")
+  doMC::registerDoMC(cores = parallel::detectCores() - 1)
+}
 
 # -------------------------------------------------------------------------------------------------------------------#
 #
@@ -15,9 +27,13 @@ options(stringsAsFactors=FALSE)
 #
 
 page_rank_simulation <- function(g, d=0.85, steps=10000, PR = NULL) {
-  for (i in 1:vcount(g)) {
-    cat("==> Walking", steps, "random steps from node", i, "with teleport\n")
-    PR <- page_rank_simulation_iter(g, start=i, d=d, steps=steps, PR = PR)
+  # for (i in 1:vcount(g)) {
+  #   cat("==> Walking", steps, "random steps from node", i, "with teleport\n")
+  #   PR <- page_rank_simulation_iter(g, start=i, d=d, steps=steps, PR = PR)
+  # }
+
+  PR <- foreach (i = 1:vcount(g), .combine=`+`) %dopar% {
+    page_rank_simulation_iter(g, start=i, d=d, steps=steps)
   }
 
   list(
@@ -111,10 +127,23 @@ fatigued_transition_probability <- function(nf, method="zero", ...) {
 }
 
 fatigued_page_rank_simulation <- function(g, d=0.85, nf=10, steps=1000, use_teleport=FALSE, FPR = NULL) {
-  for (i in 1:vcount(g)) {
+  # for (i in 1:vcount(g)) {
+  #   teleport_str <- ifelse(use_teleport, "teleport", "without teleport")
+  #   cat("==> Walking", steps, "random steps from node", i, "with fatigue and", teleport_str, "\n")
+  #   FPR <- fatigued_page_rank_simulation_iter(g, i, d=d, nf=nf, steps=steps, use_teleport = use_teleport, FPR = FPR)
+  # }
+
+  merge_fpr <- function(a, b) {
+    list(
+      vector=a$vector + b$vector,
+      NF=a$NF + b$NF,
+      iterations=a$iterations + b$iterations)
+  }
+  
+  FPR <- foreach (i = 1:vcount(g), .combine=merge_fpr) %dopar% {
     teleport_str <- ifelse(use_teleport, "teleport", "without teleport")
     cat("==> Walking", steps, "random steps from node", i, "with fatigue and", teleport_str, "\n")
-    FPR <- fatigued_page_rank_simulation_iter(g, i, d=d, nf=nf, steps=steps, use_teleport = use_teleport, FPR = FPR)
+    fatigued_page_rank_simulation_iter(g, i, d=d, nf=nf, steps=steps, use_teleport = use_teleport)
   }
 
   FPR$vector <- FPR$vector / norm(as.matrix(FPR$vector))
@@ -193,7 +222,7 @@ fatigued_page_rank_simulation_iter <- function(g, start, d, nf, steps, use_telep
 # For now, nf is ignored. There is instead a probability of a node being fatigued, depending on its in-degree.
 # This must be revised to also depend on the number of cycles of node fatigue (nf).
 fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fatigue_method='3ord', ...) {
-  stopifnot(fatigue_method %in% c("1ord", "2ord", "3ord"))
+  stopifnot(fatigue_method %in% c("1ord", "2ord", "3ord", "in_out"))
 
   first_order_fatigue <- function(M, ...) {
     kwargs <- list(...)
@@ -349,10 +378,10 @@ plot_replicas_histogram <- function(df) {
 #g <- make_graph(c(1,2, 2,3, 3,2, 4,2, 4,3, 3,1, 4,5, 5,3, 3,6, 6,7, 7,8, 8,1, 8,3))
 #g <- make_graph(c(1,2, 2,4, 4,3, 3,2))
 #g <- read_graph(gzfile("~/Data/facebook_combined.txt.gz"), format = "edgelist")
-# g <- read.graph(
-#   gzfile("~/Data/wikipedia/wikipedia-sample-rw_leskovec_faloutsos-with_transitions-20181122.graphml.gz"), "graphml")
+g <- read.graph(
+  gzfile("~/Data/wikipedia/wikipedia-sample-rw_leskovec_faloutsos-with_transitions-20181122.graphml.gz"), "graphml")
 
-# V(g)$pr <- page_rank(g)$vector
+V(g)$pr <- page_rank(g)$vector
 
 # pr_sim <- page_rank_simulation(g, steps=1000)
 # V(g)$pr_sim <- pr_sim$vector
@@ -366,14 +395,16 @@ plot_replicas_histogram <- function(df) {
 # cor(V(g)$pr, V(g)$pr_iter, method="pearson")
 # cor(V(g)$pr, V(g)$pr_iter, method="spearman")
  
-# fpr_sim <- replicate(25, fatigued_page_rank_simulation(g, steps=1000, use_teleport = FALSE), simplify = FALSE)
-# V(g)$fpr_sim <- fpr_sim[[1]]$vector
-# V(g)$fpr_sim_iter <- fpr_sim[[1]]$iterations
-# cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
-# cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
+fpr_sim <- replicate(25, fatigued_page_rank_simulation(g, steps=1000, use_teleport = TRUE), simplify = FALSE)
+V(g)$fpr_sim <- fpr_sim[[1]]$vector
+V(g)$fpr_sim_iter <- fpr_sim[[1]]$iterations
+cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
+cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
 
-fpr_sim_df <- as.data.frame(do.call(cbind, lapply(fpr_sim[1:10], function(d) d$vector)))
-names(fpr_sim_df) <- sprintf("replica_%.2d", 1:10)
+# Visualize first n_replicas
+n_replicas <- 10
+fpr_sim_df <- as.data.frame(do.call(cbind, lapply(fpr_sim[1:n_replicas], function(d) d$vector)))
+names(fpr_sim_df) <- sprintf("replica_%.2d", 1:n_replicas)
 plot_replicas_histogram(fpr_sim_df) + scale_x_continuous(limits=c(0, 0.0025))
 plot_replicas_histogram(data.frame(PageRank=V(g)$pr))+ scale_x_continuous(limits=c(0, 0.0025))
 

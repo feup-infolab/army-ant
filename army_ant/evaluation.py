@@ -285,16 +285,24 @@ class FilesystemEvaluator(Evaluator):
         result_files = self.get_result_files(params_id)
 
         ideal_rankings = {}
+        qrels = {}
         for topic_id, judgements in topic_doc_judgements.items():
-            ideal_rankings[topic_id] = sorted((judgement > 0 for judgement in judgements.values()), reverse=True)
+            ideal_rankings[topic_id] = sorted((judgement for judgement in judgements.values()), reverse=True)
+
+            qrels[topic_id] = { 'doc_id': [], 'rel': [] }
+            for doc_id, rel in judgements.items():
+                qrels[topic_id]['doc_id'].append(doc_id)
+                qrels[topic_id]['rel'].append(rel)
+            qrels[topic_id] = pd.DataFrame(qrels[topic_id], columns=['doc_id', 'rel'])
 
         ndcgs = []
         for result_file in result_files:
             topic_id = self.path_to_topic_id(result_file)
 
-            df = pd.read_csv(result_file)
+            df = pd.read_csv(result_file).merge(qrels[topic_id], on='doc_id', how='left')
+            df.rel.fillna(value=0, inplace=True)
 
-            dcg_p = dcg(df.relevant, p)
+            dcg_p = dcg(df.rel, p)
             idcg_p = dcg(ideal_rankings[topic_id], p)
             ndcgs.append(safe_div(dcg_p, idcg_p))
 
@@ -423,13 +431,16 @@ class INEXEvaluator(FilesystemEvaluator):
             for line in f:
                 if self.retrieval_task == Index.RetrievalTask.entity_retrieval:
                     topic_id, _, id, _, judgement = line.split(' ', 4)
-                    if judgement == 2: judgment = 0
+                    judgement = int(judgement)
+                    if judgement == 2: judgement = 0
                 else:
                     topic_id, _, id, judgement, _ = line.split(' ', 4)
+                    judgement = int(judgement)
+                    if judgement > 0: judgement = 1
 
                 if not topic_id in topic_doc_judgements:
                     topic_doc_judgements[topic_id] = {}
-                topic_doc_judgements[topic_id][id] = int(judgement)
+                topic_doc_judgements[topic_id][id] = judgement
 
         return topic_doc_judgements
 

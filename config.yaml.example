@@ -17,6 +17,31 @@ defaults:
     other_args: -XX:+UseConcMarkSweepGC
 
 engines:
+  lucene-wapo:
+    name: WaPo - Lucene
+    db:
+      name: aa_wapo
+    index:
+      type: lucene
+      location: /opt/army-ant/indexes/wapo/lucene
+    ranking:
+      default:
+        id: tf_idf
+      functions:
+        tf_idf:
+          name: TF-IDF
+        bm25:
+          name: BM25
+          params:
+            k1: [1, 1.2, 1.8]
+            b: [0.5, 0.75, 1]
+        dfr:
+          name: DFR
+          params:
+            BM: [BE, G, P, D, In, Ine, IF]
+            AE: [L, B, Disabled]
+            N: [H1, H2, H3, Z, Disabled]
+
   lucene-wapo-sample:
     name: WaPo Sample - Lucene
     db:
