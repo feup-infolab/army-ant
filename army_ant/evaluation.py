@@ -146,18 +146,25 @@ class FilesystemEvaluator(Evaluator):
 
                     tp = fp = tn = fn = 0
 
-                    for doc_id, judgment in topic_doc_judgements.get(topic_id, {}).items():
-                        relevant = judgment > 0
+                    # Positives, i.e., documents in the list of results.
+                    for doc_id in result_doc_ids:
+                        relevant = topic_doc_judgements.get(topic_id, {}).get(doc_id, 0) > 0
                         if relevant:
-                            if doc_id in result_doc_ids:
-                                tp += 1
-                            else:
-                                fn += 1
+                            tp += 1
                         else:
-                            if doc_id in result_doc_ids:
-                                fp += 1
+                            fp += 1
+
+                    # Negatives are unknown, because they refer to documents in the qrels that weren't returned.
+                    for doc_id, judgment in topic_doc_judgements.get(topic_id, {}).items():
+                        # Skip positives
+                        if not doc_id in result_doc_ids:
+                            relevant = judgment > 0
+                            if relevant:
+                                fn += 1
                             else:
                                 tn += 1
+
+                    # print(topic_id, "num_ret =", tp+fp, "num_rel =", tp+fn, "num_rel_ret =", tp)
 
                     tps.append(tp)
                     fps.append(fp)
@@ -210,6 +217,11 @@ class FilesystemEvaluator(Evaluator):
             self.results[params_id]['metrics']['Macro Avg F2'] = self.f_score(
                 self.results[params_id]['metrics']['Macro Avg Prec'],
                 self.results[params_id]['metrics']['Macro Avg Rec'], beta=2)
+
+            # Same as TREC set_F.0.25 (beta^2 = 0.25 <=> 0.5^2 = 0.25), set_F.1 and set_F.4 (beta^2 = 4 <=> 2^2 = 4)
+            self.results[params_id]['metrics']['F0_5'] = safe_div(sum(f_0_5_scores), len(f_0_5_scores))
+            self.results[params_id]['metrics']['F1'] = safe_div(sum(f_1_scores), len(f_1_scores))
+            self.results[params_id]['metrics']['F2'] = safe_div(sum(f_2_scores), len(f_2_scores))
 
     def calculate_precision_at_n(self, n=10, ranking_params=None):
         params_id = ranking_params_to_params_id(ranking_params)
