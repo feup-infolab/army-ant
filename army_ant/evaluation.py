@@ -242,6 +242,7 @@ class FilesystemEvaluator(Evaluator):
             self.results[params_id]['metrics']['P@%d' % n] = safe_div(sum(precisions_at_n), len(precisions_at_n))
 
     def calculate_mean_average_precision(self, ranking_params=None):
+        topic_doc_judgements = self.get_topic_assessments()
         params_id = ranking_params_to_params_id(ranking_params)
         result_files = self.get_result_files(params_id)
 
@@ -252,6 +253,13 @@ class FilesystemEvaluator(Evaluator):
         with open(o_eval_details_file, 'w') as ef:
             writer = csv.writer(ef)
             writer.writerow(['topic_id', 'avg_precision'])
+
+            num_rel_per_topic = {}
+            for topic_id, judgements in topic_doc_judgements.items():
+                num_rel_per_topic[topic_id] = 0
+                for doc_id, rel in judgements.items():
+                    if rel > 0:
+                        num_rel_per_topic[topic_id] += 1
 
             avg_precisions = []
             for result_file in result_files:
@@ -266,10 +274,11 @@ class FilesystemEvaluator(Evaluator):
 
                     for i in range(1, len(results) + 1):
                         rel = results[0:i]
+                        if not rel[i-1]: continue
                         p = safe_div(sum(rel), len(rel))
                         precisions.append(p)
 
-                    avg_precision = safe_div(sum(precisions), len(precisions))
+                    avg_precision = safe_div(sum(precisions), num_rel_per_topic[topic_id])
                     avg_precisions.append(avg_precision)
                     writer.writerow([topic_id, avg_precision])
 
