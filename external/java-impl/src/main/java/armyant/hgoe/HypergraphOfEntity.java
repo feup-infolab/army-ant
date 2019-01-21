@@ -245,14 +245,14 @@ public class HypergraphOfEntity extends Engine {
 
         if (features.contains(Feature.SENTENCES)) {
             logger.debug("Creating sentence hyperedges for document {}", document.getDocID());
-            
+
             List<List<String>> sentenceTokens = analyzePerSentence(document.getText());
             Set<Integer> targetTermNodeIDs = new HashSet<>();
-            
+
             for (List<String> tokens : sentenceTokens) {
                 SentenceEdge sentenceEdge = new SentenceEdge();
                 int sentenceEdgeID = getOrCreateUndirectedEdge(sentenceEdge);
-                
+
                 Set<Integer> targetSentenceTermNodeIDs = tokens.stream().map(token -> {
                     TermNode termNode = new TermNode(token);
                     return getOrCreateNode(termNode);
@@ -965,19 +965,20 @@ public class HypergraphOfEntity extends Engine {
     }
 
     // TODO Should follow Bellaachia2013 for random walks on hypergraphs (Equation 14)
-    private grph.path.Path randomWalk(int startNodeID, int length, boolean useWeightBias,
+    private grph.path.Path randomWalk(int startNodeID, int length, boolean isDirected, boolean isBiased,
                                       int nodeFatigue, int edgeFatigue) {
         grph.path.Path path = new ArrayListPath();
         path.setSource(startNodeID);
-        randomStep(startNodeID, length, path, useWeightBias, nodeFatigue, edgeFatigue);
+        randomStep(startNodeID, length, path, isDirected, isBiased, nodeFatigue, edgeFatigue);
         return path;
     }
 
-    private void randomStep(int nodeID, int remainingSteps, grph.path.Path path, boolean useWeightBias,
+    private void randomStep(int nodeID, int remainingSteps, grph.path.Path path, boolean isDirected, boolean isBiased,
                             int nodeFatigue, int edgeFatigue) {
         if (remainingSteps == 0 || nodeFatigueStatus.containsKey(nodeID)) return;
 
         if (nodeFatigue > 0) {
+            // Decrement fatigue for all nodes
             for (Iterator<Map.Entry<Integer, Integer>> it = nodeFatigueStatus.entrySet().iterator(); it.hasNext(); ) {
                 Map.Entry<Integer, Integer> entry = it.next();
                 if (entry.getValue() > 0) {
@@ -986,10 +987,12 @@ public class HypergraphOfEntity extends Engine {
                     it.remove();
                 }
             }
+            // Set node fatigue for start node
             nodeFatigueStatus.put(nodeID, nodeFatigue);
         }
 
         if (edgeFatigue > 0) {
+            // Decrement fatigue for all edges
             for (Iterator<Map.Entry<Integer, Integer>> it = edgeFatigueStatus.entrySet().iterator(); it.hasNext(); ) {
                 Map.Entry<Integer, Integer> entry = it.next();
                 if (entry.getValue() > 0) {
@@ -1000,7 +1003,12 @@ public class HypergraphOfEntity extends Engine {
             }
         }
 
-        IntSet edgeIDs = graph.getOutEdges(nodeID);
+        IntSet edgeIDs;
+        if (isDirected) {
+            edgeIDs = graph.getOutEdges(nodeID);
+        } else {
+            edgeIDs = graph.getEdgesIncidentTo(nodeID);
+        }
 
         if (logger.isTraceEnabled()) {
             logger.trace("Selectable out edges for random step: {}", String.join(", ", edgeIDs.stream()
@@ -1014,7 +1022,7 @@ public class HypergraphOfEntity extends Engine {
         }
 
         int randomEdgeID;
-        if (useWeightBias) {
+        if (isBiased) {
             Float[] edgeWeights = edgeIDs.stream().map(this.edgeWeights::getValueAsFloat).toArray(Float[]::new);
             randomEdgeID = sampleNonUniformlyAtRandom(edgeIDs.toIntArray(), ArrayUtils.toPrimitive(edgeWeights));
         } else {
@@ -1024,6 +1032,7 @@ public class HypergraphOfEntity extends Engine {
         IntSet nodeIDs = new LucIntHashSet(10);
         if (graph.isDirectedHyperEdge(randomEdgeID)) {
             nodeIDs.addAll(graph.getDirectedHyperEdgeHead(randomEdgeID));
+            if (!isDirected) nodeIDs.addAll(graph.getDirectedHyperEdgeTail(randomEdgeID));
         } else {
             nodeIDs.addAll(graph.getUndirectedHyperEdgeVertices(randomEdgeID));
             nodeIDs.remove(nodeID);
@@ -1040,7 +1049,7 @@ public class HypergraphOfEntity extends Engine {
 
         if (nodeIDs.isEmpty()) return;
         int randomNodeID;
-        if (useWeightBias) {
+        if (isBiased) {
             Float[] nodeWeights = nodeIDs.stream().map(this.nodeWeights::getValueAsFloat).toArray(Float[]::new);
             randomNodeID = sampleNonUniformlyAtRandom(nodeIDs.toIntArray(), ArrayUtils.toPrimitive(nodeWeights));
         } else {
@@ -1048,12 +1057,12 @@ public class HypergraphOfEntity extends Engine {
         }
 
         path.extend(randomEdgeID, randomNodeID);
-        randomStep(randomNodeID, remainingSteps - 1, path, useWeightBias, nodeFatigue, edgeFatigue);
+        randomStep(randomNodeID, remainingSteps - 1, path, isDirected, isBiased, nodeFatigue, edgeFatigue);
     }
 
     public ResultSet randomWalkSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights, Task task,
-                                      int walkLength, int walkRepeats, boolean biased, int nodeFatigue,
-                                      int edgeFatigue) {
+                                      int walkLength, int walkRepeats, boolean isDirected, boolean isBiased,
+                                      int nodeFatigue, int edgeFatigue) {
         logger.info("walkLength = {}, walkRepeats = {}, fatigue = ({}, {})",
                 walkLength, walkRepeats, nodeFatigue, edgeFatigue);
 
@@ -1070,7 +1079,8 @@ public class HypergraphOfEntity extends Engine {
             trace.goDown();
 
             for (int i = 0; i < walkRepeats; i++) {
-                grph.path.Path randomPath = randomWalk(seedNodeID, walkLength, biased, nodeFatigue, edgeFatigue);
+                grph.path.Path randomPath = randomWalk(
+                    seedNodeID, walkLength, isDirected, isBiased, nodeFatigue, edgeFatigue);
 
                 StringBuilder messageRandomPath = new StringBuilder();
                 for (int j = 0; j < randomPath.getNumberOfVertices(); j++) {
@@ -1342,8 +1352,8 @@ public class HypergraphOfEntity extends Engine {
     public ResultSet search(String query, int offset, int limit, Task task, RankingFunction function,
             Map<String, String> params, boolean debug) throws IOException {
         long start = System.currentTimeMillis();
-        
-        trace.reset();        
+
+        trace.reset();
         trace.setEnabled(debug);
 
         List<String> tokens = analyze(query);
@@ -1376,12 +1386,14 @@ public class HypergraphOfEntity extends Engine {
 
         ResultSet resultSet;
         switch (function) {
+            case UNDIRECTED_RANDOM_WALK_SCORE:
             case RANDOM_WALK_SCORE:
             case BIASED_RANDOM_WALK_SCORE:
                 resultSet = randomWalkSearch(
                         seedNodeIDs, seedNodeWeights, task,
                         Integer.valueOf(params.getOrDefault("l", String.valueOf(DEFAULT_WALK_LENGTH))),
                         Integer.valueOf(params.getOrDefault("r", String.valueOf(DEFAULT_WALK_REPEATS))),
+                        function != RankingFunction.UNDIRECTED_RANDOM_WALK_SCORE,
                         function == RankingFunction.BIASED_RANDOM_WALK_SCORE,
                         Integer.valueOf(params.getOrDefault("nf", String.valueOf(DEFAULT_FATIQUE))),
                         Integer.valueOf(params.getOrDefault("ef", String.valueOf(DEFAULT_FATIQUE))));
@@ -1702,6 +1714,7 @@ public class HypergraphOfEntity extends Engine {
         JACCARD_SCORE,
         RANDOM_WALK_SCORE,
         BIASED_RANDOM_WALK_SCORE,
+        UNDIRECTED_RANDOM_WALK_SCORE,
     }
 
     public enum Feature {
