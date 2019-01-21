@@ -320,7 +320,8 @@ class FilesystemEvaluator(Evaluator):
         for result_file in result_files:
             topic_id = self.path_to_topic_id(result_file)
 
-            df = pd.read_csv(result_file).merge(qrels[topic_id], on='doc_id', how='left')
+            df = pd.read_csv(result_file, converters = { 'doc_id': lambda d: str(d) })
+            df = df.merge(qrels[topic_id], on='doc_id', how='left')
             df.rel.fillna(value=0, inplace=True)
 
             dcg_p = dcg(df.rel, p)
