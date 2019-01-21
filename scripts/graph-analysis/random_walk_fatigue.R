@@ -140,7 +140,7 @@ fatigued_page_rank_simulation <- function(g, d=0.85, nf=10, steps=1000, use_tele
       iterations=a$iterations + b$iterations)
   }
   
-  FPR <- foreach (i = 1:vcount(g), .combine=merge_fpr) %dopar% {
+  FPR <- foreach (i = 1:vcount(g), .combine=merge_fpr) %do% {
     teleport_str <- ifelse(use_teleport, "teleport", "without teleport")
     cat("==> Walking", steps, "random steps from node", i, "with fatigue and", teleport_str, "\n")
     fatigued_page_rank_simulation_iter(g, i, d=d, nf=nf, steps=steps, use_teleport = use_teleport)
@@ -395,23 +395,26 @@ V(g)$pr <- page_rank(g)$vector
 # cor(V(g)$pr, V(g)$pr_iter, method="pearson")
 # cor(V(g)$pr, V(g)$pr_iter, method="spearman")
  
-fpr_sim <- replicate(25, fatigued_page_rank_simulation(g, steps=1000, use_teleport = TRUE), simplify = FALSE)
-V(g)$fpr_sim <- fpr_sim[[1]]$vector
-V(g)$fpr_sim_iter <- fpr_sim[[1]]$iterations
+# fpr_sim <- replicate(25, fatigued_page_rank_simulation(g, steps=10, use_teleport = TRUE), simplify = FALSE)
+# V(g)$fpr_sim <- fpr_sim[[1]]$vector
+# V(g)$fpr_sim_iter <- fpr_sim[[1]]$iterations
+system.time(fpr_sim <- fatigued_page_rank_simulation(g, steps=1000, use_teleport = TRUE))
+V(g)$fpr_sim <- fpr_sim$vector
+V(g)$fpr_sim_iter <- fpr_sim$iterations
 cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
 cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
 
 # Visualize first n_replicas
-n_replicas <- 10
-fpr_sim_df <- as.data.frame(do.call(cbind, lapply(fpr_sim[1:n_replicas], function(d) d$vector)))
-names(fpr_sim_df) <- sprintf("replica_%.2d", 1:n_replicas)
-plot_replicas_histogram(fpr_sim_df) + scale_x_continuous(limits=c(0, 0.0025))
-plot_replicas_histogram(data.frame(PageRank=V(g)$pr))+ scale_x_continuous(limits=c(0, 0.0025))
-
-cor(strength(g, mode = "in"), V(g)$pr, method = "pearson")
-cor(strength(g, mode = "in"), V(g)$pr, method = "spearman")
-summary(sapply(fpr_sim, function(r) cor(strength(g, mode = "in"), r$vector, method = "pearson")))
-summary(sapply(fpr_sim, function(r) cor(strength(g, mode = "in"), r$vector, method = "spearman")))
+# n_replicas <- 10
+# fpr_sim_df <- as.data.frame(do.call(cbind, lapply(fpr_sim[1:n_replicas], function(d) d$vector)))
+# names(fpr_sim_df) <- sprintf("replica_%.2d", 1:n_replicas)
+# plot_replicas_histogram(fpr_sim_df) + scale_x_continuous(limits=c(0, 0.0025))
+# plot_replicas_histogram(data.frame(PageRank=V(g)$pr))+ scale_x_continuous(limits=c(0, 0.0025))
+# 
+# cor(strength(g, mode = "in"), V(g)$pr, method = "pearson")
+# cor(strength(g, mode = "in"), V(g)$pr, method = "spearman")
+# summary(sapply(fpr_sim, function(r) cor(strength(g, mode = "in"), r$vector, method = "pearson")))
+# summary(sapply(fpr_sim, function(r) cor(strength(g, mode = "in"), r$vector, method = "spearman")))
 
 # l <- layout.fruchterman.reingold(g)
 # plot(g, layout=l, vertex.size=V(g)$pr * 100, vertex.label=round(V(g)$pr, 2), vertex.label.dist=3)
