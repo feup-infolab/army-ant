@@ -19,7 +19,10 @@ public class ResultSet implements Iterator<Result>, Iterable<Result> {
     }
 
     public ResultSet() {
-        this(new TreeSet<>((a, b) -> Double.compare(b.getScore(), a.getScore())), null, null);
+        this(new TreeSet<>((a, b) -> Comparator
+            .comparing(Result::getScore)
+            .thenComparing(Result::getID)
+            .compare(b, a)), null, null);
     }
 
     public ResultSet(SortedSet<Result> results) {

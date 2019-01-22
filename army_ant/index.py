@@ -1047,7 +1047,7 @@ class LuceneEngine(JavaIndex):
             num_docs = results.getNumDocs()
             trace = results.getTrace()
             results = [Result(result.getScore(), result.getID(), result.getName(), result.getType())
-                       for result in itertools.islice(results, offset, offset + limit)]
+                       for result in results]
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
