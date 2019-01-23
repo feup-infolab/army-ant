@@ -248,12 +248,12 @@ engines:
             N: [H1, H2, H3, Z, Disabled]
 
   hgoe-inex-10t-nl:
-    name: INEX 10T-NL - Hypergraph-of-Entity
+    name: INEX 2009 10T-NL - Hypergraph-of-Entity
     db:
       name: aa_inex
     index:
       type: hgoe
-      location: /opt/army-ant/indexes/inex-10t-nl/hgoe
+      location: /opt/army-ant/indexes/inex-2009-10t-nl/hgoe
       preload: false
     ranking:
       default:

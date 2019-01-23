@@ -140,7 +140,7 @@ fatigued_page_rank_simulation <- function(g, d=0.85, nf=10, steps=1000, use_tele
       iterations=a$iterations + b$iterations)
   }
   
-  FPR <- foreach (i = 1:vcount(g), .combine=merge_fpr) %do% {
+  FPR <- foreach (i = 1:vcount(g), .combine=merge_fpr) %dopar% {
     teleport_str <- ifelse(use_teleport, "teleport", "without teleport")
     cat("==> Walking", steps, "random steps from node", i, "with fatigue and", teleport_str, "\n")
     fatigued_page_rank_simulation_iter(g, i, d=d, nf=nf, steps=steps, use_teleport = use_teleport)
@@ -311,42 +311,82 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
     diag(NF) <- 0
     NF
   }
-
-  # Columns must represent outgoing links
-  M <- t(as.matrix(as_adj(g)))
   
-  if (fatigue_method == '1ord') {
-    NF <- first_order_fatigue(M, ...)
-  } else if (fatigue_method == '2ord') {
-    NF <- second_order_fatigue(M, ...)
-  } else if (fatigue_method == '3ord') {
-    NF <- third_order_fatigue(M, ...)
-  }
-
-  M <- scale(M, center=FALSE, scale=colSums(M))
-  M[is.nan(M)] <- 0
+  regular_power_iteration <- function() {
+    # Columns must represent outgoing links
+    M <- t(as.matrix(as_adj(g)))
+    
+    if (fatigue_method == '1ord') {
+      NF <- first_order_fatigue(M, ...)
+    } else if (fatigue_method == '2ord') {
+      NF <- second_order_fatigue(M, ...)
+    } else if (fatigue_method == '3ord') {
+      NF <- third_order_fatigue(M, ...)
+    }
   
-  N <- vcount(g)
-  
-  v <- as.matrix(runif(N))
-  v <- v / norm(v)
-  last_v <- matrix(1, N) * 100
-  
-  M_hat <- (d * M + (1-d)/N * matrix(1, N, N)) * (1 - NF)
-  
-  iter <- 0
-  repeat {
-    if (norm(v - last_v, "2") <= eps) break;
-    last_v <- v
-    v <- M_hat %*% v
+    M <- scale(M, center=FALSE, scale=colSums(M))
+    M[is.nan(M)] <- 0
+    
+    N <- vcount(g)
+    
+    v <- as.matrix(runif(N))
     v <- v / norm(v)
-    iter <- iter + 1
+    last_v <- matrix(1, N) * 100
+    
+    M_hat <- (d * M + (1-d)/N * matrix(1, N, N)) * (1 - NF)
+    
+    iter <- 0
+    repeat {
+      if (norm(v - last_v, "2") <= eps) break;
+      last_v <- v
+      v <- M_hat %*% v
+      v <- v / norm(v)
+      iter <- iter + 1
+    }
+    
+    list(
+      iterations=iter,
+      vector=as.numeric(v)
+    )
+  }
+
+  in_out_power_iteration <- function() {
+    A <- as.matrix(as_adj(g))
+    N <- vcount(g)
+    
+    M_out <- t(A)
+    M_out <- scale(M_out, center=FALSE, scale=colSums(M_out))
+    M_out <- apply(M_out, 2, function(col) if (all(is.nan(col))) rep(1/N, N) else col)
+    
+    M_in <- A
+    M_in <- scale(M_in, center=FALSE, scale=colSums(M_in))
+    M_in <- apply(M_in, 2, function(col) if (all(is.nan(col))) rep(1/N, N) else col)
+    
+    v <- as.matrix(runif(N))
+    v <- v / norm(v)
+    last_v <- matrix(1, N) * 100
+    
+    iter <- 0
+    repeat {
+      if (norm(v - last_v, "2") <= eps) break;
+      last_v <- v
+      M_hat <- M_out %*% M_in
+      v <- M_hat %*% v
+      v <- v / norm(v)
+      iter <- iter + 1
+    }
+    
+    list(
+      iterations=iter,
+      vector=as.numeric(v)
+    )
   }
   
-  list(
-    iterations=iter,
-    vector=as.numeric(v)
-  )
+  if (fatigue_method == 'in_out') {
+    in_out_power_iteration()
+  } else {
+    regular_power_iteration()
+  }
 }
 
 plot_replicas_histogram <- function(df) {
@@ -368,6 +408,19 @@ plot_replicas_histogram <- function(df) {
   p
 }
 
+plot_small_graph_with_metrics <- function(g, metrics=list("PR"="pr", "PR Sim"="pr_sim", "FPR Sim"="fpr_sim")) {
+  l <- layout.fruchterman.reingold(g)
+  for (name in names(metrics)) {
+    plot(
+      g, layout=l,
+      vertex.size=get.vertex.attribute(g, metrics[[name]]) * 100,
+      vertex.label=round(get.vertex.attribute(g, metrics[[name]]), 2),
+      vertex.label.dist=3)
+    title(name)
+  }
+  
+}
+
 
 # -------------------------------------------------------------------------------------------------------------------#
 #
@@ -382,6 +435,7 @@ g <- read.graph(
   gzfile("~/Data/wikipedia/wikipedia-sample-rw_leskovec_faloutsos-with_transitions-20181122.graphml.gz"), "graphml")
 
 V(g)$pr <- page_rank(g)$vector
+V(g)$hits_authority <- authority_score(g)$vector
 
 # pr_sim <- page_rank_simulation(g, steps=1000)
 # V(g)$pr_sim <- pr_sim$vector
@@ -395,41 +449,44 @@ V(g)$pr <- page_rank(g)$vector
 # cor(V(g)$pr, V(g)$pr_iter, method="pearson")
 # cor(V(g)$pr, V(g)$pr_iter, method="spearman")
  
-# fpr_sim <- replicate(25, fatigued_page_rank_simulation(g, steps=10, use_teleport = TRUE), simplify = FALSE)
-# V(g)$fpr_sim <- fpr_sim[[1]]$vector
-# V(g)$fpr_sim_iter <- fpr_sim[[1]]$iterations
 system.time(fpr_sim <- fatigued_page_rank_simulation(g, steps=1000, use_teleport = TRUE))
 V(g)$fpr_sim <- fpr_sim$vector
 V(g)$fpr_sim_iter <- fpr_sim$iterations
 cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
 cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
 
-# Visualize first n_replicas
-# n_replicas <- 10
-# fpr_sim_df <- as.data.frame(do.call(cbind, lapply(fpr_sim[1:n_replicas], function(d) d$vector)))
-# names(fpr_sim_df) <- sprintf("replica_%.2d", 1:n_replicas)
-# plot_replicas_histogram(fpr_sim_df) + scale_x_continuous(limits=c(0, 0.0025))
-# plot_replicas_histogram(data.frame(PageRank=V(g)$pr))+ scale_x_continuous(limits=c(0, 0.0025))
-# 
-# cor(strength(g, mode = "in"), V(g)$pr, method = "pearson")
-# cor(strength(g, mode = "in"), V(g)$pr, method = "spearman")
-# summary(sapply(fpr_sim, function(r) cor(strength(g, mode = "in"), r$vector, method = "pearson")))
-# summary(sapply(fpr_sim, function(r) cor(strength(g, mode = "in"), r$vector, method = "spearman")))
+system.time(fpr_sim_without_teleport <- fatigued_page_rank_simulation(g, steps=1000, use_teleport = FALSE))
+V(g)$fpr_sim_without_teleport <- fpr_sim_without_teleport$vector
+V(g)$fpr_sim_without_teleport_iter <- fpr_sim_without_teleport$iterations
+cor(V(g)$pr, V(g)$fpr_sim_without_teleport, method="pearson")
+cor(V(g)$pr, V(g)$fpr_sim_without_teleport, method="spearman")
 
-# l <- layout.fruchterman.reingold(g)
-# plot(g, layout=l, vertex.size=V(g)$pr * 100, vertex.label=round(V(g)$pr, 2), vertex.label.dist=3)
-# title("PR")
-# plot(g, layout=l, vertex.size=V(g)$pr_sim * 100, vertex.label=round(V(g)$pr_sim, 2), vertex.label.dist=3)
-# title("PR Sim")
-# plot(g, layout=l, vertex.size=V(g)$fpr_sim * 100, vertex.label=round(V(g)$fpr_sim, 2), vertex.label.dist=3)
-# title("FPR")
+fpr_iter <- fatigued_page_rank_power_iteration(g, fatigue_method = "in_out")
+V(g)$fpr_iter <- fpr_iter$vector
+V(g)$fpr_iter_iter <- fpr_iter$iterations
+cor(V(g)$fpr_sim, V(g)$fpr_iter, method="pearson")
+cor(V(g)$fpr_sim, V(g)$fpr_iter, method="spearman")
+cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
+cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
+cor(V(g)$pr, V(g)$fpr_iter, method="pearson")
+cor(V(g)$pr, V(g)$fpr_iter, method="spearman")
+cor(V(g)$hits_authority, V(g)$fpr_iter, method="pearson")
+cor(V(g)$hits_authority, V(g)$fpr_iter, method="spearman")
 
-# fpr_iter <- fatigued_page_rank_power_iteration(g, fatigue_method = "2ord", teleport=TRUE)
-# V(g)$fpr_iter <- fpr_iter$vector
-# V(g)$fpr_iter_iter <- fpr_iter$iterations
-# cor(V(g)$fpr_sim, V(g)$fpr_iter, method="pearson")
-# cor(V(g)$fpr_sim, V(g)$fpr_iter, method="spearman")
-# cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
-# cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
-# cor(V(g)$pr, V(g)$fpr_iter, method="pearson")
-# cor(V(g)$pr, V(g)$fpr_iter, method="spearman")
+eval <- list(
+  pr=c(
+    pearson=cor(strength(g, mode = "in"), V(g)$pr, method = "pearson"),
+    spearman=cor(strength(g, mode = "in"), V(g)$pr, method = "spearman")),
+  hits_authority=c(
+    pearson=cor(strength(g, mode = "in"), V(g)$hits_authority, method = "pearson"),
+    spearman=cor(strength(g, mode = "in"), V(g)$hits_authority, method = "spearman")),
+  fpr_sim=c(
+    pearson=cor(strength(g, mode = "in"), V(g)$fpr_sim, method = "pearson"),
+    spearman=cor(strength(g, mode = "in"), V(g)$fpr_sim, method = "spearman")),
+  fpr_sim_without_teleport=c(
+    pearson=cor(strength(g, mode = "in"), V(g)$fpr_sim_without_teleport, method = "pearson"),
+    spearman=cor(strength(g, mode = "in"), V(g)$fpr_sim_without_teleport, method = "spearman")),
+  fpr_iter=c(
+    pearson=cor(strength(g, mode = "in"), V(g)$fpr_iter, method = "pearson"),
+    spearman=cor(strength(g, mode = "in"), V(g)$fpr_iter, method = "spearman"))
+)
