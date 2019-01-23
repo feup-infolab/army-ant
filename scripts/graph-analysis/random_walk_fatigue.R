@@ -222,11 +222,11 @@ fatigued_page_rank_simulation_iter <- function(g, start, d, nf, steps, use_telep
 # For now, nf is ignored. There is instead a probability of a node being fatigued, depending on its in-degree.
 # This must be revised to also depend on the number of cycles of node fatigue (nf).
 fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fatigue_method='3ord', ...) {
-  stopifnot(fatigue_method %in% c("1ord", "2ord", "3ord", "in_out"))
+  stopifnot(fatigue_method %in% c('1ord', '2ord', '3ord', 'in_out', 'in_out_update'))
 
   first_order_fatigue <- function(M, ...) {
     kwargs <- list(...)
-    lambda <- ifelse("lambda" %in% kwargs, kwargs$lambda, 0.85)
+    lambda <- ifelse('lambda' %in% kwargs, kwargs$lambda, 0.85)
     teleport <- ifelse(is.null(kwargs$teleport), FALSE, kwargs$teleport)
     N <- nrow(M)
 
@@ -295,7 +295,7 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
     P_NNi_i <- vapply(1:vcount(g), function(i) {
       p <- rep((1 - lambda) / N, vcount(g))
       rw_visits <- lapply(
-        as.numeric(adjacent_vertices(g, i, "in")[[1]]),
+        as.numeric(adjacent_vertices(g, i, 'in')[[1]]),
         function(j) as.data.frame(table(random_walk(g, start=i, steps=10)))
       )
       if (length(rw_visits) == 0) return(prod(p))
@@ -337,7 +337,7 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
     
     iter <- 0
     repeat {
-      if (norm(v - last_v, "2") <= eps) break;
+      if (norm(v - last_v, '2') <= eps) break;
       last_v <- v
       v <- M_hat %*% v
       v <- v / norm(v)
@@ -365,12 +365,19 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
     v <- as.matrix(runif(N))
     v <- v / norm(v)
     last_v <- matrix(1, N) * 100
-    
+
     iter <- 0
     repeat {
-      if (norm(v - last_v, "2") <= eps) break;
+      if (norm(v - last_v, '2') <= eps) break;
       last_v <- v
+      
       M_hat <- M_out %*% M_in
+      
+      if (fatigue_method == 'in_out_update') {
+        M_in <- M_in %*% M_out
+        M_out <- M_hat
+      }
+
       v <- M_hat %*% v
       v <- v / norm(v)
       iter <- iter + 1
@@ -382,7 +389,7 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
     )
   }
   
-  if (fatigue_method == 'in_out') {
+  if (fatigue_method %in% c('in_out', 'in_out_update')) {
     in_out_power_iteration()
   } else {
     regular_power_iteration()
@@ -461,7 +468,7 @@ V(g)$fpr_sim_without_teleport_iter <- fpr_sim_without_teleport$iterations
 cor(V(g)$pr, V(g)$fpr_sim_without_teleport, method="pearson")
 cor(V(g)$pr, V(g)$fpr_sim_without_teleport, method="spearman")
 
-fpr_iter <- fatigued_page_rank_power_iteration(g, fatigue_method = "in_out")
+system.time(fpr_iter <- fatigued_page_rank_power_iteration(g, fatigue_method = "in_out"))
 V(g)$fpr_iter <- fpr_iter$vector
 V(g)$fpr_iter_iter <- fpr_iter$iterations
 cor(V(g)$fpr_sim, V(g)$fpr_iter, method="pearson")
@@ -472,6 +479,18 @@ cor(V(g)$pr, V(g)$fpr_iter, method="pearson")
 cor(V(g)$pr, V(g)$fpr_iter, method="spearman")
 cor(V(g)$hits_authority, V(g)$fpr_iter, method="pearson")
 cor(V(g)$hits_authority, V(g)$fpr_iter, method="spearman")
+
+system.time(fpr_iter_update <- fatigued_page_rank_power_iteration(g, fatigue_method = "in_out_update"))
+V(g)$fpr_iter_update <- fpr_iter_update$vector
+V(g)$fpr_iter_update_iter <- fpr_iter_update$iterations
+cor(V(g)$fpr_sim, V(g)$fpr_iter_update, method="pearson")
+cor(V(g)$fpr_sim, V(g)$fpr_iter_update, method="spearman")
+cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
+cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
+cor(V(g)$pr, V(g)$fpr_iter_update, method="pearson")
+cor(V(g)$pr, V(g)$fpr_iter_update, method="spearman")
+cor(V(g)$hits_authority, V(g)$fpr_iter_update, method="pearson")
+cor(V(g)$hits_authority, V(g)$fpr_iter_update, method="spearman")
 
 eval <- list(
   pr=c(
@@ -488,5 +507,8 @@ eval <- list(
     spearman=cor(strength(g, mode = "in"), V(g)$fpr_sim_without_teleport, method = "spearman")),
   fpr_iter=c(
     pearson=cor(strength(g, mode = "in"), V(g)$fpr_iter, method = "pearson"),
-    spearman=cor(strength(g, mode = "in"), V(g)$fpr_iter, method = "spearman"))
+    spearman=cor(strength(g, mode = "in"), V(g)$fpr_iter, method = "spearman")),
+  fpr_iter_update=c(
+    pearson=cor(strength(g, mode = "in"), V(g)$fpr_iter_update, method = "pearson"),
+    spearman=cor(strength(g, mode = "in"), V(g)$fpr_iter_update, method = "spearman"))
 )
