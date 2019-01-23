@@ -222,7 +222,7 @@ fatigued_page_rank_simulation_iter <- function(g, start, d, nf, steps, use_telep
 # For now, nf is ignored. There is instead a probability of a node being fatigued, depending on its in-degree.
 # This must be revised to also depend on the number of cycles of node fatigue (nf).
 fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fatigue_method='3ord', ...) {
-  stopifnot(fatigue_method %in% c('1ord', '2ord', '3ord', 'in_out', 'in_out_update'))
+  stopifnot(fatigue_method %in% c('1ord', '2ord', '3ord', 'out_in', 'out_in_update'))
 
   first_order_fatigue <- function(M, ...) {
     kwargs <- list(...)
@@ -350,7 +350,7 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
     )
   }
 
-  in_out_power_iteration <- function() {
+  out_in_power_iteration <- function() {
     A <- as.matrix(as_adj(g))
     N <- vcount(g)
     
@@ -361,6 +361,8 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
     M_in <- A
     M_in <- scale(M_in, center=FALSE, scale=colSums(M_in))
     M_in <- apply(M_in, 2, function(col) if (all(is.nan(col))) rep(1/N, N) else col)
+    M_in <- 1 - M_in
+    M_in <- scale(M_in, center=FALSE, scale=colSums(M_in))
     
     v <- as.matrix(runif(N))
     v <- v / norm(v)
@@ -370,12 +372,15 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
     repeat {
       if (norm(v - last_v, '2') <= eps) break;
       last_v <- v
+
+      M <- M_out %*% M_in
+      # M_hat <- M
+      M_hat <- d * M + (1-d)/N * matrix(1, N, N)
       
-      M_hat <- M_out %*% M_in
-      
-      if (fatigue_method == 'in_out_update') {
+      if (fatigue_method == 'out_in_update') {
         M_in <- M_in %*% M_out
-        M_out <- M_hat
+        #M_out <- M_hat
+        M_out <- M
       }
 
       v <- M_hat %*% v
@@ -389,8 +394,8 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
     )
   }
   
-  if (fatigue_method %in% c('in_out', 'in_out_update')) {
-    in_out_power_iteration()
+  if (fatigue_method %in% c('out_in', 'out_in_update')) {
+    out_in_power_iteration()
   } else {
     regular_power_iteration()
   }
@@ -438,11 +443,11 @@ plot_small_graph_with_metrics <- function(g, metrics=list("PR"="pr", "PR Sim"="p
 #g <- make_graph(c(1,2, 2,3, 3,2, 4,2, 4,3, 3,1, 4,5, 5,3, 3,6, 6,7, 7,8, 8,1, 8,3))
 #g <- make_graph(c(1,2, 2,4, 4,3, 3,2))
 #g <- read_graph(gzfile("~/Data/facebook_combined.txt.gz"), format = "edgelist")
-g <- read.graph(
-  gzfile("~/Data/wikipedia/wikipedia-sample-rw_leskovec_faloutsos-with_transitions-20181122.graphml.gz"), "graphml")
-
-V(g)$pr <- page_rank(g)$vector
-V(g)$hits_authority <- authority_score(g)$vector
+# g <- read.graph(
+#   gzfile("~/Data/wikipedia/wikipedia-sample-rw_leskovec_faloutsos-with_transitions-20181122.graphml.gz"), "graphml")
+# 
+# V(g)$pr <- page_rank(g)$vector
+# V(g)$hits_authority <- authority_score(g)$vector
 
 # pr_sim <- page_rank_simulation(g, steps=1000)
 # V(g)$pr_sim <- pr_sim$vector
@@ -456,19 +461,19 @@ V(g)$hits_authority <- authority_score(g)$vector
 # cor(V(g)$pr, V(g)$pr_iter, method="pearson")
 # cor(V(g)$pr, V(g)$pr_iter, method="spearman")
  
-system.time(fpr_sim <- fatigued_page_rank_simulation(g, steps=1000, use_teleport = TRUE))
-V(g)$fpr_sim <- fpr_sim$vector
-V(g)$fpr_sim_iter <- fpr_sim$iterations
-cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
-cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
-
-system.time(fpr_sim_without_teleport <- fatigued_page_rank_simulation(g, steps=1000, use_teleport = FALSE))
-V(g)$fpr_sim_without_teleport <- fpr_sim_without_teleport$vector
-V(g)$fpr_sim_without_teleport_iter <- fpr_sim_without_teleport$iterations
-cor(V(g)$pr, V(g)$fpr_sim_without_teleport, method="pearson")
-cor(V(g)$pr, V(g)$fpr_sim_without_teleport, method="spearman")
-
-system.time(fpr_iter <- fatigued_page_rank_power_iteration(g, fatigue_method = "in_out"))
+# system.time(fpr_sim <- fatigued_page_rank_simulation(g, steps=1000, use_teleport = TRUE))
+# V(g)$fpr_sim <- fpr_sim$vector
+# V(g)$fpr_sim_iter <- fpr_sim$iterations
+# cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
+# cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
+# 
+# system.time(fpr_sim_without_teleport <- fatigued_page_rank_simulation(g, steps=1000, use_teleport = FALSE))
+# V(g)$fpr_sim_without_teleport <- fpr_sim_without_teleport$vector
+# V(g)$fpr_sim_without_teleport_iter <- fpr_sim_without_teleport$iterations
+# cor(V(g)$pr, V(g)$fpr_sim_without_teleport, method="pearson")
+# cor(V(g)$pr, V(g)$fpr_sim_without_teleport, method="spearman")
+ 
+system.time(fpr_iter <- fatigued_page_rank_power_iteration(g, fatigue_method = "out_in"))
 V(g)$fpr_iter <- fpr_iter$vector
 V(g)$fpr_iter_iter <- fpr_iter$iterations
 cor(V(g)$fpr_sim, V(g)$fpr_iter, method="pearson")
@@ -479,8 +484,8 @@ cor(V(g)$pr, V(g)$fpr_iter, method="pearson")
 cor(V(g)$pr, V(g)$fpr_iter, method="spearman")
 cor(V(g)$hits_authority, V(g)$fpr_iter, method="pearson")
 cor(V(g)$hits_authority, V(g)$fpr_iter, method="spearman")
-
-system.time(fpr_iter_update <- fatigued_page_rank_power_iteration(g, fatigue_method = "in_out_update"))
+ 
+system.time(fpr_iter_update <- fatigued_page_rank_power_iteration(g, fatigue_method = "out_in_update"))
 V(g)$fpr_iter_update <- fpr_iter_update$vector
 V(g)$fpr_iter_update_iter <- fpr_iter_update$iterations
 cor(V(g)$fpr_sim, V(g)$fpr_iter_update, method="pearson")
