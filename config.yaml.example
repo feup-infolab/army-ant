@@ -393,6 +393,38 @@ engines:
             nf: [0, 10, 100, 500, 1000]
             ef: [0, 10, 100, 500, 1000]
 
+  hgoe-syns-context-52t-nl-weight:
+    name: INEX 2009 10T-NL - Hypergraph-of-Entity (Syns; Context; Weight)
+    db:
+      name: aa_inex
+    index:
+      type: hgoe
+      location: /opt/army-ant/indexes/inex-2009-10t-nl/hgoe-syns_context_52t_nl_weight
+      preload: false
+    ranking:
+      default:
+        id: biased_random_walk
+        params:
+          l: 2
+          r: 1000
+          nf: 10
+          ef: 10
+      functions:
+        random_walk:
+          name: Random Walk Score
+          params:
+            l: [1, 2, 3, 4, 5, 6]
+            r: [10, 100, 250, 500, 750, 1000, 10000]
+            nf: [0, 10, 100, 500, 1000]
+            ef: [0, 10, 100, 500, 1000]
+        biased_random_walk:
+          name: Biased Random Walk Score
+          params:
+            l: [1, 2, 3, 4, 5, 6]
+            r: [10, 100, 250, 500, 750, 1000, 10000]
+            nf: [0, 10, 100, 500, 1000]
+            ef: [0, 10, 100, 500, 1000]
+
   lucene-inex-2009-3t-nl:
     name: INEX 3T-NL - Lucene
     db:
