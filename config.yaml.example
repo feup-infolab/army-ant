@@ -17,6 +17,28 @@ defaults:
     other_args: -XX:+UseConcMarkSweepGC
 
 engines:
+  gow-wikipedia:
+    name: Wikipedia Data - Graph of Word
+    message: >-
+      Don't forget to launch Gremlin Server with the "gow_wikipedia" graph
+      configured (e.g., "bin/gremlin-server.sh gremlin-server-neo4j.yaml").
+    db:
+      name: wikipedia_data
+    index:
+      type: gow
+      location: localhost:8182/gow_wikipedia
+
+  goe-wikipedia_data:
+    name: Wikipedia Data - Graph of Entity
+    message: >-
+      Don't forget to launch Gremlin Server with the "goe_wikipedia" graph
+      configured (e.g., "bin/gremlin-server.sh gremlin-server-neo4j.yaml").
+    db:
+      name: wikipedia_data
+    index:
+      type: goe
+      location: localhost:8182/goe_wikipedia
+
   gow-trec2017:
     name: TREC 2017 - Graph of Word
     message: >-
@@ -158,35 +180,13 @@ engines:
             l: [1, 2, 3, 4, 5, 6]
             r: [10, 100, 250, 500, 750, 1000, 10000, 100000]
 
-  gow-wikipedia:
-    name: Wikipedia Data - Graph of Word
-    message: >-
-      Don't forget to launch Gremlin Server with the "gow_wikipedia" graph
-      configured (e.g., "bin/gremlin-server.sh gremlin-server-neo4j.yaml").
-    db:
-      name: wikipedia_data
-    index:
-      type: gow
-      location: localhost:8182/gow_wikipedia
-
-  goe-wikipedia_data:
-    name: Wikipedia Data - Graph of Entity
-    message: >-
-      Don't forget to launch Gremlin Server with the "goe_wikipedia" graph
-      configured (e.g., "bin/gremlin-server.sh gremlin-server-neo4j.yaml").
-    db:
-      name: wikipedia_data
-    index:
-      type: goe
-      location: localhost:8182/goe_wikipedia
-
-  lucene-inex-10t-nl:
+  lucene-inex-2009-10t-nl:
     name: INEX 10T-NL - Lucene
     db:
       name: aa_inex
     index:
       type: lucene
-      location: /opt/army-ant/indexes/inex-10t-nl/lucene
+      location: /opt/army-ant/indexes/inex-2009-10t-nl/lucene
     ranking:
       default:
         id: tf_idf
@@ -208,13 +208,13 @@ engines:
             AE: [L, B, Disabled]
             N: [H1, H2, H3, Z, Disabled]
 
-  tfr-inex-10t-nl:
+  tfr-inex-2009-10t-nl:
     name: INEX 10T-NL - TFR Lucene Reranker
     db:
       name: aa_inex
     index:
       type: tfr
-      location: /opt/army-ant/indexes/inex-10t-nl/tfr
+      location: /opt/army-ant/indexes/inex-2009-10t-nl/tfr
     ranking:
       default:
         id: tf_idf
@@ -236,7 +236,7 @@ engines:
             AE: [L, B, Disabled]
             N: [H1, H2, H3, Z, Disabled]
 
-  gow-inex-10t-nl:
+  gow-inex-2009-10t-nl:
     name: INEX 10T-NL - Graph of Word
     message: >-
       Don't forget to launch Gremlin Server with the "gow_inex_10t_nl" graph
@@ -247,7 +247,7 @@ engines:
       type: gow
       location: localhost:8182/gow_inex_10t_nl
 
-  goe-inex-10t-nl:
+  goe-inex-2009-10t-nl:
     name: INEX 10T-NL - Graph of Entity
     message: >-
       Don't forget to launch Gremlin Server with the "goe_inex_10t_nl" graph
@@ -258,18 +258,7 @@ engines:
       type: goe
       location: localhost:8182/goe_inex_10t_nl
 
-  goe-inex-10t-nl-comp:
-    name: INEX 10T-NL - Graph of Entity (HGoE Compare Version)
-    message: >-
-      Don't forget to launch Gremlin Server with the "goe_inex_10t_nl_comp" graph
-      configured (e.g., "bin/gremlin-server.sh gremlin-server-neo4j.yaml").
-    db:
-      name: aa_inex
-    index:
-      type: goe
-      location: localhost:8182/goe_inex_10t_nl_comp
-
-  hgoe-inex-10t-nl:
+  hgoe-inex-2009-10t-nl:
     name: INEX 2009 10T-NL - Hypergraph-of-Entity
     db:
       name: aa_inex
@@ -294,13 +283,67 @@ engines:
             nf: [0, 10, 100, 500, 1000]
             ef: [0, 10, 100, 500, 1000]
 
-  hgoe-syns-context-10t-nl-inex-52t-nl:
-    name: INEX 10T-NL - Hypergraph-of-Entity (Synonyms; Context 52T-NL)
+  hgoe-syns-inex-2009-10t-nl:
+    name: INEX 2009 10T-NL - Hypergraph-of-Entity (Synonyms)
+    db:
+      name: aa_inex
+    index:
+      type: hgoe:syns
+      location: /opt/army-ant/indexes/inex-2009-10t-nl/hgoe-syns
+      preload: false
+    features:
+      - syns
+    ranking:
+      default:
+        id: random_walk
+        params:
+          l: 2
+          r: 1000
+          nf: 10
+          ef: 10
+      functions:
+        random_walk:
+          name: Random Walk Score
+          params:
+            l: [1, 2, 3, 4, 5, 6]
+            r: [10, 100, 250, 500, 750, 1000, 10000]
+            nf: [0, 10, 100, 500, 1000]
+            ef: [0, 10, 100, 500, 1000]
+
+  hgoe-context-52t-nl-inex-2009-10t-nl:
+    name: INEX 2009 10T-NL - Hypergraph-of-Entity (Context 52T-NL)
+    db:
+      name: aa_inex
+    index:
+      type: hgoe:context
+      location: /opt/army-ant/indexes/inex-2009-10t-nl/hgoe-context_52t_nl
+      preload: false
+    features:
+      - context
+    ranking:
+      default:
+        id: random_walk
+        params:
+          l: 2
+          r: 1000
+          nf: 10
+          ef: 10
+      functions:
+        random_walk:
+          name: Random Walk Score
+          params:
+            l: [1, 2, 3, 4, 5, 6]
+            r: [10, 100, 250, 500, 750, 1000, 10000]
+            nf: [0, 10, 100, 500, 1000]
+            ef: [0, 10, 100, 500, 1000]
+
+  hgoe-syns-context-52t-nl-inex-2009-10t-nl:
+    name: INEX 2009 10T-NL - Hypergraph-of-Entity (Synonyms; Context 52T-NL)
     db:
       name: aa_inex
     index:
       type: hgoe:syns:context
-      location: /opt/army-ant/indexes/inex-10t-nl/hgoe-syns-context-52t-nl
+      location: /opt/army-ant/indexes/inex-2009-10t-nl/hgoe-syns_context_52t_nl
       preload: false
     features:
       - context
@@ -322,36 +365,41 @@ engines:
             nf: [0, 10, 100, 500, 1000]
             ef: [0, 10, 100, 500, 1000]
 
-  hgoe-inex-30t-nl:
-    name: INEX 30T-NL - Hypergraph of Entity
+  hgoe-context-52t-nl-syns-inex-2009-10t-nl:
+    name: INEX 2009 10T-NL - Hypergraph-of-Entity (Context 52T-NL; Synonyms)
     db:
       name: aa_inex
     index:
-      type: hgoe
-      location: /opt/army-ant/indexes/inex-30t-nl/hypergraph-of-entity
+      type: hgoe:context:syns
+      location: /opt/army-ant/indexes/inex-2009-10t-nl/hgoe-context_52t_nl_syns
       preload: false
+    features:
+      - context
+      - syns
     ranking:
       default:
         id: random_walk
         params:
-          l: 3
-          r: 100
+          l: 2
+          r: 1000
+          nf: 10
+          ef: 10
       functions:
-        jaccard:
-          name: Jaccard Score
         random_walk:
           name: Random Walk Score
           params:
             l: [1, 2, 3, 4, 5, 6]
-            r: [10, 100, 250, 500, 750, 1000]
+            r: [10, 100, 250, 500, 750, 1000, 10000]
+            nf: [0, 10, 100, 500, 1000]
+            ef: [0, 10, 100, 500, 1000]
 
-  lucene-inex-3t-nl:
+  lucene-inex-2009-3t-nl:
     name: INEX 3T-NL - Lucene
     db:
       name: aa_inex
     index:
       type: lucene
-      location: /opt/army-ant/indexes/inex-3t-nl/lucene
+      location: /opt/army-ant/indexes/inex-2009-3t-nl/lucene
     ranking:
       default:
         id: tf_idf
@@ -373,13 +421,13 @@ engines:
             AE: [L, B, Disabled]
             N: [H1, H2, H3, Z, Disabled]
 
-  tfr-inex-3t-nl:
+  tfr-inex-2009-3t-nl:
     name: INEX 3T-NL - TFR Lucene Reranker
     db:
       name: aa_inex
     index:
       type: tfr
-      location: /opt/army-ant/indexes/inex-3t-nl/tfr
+      location: /opt/army-ant/indexes/inex-2009-3t-nl/tfr
     ranking:
       default:
         id: tf_idf
@@ -401,13 +449,13 @@ engines:
             AE: [L, B, Disabled]
             N: [H1, H2, H3, Z, Disabled]
 
-  hgoe-inex-3t-nl:
+  hgoe-inex-2009-3t-nl:
     name: INEX 3T-NL - Hypergraph-of-Entity
     db:
       name: aa_inex
     index:
       type: hgoe
-      location: /opt/army-ant/indexes/inex-3t-nl/hgoe
+      location: /opt/army-ant/indexes/inex-2009-3t-nl/hgoe
       preload: false
     ranking:
       default:
@@ -426,13 +474,13 @@ engines:
             r: [10, 100, 250, 500, 750, 1000]
             f: [0, 1, 2, 3, 4, 5, 10, 25, 50, 100, 125, 150, 175, 200, 300, 400, 500]
 
-  hgoe-syns-inex-3t-nl:
+  hgoe-syns-inex-2009-3t-nl:
     name: INEX 3T-NL - Hypergraph-of-Entity (Synonyms)
     db:
       name: aa_inex
     index:
       type: hgoe:syns
-      location: /opt/army-ant/indexes/inex-3t-nl/hgoe-syns
+      location: /opt/army-ant/indexes/inex-2009-3t-nl/hgoe-syns
       preload: false
     features:
       - syns
@@ -451,13 +499,13 @@ engines:
             l: [1, 2, 3, 4, 5, 6]
             r: [10, 100, 250, 500, 750, 1000]
 
-  hgoe-context-52t-nl-inex-3t-nl:
+  hgoe-context-52t-nl-inex-2009-3t-nl:
     name: INEX 3T-NL - Hypergraph-of-Entity (Context 52T-NL)
     db:
       name: aa_inex
     index:
       type: hgoe:context
-      location: /opt/army-ant/indexes/inex-3t-nl/hgoe-context-52t-nl
+      location: /opt/army-ant/indexes/inex-2009-3t-nl/hgoe-context-52t-nl
       preload: false
     features:
       - context
@@ -476,13 +524,13 @@ engines:
             l: [1, 2, 3, 4, 5, 6]
             r: [10, 100, 250, 500, 750, 1000]
 
-  hgoe-syns-context-52t-nl-inex-3t-nl:
+  hgoe-syns-context-52t-nl-inex-2009-3t-nl:
     name: INEX 3T-NL - Hypergraph-of-Entity (Synonyms; Context 52T-NL)
     db:
       name: aa_inex
     index:
       type: hgoe:syns:context
-      location: /opt/army-ant/indexes/inex-3t-nl/hgoe-syns-context-52t-nl
+      location: /opt/army-ant/indexes/inex-2009-3t-nl/hgoe-syns-context-52t-nl
       preload: false
     features:
       - context
@@ -502,13 +550,13 @@ engines:
             l: [1, 2, 3, 4, 5, 6]
             r: [10, 100, 250, 500, 750, 1000]
 
-  hgoe-context-52t-nl-syns-inex-3t-nl:
+  hgoe-context-52t-nl-syns-inex-2009-3t-nl:
     name: INEX 3T-NL - Hypergraph-of-Entity (Context 52T-NL; Synonyms)
     db:
       name: aa_inex
     index:
       type: hgoe:context:syns
-      location: /opt/army-ant/indexes/inex-3t-nl/hgoe-context-52t-nl-syns
+      location: /opt/army-ant/indexes/inex-2009-3t-nl/hgoe-context-52t-nl-syns
       preload: false
     features:
       - context
