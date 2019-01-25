@@ -17,6 +17,28 @@ defaults:
     other_args: -XX:+UseConcMarkSweepGC
 
 engines:
+  gow-trec2017:
+    name: TREC 2017 - Graph of Word
+    message: >-
+      Don't forget to launch Gremlin Server with the "gow_trec2017" graph configured
+      (e.g., "gremlin-server-neo4j.yaml").
+    db:
+      name: aa_ssoar
+    index:
+      type: gow_csv
+      location: localhost:8182/gow_trec2017
+
+  goe-trec2017:
+    name: TREC 2017 - Graph of Entity
+    message: >-
+      Don't forget to launch Gremlin Server with the "goe_trec2017" graph configured
+      (e.g., "gremlin-server-neo4j.yaml").
+    db:
+      name: aa_ssoar
+    index:
+      type: goe_csv
+      location: localhost:8182/goe_trec2017
+
   lucene-wapo:
     name: WaPo - Lucene
     db:
@@ -158,39 +180,6 @@ engines:
       type: goe
       location: localhost:8182/goe_wikipedia
 
-  gow-inex-10t-nl:
-    name: INEX 10T-NL - Graph of Word
-    message: >-
-      Don't forget to launch Gremlin Server with the "gow_inex_10t_nl" graph
-      configured (e.g., "bin/gremlin-server.sh gremlin-server-neo4j.yaml").
-    db:
-      name: aa_inex
-    index:
-      type: gow
-      location: localhost:8182/gow_inex_10t_nl
-
-  goe-inex-10t-nl:
-    name: INEX 10T-NL - Graph of Entity
-    message: >-
-      Don't forget to launch Gremlin Server with the "goe_inex_10t_nl" graph
-      configured (e.g., "bin/gremlin-server.sh gremlin-server-neo4j.yaml").
-    db:
-      name: aa_inex
-    index:
-      type: goe
-      location: localhost:8182/goe_inex_10t_nl
-
-  goe-inex-10t-nl-comp:
-    name: INEX 10T-NL - Graph of Entity (HGoE Compare Version)
-    message: >-
-      Don't forget to launch Gremlin Server with the "goe_inex_10t_nl_comp" graph
-      configured (e.g., "bin/gremlin-server.sh gremlin-server-neo4j.yaml").
-    db:
-      name: aa_inex
-    index:
-      type: goe
-      location: localhost:8182/goe_inex_10t_nl_comp
-
   lucene-inex-10t-nl:
     name: INEX 10T-NL - Lucene
     db:
@@ -246,6 +235,39 @@ engines:
             BM: [BE, G, P, D, In, Ine, IF]
             AE: [L, B, Disabled]
             N: [H1, H2, H3, Z, Disabled]
+
+  gow-inex-10t-nl:
+    name: INEX 10T-NL - Graph of Word
+    message: >-
+      Don't forget to launch Gremlin Server with the "gow_inex_10t_nl" graph
+      configured (e.g., "bin/gremlin-server.sh gremlin-server-neo4j.yaml").
+    db:
+      name: aa_inex
+    index:
+      type: gow
+      location: localhost:8182/gow_inex_10t_nl
+
+  goe-inex-10t-nl:
+    name: INEX 10T-NL - Graph of Entity
+    message: >-
+      Don't forget to launch Gremlin Server with the "goe_inex_10t_nl" graph
+      configured (e.g., "bin/gremlin-server.sh gremlin-server-neo4j.yaml").
+    db:
+      name: aa_inex
+    index:
+      type: goe
+      location: localhost:8182/goe_inex_10t_nl
+
+  goe-inex-10t-nl-comp:
+    name: INEX 10T-NL - Graph of Entity (HGoE Compare Version)
+    message: >-
+      Don't forget to launch Gremlin Server with the "goe_inex_10t_nl_comp" graph
+      configured (e.g., "bin/gremlin-server.sh gremlin-server-neo4j.yaml").
+    db:
+      name: aa_inex
+    index:
+      type: goe
+      location: localhost:8182/goe_inex_10t_nl_comp
 
   hgoe-inex-10t-nl:
     name: INEX 2009 10T-NL - Hypergraph-of-Entity
@@ -323,36 +345,41 @@ engines:
             l: [1, 2, 3, 4, 5, 6]
             r: [10, 100, 250, 500, 750, 1000]
 
-  hgoe-inex-dev:
-    name: INEX Dev - Hypergraph-of-Entity
-    db:
-      name: aa_inex
-    index:
-      type: hgoe
-      location: /opt/army-ant/indexes/inex-dev/hypergraph-of-entity
-      preload: false
-    ranking:
-      default:
-        id: random_walk
-        params:
-          l: 3
-          r: 100
-      functions:
-        jaccard:
-          name: Jaccard Score
-        random_walk:
-          name: Random Walk Score
-          params:
-            l: [1, 2, 3, 4, 5, 6]
-            r: [10, 100, 250, 500, 750, 1000]
-
-  lucene-inex-dev:
-    name: INEX Dev - Lucene
+  lucene-inex-3t-nl:
+    name: INEX 3T-NL - Lucene
     db:
       name: aa_inex
     index:
       type: lucene
-      location: /opt/army-ant/indexes/inex-dev/lucene
+      location: /opt/army-ant/indexes/inex-3t-nl/lucene
+    ranking:
+      default:
+        id: tf_idf
+        #params:
+          #k1: 1.2
+          #b: 0.75
+      functions:
+        tf_idf:
+          name: TF-IDF
+        bm25:
+          name: BM25
+          params:
+            k1: [1, 1.2, 1.8]
+            b: [0.5, 0.75, 1]
+        dfr:
+          name: DFR
+          params:
+            BM: [BE, G, P, D, In, Ine, IF]
+            AE: [L, B, Disabled]
+            N: [H1, H2, H3, Z, Disabled]
+
+  tfr-inex-3t-nl:
+    name: INEX 3T-NL - TFR Lucene Reranker
+    db:
+      name: aa_inex
+    index:
+      type: tfr
+      location: /opt/army-ant/indexes/inex-3t-nl/tfr
     ranking:
       default:
         id: tf_idf
@@ -500,81 +527,3 @@ engines:
           params:
             l: [1, 2, 3, 4, 5, 6]
             r: [10, 100, 250, 500, 750, 1000]
-
-  lucene-inex-3t-nl:
-    name: INEX 3T-NL - Lucene
-    db:
-      name: aa_inex
-    index:
-      type: lucene
-      location: /opt/army-ant/indexes/inex-3t-nl/lucene
-    ranking:
-      default:
-        id: tf_idf
-        #params:
-          #k1: 1.2
-          #b: 0.75
-      functions:
-        tf_idf:
-          name: TF-IDF
-        bm25:
-          name: BM25
-          params:
-            k1: [1, 1.2, 1.8]
-            b: [0.5, 0.75, 1]
-        dfr:
-          name: DFR
-          params:
-            BM: [BE, G, P, D, In, Ine, IF]
-            AE: [L, B, Disabled]
-            N: [H1, H2, H3, Z, Disabled]
-
-  tfr-inex-3t-nl:
-    name: INEX 3T-NL - TFR Lucene Reranker
-    db:
-      name: aa_inex
-    index:
-      type: tfr
-      location: /opt/army-ant/indexes/inex-3t-nl/tfr
-    ranking:
-      default:
-        id: tf_idf
-        #params:
-          #k1: 1.2
-          #b: 0.75
-      functions:
-        tf_idf:
-          name: TF-IDF
-        bm25:
-          name: BM25
-          params:
-            k1: [1, 1.2, 1.8]
-            b: [0.5, 0.75, 1]
-        dfr:
-          name: DFR
-          params:
-            BM: [BE, G, P, D, In, Ine, IF]
-            AE: [L, B, Disabled]
-            N: [H1, H2, H3, Z, Disabled]
-
-  gow-trec2017:
-    name: TREC 2017 - Graph of Word
-    message: >-
-      Don't forget to launch Gremlin Server with the "gow_trec2017" graph configured
-      (e.g., "gremlin-server-neo4j.yaml").
-    db:
-      name: aa_ssoar
-    index:
-      type: gow_csv
-      location: localhost:8182/gow_trec2017
-
-  goe-trec2017:
-    name: TREC 2017 - Graph of Entity
-    message: >-
-      Don't forget to launch Gremlin Server with the "goe_trec2017" graph configured
-      (e.g., "gremlin-server-neo4j.yaml").
-    db:
-      name: aa_ssoar
-    index:
-      type: goe_csv
-      location: localhost:8182/goe_trec2017

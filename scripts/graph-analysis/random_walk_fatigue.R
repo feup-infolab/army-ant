@@ -443,9 +443,11 @@ plot_small_graph_with_metrics <- function(g, metrics=list("PR"="pr", "PR Sim"="p
 #g <- make_graph(c(1,2, 2,3, 3,2, 4,2, 4,3, 3,1, 4,5, 5,3, 3,6, 6,7, 7,8, 8,1, 8,3))
 #g <- make_graph(c(1,2, 2,4, 4,3, 3,2))
 #g <- read_graph(gzfile("~/Data/facebook_combined.txt.gz"), format = "edgelist")
-# g <- read.graph(
-#   gzfile("~/Data/wikipedia/wikipedia-sample-rw_leskovec_faloutsos-with_transitions-20181122.graphml.gz"), "graphml")
-# 
+
+g <- read.graph(
+  gzfile("~/Data/wikipedia/wikipedia-sample-rw_leskovec_faloutsos-with_transitions-20181122.graphml.gz"), "graphml")
+names(edge_attr(g))[which(names(edge_attr(g)) == "transitions")] <- "weight"
+
 # V(g)$pr <- page_rank(g)$vector
 # V(g)$hits_authority <- authority_score(g)$vector
 
@@ -472,7 +474,7 @@ plot_small_graph_with_metrics <- function(g, metrics=list("PR"="pr", "PR Sim"="p
 # V(g)$fpr_sim_without_teleport_iter <- fpr_sim_without_teleport$iterations
 # cor(V(g)$pr, V(g)$fpr_sim_without_teleport, method="pearson")
 # cor(V(g)$pr, V(g)$fpr_sim_without_teleport, method="spearman")
- 
+
 system.time(fpr_iter <- fatigued_page_rank_power_iteration(g, fatigue_method = "out_in"))
 V(g)$fpr_iter <- fpr_iter$vector
 V(g)$fpr_iter_iter <- fpr_iter$iterations
@@ -517,3 +519,5 @@ eval <- list(
     pearson=cor(strength(g, mode = "in"), V(g)$fpr_iter_update, method = "pearson"),
     spearman=cor(strength(g, mode = "in"), V(g)$fpr_iter_update, method = "spearman"))
 )
+
+eval
