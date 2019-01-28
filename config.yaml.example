@@ -393,12 +393,12 @@ engines:
             nf: [0, 10, 100, 500, 1000]
             ef: [0, 10, 100, 500, 1000]
 
-  hgoe-syns-context-52t-nl-weight:
+  hgoe-syns-context-52t-nl-weight-inex-2009-10t-nl:
     name: INEX 2009 10T-NL - Hypergraph-of-Entity (Syns; Context; Weight)
     db:
       name: aa_inex
     index:
-      type: hgoe
+      type: hgoe:syns:context:weight
       location: /opt/army-ant/indexes/inex-2009-10t-nl/hgoe-syns_context_52t_nl_weight
       preload: false
     ranking:
