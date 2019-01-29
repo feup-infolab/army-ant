@@ -10,6 +10,7 @@
 #
 
 import gzip
+import logging
 import os
 import shelve
 import shutil
@@ -17,6 +18,11 @@ import sys
 import tempfile
 
 import networkx as nx
+
+logging.basicConfig(
+    format='%(asctime)s link_graph_from_dump: %(levelname)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    level=logging.INFO)
 
 if len(sys.argv) < 4:
     print("Usage: %s INPUT_GRAPHML_GZ OUTPUT_GRAPHML_GZ CLICKSTREAM_TSV_GZ [OUT_KV_DB_PATH]" % sys.argv[0])
@@ -31,18 +37,18 @@ if len(sys.argv) > 4:
     shelve_path = sys.argv[4]
 else:
     tempdir_path = tempfile.mkdtemp(prefix='army_ant_', suffix='_wikipedia_clickstream')
-    print("==> Using temporary directory %s" % tempdir_path)
+    logging.info("Using temporary directory %s" % tempdir_path)
     shelve_path = os.path.join(tempdir_path, 'transitions.idx')
 
 if os.path.isfile(shelve_path):
-    print("==> Using existing clickstream index at %s" % shelve_path)
+    logging.info("Using existing clickstream index at %s" % shelve_path)
     requires_indexing = False
 else:
     requires_indexing = True
 
 with shelve.open(shelve_path) as db, gzip.open(clickstream_path, 'rt') as cs:
     if requires_indexing:
-        print("==> Indexing clickstream")
+        logging.info("Indexing clickstream")
         c = 0
 
         for line in cs:
@@ -54,17 +60,17 @@ with shelve.open(shelve_path) as db, gzip.open(clickstream_path, 'rt') as cs:
                 entry = db[prev]
                 entry[curr] = n
                 db[prev] = entry
-                
+
                 c += 1
                 if c % 100000 == 0:
-                    print("    %d transitions indexed" % c)            
+                    logging.info("%d transitions indexed" % c)
 
-        print("    %d transitions indexed" % c)
+        logging.info("%d transitions indexed" % c)
 
-    print("==> Loading GraphML from %s" % in_graphml_path)
+    logging.info("Loading GraphML from %s" % in_graphml_path)
     g = nx.read_graphml(in_graphml_path)
 
-    print("==> Adding transitions attribute to existing edges")
+    logging.info("Adding transitions attribute to existing edges")
     c = 0
     for source, target in g.edges():
         if not source in db or not target in db[source]:
@@ -73,14 +79,14 @@ with shelve.open(shelve_path) as db, gzip.open(clickstream_path, 'rt') as cs:
             g[source][target]['transitions'] = db[source][target]
         c += 1
         if c % 10000 == 0:
-            print("    %d (%.2f%%) edges processed" % (c, c / g.number_of_edges() * 100))
-    print("    %d (%.2f%%) edges processed" % (c, c / g.number_of_edges() * 100))
+            logging.info("%d (%.2f%%) edges processed" % (c, c / g.number_of_edges() * 100))
+    logging.info("%d (%.2f%%) edges processed" % (c, c / g.number_of_edges() * 100))
 
-    print("==> Saving to %s" % out_graphml_path)
+    logging.info("Saving to %s" % out_graphml_path)
     nx.write_graphml(g, out_graphml_path)
 
 if tempdir_path:
-    print("==> Removing temporary directory %s" % tempdir_path)
+    logging.info("Removing temporary directory %s" % tempdir_path)
     shutil.rmtree(tempdir_path)
 
-print("==> Done")
+logging.info("Done")
