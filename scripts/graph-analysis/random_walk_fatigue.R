@@ -443,13 +443,17 @@ plot_small_graph_with_metrics <- function(g, metrics=list("PR"="pr", "PR Sim"="p
 #g <- make_graph(c(1,2, 2,3, 3,2, 4,2, 4,3, 3,1, 4,5, 5,3, 3,6, 6,7, 7,8, 8,1, 8,3))
 #g <- make_graph(c(1,2, 2,4, 4,3, 3,2))
 #g <- read_graph(gzfile("~/Data/facebook_combined.txt.gz"), format = "edgelist")
+# g <- read.graph(
+#   gzfile("~/Data/wikipedia/wikipedia-sample-rw_leskovec_faloutsos-with_transitions-20181122.graphml.gz"), "graphml")
+# names(edge_attr(g))[which(names(edge_attr(g)) == "transitions")] <- "weight"
 
 g <- read.graph(
-  gzfile("~/Data/wikipedia/wikipedia-sample-rw_leskovec_faloutsos-with_transitions-20181122.graphml.gz"), "graphml")
+  gzfile("~/Data/wikipedia/simplewiki_link_graph-with_transitions-20190129T1506.graphml.gz"), "graphml")
 names(edge_attr(g))[which(names(edge_attr(g)) == "transitions")] <- "weight"
 
-# V(g)$pr <- page_rank(g)$vector
-# V(g)$hits_authority <- authority_score(g)$vector
+
+V(g)$pr <- page_rank(g)$vector
+V(g)$hits_authority <- authority_score(g)$vector
 
 # pr_sim <- page_rank_simulation(g, steps=1000)
 # V(g)$pr_sim <- pr_sim$vector
@@ -478,26 +482,26 @@ names(edge_attr(g))[which(names(edge_attr(g)) == "transitions")] <- "weight"
 system.time(fpr_iter <- fatigued_page_rank_power_iteration(g, fatigue_method = "out_in"))
 V(g)$fpr_iter <- fpr_iter$vector
 V(g)$fpr_iter_iter <- fpr_iter$iterations
-cor(V(g)$fpr_sim, V(g)$fpr_iter, method="pearson")
-cor(V(g)$fpr_sim, V(g)$fpr_iter, method="spearman")
-cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
-cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
+# cor(V(g)$fpr_sim, V(g)$fpr_iter, method="pearson")
+# cor(V(g)$fpr_sim, V(g)$fpr_iter, method="spearman")
+# cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
+# cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
 cor(V(g)$pr, V(g)$fpr_iter, method="pearson")
 cor(V(g)$pr, V(g)$fpr_iter, method="spearman")
 cor(V(g)$hits_authority, V(g)$fpr_iter, method="pearson")
 cor(V(g)$hits_authority, V(g)$fpr_iter, method="spearman")
  
-system.time(fpr_iter_update <- fatigued_page_rank_power_iteration(g, fatigue_method = "out_in_update"))
-V(g)$fpr_iter_update <- fpr_iter_update$vector
-V(g)$fpr_iter_update_iter <- fpr_iter_update$iterations
-cor(V(g)$fpr_sim, V(g)$fpr_iter_update, method="pearson")
-cor(V(g)$fpr_sim, V(g)$fpr_iter_update, method="spearman")
-cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
-cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
-cor(V(g)$pr, V(g)$fpr_iter_update, method="pearson")
-cor(V(g)$pr, V(g)$fpr_iter_update, method="spearman")
-cor(V(g)$hits_authority, V(g)$fpr_iter_update, method="pearson")
-cor(V(g)$hits_authority, V(g)$fpr_iter_update, method="spearman")
+# system.time(fpr_iter_update <- fatigued_page_rank_power_iteration(g, fatigue_method = "out_in_update"))
+# V(g)$fpr_iter_update <- fpr_iter_update$vector
+# V(g)$fpr_iter_update_iter <- fpr_iter_update$iterations
+# cor(V(g)$fpr_sim, V(g)$fpr_iter_update, method="pearson")
+# cor(V(g)$fpr_sim, V(g)$fpr_iter_update, method="spearman")
+# cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
+# cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
+# cor(V(g)$pr, V(g)$fpr_iter_update, method="pearson")
+# cor(V(g)$pr, V(g)$fpr_iter_update, method="spearman")
+# cor(V(g)$hits_authority, V(g)$fpr_iter_update, method="pearson")
+# cor(V(g)$hits_authority, V(g)$fpr_iter_update, method="spearman")
 
 eval <- list(
   pr=c(
@@ -506,18 +510,18 @@ eval <- list(
   hits_authority=c(
     pearson=cor(strength(g, mode = "in"), V(g)$hits_authority, method = "pearson"),
     spearman=cor(strength(g, mode = "in"), V(g)$hits_authority, method = "spearman")),
-  fpr_sim=c(
-    pearson=cor(strength(g, mode = "in"), V(g)$fpr_sim, method = "pearson"),
-    spearman=cor(strength(g, mode = "in"), V(g)$fpr_sim, method = "spearman")),
-  fpr_sim_without_teleport=c(
-    pearson=cor(strength(g, mode = "in"), V(g)$fpr_sim_without_teleport, method = "pearson"),
-    spearman=cor(strength(g, mode = "in"), V(g)$fpr_sim_without_teleport, method = "spearman")),
+  # fpr_sim=c(
+  #   pearson=cor(strength(g, mode = "in"), V(g)$fpr_sim, method = "pearson"),
+  #   spearman=cor(strength(g, mode = "in"), V(g)$fpr_sim, method = "spearman")),
+  # fpr_sim_without_teleport=c(
+  #   pearson=cor(strength(g, mode = "in"), V(g)$fpr_sim_without_teleport, method = "pearson"),
+  #   spearman=cor(strength(g, mode = "in"), V(g)$fpr_sim_without_teleport, method = "spearman")),
   fpr_iter=c(
     pearson=cor(strength(g, mode = "in"), V(g)$fpr_iter, method = "pearson"),
-    spearman=cor(strength(g, mode = "in"), V(g)$fpr_iter, method = "spearman")),
-  fpr_iter_update=c(
-    pearson=cor(strength(g, mode = "in"), V(g)$fpr_iter_update, method = "pearson"),
-    spearman=cor(strength(g, mode = "in"), V(g)$fpr_iter_update, method = "spearman"))
+    spearman=cor(strength(g, mode = "in"), V(g)$fpr_iter, method = "spearman"))
+  # fpr_iter_update=c(
+  #   pearson=cor(strength(g, mode = "in"), V(g)$fpr_iter_update, method = "pearson"),
+  #   spearman=cor(strength(g, mode = "in"), V(g)$fpr_iter_update, method = "spearman"))
 )
 
 eval
