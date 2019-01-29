@@ -52,16 +52,10 @@ async def rank_correlation(index_a_location, index_a_type, index_b_location, ind
             filename_a = os.path.join(path, 'a_repeat_%%0%dd.csv' % len(str(repeats)) % repeat)
             filename_b = os.path.join(path, 'b_repeat_%%0%dd.csv' % len(str(repeats)) % repeat)
 
-            if not force and os.path.exists(filename_a) and os.path.exists(filename_b):
-                df_a = pd.read_csv(filename_a)
+            if not force and os.path.exists(filename_a):
+                df_a = pd.read_csv(filename_a, converters = { 'id': lambda d: str(d) })
                 logger.warning("Loaded existing file for repeat %d of index A: %s (use --force to recompute)" % (
                     repeat, filename_a))
-
-                df_b = pd.read_csv(filename_b)
-                logger.warning("Loaded existing file for repeat %d of index B: %s (use --force to recompute)" % (
-                    repeat, filename_b))
-
-                rhos.append(spearman_rho(df_a, df_b))
             else:
                 result_set_a = await index_a.search(
                     query, 0, cutoff, task=Index.RetrievalTask.document_retrieval,
@@ -81,6 +75,11 @@ async def rank_correlation(index_a_location, index_a_type, index_b_location, ind
 
                 logger.info("Saved repeat %d for index A in %s" % (repeat, filename_a))
 
+            if not force and os.path.exists(filename_b):
+                df_b = pd.read_csv(filename_b, converters = { 'id': lambda d: str(d) })
+                logger.warning("Loaded existing file for repeat %d of index B: %s (use --force to recompute)" % (
+                    repeat, filename_b))
+            else:
                 result_set_b = await index_b.search(
                     query, 0, cutoff, task=Index.RetrievalTask.document_retrieval,
                     ranking_function=ranking_fun_b, ranking_params=ranking_params_b)
@@ -101,7 +100,6 @@ async def rank_correlation(index_a_location, index_a_type, index_b_location, ind
 
             num_results_a.append(len(df_a))
             num_results_b.append(len(df_b))
-
             rhos.append(spearman_rho(df_a, df_b))
             jaccards.append(jaccard_index(df_a, df_b))
 
@@ -113,7 +111,7 @@ async def rank_correlation(index_a_location, index_a_type, index_b_location, ind
             'avg_num_results_a': np.mean(num_results_a),
             'index_type_b': index_b_type,
             'ranking_funtion_b': ranking_fun_b,
-            'ranking_params_b': '_'.join('_'.join(d) for d in ranking_params_b.items()),            
+            'ranking_params_b': '_'.join('_'.join(d) for d in ranking_params_b.items()),
             'avg_num_results_b': np.mean(num_results_b),
             'avg_rho': np.mean(rhos),
             'avg_jaccard': np.mean(jaccards)
