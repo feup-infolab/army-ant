@@ -389,27 +389,40 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
   }
   
   out_indegree_power_iteration <- function() {
-    A <- as.matrix(as_adj(g))
+    A <- as_adj(g)
     N <- vcount(g)
     
     M_out <- t(A)
-    M_out <- scale(M_out, center=FALSE, scale=colSums(M_out))
-    M_out <- apply(M_out, 2, function(col) if (all(is.nan(col))) rep(1/N, N) else col)
-    
+    M_out <- as(M_out, "dgTMatrix")
+    M_out@x <- M_out@x / colSums(M_out)[M_out@j + 1]
+    idx_zero_cols <- setdiff(1:N, unique(M_out@j+1))
+    if (length(idx_zero_cols) > 0) {
+      M_out[, idx_zero_cols] <- rep(1/N, N)
+    }
+
     # M_in <- A
     # M_in <- scale(M_in, center=FALSE, scale=colSums(M_in))
     # M_in <- apply(M_in, 2, function(col) if (all(is.nan(col))) rep(1/N, N) else col)
     # M_in <- 1 - M_in
     # M_in <- scale(M_in, center=FALSE, scale=colSums(M_in))
-    deg_in <- degree(g, mode = "in", normalized = TRUE)
+    
+    # Additive smoothing (a.k.a. Laplace smoothing) of the normalized indegree as a stochastic vector
+    alpha <- 1
+    inv_deg_in <- degree(g, mode = "in", normalized = FALSE)
+    inv_deg_in <- 1 - (inv_deg_in + alpha) / (sum(inv_deg_in) + N * alpha)
+    inv_deg_in <- inv_deg_in / norm(as.matrix(inv_deg_in))
 
     v <- as.matrix(runif(N))
     v <- v / norm(v)
     last_v <- matrix(1, N) * 100
     
-    M <- (1 - deg_in) * M_out
-    M_hat <- d * M + (1-d)/N * matrix(1, N, N)
-    
+    # M <- M_out %*% M_in
+    M <- as(inv_deg_in * M_out, "dgTMatrix")
+    M@x <- M@x / colSums(M)[M@j + 1]
+    #M_hat <- d * M + (1-d)/N * matrix(1, N, N)
+    M_hat <- M
+    print(colSums(M_hat))
+
     iter <- 0
     repeat {
       if (norm(v - last_v, '2') <= eps) break;
@@ -474,16 +487,18 @@ plot_small_graph_with_metrics <- function(g, metrics=list("PR"="pr", "PR Sim"="p
 
 #g <- make_graph("Zachary")
 #g <- make_graph(c(1,2, 1,2, 2,3, 3,2, 4,2, 4,3, 3,1, 4,5, 5,3, 3,6, 6,7, 7,8, 8,1, 8,3))
-#g <- make_graph(c(1,2, 2,4, 4,3, 3,2))
+#g <- make_graph(c(1,2, 2,3, 3,1, 4,1, 4,3, 4,5, 6,4, 6,7))
+g <- make_graph(c(1,2, 2,4, 4,3, 3,2))
 #g <- read_graph(gzfile("~/Data/facebook_combined.txt.gz"), format = "edgelist")
 # g <- read.graph(
 #   gzfile("~/Data/wikipedia/wikipedia-sample-rw_leskovec_faloutsos-with_transitions-20181122.graphml.gz"), "graphml")
 # names(edge_attr(g))[which(names(edge_attr(g)) == "transitions")] <- "weight"
 
-system.time(
-  g <- read.graph(
-    gzfile("~/Data/wikipedia/simplewiki_link_graph-with_transitions-20190129T1506.graphml.gz"), "graphml"))
-system.time(names(edge_attr(g))[which(names(edge_attr(g)) == "transitions")] <- "weight")
+# system.time(
+#   g <- read.graph(
+#     gzfile("~/Data/wikipedia/simplewiki_link_graph-article_namespace-with_transitions-20190130T1723.graphml.gz"),
+#     "graphml"))
+# system.time(names(edge_attr(g))[which(names(edge_attr(g)) == "transitions")] <- "weight")
 
 system.time(V(g)$pr <- page_rank(g)$vector)
 system.time(V(g)$hits_authority <- authority_score(g)$vector)

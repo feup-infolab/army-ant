@@ -37,7 +37,8 @@ logging.info("Loading edges from pagelinks joined with page to obtain titles")
 c.execute("""
     SELECT p1.page_title AS source, pl_title AS target
     FROM pagelinks
-    JOIN page AS p1 ON pl_from = p1.page_id;""")
+    JOIN page AS p1 ON pl_from = p1.page_id
+    WHERE pl_namespace = 0 AND pl_from_namespace = 0""")
 
 edge_count = 0
 
