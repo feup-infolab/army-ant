@@ -222,7 +222,7 @@ fatigued_page_rank_simulation_iter <- function(g, start, d, nf, steps, use_telep
 
 # For now, nf is ignored. There is instead a probability of a node being fatigued, depending on its in-degree.
 # This must be revised to also depend on the number of cycles of node fatigue (nf).
-fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fatigue_method='3ord', ...) {
+fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.001, fatigue_method='3ord', ...) {
   stopifnot(fatigue_method %in% c('1ord', '2ord', '3ord', 'out_in', 'out_indegree'))
 
   first_order_fatigue <- function(M, ...) {
@@ -351,6 +351,7 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
     )
   }
 
+  # TODO optimize with sparse matrices and compare with degree version
   out_in_power_iteration <- function() {
     A <- as.matrix(as_adj(g))
     N <- vcount(g)
@@ -394,7 +395,7 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
     n <- vcount(g)
     
     # Column-vector of ones.
-    e <- matrix(1, n)
+    e <- Matrix(1, n)
     
     # Stochastic matrix from adjacency matrix, with zero columns replaced by teleport probability.
     # This is not explicitly computed, as to avoid storing more values in memory than necessary.
@@ -407,17 +408,11 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
     a <- Matrix(0, nrow=n)
     a[setdiff(1:n, unique(H@j+1)), ] <- 1
 
-    # M_in <- A
-    # M_in <- scale(M_in, center=FALSE, scale=colSums(M_in))
-    # M_in <- apply(M_in, 2, function(col) if (all(is.nan(col))) rep(1/N, N) else col)
-    # M_in <- 1 - M_in
-    # M_in <- scale(M_in, center=FALSE, scale=colSums(M_in))
-    
     # Additive smoothing (a.k.a. Laplace smoothing) of the normalized indegree as a stochastic vector
     alpha <- 1
     inv_deg_in <- degree(g, mode = "in", normalized = FALSE)
-    inv_deg_in <- 1 - (inv_deg_in + alpha) / (sum(inv_deg_in) + n * alpha)
-    inv_deg_in <- inv_deg_in / norm(as.matrix(inv_deg_in))
+    inv_deg_in <- 1 - (inv_deg_in + alpha) / ((n-1) + alpha)
+    inv_deg_in <- inv_deg_in / sum(inv_deg_in)
 
     v <- Matrix(runif(n))
     v <- v / norm(v)
@@ -433,6 +428,9 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
       v <- (d*H + (d*a + (1-d)*e) %*% (1/n * t(e))) %*% v
       v <- v / norm(v)
       iter <- iter + 1
+      if (iter %% 1000 == 0) {
+        logwarn("FPR power iteration has reached iteration %d", iter)
+      }
     }
     
     list(
@@ -479,7 +477,6 @@ plot_small_graph_with_metrics <- function(g, metrics=list("PR"="pr", "PR Sim"="p
       vertex.label.dist=3)
     title(name)
   }
-  
 }
 
 
@@ -499,7 +496,7 @@ plot_small_graph_with_metrics <- function(g, metrics=list("PR"="pr", "PR Sim"="p
 
 system.time(
   g <- read.graph(
-    gzfile("~/Data/wikipedia/simplewiki_link_graph-article_namespace-with_transitions-20190130T1723.graphml.gz"),
+    "~/Data/wikipedia/simplewiki_link_graph-article_namespace-with_transitions-20190130T1723.graphml",
     "graphml"))
 system.time(names(edge_attr(g))[which(names(edge_attr(g)) == "transitions")] <- "weight")
 
