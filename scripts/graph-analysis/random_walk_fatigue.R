@@ -388,17 +388,24 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
     )
   }
   
+  # Using nomenclature from http://www.cs.cmu.edu/~elaw/pagerank.pdf, except for alpha, which is still d here.
   out_indegree_power_iteration <- function() {
-    A <- as_adj(g)
-    N <- vcount(g)
+    # Vertex number.
+    n <- vcount(g)
     
-    M_out <- t(A)
-    M_out <- as(M_out, "dgTMatrix")
-    M_out@x <- M_out@x / colSums(M_out)[M_out@j + 1]
-    idx_zero_cols <- setdiff(1:N, unique(M_out@j+1))
-    if (length(idx_zero_cols) > 0) {
-      M_out[, idx_zero_cols] <- rep(1/N, N)
-    }
+    # Column-vector of ones.
+    e <- matrix(1, n)
+    
+    # Stochastic matrix from adjacency matrix, with zero columns replaced by teleport probability.
+    # This is not explicitly computed, as to avoid storing more values in memory than necessary.
+    # Instead, we store H as a sparse matrix and then do this calculation during PageRank vector computation.
+    # S <- H + (1/n * e) %*% a
+    
+    H <- t(as_adj(g))
+    H <- as(H, "dgTMatrix")
+    H@x <- H@x / colSums(H)[H@j + 1]
+    a <- Matrix(0, nrow=n)
+    a[setdiff(1:n, unique(H@j+1)), ] <- 1
 
     # M_in <- A
     # M_in <- scale(M_in, center=FALSE, scale=colSums(M_in))
@@ -409,25 +416,21 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.0001, fat
     # Additive smoothing (a.k.a. Laplace smoothing) of the normalized indegree as a stochastic vector
     alpha <- 1
     inv_deg_in <- degree(g, mode = "in", normalized = FALSE)
-    inv_deg_in <- 1 - (inv_deg_in + alpha) / (sum(inv_deg_in) + N * alpha)
+    inv_deg_in <- 1 - (inv_deg_in + alpha) / (sum(inv_deg_in) + n * alpha)
     inv_deg_in <- inv_deg_in / norm(as.matrix(inv_deg_in))
 
-    v <- as.matrix(runif(N))
+    v <- Matrix(runif(n))
     v <- v / norm(v)
-    last_v <- matrix(1, N) * 100
+    last_v <- Matrix(1/n, n)
     
-    # M <- M_out %*% M_in
-    M <- as(inv_deg_in * M_out, "dgTMatrix")
-    M@x <- M@x / colSums(M)[M@j + 1]
-    #M_hat <- d * M + (1-d)/N * matrix(1, N, N)
-    M_hat <- M
-    print(colSums(M_hat))
+    H <- as(inv_deg_in * H, "dgTMatrix")
+    H@x <- H@x / colSums(H)[H@j + 1]
 
     iter <- 0
     repeat {
       if (norm(v - last_v, '2') <= eps) break;
       last_v <- v
-      v <- M_hat %*% v
+      v <- (d*H + (d*a + (1-d)*e) %*% (1/n * t(e))) %*% v
       v <- v / norm(v)
       iter <- iter + 1
     }
@@ -488,17 +491,17 @@ plot_small_graph_with_metrics <- function(g, metrics=list("PR"="pr", "PR Sim"="p
 #g <- make_graph("Zachary")
 #g <- make_graph(c(1,2, 1,2, 2,3, 3,2, 4,2, 4,3, 3,1, 4,5, 5,3, 3,6, 6,7, 7,8, 8,1, 8,3))
 #g <- make_graph(c(1,2, 2,3, 3,1, 4,1, 4,3, 4,5, 6,4, 6,7))
-g <- make_graph(c(1,2, 2,4, 4,3, 3,2))
+#g <- make_graph(c(1,2, 2,4, 4,3, 3,2))
 #g <- read_graph(gzfile("~/Data/facebook_combined.txt.gz"), format = "edgelist")
 # g <- read.graph(
 #   gzfile("~/Data/wikipedia/wikipedia-sample-rw_leskovec_faloutsos-with_transitions-20181122.graphml.gz"), "graphml")
 # names(edge_attr(g))[which(names(edge_attr(g)) == "transitions")] <- "weight"
 
-# system.time(
-#   g <- read.graph(
-#     gzfile("~/Data/wikipedia/simplewiki_link_graph-article_namespace-with_transitions-20190130T1723.graphml.gz"),
-#     "graphml"))
-# system.time(names(edge_attr(g))[which(names(edge_attr(g)) == "transitions")] <- "weight")
+system.time(
+  g <- read.graph(
+    gzfile("~/Data/wikipedia/simplewiki_link_graph-article_namespace-with_transitions-20190130T1723.graphml.gz"),
+    "graphml"))
+system.time(names(edge_attr(g))[which(names(edge_attr(g)) == "transitions")] <- "weight")
 
 system.time(V(g)$pr <- page_rank(g)$vector)
 system.time(V(g)$hits_authority <- authority_score(g)$vector)
