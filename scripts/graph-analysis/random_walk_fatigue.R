@@ -409,9 +409,9 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.001, fati
     a[setdiff(1:n, unique(H@j+1)), ] <- 1
 
     # Additive smoothing (a.k.a. Laplace smoothing) of the normalized indegree as a stochastic vector
-    alpha <- 1
+    alpha <- 0.1
     inv_deg_in <- degree(g, mode = "in", normalized = FALSE)
-    inv_deg_in <- 1 - (inv_deg_in + alpha) / ((n-1) + alpha)
+    inv_deg_in <- 1 - (inv_deg_in + alpha) / ((n-1) + alpha*sum(inv_deg_in))
     inv_deg_in <- inv_deg_in / sum(inv_deg_in)
 
     v <- Matrix(runif(n))
@@ -479,6 +479,31 @@ plot_small_graph_with_metrics <- function(g, metrics=list("PR"="pr", "PR Sim"="p
   }
 }
 
+toy_example <- function() {
+  print_latex_matrix <- function(m) {
+    m <- as.matrix(m)
+    x <- xtable(m, align=rep("", ncol(m)+1), digits=0)
+    print(
+      x, floating=FALSE, tabular.environment="bmatrix", 
+      hline.after=NULL, include.rownames=FALSE, include.colnames=FALSE)
+  }
+  
+  cat("\n==> Plot\n")
+  g <- make_graph(c(1,2, 2,3, 3,1, 4,1, 4,3, 4,5, 6,4, 6,7))
+  
+  set.seed(1337)
+  pdf(file = "output/fatigued_pagerank-toy_example_graph.pdf", width = 5, height = 5)
+  plot(g, vertex.color="#ecd078", vertex.size=30)
+  dev.off()
+  
+  cat("\n==> Adjacency\n")
+  A <- as_adj(g)
+  print_latex_matrix(A)
+  
+  cat("\n==> H")
+  H <- A
+}
+
 
 # -------------------------------------------------------------------------------------------------------------------#
 #
@@ -486,7 +511,7 @@ plot_small_graph_with_metrics <- function(g, metrics=list("PR"="pr", "PR Sim"="p
 #
 
 #g <- make_graph("Zachary")
-#g <- make_graph(c(1,2, 1,2, 2,3, 3,2, 4,2, 4,3, 3,1, 4,5, 5,3, 3,6, 6,7, 7,8, 8,1, 8,3))
+#g <- make_graph(c(1,2, 2,3, 3,2, 4,2, 4,3, 3,1, 4,5, 5,3, 3,6, 6,7, 7,8, 8,1, 8,3))
 #g <- make_graph(c(1,2, 2,3, 3,1, 4,1, 4,3, 4,5, 6,4, 6,7))
 #g <- make_graph(c(1,2, 2,4, 4,3, 3,2))
 #g <- read_graph(gzfile("~/Data/facebook_combined.txt.gz"), format = "edgelist")
@@ -495,10 +520,12 @@ plot_small_graph_with_metrics <- function(g, metrics=list("PR"="pr", "PR Sim"="p
 # names(edge_attr(g))[which(names(edge_attr(g)) == "transitions")] <- "weight"
 
 system.time(
-  g <- read.graph(
-    "~/Data/wikipedia/simplewiki_link_graph-article_namespace-with_transitions-20190130T1723.graphml",
-    "graphml"))
+  g <- read_graph(
+    gzfile("~/Data/wikipedia/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.gml.gz"),
+    "gml"))
 system.time(names(edge_attr(g))[which(names(edge_attr(g)) == "transitions")] <- "weight")
+
+save(g, file = "/media/vdb1/output/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.RData")
 
 system.time(V(g)$pr <- page_rank(g)$vector)
 system.time(V(g)$hits_authority <- authority_score(g)$vector)
@@ -561,3 +588,5 @@ eval <- list(
 )
 
 eval
+
+save.image()
