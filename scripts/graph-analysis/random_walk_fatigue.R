@@ -7,7 +7,8 @@ pacman::p_load(
   dplyr,
   foreach,
   logging,
-  Matrix
+  Matrix,
+  xtable
 )
 
 basicConfig()
@@ -480,17 +481,18 @@ plot_small_graph_with_metrics <- function(g, metrics=list("PR"="pr", "PR Sim"="p
 }
 
 toy_example <- function() {
-  print_latex_matrix <- function(m) {
+  print_latex_matrix <- function(m, digits=0) {
     m <- as.matrix(m)
-    x <- xtable(m, align=rep("", ncol(m)+1), digits=0)
+    x <- xtable(m, align=rep("", ncol(m)+1), digits=digits)
     print(
       x, floating=FALSE, tabular.environment="bmatrix", 
       hline.after=NULL, include.rownames=FALSE, include.colnames=FALSE)
   }
   
-  cat("\n==> Plot\n")
   g <- make_graph(c(1,2, 2,3, 3,1, 4,1, 4,3, 4,5, 6,4, 6,7))
-  
+  n <- vcount(g)
+
+  cat("\n==> Plot\n")
   set.seed(1337)
   pdf(file = "output/fatigued_pagerank-toy_example_graph.pdf", width = 5, height = 5)
   plot(g, vertex.color="#ecd078", vertex.size=30)
@@ -499,11 +501,34 @@ toy_example <- function() {
   cat("\n==> Adjacency\n")
   A <- as_adj(g)
   print_latex_matrix(A)
-  
-  cat("\n==> H")
-  H <- A
-}
 
+  cat("\n==> H\n")
+  H <- t(as_adj(g))
+  H <- as(H, "dgTMatrix")
+  H@x <- H@x / colSums(H)[H@j + 1]
+  print_latex_matrix(H, digits=2)
+
+  cat("\n==> a^T\n")
+  a <- Matrix(0, nrow=n)
+  a[setdiff(1:n, unique(H@j+1)), ] <- 1
+  print_latex_matrix(t(a))
+
+  # TODO generate prints for remaining
+
+  # Additive smoothing (a.k.a. Laplace smoothing) of the normalized indegree as a stochastic vector
+  alpha <- 0.1
+  inv_deg_in <- degree(g, mode = "in", normalized = FALSE)
+  inv_deg_in <- 1 - (inv_deg_in + alpha) / ((n-1) + alpha*sum(inv_deg_in))
+  inv_deg_in <- inv_deg_in / sum(inv_deg_in)
+
+  v <- Matrix(runif(n))
+  v <- v / norm(v)
+  last_v <- Matrix(1/n, n)
+
+  H <- as(inv_deg_in * H, "dgTMatrix")
+  H@x <- H@x / colSums(H)[H@j + 1]
+}
+toy_example()
 
 # -------------------------------------------------------------------------------------------------------------------#
 #
