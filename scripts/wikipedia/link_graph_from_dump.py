@@ -17,13 +17,13 @@ logging.basicConfig(
 
 
 if len(sys.argv) < 4:
-    print("Usage: %s MYSQL_DBNAME MYSQL_OPTIONS_FILE GRAPHML_GZ_PATH" % sys.argv[0])
+    print("Usage: %s MYSQL_DBNAME MYSQL_OPTIONS_FILE OUTPUT_GRAPH_PATH" % sys.argv[0])
     sys.exit(1)
 
 
 database = sys.argv[1]
 mycnf_path = sys.argv[2]
-graphml_gz_path = sys.argv[3]
+output_graph_path = sys.argv[3]
 
 
 graph = {}
@@ -58,10 +58,13 @@ for row in c:
 logging.info("%d edges read" % edge_count)
 
 
-logging.info("Converting to igraph format as a directed graph from a tuple list")
+logging.info("Converting into networkx format as a DiGraph")
 g = nx.DiGraph()
 g.add_edges_from((k, v) for k, vs in graph.items() for v in vs)
 
 
-logging.info("Saving graph to %s" % graphml_gz_path)
-nx.write_graphml(g, graphml_gz_path)
+logging.info("Saving graph to %s" % output_graph_path)
+if output_graph_path.endswith('.gml') or output_graph_path.endswith('.gml.gz'):
+    nx.write_gml(g, output_graph_path)
+else:
+    nx.write_graphml(g, output_graph_path)

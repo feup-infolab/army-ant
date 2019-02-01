@@ -25,11 +25,11 @@ logging.basicConfig(
     level=logging.INFO)
 
 if len(sys.argv) < 4:
-    print("Usage: %s INPUT_GRAPHML_GZ OUTPUT_GRAPHML_GZ CLICKSTREAM_TSV_GZ [OUT_KV_DB_PATH]" % sys.argv[0])
+    print("Usage: %s INPUT_GRAPH_PATH OUTPUT_GRAPH_PATH CLICKSTREAM_TSV_GZ [OUT_KV_DB_PATH]" % sys.argv[0])
     sys.exit(1)
 
-in_graphml_path = sys.argv[1]
-out_graphml_path = sys.argv[2]
+in_graph_path = sys.argv[1]
+out_graph_path = sys.argv[2]
 clickstream_path = sys.argv[3]
 tempdir_path = None
 
@@ -67,8 +67,11 @@ with shelve.open(shelve_path) as db, gzip.open(clickstream_path, 'rt') as cs:
 
         logging.info("%d transitions indexed" % c)
 
-    logging.info("Loading GraphML from %s" % in_graphml_path)
-    g = nx.read_graphml(in_graphml_path)
+    logging.info("Loading graph from %s" % in_graph_path)
+    if in_graph_path.endswith('.gml') or in_graph_path.endswith('.gml.gz'):
+        g = nx.read_gml(in_graph_path)
+    else:
+        g = nx.read_graphml(in_graph_path)
 
     logging.info("Adding transitions attribute to existing edges")
     c = 0
@@ -82,8 +85,11 @@ with shelve.open(shelve_path) as db, gzip.open(clickstream_path, 'rt') as cs:
             logging.info("%d (%.2f%%) edges processed" % (c, c / g.number_of_edges() * 100))
     logging.info("%d (%.2f%%) edges processed" % (c, c / g.number_of_edges() * 100))
 
-    logging.info("Saving to %s" % out_graphml_path)
-    nx.write_graphml(g, out_graphml_path)
+    logging.info("Saving to %s" % out_graph_path)
+    if out_graph_path.endswith('.gml') or out_graph_path.endswith('.gml.gz'):
+        nx.write_gml(g, out_graph_path)
+    else:
+        nx.write_graphml(g, out_graph_path)
 
 if tempdir_path:
     logging.info("Removing temporary directory %s" % tempdir_path)
