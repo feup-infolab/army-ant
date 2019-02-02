@@ -559,7 +559,7 @@ toy_example <- function() {
 
 #save(g, file = "/media/vdb1/output/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.RData")
 
-load("/media/vdb1/output/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.RData")
+system.time(load("/media/vdb1/output/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.RData"))
 
 system.time(V(g)$pr <- page_rank(g)$vector)
 system.time(V(g)$hits_authority <- authority_score(g)$vector)
