@@ -1,27 +1,31 @@
-if (!require("pacman")) install.packages("pacman")
+# if (!require("pacman")) install.packages("pacman")
+# 
+# pacman::p_load(
+#   igraph,
+#   ggplot2,
+#   tidyr,
+#   dplyr,
+#   foreach,
+#   logging,
+#   Matrix,
+#   xtable
+# )
 
-pacman::p_load(
-  igraph,
-  ggplot2,
-  tidyr,
-  dplyr,
-  foreach,
-  logging,
-  Matrix,
-  xtable
-)
+library(igraph)
+library(Matrix)
+library(logging)
 
 basicConfig()
 
-options(stringsAsFactors=FALSE)
-
-if (Sys.info()[["sysname"]] == "Windows") {
-  loginfo("Using doParallel for parallelization")
-  doParallel::registerDoParallel(cores = parallel::detectCores() - 1)
-} else {
-  loginfo("Using doMC for parallelization")
-  doMC::registerDoMC(cores = parallel::detectCores() - 1)
-}
+# options(stringsAsFactors=FALSE)
+# 
+# if (Sys.info()[["sysname"]] == "Windows") {
+#   loginfo("Using doParallel for parallelization")
+#   doParallel::registerDoParallel(cores = parallel::detectCores() - 1)
+# } else {
+#   loginfo("Using doMC for parallelization")
+#   doMC::registerDoMC(cores = parallel::detectCores() - 1)
+# }
 
 # -------------------------------------------------------------------------------------------------------------------#
 #
@@ -407,7 +411,10 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.001, fati
     H <- as(H, "dgTMatrix")
     H@x <- H@x / colSums(H)[H@j + 1]
     a <- Matrix(0, nrow=n)
-    a[setdiff(1:n, unique(H@j+1)), ] <- 1
+    idx_zeros <- setdiff(1:n, unique(H@j+1))
+    if (length(idx_zeros) > 0) {
+      a[idx_zeros, ] <- 1
+    }
 
     # Additive smoothing (a.k.a. Laplace smoothing) of the normalized indegree as a stochastic vector
     alpha <- 0.1
@@ -544,13 +551,15 @@ toy_example()
 #   gzfile("~/Data/wikipedia/wikipedia-sample-rw_leskovec_faloutsos-with_transitions-20181122.graphml.gz"), "graphml")
 # names(edge_attr(g))[which(names(edge_attr(g)) == "transitions")] <- "weight"
 
-system.time(
-  g <- read_graph(
-    gzfile("~/Data/wikipedia/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.gml.gz"),
-    "gml"))
-system.time(names(edge_attr(g))[which(names(edge_attr(g)) == "transitions")] <- "weight")
+# system.time(
+#   g <- read_graph(
+#     gzfile("~/Data/wikipedia/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.gml.gz"),
+#     "gml"))
+# system.time(names(edge_attr(g))[which(names(edge_attr(g)) == "transitions")] <- "weight")
 
-save(g, file = "/media/vdb1/output/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.RData")
+#save(g, file = "/media/vdb1/output/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.RData")
+
+load("/media/vdb1/output/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.RData")
 
 system.time(V(g)$pr <- page_rank(g)$vector)
 system.time(V(g)$hits_authority <- authority_score(g)$vector)
