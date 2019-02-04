@@ -1,31 +1,31 @@
-# if (!require("pacman")) install.packages("pacman")
-# 
-# pacman::p_load(
-#   igraph,
-#   ggplot2,
-#   tidyr,
-#   dplyr,
-#   foreach,
-#   logging,
-#   Matrix,
-#   xtable
-# )
+if (!require("pacman")) install.packages("pacman")
 
-library(igraph)
-library(Matrix)
-library(logging)
+pacman::p_load(
+  igraph,
+  ggplot2,
+  tidyr,
+  dplyr,
+  foreach,
+  logging,
+  Matrix,
+  xtable
+)
+
+# library(igraph)
+# library(Matrix)
+# library(logging)
 
 basicConfig()
 
-# options(stringsAsFactors=FALSE)
-# 
-# if (Sys.info()[["sysname"]] == "Windows") {
-#   loginfo("Using doParallel for parallelization")
-#   doParallel::registerDoParallel(cores = parallel::detectCores() - 1)
-# } else {
-#   loginfo("Using doMC for parallelization")
-#   doMC::registerDoMC(cores = parallel::detectCores() - 1)
-# }
+options(stringsAsFactors=FALSE)
+
+if (Sys.info()[["sysname"]] == "Windows") {
+  loginfo("Using doParallel for parallelization")
+  doParallel::registerDoParallel(cores = parallel::detectCores() - 1)
+} else {
+  loginfo("Using doMC for parallelization")
+  doMC::registerDoMC(cores = parallel::detectCores() - 1)
+}
 
 # -------------------------------------------------------------------------------------------------------------------#
 #
@@ -358,34 +358,49 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.001, fati
 
   # TODO optimize with sparse matrices and compare with degree version
   out_in_power_iteration <- function() {
-    A <- as.matrix(as_adj(g))
-    N <- vcount(g)
+    # Vertex number.
+    n <- vcount(g)
     
-    M_out <- t(A)
-    M_out <- scale(M_out, center=FALSE, scale=colSums(M_out))
-    M_out <- apply(M_out, 2, function(col) if (all(is.nan(col))) rep(1/N, N) else col)
+    # Column-vector of ones.
+    e <- Matrix(1, n)
     
-    M_in <- A
-    M_in <- scale(M_in, center=FALSE, scale=colSums(M_in))
-    M_in <- apply(M_in, 2, function(col) if (all(is.nan(col))) rep(1/N, N) else col)
-    M_in <- 1 - M_in
-    M_in <- scale(M_in, center=FALSE, scale=colSums(M_in))
+    # Stochastic matrix from adjacency matrix, with zero columns replaced by teleport probability.
+    # This is not explicitly computed, as to avoid storing more values in memory than necessary.
+    # Instead, we store H as a sparse matrix and then do this calculation during PageRank vector computation.
+    # S <- H + (1/n * e) %*% a
 
-    v <- as.matrix(runif(N))
+    H_out <- t(as_adj(g))
+    H_out <- as(H_out, "dgTMatrix")
+    H_out@x <- H_out@x / colSums(H_out)[H_out@j + 1]
+    a_out <- Matrix(0, nrow=n)
+    idx_zeros <- setdiff(1:n, unique(H_out@j+1))
+    if (length(idx_zeros) > 0) {
+      a_out[idx_zeros, ] <- 1
+    }
+
+    H_in <- as_adj(g)
+    H_in <- as(H_in, "dgTMatrix")
+    H_in@x <- H_in@x / colSums(H_in)[H_in@j + 1]
+    a_in <- Matrix(0, nrow=n)
+    idx_zeros <- setdiff(1:n, unique(H_in@j+1))
+    if (length(idx_zeros) > 0) {
+      a_in[idx_zeros, ] <- 1
+    }
+
+    v <- Matrix(runif(n))
     v <- v / norm(v)
-    last_v <- matrix(1, N) * 100
+    last_v <- Matrix(1/n, n)
 
-    M <- M_out %*% M_in
-    # M_hat <- M
-    M_hat <- d * M + (1-d)/N * matrix(1, N, N)
-    
     iter <- 0
     repeat {
       if (norm(v - last_v, '2') <= eps) break;
       last_v <- v
-      v <- M_hat %*% v
+      v <- (d*H_out + (d*a_out + (1-d)*e) %*% (1/n * t(e))) %*% v
       v <- v / norm(v)
       iter <- iter + 1
+      if (iter %% 1000 == 0) {
+        logwarn("FPR power iteration has reached iteration %d", iter)
+      }
     }
     
     list(
@@ -393,7 +408,7 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.001, fati
       vector=as.numeric(v)
     )
   }
-  
+
   # Using nomenclature from http://www.cs.cmu.edu/~elaw/pagerank.pdf, except for alpha, which is still d here.
   out_indegree_power_iteration <- function() {
     # Vertex number.
@@ -422,23 +437,30 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.001, fati
     inv_deg_in <- 1 - (inv_deg_in + alpha) / ((n-1) + alpha*sum(inv_deg_in))
     inv_deg_in <- inv_deg_in / sum(inv_deg_in)
 
-    v <- Matrix(runif(n))
-    v <- v / norm(v)
-    last_v <- Matrix(1/n, n)
-    
     H <- as(inv_deg_in * H, "dgTMatrix")
     H@x <- H@x / colSums(H)[H@j + 1]
 
+    v <- Matrix(1/n, n)
+    batch_size <- 100
+
     iter <- 0
     repeat {
-      if (norm(v - last_v, '2') <= eps) break;
       last_v <- v
-      v <- (d*H + (d*a + (1-d)*e) %*% (1/n * t(e))) %*% v
+      v <- foreach (i = 1:ceiling(n / batch_size), .combine=rbind, .inorder = TRUE) %dopar% {
+        start <- (i-1) * batch_size + 1
+        end <- min(i * batch_size, n)
+        (d*H[start:end, ] + (d*a[start:end] + (1-d)*e[start:end]) %*% (1/n * t(e))) %*% last_v
+      }
+      #v <- (d*H + (d*a + (1-d)*e) %*% (1/n * t(e))) %*% v
+      #v <- (d * (H + 1/n * a %*% t(e)) + (1-d) * 1/n * e %*% t(e)) %*% last_v
       v <- v / norm(v)
+
       iter <- iter + 1
       if (iter %% 1000 == 0) {
         logwarn("FPR power iteration has reached iteration %d", iter)
       }
+
+      if (norm(v - last_v, '2') <= eps) break;
     }
     
     list(
@@ -542,85 +564,68 @@ toy_example <- function() {
 # MAIN
 #
 
-#g <- make_graph("Zachary")
-#g <- make_graph(c(1,2, 2,3, 3,2, 4,2, 4,3, 3,1, 4,5, 5,3, 3,6, 6,7, 7,8, 8,1, 8,3))
-#g <- make_graph(c(1,2, 2,3, 3,1, 4,1, 4,3, 4,5, 6,4, 6,7))
-#g <- make_graph(c(1,2, 2,4, 4,3, 3,2))
-#g <- read_graph(gzfile("~/Data/facebook_combined.txt.gz"), format = "edgelist")
-# g <- read.graph(
-#   gzfile("~/Data/wikipedia/wikipedia-sample-rw_leskovec_faloutsos-with_transitions-20181122.graphml.gz"), "graphml")
-# names(edge_attr(g))[which(names(edge_attr(g)) == "transitions")] <- "weight"
+#
+# Graph
+#
+
+# g <- make_graph("Zachary")
+# g <- make_graph(c(1,2, 2,3, 3,2, 4,2, 4,3, 3,1, 4,5, 5,3, 3,6, 6,7, 7,8, 8,1, 8,3))
+# g <- make_graph(c(1,2, 2,3, 3,1, 4,1, 4,3, 4,5, 6,4, 6,7))
+# g <- make_graph(c(1,2, 2,4, 4,3, 3,2))
+# g <- read_graph(gzfile("~/Data/facebook_combined.txt.gz"), format = "edgelist")
 
 # system.time(
 #   g <- read_graph(
 #     gzfile("~/Data/wikipedia/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.gml.gz"),
 #     "gml"))
 # system.time(names(edge_attr(g))[which(names(edge_attr(g)) == "transitions")] <- "weight")
+# save(g, file = "/media/vdb1/output/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.RData")
 
-#save(g, file = "/media/vdb1/output/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.RData")
+#system.time(load("/media/vdb1/output/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.RData"))
+system.time(load("~/Data/wikipedia/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.RData"))
 
-system.time(load("/media/vdb1/output/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.RData"))
+#
+# Node ranking metrics
+#
 
+system.time(V(g)$indegree <- degree(g, mode = "in"))
 system.time(V(g)$pr <- page_rank(g)$vector)
 system.time(V(g)$hits_authority <- authority_score(g)$vector)
 
 # pr_sim <- page_rank_simulation(g, steps=1000)
 # V(g)$pr_sim <- pr_sim$vector
 # V(g)$pr_sim_iter <- pr_sim$iterations
-# cor(V(g)$pr, V(g)$pr_sim, method="pearson")
-# cor(V(g)$pr, V(g)$pr_sim, method="spearman")
-
+#
 # pr_iter <- page_rank_power_iteration(g)
 # V(g)$pr_iter <- pr_iter$vector
 # V(g)$pr_iter_iter <- pr_iter$iterations
-# cor(V(g)$pr, V(g)$pr_iter, method="pearson")
-# cor(V(g)$pr, V(g)$pr_iter, method="spearman")
- 
+#
 # system.time(fpr_sim <- fatigued_page_rank_simulation(g, steps=1000, use_teleport = TRUE))
 # V(g)$fpr_sim <- fpr_sim$vector
 # V(g)$fpr_sim_iter <- fpr_sim$iterations
-# cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
-# cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
 # 
 # system.time(fpr_sim_without_teleport <- fatigued_page_rank_simulation(g, steps=1000, use_teleport = FALSE))
 # V(g)$fpr_sim_without_teleport <- fpr_sim_without_teleport$vector
 # V(g)$fpr_sim_without_teleport_iter <- fpr_sim_without_teleport$iterations
-# cor(V(g)$pr, V(g)$fpr_sim_without_teleport, method="pearson")
-# cor(V(g)$pr, V(g)$fpr_sim_without_teleport, method="spearman")
 
-system.time(fpr_iter <- fatigued_page_rank_power_iteration(g, fatigue_method = "out_indegree"))
-V(g)$fpr_iter <- fpr_iter$vector
-V(g)$fpr_iter_iter <- fpr_iter$iterations
-# cor(V(g)$fpr_sim, V(g)$fpr_iter, method="pearson")
-# cor(V(g)$fpr_sim, V(g)$fpr_iter, method="spearman")
-# cor(V(g)$pr, V(g)$fpr_sim, method="pearson")
-# cor(V(g)$pr, V(g)$fpr_sim, method="spearman")
-cor(V(g)$pr, V(g)$fpr_iter, method="pearson")
-cor(V(g)$pr, V(g)$fpr_iter, method="spearman")
-cor(V(g)$hits_authority, V(g)$fpr_iter, method="pearson")
-cor(V(g)$hits_authority, V(g)$fpr_iter, method="spearman")
+system.time(fpr_out_indegree <- fatigued_page_rank_power_iteration(g, fatigue_method = "out_indegree"))
+V(g)$fpr_out_indegree <- fpr_out_indegree$vector
+V(g)$fpr_out_indegree_iter <- fpr_out_indegree$iterations
 
 eval <- list(
+  indegree=c(
+    pearson=cor(strength(g, mode = "in"), degree(g, mode = "in"), method = "pearson"),
+    spearman=cor(strength(g, mode = "in"), degree(g, mode = "in"), method = "spearman")),
   pr=c(
     pearson=cor(strength(g, mode = "in"), V(g)$pr, method = "pearson"),
     spearman=cor(strength(g, mode = "in"), V(g)$pr, method = "spearman")),
   hits_authority=c(
     pearson=cor(strength(g, mode = "in"), V(g)$hits_authority, method = "pearson"),
     spearman=cor(strength(g, mode = "in"), V(g)$hits_authority, method = "spearman")),
-  # fpr_sim=c(
-  #   pearson=cor(strength(g, mode = "in"), V(g)$fpr_sim, method = "pearson"),
-  #   spearman=cor(strength(g, mode = "in"), V(g)$fpr_sim, method = "spearman")),
-  # fpr_sim_without_teleport=c(
-  #   pearson=cor(strength(g, mode = "in"), V(g)$fpr_sim_without_teleport, method = "pearson"),
-  #   spearman=cor(strength(g, mode = "in"), V(g)$fpr_sim_without_teleport, method = "spearman")),
-  fpr_iter=c(
-    pearson=cor(strength(g, mode = "in"), V(g)$fpr_iter, method = "pearson"),
-    spearman=cor(strength(g, mode = "in"), V(g)$fpr_iter, method = "spearman"))
-  # fpr_iter_update=c(
-  #   pearson=cor(strength(g, mode = "in"), V(g)$fpr_iter_update, method = "pearson"),
-  #   spearman=cor(strength(g, mode = "in"), V(g)$fpr_iter_update, method = "spearman"))
+  fpr_out_indegree=c(
+    pearson=cor(strength(g, mode = "in"), V(g)$fpr_out_indegree, method = "pearson"),
+    spearman=cor(strength(g, mode = "in"), V(g)$fpr_out_indegree, method = "spearman"))
 )
-
 eval
 
 save.image()
