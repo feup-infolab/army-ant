@@ -57,6 +57,9 @@ for doc in document_iterator():
         graph[source] = set([])
 
     for par in doc['contents']:
+        if par is None:
+            continue
+
         html = par.get('content')
         if html is None:
             continue
