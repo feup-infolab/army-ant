@@ -75,6 +75,8 @@ class Index(object):
             return LuceneEngine(reader, index_location, loop)
         elif index_type == 'tfr':
             return TensorFlowRanking(reader, index_location, loop)
+        elif index_type == 'lucene_features':
+            return LuceneFeaturesEngine(reader, index_location, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 
@@ -105,6 +107,8 @@ class Index(object):
             return LuceneEngine(None, index_location, loop)
         elif index_type == 'tfr':
             return TensorFlowRanking(None, index_location, loop)
+        elif index_type == 'lucene_features':
+            return LuceneFeaturesEngine(None, index_location, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 
@@ -1053,7 +1057,7 @@ class LuceneEngine(JavaIndex):
 
         return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()), trace_ascii=trace.toASCII())
 
-class TensorFlowRanking(Index):
+class TensorFlowRanking(JavaIndex):
     FEATURES = ['num_query_terms', 'norm_num_query_terms', 'idf', 'sum_query_tf', 'min_query_tf', 'max_query_tf',
                 'avg_query_tf', 'var_query_tf', 'stream_length', 'sum_norm_tf', 'min_norm_tf', 'max_norm_tf',
                 'avg_norm_tf', 'var_norm_tf', 'url_slashes', 'url_length', 'indegree', 'outdegree', 'pagerank',
@@ -1337,6 +1341,71 @@ class TensorFlowRanking(Index):
         ranker = self.get_estimator(hparams)
         ranker.train(input_fn=lambda: self.input_fn(pd_train_generator), steps=100)
 
+    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
+        hparams = tf.contrib.training.HParams(learning_rate=0.05)
+        ranker = self.get_estimator(hparams)
+
+        k = 1000
+        ltr_helper = TensorFlowRanking.JLearningToRankHelper(self.lucene_index_location)
+        doc_ids = [result.id for result in ltr_helper.search(
+            query, 0, k, task=task, ranking_function=ranking_function, ranking_params=ranking_params, debug=debug)]
+
+        logger.info("Using %d documents for reranking" % len(doc_ids))
+
+        doc_ids, predict_set = self.build_predict_set(ltr_helper, query, filter_by_doc_id=doc_ids)
+
+        # print(predict_set)
+
+        results = ranker.predict(input_fn=lambda: (predict_set, None))
+        results = zip([next(results)[0] for i in range(k)], doc_ids)
+        results = sorted(results, key=lambda d: -d[0])
+
+        results = [Result(score=result[0], id=result[1], name=result[1], type='document')
+                   for result in itertools.islice(results, offset, offset + limit)]
+
+        return ResultSet(results, len(doc_ids))
+
+class LuceneFeaturesEngine(JavaIndex):
+    JFeaturesHelper = JavaIndex.armyant.lucene.LuceneFeaturesHelper
+
+    def __init__(self, reader, index_location, loop):
+        super().__init__(reader, index_location, loop)
+        self.lucene_index_location = os.path.join(index_location, 'lucene')
+        self.lucene_engine = LuceneEngine(reader, self.lucene_index_location, loop)
+
+    # TODO load features like PageRank from CSV
+    def j_load_features(self, features_location):
+        # TODO load csv
+
+        logger.info("Loading query-independent features")
+        j_graph_based_features = java.util.HashMap()
+        # TODO iterave over CSV
+        for v in self.graph.vs.select(name_in=self.web_features.keys()):
+            j_features = java.util.LinkedHashMap()
+
+            for feature_name, feature_value in self.web_features[v['name']].items():
+                j_features.put(feature_name, float(feature_value))
+
+            j_features.put('indegree', float(indegree[v.index]))
+            j_features.put('outdegree', float(outdegree[v.index]))
+            j_features.put('pagerank', float(pagerank[v.index]))
+
+            j_graph_based_features.put(v['name'], j_features)
+
+        return j_graph_based_features
+
+    async def index(self, features_location=None):
+        if not features_location:
+            raise ArmyAntException("Must provide a features location with topics.txt and qrels.txt files")
+
+        async for doc in self.lucene_engine.index(features_location=features_location):
+            yield doc
+
+        features_helper = LuceneFeaturesEngine.JFeaturesHelper(self.lucene_index_location)
+        j_features = self.j_load_features(features_location)
+        features_helper.setDocumentFeatures(j_features)
+
+    # TODO rewrite
     async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
         hparams = tf.contrib.training.HParams(learning_rate=0.05)
         ranker = self.get_estimator(hparams)
