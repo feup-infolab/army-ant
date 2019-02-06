@@ -17,10 +17,12 @@ import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.similarities.AfterEffect;
 import org.apache.lucene.search.similarities.BM25Similarity;
 import org.apache.lucene.search.similarities.BasicModel;
@@ -117,9 +119,13 @@ public class LuceneEngine extends Engine {
         return search(query, offset, limit, RankingFunction.TF_IDF, null);
     }
 
-    public ResultSet search(String query, int offset, int limit,
-                            RankingFunction rankingFunction, Map<String, String> params)
-            throws IOException, ParseException, ClassNotFoundException, IllegalAccessException, InstantiationException {
+    public ResultSet search(String query, int offset, int limit, RankingFunction rankingFunction,
+                            Map<String, String> params) throws Exception {
+        return search(query, offset, limit, rankingFunction, params, null);
+    }
+
+    protected ResultSet search(String query, int offset, int limit, RankingFunction rankingFunction,
+                            Map<String, String> params, Query boost) throws Exception {
         IndexReader reader = DirectoryReader.open(directory);
         IndexSearcher searcher = new IndexSearcher(reader);
 
@@ -160,6 +166,15 @@ public class LuceneEngine extends Engine {
 
         QueryParser parser = new QueryParser("text", analyzer);
         Query luceneQuery = parser.parse(query);
+
+        if (boost != null) {
+            logger.info("Using query boosting");
+            luceneQuery = new BooleanQuery.Builder()
+                .add(luceneQuery, Occur.MUST)
+                .add(boost, Occur.SHOULD)
+                .build();
+        }
+
         TopDocs hits = searcher.search(luceneQuery, offset + limit);
 
         ResultSet results = new ResultSet();

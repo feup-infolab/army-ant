@@ -30,8 +30,6 @@ database = sys.argv[1]
 output_graph_path = sys.argv[2]
 
 
-graph = {}
-
 mongo = MongoClient()
 db = mongo[database]
 
@@ -43,20 +41,20 @@ def document_iterator():
         yield doc
 
 
-logging.info("Extracting anchors from content elements (using article_url as node ID)")
+logging.info("Extracting anchors from content elements (using article_url as node ID) and building graph")
 
+g = nx.DiGraph()
+
+doc_count = 0
 edge_count = 0
 
-for doc in document_iterator():
-    if not 'contents' in doc or doc.get('contents') is None:
+attr_keys = ['id', 'title', 'article_url', 'published_date', 'author', 'type']
+
+for source in document_iterator():
+    if not 'contents' in source or source.get('contents') is None:
         continue
 
-    source = doc['article_url']
-
-    if not source in graph:
-        graph[source] = set([])
-
-    for par in doc['contents']:
+    for par in source['contents']:
         if par is None:
             continue
 
@@ -70,22 +68,36 @@ for doc in document_iterator():
         anchors = soup.find_all('a')
 
         for a in anchors:
-            target = a.attrs.get('href')
+            target_url = a.attrs.get('href')
+            if target_url is None:
+                continue
+
+            query = {'article_url': target_url}
+            attr_selector = {
+                '_id': -1, 'id': 1, 'article_url': 1, 'title': 1,
+                'published_date': 1, 'author': 1, 'type': 1}
+            target = db.articles.find_one(query, attr_selector) \
+                or db.blog_posts.find_one(query, attr_selector)
+
             if target is None:
                 continue
 
-            graph[source].add(target)
+            # graph[source_url].add(target_url)
+
+            g.add_node(
+                source['id'], attrs={k.replace('_', ''): source[k] for k in attr_keys if not source[k] is None})
+            g.add_node(
+                target['id'], attrs={k.replace('_', ''): target[k] for k in attr_keys if not target[k] is None})
+            g.add_edge(source['id'], target['id'])
 
             edge_count += 1
-            if edge_count % 100000 == 0:
-                logging.info("%d edges read (with duplicates)" % edge_count)
 
-logging.info("%d edges read (with duplicates)" % edge_count)
+    doc_count += 1
 
+    if doc_count % 1000 == 0:
+        logging.info("%d documents processed (%d edges created)" % (doc_count, edge_count))
 
-logging.info("Converting into networkx format as a DiGraph")
-g = nx.DiGraph()
-g.add_edges_from((k, v) for k, vs in graph.items() for v in vs)
+logging.info("%d documents processed (%d edges created)" % (doc_count, edge_count))
 
 
 logging.info("Saving graph to %s" % output_graph_path)
