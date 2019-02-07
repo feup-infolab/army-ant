@@ -14,7 +14,7 @@ from pymongo import MongoClient
 
 
 logging.basicConfig(
-    format='%(asctime)s link_graph_from_dump: %(levelname)s: %(message)s',
+    format='%(asctime)s wapo_link_graph_from_mongo: %(levelname)s: %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
     level=logging.INFO)
 
@@ -85,9 +85,9 @@ for source in document_iterator():
             # graph[source_url].add(target_url)
 
             g.add_node(
-                source['id'], attrs={k.replace('_', ''): source[k] for k in attr_keys if not source[k] is None})
+                source['id'], **{k.replace('_', ''): source[k] for k in attr_keys if not source[k] is None})
             g.add_node(
-                target['id'], attrs={k.replace('_', ''): target[k] for k in attr_keys if not target[k] is None})
+                target['id'], **{k.replace('_', ''): target[k] for k in attr_keys if not target[k] is None})
             g.add_edge(source['id'], target['id'])
 
             edge_count += 1
