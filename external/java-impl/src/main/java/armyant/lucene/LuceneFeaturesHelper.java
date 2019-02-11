@@ -104,6 +104,7 @@ public class LuceneFeaturesHelper extends LuceneEngine {
             Map<String, String> params) throws Exception {
 
         String featureName = params.get("feature");
+        if (featureName != null && featureName.equals("Disabled")) featureName = null;
         float w = params.get("w") == null ? 1.8f : Float.parseFloat(params.get("w"));
         float k = params.get("k") == null ? 1.0f : Float.parseFloat(params.get("k"));
         float a = params.get("a") == null ? 0.6f : Float.parseFloat(params.get("a"));

@@ -86,6 +86,27 @@ engines:
             AE: [L, B, Disabled]
             N: [H1, H2, H3, Z, Disabled]
 
+  lucene-features-wapo:
+    name: WaPo - Lucene Features
+    db:
+      name: aa_wapo
+    index:
+      type: lucene_features
+      location: /opt/army-ant/indexes/wapo/lucene_features
+    ranking:
+      default:
+        id: bm25
+      functions:
+        bm25:
+          name: BM25
+          params:
+            k1: [1.2]
+            b: [0.75]
+            feature: ["indegree", "hits_authority", "pr", "fpr_out_indegree", "Disabled"]
+            w: [1.8]
+            k: [1.0]
+            a: [0.6]
+
   lucene-wapo-sample:
     name: WaPo Sample - Lucene
     db:

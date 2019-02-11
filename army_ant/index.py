@@ -1392,13 +1392,12 @@ class LuceneFeaturesEngine(JavaIndex):
         if not features_location:
             raise ArmyAntException("Must provide a features location with topics.txt and qrels.txt files")
 
-        # async for doc in self.lucene_engine.index(features_location=features_location):
-        #     yield doc
+        async for doc in self.lucene_engine.index(features_location=features_location):
+            yield doc
 
         features_helper = LuceneFeaturesEngine.JFeaturesHelper(self.lucene_index_location)
         j_features = self.j_load_features(features_location)
         features_helper.setDocumentFeatures(j_features)
-        yield None
 
     async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
         if ranking_function:
