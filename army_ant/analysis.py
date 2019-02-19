@@ -170,8 +170,10 @@ async def rws_rank_concordance(index_location, index_type, rw_length, rw_repeats
                             repeat, filename))
                         continue
 
-                    result_set = await index.search(query, 0, cutoff, 'random_walk',
-                                                    {'l': str(rw_length[i]), 'r': str(rw_repeats[j])})
+                    result_set = await index.search(query, 0, cutoff,
+                                                    task=Index.RetrievalTask.document_retrieval,
+                                                    ranking_function='random_walk',
+                                                    ranking_params={'l': str(rw_length[i]), 'r': str(rw_repeats[j])})
                     df = pd.DataFrame(columns=['score', 'id'])
 
                     for result in result_set:
