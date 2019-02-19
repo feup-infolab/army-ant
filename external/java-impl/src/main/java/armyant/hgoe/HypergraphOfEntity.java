@@ -63,7 +63,7 @@ public class HypergraphOfEntity extends Engine {
 
     private static final float DEFAULT_DOCUMENT_EDGE_WEIGHT = 0.5f;
 
-    private static final int DEFAULT_WALK_LENGTH = 3;
+    private static final int DEFAULT_WALK_LENGTH = 2;
     private static final int DEFAULT_WALK_REPEATS = 1000;
     private static final int DEFAULT_FATIQUE = 0;
 
