@@ -6,6 +6,8 @@
 
 import datetime
 import logging
+import math
+import numbers
 import sys
 from zipfile import ZipFile
 
@@ -20,6 +22,9 @@ decimal_places = 4
 favorite_metrics = ['GMAP', 'MAP', 'NDCG@10', 'P@10']
 
 def millis_format(millis):
+    if not isinstance(millis, numbers.Number) or math.isnan(millis):
+        return "N/A"
+
     out = {}
     out['days'] = millis // 86400000
     millis -= out['days'] * 86400000
@@ -57,11 +62,11 @@ else:
 if len(sys.argv) > 3:
     param_names = sys.argv[3:]
 else:
-    param_names = []
+    param_names = None
 
 with ZipFile(sys.argv[1]) as f_zip:
     eval_metrics = [zip_obj for zip_obj in f_zip.filelist if zip_obj.filename.endswith('eval_metrics.csv')]
-    
+
     if len(eval_metrics) < 1:
         logging.error("No eval_metrics.csv file found")
         sys.exit(2)
@@ -70,7 +75,7 @@ with ZipFile(sys.argv[1]) as f_zip:
         logging.warning("Multiple eval_metrics.csv files found, using %s" % eval_metrics[0].filename)
 
     eval_stats = [zip_obj for zip_obj in f_zip.filelist if zip_obj.filename.endswith('eval_stats.csv')]
-    
+
     if len(eval_stats) < 1:
         logging.error("No eval_stats.csv file found")
         sys.exit(2)
@@ -81,6 +86,9 @@ with ZipFile(sys.argv[1]) as f_zip:
     with f_zip.open(eval_metrics[0].filename, 'r') as f:
         df = pd.read_csv(f)
 
+        if param_names is None:
+            param_names = [col for col in df.columns if not col in ['metric', 'value']]
+
         df['Version'] = df[param_names].apply(lambda d: "%s(%s)" % (
             function_name,
             ', '.join(['%s=%s' % (p, x) for p, x in zip(param_names, d)])
@@ -90,6 +98,7 @@ with ZipFile(sys.argv[1]) as f_zip:
 
     with f_zip.open(eval_stats[0].filename, 'r') as f:
         df = pd.read_csv(f)
+        print(df)
 
         df['Version'] = df[param_names].apply(lambda d: "%s(%s)" % (
             function_name,
