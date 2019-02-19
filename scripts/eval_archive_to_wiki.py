@@ -19,7 +19,7 @@ logging.basicConfig(
     level=logging.INFO)
 
 decimal_places = 4
-favorite_metrics = ['GMAP', 'MAP', 'NDCG@10', 'P@10']
+favorite_metrics = ['GMAP', 'MAP', 'Macro Avg Prec', 'Macro Avg Rec', 'NDCG@10', 'P@10']
 
 def millis_format(millis):
     if not isinstance(millis, numbers.Number) or math.isnan(millis):
@@ -98,7 +98,6 @@ with ZipFile(sys.argv[1]) as f_zip:
 
     with f_zip.open(eval_stats[0].filename, 'r') as f:
         df = pd.read_csv(f)
-        print(df)
 
         df['Version'] = df[param_names].apply(lambda d: "%s(%s)" % (
             function_name,
