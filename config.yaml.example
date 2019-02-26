@@ -447,7 +447,7 @@ engines:
             ef: [0, 10, 100, 500, 1000]
 
   lucene-inex-2009-3t-nl:
-    name: INEX 3T-NL - Lucene
+    name: INEX 2009 3T-NL - Lucene
     db:
       name: aa_inex
     index:
@@ -475,7 +475,7 @@ engines:
             N: [H1, H2, H3, Z, Disabled]
 
   tfr-inex-2009-3t-nl:
-    name: INEX 3T-NL - TFR Lucene Reranker
+    name: INEX 2009 3T-NL - TFR Lucene Reranker
     db:
       name: aa_inex
     index:
@@ -503,7 +503,7 @@ engines:
             N: [H1, H2, H3, Z, Disabled]
 
   hgoe-inex-2009-3t-nl:
-    name: INEX 3T-NL - Hypergraph-of-Entity
+    name: INEX 2009 3T-NL - Hypergraph-of-Entity
     db:
       name: aa_inex
     index:
@@ -515,20 +515,20 @@ engines:
         id: random_walk
         params:
           l: 2
-          r: 100
-          f: 0
+          r: 1000
+          nf: 0
+          ef: 0
       functions:
-        jaccard:
-          name: Jaccard Score
         random_walk:
           name: Random Walk Score
           params:
             l: [1, 2, 3, 4, 5, 6]
-            r: [10, 100, 250, 500, 750, 1000]
-            f: [0, 1, 2, 3, 4, 5, 10, 25, 50, 100, 125, 150, 175, 200, 300, 400, 500]
+            r: [10, 100, 250, 500, 750, 1000, 2500, 5000, 10000]
+            nf: [0, 10, 100, 500, 1000]
+            ef: [0, 10, 100, 500, 1000]
 
   hgoe-syns-inex-2009-3t-nl:
-    name: INEX 3T-NL - Hypergraph-of-Entity (Synonyms)
+    name: INEX 2009 3T-NL - Hypergraph-of-Entity (Synonyms)
     db:
       name: aa_inex
     index:
@@ -541,16 +541,18 @@ engines:
       default:
         id: random_walk
         params:
-          l: 3
-          r: 100
+          l: 2
+          r: 1000
+          nf: 10
+          ef: 10
       functions:
-        jaccard:
-          name: Jaccard Score
         random_walk:
           name: Random Walk Score
           params:
             l: [1, 2, 3, 4, 5, 6]
-            r: [10, 100, 250, 500, 750, 1000]
+            r: [10, 100, 250, 500, 750, 1000, 2500, 5000, 10000]
+            nf: [0, 10, 100, 500, 1000]
+            ef: [0, 10, 100, 500, 1000]
 
   hgoe-context-52t-nl-inex-2009-3t-nl:
     name: INEX 3T-NL - Hypergraph-of-Entity (Context 52T-NL)
