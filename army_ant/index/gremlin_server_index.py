@@ -33,12 +33,11 @@ from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
 
 from army_ant.exception import ArmyAntException
+from army_ant.index import ServiceIndex
 from army_ant.reader import Document, Entity
 from army_ant.setup import config_logger
 from army_ant.util import load_gremlin_script, load_sql_script
 from army_ant.util.text import analyze
-
-from . import ServiceIndex
 
 logger = logging.getLogger(__name__)
 

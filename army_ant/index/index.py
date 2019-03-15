@@ -38,9 +38,6 @@ from army_ant.setup import config_logger
 from army_ant.util import load_gremlin_script, load_sql_script
 from army_ant.util.text import analyze
 
-from . import (GraphOfWord, GraphOfEntity, GraphOfWordBatch, GraphOfEntityBatch, GraphOfWordCSV, GraphOfEntityCSV,
-               HypergraphOfEntity, LuceneEngine, TensorFlowRanking, LuceneFeaturesEngine, GremlinServerIndex)
-
 logger = logging.getLogger(__name__)
 
 
@@ -58,59 +55,63 @@ class Index(object):
 
     @staticmethod
     def factory(reader, index_location, index_type, loop):
+        import army_ant.index as idx
+
         if index_type == 'gow':
-            return GraphOfWord(reader, index_location, loop)
+            return idx.GraphOfWord(reader, index_location, loop)
         elif index_type == 'goe':
-            return GraphOfEntity(reader, index_location, loop)
+            return idx.GraphOfEntity(reader, index_location, loop)
         elif index_type == 'gow_batch':
-            return GraphOfWordBatch(reader, index_location, loop)
+            return idx.GraphOfWordBatch(reader, index_location, loop)
         elif index_type == 'goe_batch':
-            return GraphOfEntityBatch(reader, index_location, loop)
+            return idx.GraphOfEntityBatch(reader, index_location, loop)
         elif index_type == 'gow_csv':
-            return GraphOfWordCSV(reader, index_location, loop)
+            return idx.GraphOfWordCSV(reader, index_location, loop)
         elif index_type == 'goe_csv':
-            return GraphOfEntityCSV(reader, index_location, loop)
+            return idx.GraphOfEntityCSV(reader, index_location, loop)
         elif index_type.startswith('hgoe'):
             index_features = index_type.split(':')[1:]
-            return HypergraphOfEntity(reader, index_location, index_features, loop)
+            return idx.HypergraphOfEntity(reader, index_location, index_features, loop)
         elif index_type == 'lucene':
-            return LuceneEngine(reader, index_location, loop)
+            return idx.LuceneEngine(reader, index_location, loop)
         elif index_type == 'tfr':
-            return TensorFlowRanking(reader, index_location, loop)
+            return idx.TensorFlowRanking(reader, index_location, loop)
         elif index_type == 'lucene_features':
-            return LuceneFeaturesEngine(reader, index_location, loop)
+            return idx.LuceneFeaturesEngine(reader, index_location, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 
     @staticmethod
     def open(index_location, index_type, loop):
+        import army_ant.index as idx
+
         key = Index.__preloaded_key__(index_location, index_type)
         if key in Index.PRELOADED:
             return Index.PRELOADED[key]
 
         if index_type == 'gow':
-            return GraphOfWord(None, index_location, loop)
+            return idx.GraphOfWord(None, index_location, loop)
         elif index_type == 'goe':
-            return GraphOfEntity(None, index_location, loop)
+            return idx.GraphOfEntity(None, index_location, loop)
         elif index_type == 'gow_batch':
-            return GraphOfWordBatch(None, index_location, loop)
+            return idx.GraphOfWordBatch(None, index_location, loop)
         elif index_type == 'goe_batch':
-            return GraphOfEntityBatch(None, index_location, loop)
+            return idx.GraphOfEntityBatch(None, index_location, loop)
         elif index_type == 'gow_csv':
-            return GraphOfWordCSV(None, index_location, loop)
+            return idx.GraphOfWordCSV(None, index_location, loop)
         elif index_type == 'goe_csv':
-            return GraphOfEntityCSV(None, index_location, loop)
+            return idx.GraphOfEntityCSV(None, index_location, loop)
         elif index_type == 'gremlin':
-            return GremlinServerIndex(None, index_location, loop)
+            return idx.GremlinServerIndex(None, index_location, loop)
         elif index_type.startswith('hgoe'):
             index_features = index_type.split(':')[1:]
-            return HypergraphOfEntity(None, index_location, index_features, loop)
+            return idx.HypergraphOfEntity(None, index_location, index_features, loop)
         elif index_type == 'lucene':
-            return LuceneEngine(None, index_location, loop)
+            return idx.LuceneEngine(None, index_location, loop)
         elif index_type == 'tfr':
-            return TensorFlowRanking(None, index_location, loop)
+            return idx.TensorFlowRanking(None, index_location, loop)
         elif index_type == 'lucene_features':
-            return LuceneFeaturesEngine(None, index_location, loop)
+            return idx.LuceneFeaturesEngine(None, index_location, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 

@@ -33,12 +33,11 @@ from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
 
 from army_ant.exception import ArmyAntException
+from army_ant.index import GremlinServerIndex, PostgreSQLGraph
 from army_ant.reader import Document, Entity
 from army_ant.setup import config_logger
 from army_ant.util import load_gremlin_script, load_sql_script
 from army_ant.util.text import analyze
-
-from . import GremlinServerIndex
 
 logger = logging.getLogger(__name__)
 
@@ -91,3 +90,61 @@ class GraphOfWord(GremlinServerIndex):
         await self.cluster.close()
 
         return results
+
+
+class GraphOfWordBatch(PostgreSQLGraph, GraphOfWord):
+    def get_or_create_term_vertex(self, conn, token):
+        if token in self.vertex_cache:
+            vertex_id = self.vertex_cache[token]
+        else:
+            vertex_id = self.next_vertex_id
+            self.vertex_cache[token] = vertex_id
+            self.next_vertex_id += 1
+            self.create_vertex_postgres(conn, vertex_id, 'term', {'name': token})
+
+        return vertex_id
+
+    def load_to_postgres(self, conn, doc):
+        tokens = GraphOfWordBatch.analyze(doc.text)
+
+        for i in range(len(tokens) - self.window_size):
+            for j in range(1, self.window_size + 1):
+                source_vertex_id = self.get_or_create_term_vertex(conn, tokens[i])
+                target_vertex_id = self.get_or_create_term_vertex(conn, tokens[i + j])
+
+                logger.debug("%s (%d) -> %s (%s)" % (tokens[i], source_vertex_id, tokens[i + j], target_vertex_id))
+                self.create_edge_postgres(conn, self.next_edge_id, 'in_window_of', source_vertex_id, target_vertex_id,
+                                          {'doc_id': doc.doc_id})
+                self.next_edge_id += 1
+
+        conn.commit()
+
+        yield doc
+
+
+class GraphOfWordCSV(GraphOfWordBatch):
+    async def index(self, features_location=None, pgonly=True):
+        if os.path.exists(self.index_location):
+            raise ArmyAntException("%s already exists" % self.index_location)
+
+        os.mkdir(self.index_location)
+
+        async for item in super().index(pgonly=pgonly):
+            yield item
+
+        conn = psycopg2.connect("dbname='army_ant' user='army_ant' host='localhost'")
+        c = conn.cursor()
+
+        logging.info("Creating term nodes CSV file")
+        with open(os.path.join(self.index_location, 'term-nodes.csv'), 'w') as f:
+            c.copy_expert("""
+            COPY (SELECT node_id AS "node_id:ID", attributes->'name'->0->>'value' AS name, label AS ":LABEL" FROM nodes)
+            TO STDOUT WITH CSV HEADER
+            """, f)
+
+        logging.info("Creating in_window_of edges CSV file")
+        with open(os.path.join(self.index_location, 'in_window_of-edges.csv'), 'w') as f:
+            c.copy_expert("""
+            COPY (SELECT source_node_id AS ":START_ID", attributes->>'doc_id' AS doc_id, target_node_id AS ":END_ID", label AS ":TYPE" FROM edges)
+            TO STDOUT WITH CSV HEADER
+            """, f)
