@@ -25,7 +25,7 @@ class Group(Enum):
 
 
 class Product:
-    def __init__(self, id, asin, title, group, sales_rank, similar, categories, reviews, avg_rating):        
+    def __init__(self, id, asin, title, group, sales_rank, similar, categories, reviews, avg_rating):
         self.id = int(id)
         self.asin = str(asin)
         self.title = str(title)
@@ -34,7 +34,7 @@ class Product:
         self.group = group
 
         self.sales_rank = int(sales_rank)
-        
+
         assert type(similar) is list
         if len(similar) > 0: assert type(similar[0]) is str or type(similar[0]) is Product
         self.similar = similar
@@ -134,7 +134,7 @@ class ProductTransformer(Transformer):
     title = lambda self, t: ('title', t[0].value)
     group = lambda self, t: ('group', Group(t[0].value))
     sales_rank = lambda self, t: ('sales_rank', int(t[0].value))
-    
+
     similar = lambda self, lst: ('similar', lst[1][0:-1] if lst and len(lst) > 1 else [])
     similar_count = lambda self, t: ('count', int(t[0].value))
     similar_asins = lambda self, t: [d.value for d in t]
@@ -147,12 +147,12 @@ class ProductTransformer(Transformer):
     category = lambda self, c: Category(c[1].value, c[0].value)
 
     reviews = lambda self, t: ('reviews', dict(t))
-    
+
     review_summary = lambda self, lst: ('summary', dict(lst[0:-1]) if lst and len(lst) > 0 else {})
     review_total = lambda self, t: ('total', int(t[0].value))
     review_downloaded = lambda self, t: ('downloaded', int(t[0].value))
     review_avg_rating = lambda self, t: ('avg_rating', float(t[0].value))
-    
+
     review_items = lambda self, lst: ('items', lst)
     review = lambda self, lst: Review(**dict(lst[0:-1]))
     date = lambda self, t: ('date', datetime.datetime.strptime(t[0].value, '%Y-%m-%d').date())
@@ -186,35 +186,35 @@ def parse_product(data):
     product = {}
     for line in data:
         line = line.strip()
-        
+
         if line.startswith('Id:'):
             _, id = re.split(r'\s+', line)
             product['id'] = int(id)
             print("==> Parsing product %d" % product['id'])
-        
+
         elif line.startswith('ASIN:'):
             _, asin = re.split(r'\s+', line)
             product['asin'] = asin
 
         elif line == 'discontinued product':
             return
-        
+
         elif line.startswith('title:'):
             _, title = re.split(r'\s+', line, 1)
             product['title'] = title
-        
+
         elif line.startswith('group:'):
             _, group = re.split(r'\s+', line, 1)
             product['group'] = Group(group)
-        
+
         elif line.startswith('salesrank:'):
             _, sales_rank = re.split(r'\s+', line, 1)
             product['sales_rank'] = int(sales_rank)
-        
+
         elif line.startswith('similar:'):
             similar = re.split(r'\s+', line)
             product['similar'] = similar[2:]
-        
+
         elif line.startswith('|'):
             category_strs = line.split('|')[1:]
             categories = []
@@ -252,7 +252,7 @@ def parse_product(data):
 
         if not 'reviews' in product:
             product['reviews'] = []
-                
+
     return Product(**product)
 
 
@@ -286,7 +286,7 @@ def resolve_product_similars(products):
     for product in idx.values():
         print("==> Resolving similar for product %d" % product.id)
         product.similar = filter(lambda p: p, [idx.get(asin) for asin in product.similar if product.similar])
-    
+
     return products
 
 
@@ -305,7 +305,7 @@ def build_similarity_graph(proucts, path):
     print("==> Saving graph to %s" % path)
     nx.write_gml(g, path)
 
-    
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:

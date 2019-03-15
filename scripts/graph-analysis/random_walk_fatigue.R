@@ -54,9 +54,9 @@ page_rank_simulation_iter <- function(g, start, d, steps, PR = NULL) {
   teleport <- function() {
     sample(1:vcount(g), 1)
   }
-  
+
   PR[start] <- PR[start] + 1
-  
+
   for (i in 1:steps) {
     if (runif(1) >= d) {
       # Teleport.
@@ -74,10 +74,10 @@ page_rank_simulation_iter <- function(g, start, d, steps, PR = NULL) {
         start <- teleport()
       }
     }
-    
+
     PR[start] <- PR[start] + 1
   }
-  
+
   PR
 }
 
@@ -111,7 +111,7 @@ page_rank_power_iteration <- function(g, d=0.85, eps=0.0001) {
     v <- v / norm(v)
     iter <- iter + 1
   }
-  
+
   list(
     iterations=iter,
     vector=as.numeric(v)
@@ -145,7 +145,7 @@ fatigued_page_rank_simulation <- function(g, d=0.85, nf=10, steps=1000, use_tele
       NF=a$NF + b$NF,
       iterations=a$iterations + b$iterations)
   }
-  
+
   FPR <- foreach (i = 1:vcount(g), .combine=merge_fpr) %dopar% {
     teleport_str <- ifelse(use_teleport, "teleport", "without teleport")
     cat("==> Walking", steps, "random steps from node", i, "with fatigue and", teleport_str, "\n")
@@ -153,7 +153,7 @@ fatigued_page_rank_simulation <- function(g, d=0.85, nf=10, steps=1000, use_tele
   }
 
   FPR$vector <- FPR$vector / norm(as.matrix(FPR$vector))
-  
+
   FPR
 }
 
@@ -171,7 +171,7 @@ fatigued_page_rank_simulation_iter <- function(g, start, d, nf, steps, use_telep
       start
     }
   }
-  
+
   for (i in 1:steps) {
     if (use_teleport) {
       # WITH TELEPORT
@@ -215,7 +215,7 @@ fatigued_page_rank_simulation_iter <- function(g, start, d, nf, steps, use_telep
     FPR$NF[start] <- nf
     FPR$iterations <- FPR$iterations + 1
   }
-  
+
   FPR
 }
 
@@ -273,7 +273,7 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.001, fati
     diag(NF) <- 0
     NF
   }
-  
+
   third_order_fatigue <- function(M, ...) {
     kwargs <- list(...)
     lambda <- ifelse(is.null(kwargs$lambda), 0.85, kwargs$lambda)
@@ -317,11 +317,11 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.001, fati
     diag(NF) <- 0
     NF
   }
-  
+
   regular_power_iteration <- function() {
     # Columns must represent outgoing links
     M <- t(as.matrix(as_adj(g)))
-    
+
     if (fatigue_method == '1ord') {
       NF <- first_order_fatigue(M, ...)
     } else if (fatigue_method == '2ord') {
@@ -329,18 +329,18 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.001, fati
     } else if (fatigue_method == '3ord') {
       NF <- third_order_fatigue(M, ...)
     }
-  
+
     M <- scale(M, center=FALSE, scale=colSums(M))
     M[is.nan(M)] <- 0
-    
+
     N <- vcount(g)
-    
+
     v <- as.matrix(runif(N))
     v <- v / norm(v)
     last_v <- matrix(1, N) * 100
-    
+
     M_hat <- (d * M + (1-d)/N * matrix(1, N, N)) * (1 - NF)
-    
+
     iter <- 0
     repeat {
       if (norm(v - last_v, '2') <= eps) break;
@@ -349,7 +349,7 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.001, fati
       v <- v / norm(v)
       iter <- iter + 1
     }
-    
+
     list(
       iterations=iter,
       vector=as.numeric(v)
@@ -360,10 +360,10 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.001, fati
   out_in_power_iteration <- function() {
     # Vertex number.
     n <- vcount(g)
-    
+
     # Column-vector of ones.
     e <- Matrix(1, n)
-    
+
     # Stochastic matrix from adjacency matrix, with zero columns replaced by teleport probability.
     # This is not explicitly computed, as to avoid storing more values in memory than necessary.
     # Instead, we store H as a sparse matrix and then do this calculation during PageRank vector computation.
@@ -402,7 +402,7 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.001, fati
         logwarn("FPR power iteration has reached iteration %d", iter)
       }
     }
-    
+
     list(
       iterations=iter,
       vector=as.numeric(v)
@@ -413,15 +413,15 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.001, fati
   out_indegree_power_iteration <- function() {
     # Vertex number.
     n <- vcount(g)
-    
+
     # Column-vector of ones.
     e <- Matrix(1, n)
-    
+
     # Stochastic matrix from adjacency matrix, with zero columns replaced by teleport probability.
     # This is not explicitly computed, as to avoid storing more values in memory than necessary.
     # Instead, we store H as a sparse matrix and then do this calculation during PageRank vector computation.
     # S <- H + (1/n * e) %*% a
-    
+
     H <- t(as_adj(g))
     H <- as(H, "dgTMatrix")
     H@x <- H@x / colSums(H)[H@j + 1]
@@ -462,13 +462,13 @@ fatigued_page_rank_power_iteration <- function(g, d=0.85, nf=10, eps=0.001, fati
 
       if (norm(v - last_v, '2') <= eps) break;
     }
-    
+
     list(
       iterations=iter,
       vector=as.numeric(v)
     )
   }
-  
+
   if (fatigue_method == 'out_in') {
     out_in_power_iteration()
   } else if (fatigue_method == 'out_indegree') {
@@ -514,10 +514,10 @@ toy_example <- function() {
     m <- as.matrix(m)
     x <- xtable(m, align=rep("", ncol(m)+1), digits=digits)
     print(
-      x, floating=FALSE, tabular.environment="bmatrix", 
+      x, floating=FALSE, tabular.environment="bmatrix",
       hline.after=NULL, include.rownames=FALSE, include.colnames=FALSE)
   }
-  
+
   g <- make_graph(c(1,2, 2,3, 3,1, 4,1, 4,3, 4,5, 6,4, 6,7))
   n <- vcount(g)
 
@@ -526,7 +526,7 @@ toy_example <- function() {
   pdf(file = "output/fatigued_pagerank-toy_example_graph.pdf", width = 5, height = 5)
   plot(g, vertex.color="#ecd078", vertex.size=30)
   dev.off()
-  
+
   cat("\n==> Adjacency\n")
   A <- as_adj(g)
   print_latex_matrix(A)
@@ -603,7 +603,7 @@ system.time(V(g)$hits_authority <- authority_score(g)$vector)
 # system.time(fpr_sim <- fatigued_page_rank_simulation(g, steps=1000, use_teleport = TRUE))
 # V(g)$fpr_sim <- fpr_sim$vector
 # V(g)$fpr_sim_iter <- fpr_sim$iterations
-# 
+#
 # system.time(fpr_sim_without_teleport <- fatigued_page_rank_simulation(g, steps=1000, use_teleport = FALSE))
 # V(g)$fpr_sim_without_teleport <- fpr_sim_without_teleport$vector
 # V(g)$fpr_sim_without_teleport_iter <- fpr_sim_without_teleport$iterations

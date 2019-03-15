@@ -52,7 +52,7 @@ public abstract class Engine {
 
     private static final int MIN_TOKEN_LENGTH = 3;
     private static final XoRoShiRo128PlusRandom RNG = new XoRoShiRo128PlusRandom();
-    
+
     private static Pattern urlPattern = Pattern.compile("http[s]?://[^\\s]+");
     private static Pattern timePattern = Pattern.compile(
         "(\\d{1,2}:\\d{2}(:\\d{2})?)|(\\d{1,2}h(\\d{2}(m|(m\\d{1,2}s))?)?)|(\\d{1,2}(pm|am|PM|AM))");
@@ -199,11 +199,11 @@ public abstract class Engine {
 
         List<List<String>> sentenceTokens = new ArrayList<>();
         if (text == null) return sentenceTokens;
-        
+
         for (String sentence : sentenceDetector.sentDetect(text)) {
             sentenceTokens.add(analyze(sentence));
         }
-          
+
         return sentenceTokens;
     }
 }
