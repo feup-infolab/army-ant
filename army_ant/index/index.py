@@ -78,6 +78,8 @@ class Index(object):
             return idx.TensorFlowRanking(reader, index_location, loop)
         elif index_type == 'lucene_features':
             return idx.LuceneFeaturesEngine(reader, index_location, loop)
+        elif index_type == 'hyperrank':
+            return idx.HyperRank(reader, index_location, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 
@@ -112,6 +114,8 @@ class Index(object):
             return idx.TensorFlowRanking(None, index_location, loop)
         elif index_type == 'lucene_features':
             return idx.LuceneFeaturesEngine(None, index_location, loop)
+        elif index_type == 'hyperrank':
+            return idx.HyperRank(None, index_location, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 
