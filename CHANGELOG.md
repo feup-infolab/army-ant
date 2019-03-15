@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.5
+
+* Fixed several major bugs with the evaluation module, where the metrics were not being correctly computed.
+* Added a new TensorFlow Ranking engine for introducing a learning to rank baseline.
+* Added a new Lucene features engine, based on `LuceneEngine` and the new Lucene's `FeaturesField`.
+* Added an `entities` field to extended documents, as an option to index unlinked entities.
+* Removed the ability to define blank nodes (use `entities` instead).
+* Readers:
+  * Added `inex_dbpedia` and `inex_dir_dbpedia` readers that expand INEX triples with DBpedia.
+* `HypergraphOfEntity`:
+  * Introduced two new `related_to` hyperedge versions: `related_to_by_doc` and `related_to_by_subj`.
+  * Added back the option to use an `UNDIRECTED_RANDOM_WALK` for ranking, ignoring hyperedge direction.
+* Updated rank correlation analysis call to index method and improved the resume process.
+* Small overall improvements: features, server (front-end).
+
 ## 0.4
 
 * Added a reader for TREC Washington Post Corpus for TREC 2018 Common Core Track.
