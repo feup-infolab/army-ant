@@ -67,6 +67,9 @@ public class HypergraphOfEntity extends Engine {
     private static final int DEFAULT_WALK_REPEATS = 1000;
     private static final int DEFAULT_FATIQUE = 0;
 
+    private static final float DEFAULT_DAMPING_FACTOR = 0.85f;
+    private static final int DEFAULT_MAX_ITERATIONS = 10000;
+
     private static final float PROBABILITY_THRESHOLD = 0.005f;
 
     private static final String CONTEXT_FEATURES_FILENAME = "word2vec_simnet.graphml.gz";
@@ -1060,6 +1063,131 @@ public class HypergraphOfEntity extends Engine {
         randomStep(randomNodeID, remainingSteps - 1, path, isDirected, isBiased, nodeFatigue, edgeFatigue);
     }
 
+    public ResultSet hyperRankSearch(IntSet seedNodeIDs, Task task, boolean isBiased, float d, int n) {
+        logger.info("d = {}, n = {}", d, n);
+
+        // An atom is either a node or a hyperedge (we follow the same nomenclature as HypergraphDB)
+        Int2FloatOpenHashMap atomVisits = new Int2FloatOpenHashMap();
+
+        trace.add("HyperRank search (d = %.2f, n = {})", d, n);
+        trace.goDown();
+
+        int nodeID;
+        if (isBiased) {
+            trace.add("Selecting start seed node non-uniformly at random");
+            Float[] nodeWeights = seedNodeIDs.stream().map(this.nodeWeights::getValueAsFloat).toArray(Float[]::new);
+            nodeID = sampleNonUniformlyAtRandom(seedNodeIDs.toIntArray(), ArrayUtils.toPrimitive(nodeWeights));
+        } else {
+            trace.add("Selecting start seed node uniformly at random");
+            nodeID = sampleUniformlyAtRandom(seedNodeIDs.toIntArray());
+        }
+
+        for (int i = 0; i < n; i++) {
+            if (task != Task.DOCUMENT_RETRIEVAL) {
+                atomVisits.addTo(nodeID, 1);
+            }
+
+            IntSet edgeIDs = graph.getOutEdges(nodeID);
+
+            // Teleport either by chance or if it's a sink.
+            if (random() > d || edgeIDs.isEmpty()) {
+                if (isBiased) {
+                    trace.add("Found a sink, teleporting non-uniformly at random to a seed node");
+                    Float[] nodeWeights = seedNodeIDs.stream().map(this.nodeWeights::getValueAsFloat)
+                            .toArray(Float[]::new);
+                    nodeID = sampleNonUniformlyAtRandom(seedNodeIDs.toIntArray(), ArrayUtils.toPrimitive(nodeWeights));
+                } else {
+                    trace.add("Found a sink, teleporting uniformly at random to a seed node");
+                    nodeID = sampleUniformlyAtRandom(seedNodeIDs.toIntArray());
+                }
+                continue;
+            }
+
+            int randomEdgeID;
+            if (isBiased) {
+                Float[] edgeWeights = edgeIDs.stream().map(this.edgeWeights::getValueAsFloat).toArray(Float[]::new);
+                randomEdgeID = sampleNonUniformlyAtRandom(edgeIDs.toIntArray(), ArrayUtils.toPrimitive(edgeWeights));
+            } else {
+                randomEdgeID = sampleUniformlyAtRandom(edgeIDs.toIntArray());
+            }
+
+            if (task == Task.DOCUMENT_RETRIEVAL) {
+                atomVisits.addTo(randomEdgeID, 1);
+            }
+
+            IntSet nodeIDs = new LucIntHashSet(10);
+            if (graph.isDirectedHyperEdge(randomEdgeID)) {
+                nodeIDs.addAll(graph.getDirectedHyperEdgeHead(randomEdgeID));
+            } else {
+                nodeIDs.addAll(graph.getUndirectedHyperEdgeVertices(randomEdgeID));
+                nodeIDs.remove(nodeID);
+            }
+
+            // This should never happen, but just in case.
+            if (nodeIDs.isEmpty()) {
+                continue;
+            }
+
+            if (isBiased) {
+                Float[] nodeWeights = nodeIDs.stream().map(this.nodeWeights::getValueAsFloat).toArray(Float[]::new);
+                nodeID = sampleNonUniformlyAtRandom(nodeIDs.toIntArray(), ArrayUtils.toPrimitive(nodeWeights));
+            } else {
+                nodeID = sampleUniformlyAtRandom(nodeIDs.toIntArray());
+            }
+        }
+
+        ResultSet resultSet = new ResultSet();
+        resultSet.setTrace(trace);
+
+        for (int atomID : atomVisits.keySet()) {
+            Atom atom = task == Task.DOCUMENT_RETRIEVAL ? edgeIndex.getKey(atomID) : nodeIndex.getKey(atomID);
+            trace.add(atom.toString().replace("%", "%%"));
+            trace.goDown();
+            trace.add("score = %f", atomVisits.get(atomID));
+            trace.goUp();
+
+            if (task == Task.DOCUMENT_RETRIEVAL && !(atom instanceof DocumentEdge)) continue;
+            if (task == Task.ENTITY_RETRIEVAL && !(atom instanceof EntityNode)) continue;
+            if (task == Task.TERM_RETRIEVAL && !(atom instanceof TermNode)) continue;
+
+            if (atom instanceof RankableAtom) {
+                RankableAtom rankableAtom = (RankableAtom) atom;
+                logger.debug("Ranking atom {} using RANDOM_WALK_SCORE", rankableAtom);
+
+                // Unnormalized HyperRank
+                double score = atomVisits.get(atomID);
+
+                resultSet.addResult(
+                        new Result(score, rankableAtom.getID(), rankableAtom.getName(), rankableAtom.getLabel()));
+            }
+        }
+
+        if (atomVisits.isEmpty()) {
+            trace.add(Trace.EMPTY);
+        }
+
+        trace.goUp();
+
+        trace.add("Collecting results (task=%s)", task);
+        trace.goDown();
+
+        for (Result result : resultSet) {
+            trace.add(result == null || result.getName() == null ? "NULL" : result.getName());
+            trace.goDown();
+            trace.add("score = %f", result.getScore());
+            trace.add("id= %s", result.getID());
+            trace.add("name = %s", result.getName());
+            trace.add("type = %s", result.getType());
+            trace.goUp();
+        }
+
+        if (resultSet.isEmpty()) {
+            trace.add(Trace.EMPTY);
+        }
+
+        return resultSet;
+    }
+
     public ResultSet randomWalkSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights, Task task,
                                       int walkLength, int walkRepeats, boolean isDirected, boolean isBiased,
                                       int nodeFatigue, int edgeFatigue) {
@@ -1179,8 +1307,11 @@ public class HypergraphOfEntity extends Engine {
 
             if (atom instanceof RankableAtom) {
                 RankableAtom rankableAtom = (RankableAtom) atom;
-                logger.debug("Ranking node {} using RANDOM_WALK_SCORE", rankableAtom);
+                logger.debug("Ranking atom {} using RANDOM_WALK_SCORE", rankableAtom);
+
+                // Random Walk Score
                 double score = atomCoverage.get(atomID) * weightedAtomVisitProbability.get(atomID);
+
                 //if (score > PROBABILITY_THRESHOLD) {
                     resultSet.addResult(
                             new Result(score, rankableAtom.getID(), rankableAtom.getName(), rankableAtom.getLabel()));
@@ -1386,6 +1517,12 @@ public class HypergraphOfEntity extends Engine {
 
         ResultSet resultSet;
         switch (function) {
+            case HYPERRANK:
+                resultSet = hyperRankSearch(
+                    seedNodeIDs, task, function == RankingFunction.BIASED_RANDOM_WALK_SCORE,
+                    Float.valueOf(params.getOrDefault("d", String.valueOf(DEFAULT_DAMPING_FACTOR))),
+                    Integer.valueOf(params.getOrDefault("n", String.valueOf(DEFAULT_MAX_ITERATIONS))));
+                break;
             case UNDIRECTED_RANDOM_WALK_SCORE:
             case RANDOM_WALK_SCORE:
             case BIASED_RANDOM_WALK_SCORE:
@@ -1715,6 +1852,7 @@ public class HypergraphOfEntity extends Engine {
         RANDOM_WALK_SCORE,
         BIASED_RANDOM_WALK_SCORE,
         UNDIRECTED_RANDOM_WALK_SCORE,
+        HYPERRANK,
     }
 
     public enum Feature {

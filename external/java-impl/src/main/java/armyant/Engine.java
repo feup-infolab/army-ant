@@ -76,6 +76,18 @@ public abstract class Engine {
         this.sentenceDetector = null;
     }
 
+    public static double random() {
+        return RNG.nextDoubleFast();
+    }
+
+    public static int random(int length) {
+        return random(0, length-1);
+    }
+
+    public static int random(int min, int max) {
+        return (int) ((max - min) * RNG.nextDoubleFast() + min);
+    }
+
     public static Integer sampleUniformlyAtRandom(int[] elementIDs) {
         return elementIDs[(int) (elementIDs.length * RNG.nextDoubleFast())];
     }

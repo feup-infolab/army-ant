@@ -4,6 +4,7 @@
 # text.py
 # José Devezas <joseluisdevezas@gmail.com>
 # 2017-07-20
+import collections
 import itertools
 import logging
 import os
@@ -11,12 +12,12 @@ import pickle
 import re
 import string
 
-import collections
 import langdetect
 import nltk
 import yaml
 from langdetect.lang_detect_exception import LangDetectException
-from nltk.corpus import stopwords, mac_morpho
+from nltk.corpus import mac_morpho, stopwords
+from nltk.stem import PorterStemmer
 from nltk.tokenize import WordPunctTokenizer
 from unidecode import unidecode
 
@@ -62,7 +63,7 @@ def tokenize(text):
     return tokenizer.tokenize(text)
 
 
-def analyze(text, remove_stopwords=True, remove_punctuation=True):
+def analyze(text, remove_stopwords=True, remove_punctuation=True, stemming=True):
     tokens = tokenize(text.lower())
     # try:
     #     lang = langdetect.detect(text)
@@ -70,17 +71,21 @@ def analyze(text, remove_stopwords=True, remove_punctuation=True):
     #     logger.warning("Could not detect language, using 'en' by default")
     #     lang = 'en'
     lang = "en"
-    tokens = filter_tokens(tokens, lang=lang, remove_stopwords=remove_stopwords, remove_punctuation=remove_punctuation)
+    tokens = filter_tokens(
+        tokens, lang=lang, remove_stopwords=remove_stopwords,
+        remove_punctuation=remove_punctuation, stemming=stemming)
     return tokens
 
 
-def filter_tokens(tokens, lang, remove_stopwords=True, remove_punctuation=True, skip_slots=True):
+def filter_tokens(tokens, lang, remove_stopwords=True, remove_punctuation=True, stemming=True, skip_slots=True):
     filtered_tokens = []
 
     if lang == 'pt':
         sw = stopwords.words('portuguese')
     else:
         sw = stopwords.words('english')
+
+    stemmer = PorterStemmer()
 
     for token in tokens:
         if remove_stopwords:
@@ -93,7 +98,11 @@ def filter_tokens(tokens, lang, remove_stopwords=True, remove_punctuation=True, 
 
         token = token.strip()
 
-        if token == '': continue
+        if token == '':
+            continue
+
+        if stemming:
+            token = stemmer.stem(token)
 
         filtered_tokens.append(token)
 
