@@ -64,24 +64,26 @@ def tokenize(text):
 
 def analyze(text, remove_stopwords=True, remove_punctuation=True):
     tokens = tokenize(text.lower())
-    try:
-        lang = langdetect.detect(text)
-    except:
-        logger.warning("Could not detect language, using 'en' by default")
-        lang = 'en'
+    # try:
+    #     lang = langdetect.detect(text)
+    # except:
+    #     logger.warning("Could not detect language, using 'en' by default")
+    #     lang = 'en'
+    lang = "en"
     tokens = filter_tokens(tokens, lang=lang, remove_stopwords=remove_stopwords, remove_punctuation=remove_punctuation)
     return tokens
 
 
 def filter_tokens(tokens, lang, remove_stopwords=True, remove_punctuation=True, skip_slots=True):
     filtered_tokens = []
+
+    if lang == 'pt':
+        sw = stopwords.words('portuguese')
+    else:
+        sw = stopwords.words('english')
+
     for token in tokens:
         if remove_stopwords:
-            if lang == 'pt':
-                sw = stopwords.words('portuguese')
-            else:
-                sw = stopwords.words('english')
-
             if token in sw: continue
 
         if remove_punctuation:
