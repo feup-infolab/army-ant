@@ -63,7 +63,10 @@ class HypergraphOfEntity(JavaIndex):
         random_walk = 'RANDOM_WALK_SCORE'
         biased_random_walk = 'BIASED_RANDOM_WALK_SCORE'
         undirected_random_walk = 'UNDIRECTED_RANDOM_WALK_SCORE'
+        random_walk_without_seeds = 'RANDOM_WALK_SCORE_WITHOUT_SEEDS'
+        biased_random_walk_without_seeds = 'BIASED_RANDOM_WALK_SCORE_WITHOUT_SEEDS'
         hyperrank = 'HYPERRANK'
+        hyperrank_without_seeds = 'HYPERRANK_WITHOUT_SEEDS'
 
     JHypergraphOfEntityInMemory = JavaIndex.armyant.hgoe.HypergraphOfEntity
     JFeature = JClass("armyant.hgoe.HypergraphOfEntity$Feature")

@@ -61,3 +61,7 @@ config.yaml
 
 # VisualVM
 .attach_pid*
+
+# Jupyter
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*

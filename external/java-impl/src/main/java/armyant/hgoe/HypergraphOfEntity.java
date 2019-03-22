@@ -1064,12 +1064,12 @@ public class HypergraphOfEntity extends Engine {
     }
 
     public ResultSet hyperRankSearch(IntSet seedNodeIDs, Task task, boolean isBiased, float d, int n) {
-        logger.info("d = {}, n = {}", d, n);
+        logger.info("Searching using HyperRank (d = {}, n = {})", d, n);
 
         // An atom is either a node or a hyperedge (we follow the same nomenclature as HypergraphDB)
         Int2FloatOpenHashMap atomVisits = new Int2FloatOpenHashMap();
 
-        trace.add("HyperRank search (d = %.2f, n = {})", d, n);
+        trace.add("HyperRank (d = %.2f, n = {})", d, n);
         trace.goDown();
 
         int nodeID;
@@ -1154,6 +1154,11 @@ public class HypergraphOfEntity extends Engine {
                 RankableAtom rankableAtom = (RankableAtom) atom;
                 logger.debug("Ranking atom {} using RANDOM_WALK_SCORE", rankableAtom);
 
+                // Unnormalized HyperRank with "document" length normalization
+                /*double norm = task == Task.DOCUMENT_RETRIEVAL ? graph.getEdgeDegree(atomID)
+                        : graph.getVertexDegree(atomID);
+                double score = atomVisits.get(atomID) / norm;*/
+
                 // Unnormalized HyperRank
                 double score = atomVisits.get(atomID);
 
@@ -1191,14 +1196,15 @@ public class HypergraphOfEntity extends Engine {
     public ResultSet randomWalkSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights, Task task,
                                       int walkLength, int walkRepeats, boolean isDirected, boolean isBiased,
                                       int nodeFatigue, int edgeFatigue) {
-        logger.info("walkLength = {}, walkRepeats = {}, fatigue = ({}, {})",
-                walkLength, walkRepeats, nodeFatigue, edgeFatigue);
+        logger.info("Searching using Random Walk Score (l = {}, r = {}, nf = {}, ef = {})",
+            walkLength, walkRepeats, nodeFatigue, edgeFatigue);
 
         // An atom is either a node or a hyperedge (we follow the same nomenclature as HypergraphDB)
         Int2FloatOpenHashMap weightedAtomVisitProbability = new Int2FloatOpenHashMap();
         Int2DoubleOpenHashMap atomCoverage = new Int2DoubleOpenHashMap();
 
-        trace.add("Random walk search (l = %d, r = %d)", walkLength, walkRepeats);
+        trace.add("Random Walk Score (l = %d, r = %d, nf = %d, ef = {})",
+            walkLength, walkRepeats, nodeFatigue, edgeFatigue);
         trace.goDown();
 
         for (int seedNodeID : seedNodeIDs) {
@@ -1261,7 +1267,7 @@ public class HypergraphOfEntity extends Engine {
                 synchronized (this) {
                     weightedAtomVisitProbability.compute(atomID,
                             (k, v) -> (v == null ? 0 : v) + (float) atomVisits.get(atomID) / maxVisits
-                                    * seedNodeWeights.get(seedNodeID).floatValue());
+                                    * seedNodeWeights.getOrDefault(seedNodeID, 1d).floatValue());
                 }
                 /*trace.add("score(%s) += visits(%s) * w(%s)",
                         nodeIndex.getKey(nodeID),
@@ -1269,7 +1275,7 @@ public class HypergraphOfEntity extends Engine {
                         nodeIndex.getKey(seedNodeID));
                 trace.goDown();
                 trace.add("P(visit(%s)) = %f", nodeIndex.getKey(nodeID).toString(), (float) nodeVisits.get(nodeID) / maxVisits);
-                trace.add("w(%s) = %f", nodeIndex.getKey(seedNodeID), seedNodeWeights.get(seedNodeID));
+                trace.add("w(%s) = %f", nodeIndex.getKey(seedNodeID), seedNodeWeights.getOrDefault(seedNodeID, 1d));
                 trace.add("score(%s) = %f", nodeIndex.getKey(nodeID), weightedNodeVisitProbability.get(nodeID));
                 trace.goUp();*/
             }
@@ -1489,6 +1495,7 @@ public class HypergraphOfEntity extends Engine {
 
         List<String> tokens = analyze(query);
         IntSet queryTermNodeIDs = getQueryTermNodeIDs(tokens);
+        logger.info("{} query nodes found for [ {} ]", queryTermNodeIDs.size(), query);
         trace.add("Mapping query terms [ %s ] to query term nodes", StringUtils.join(tokens, ", "));
         trace.goDown();
         for (int queryTermNodeID : queryTermNodeIDs) {
@@ -1496,38 +1503,49 @@ public class HypergraphOfEntity extends Engine {
         }
         trace.goUp();
 
-        IntSet seedNodeIDs = getSeedNodeIDs(queryTermNodeIDs);
-        //System.out.println("Seed Nodes: " + seedNodeIDs.stream().map(nodeID -> nodeID + "=" + nodeIndex.getKey(nodeID).toString()).collect(Collectors.toList()));
-        trace.add("Mapping query term nodes to seed nodes");
-        trace.goDown();
-        for (int seedNodeID : seedNodeIDs) {
-            trace.add(nodeIndex.getKey(seedNodeID).toString().replace("%", "%%"));
-        }
-        trace.goUp();
+        IntSet seedNodeIDs = null;
+        Map<Integer, Double> seedNodeWeights = null;
 
-        Map<Integer, Double> seedNodeWeights = seedNodeConfidenceWeights(seedNodeIDs, queryTermNodeIDs);
-        //System.out.println("Seed Node Confidence Weights: " + seedNodeWeights);
-        logger.info("{} seed nodes weights calculated for [ {} ]", seedNodeWeights.size(), query);
-        trace.add("Calculating confidence weight for seed nodes");
-        trace.goDown();
-        for (Map.Entry<Integer, Double> entry : seedNodeWeights.entrySet()) {
-            trace.add("w(%s) = %f", nodeIndex.getKey(entry.getKey()), entry.getValue());
+        if (!function.name().endsWith("_WITHOUT_SEEDS")) {
+            seedNodeIDs = getSeedNodeIDs(queryTermNodeIDs);
+            //System.out.println("Seed Nodes: " + seedNodeIDs.stream().map(nodeID -> nodeID + "=" + nodeIndex.getKey(nodeID).toString()).collect(Collectors.toList()));
+            trace.add("Mapping query term nodes to seed nodes");
+            trace.goDown();
+            for (int seedNodeID : seedNodeIDs) {
+                trace.add(nodeIndex.getKey(seedNodeID).toString().replace("%", "%%"));
+            }
+            trace.goUp();
+
+            seedNodeWeights = seedNodeConfidenceWeights(seedNodeIDs, queryTermNodeIDs);
+            //System.out.println("Seed Node Confidence Weights: " + seedNodeWeights);
+            logger.info("{} seed nodes weights calculated for [ {} ]", seedNodeWeights.size(), query);
+            trace.add("Calculating confidence weight for seed nodes");
+            trace.goDown();
+            for (Map.Entry<Integer, Double> entry : seedNodeWeights.entrySet()) {
+                trace.add("w(%s) = %f", nodeIndex.getKey(entry.getKey()), entry.getValue());
+            }
+            trace.goUp();
         }
-        trace.goUp();
 
         ResultSet resultSet;
         switch (function) {
             case HYPERRANK:
+            case HYPERRANK_WITHOUT_SEEDS:
                 resultSet = hyperRankSearch(
-                    seedNodeIDs, task, function == RankingFunction.BIASED_RANDOM_WALK_SCORE,
+                    function.name().endsWith("_WITHOUT_SEEDS") ? queryTermNodeIDs : seedNodeIDs,
+                    task, function == RankingFunction.BIASED_RANDOM_WALK_SCORE,
                     Float.valueOf(params.getOrDefault("d", String.valueOf(DEFAULT_DAMPING_FACTOR))),
                     Integer.valueOf(params.getOrDefault("n", String.valueOf(DEFAULT_MAX_ITERATIONS))));
                 break;
             case UNDIRECTED_RANDOM_WALK_SCORE:
             case RANDOM_WALK_SCORE:
             case BIASED_RANDOM_WALK_SCORE:
+            case RANDOM_WALK_SCORE_WITHOUT_SEEDS:
+            case BIASED_RANDOM_WALK_SCORE_WITHOUT_SEEDS:
                 resultSet = randomWalkSearch(
-                        seedNodeIDs, seedNodeWeights, task,
+                        function.name().endsWith("_WITHOUT_SEEDS") ? queryTermNodeIDs : seedNodeIDs,
+                        function.name().endsWith("_WITHOUT_SEEDS") ? new HashMap<>() : seedNodeWeights,
+                        task,
                         Integer.valueOf(params.getOrDefault("l", String.valueOf(DEFAULT_WALK_LENGTH))),
                         Integer.valueOf(params.getOrDefault("r", String.valueOf(DEFAULT_WALK_REPEATS))),
                         function != RankingFunction.UNDIRECTED_RANDOM_WALK_SCORE,
@@ -1546,7 +1564,7 @@ public class HypergraphOfEntity extends Engine {
 
         long end = System.currentTimeMillis();
 
-        logger.info("{} nodes ranked for [ {} ] in {}ms", resultSet.getNumDocs(), query, end - start);
+        logger.info("{} results retrieved for [ {} ] in {}ms", resultSet.getNumDocs(), query, end - start);
         return resultSet;
     }
 
@@ -1798,6 +1816,32 @@ public class HypergraphOfEntity extends Engine {
                 }
                 csvPrinter.flush();
             }
+        } else if (feature.equals("export-node-degree")) {
+            Path path = Paths.get(workdir, String.format("node-degree-%s.csv", now));
+            logger.info("Saving node degrees to {}", path);
+            try (BufferedWriter writer = Files.newBufferedWriter(path);
+                    CSVPrinter csvPrinter = new CSVPrinter(writer,
+                            CSVFormat.DEFAULT.withHeader("Node ID", "Type", "Degree"))) {
+                for (int nodeID : graph.getVertices()) {
+                    csvPrinter.printRecord(
+                        nodeID,
+                        nodeIndex.getKey(nodeID).getClass().getSimpleName(),
+                        graph.getVertexDegree(nodeID));
+                }
+                csvPrinter.flush();
+            }
+        } else if (feature.equals("export-edge-degree")) {
+            Path path = Paths.get(workdir, String.format("edge-degree-%s.csv", now));
+            logger.info("Saving edge degrees to {}", path);
+            try (BufferedWriter writer = Files.newBufferedWriter(path);
+                    CSVPrinter csvPrinter = new CSVPrinter(writer,
+                            CSVFormat.DEFAULT.withHeader("Edge ID", "Type", "Degree"))) {
+                for (int edgeID : graph.getEdges()) {
+                    csvPrinter.printRecord(edgeID, edgeIndex.getKey(edgeID).getClass().getSimpleName(),
+                            graph.getEdgeDegree(edgeID));
+                }
+                csvPrinter.flush();
+            }
         } else {
             logger.error("Invalid feature {}", feature);
         }
@@ -1852,7 +1896,10 @@ public class HypergraphOfEntity extends Engine {
         RANDOM_WALK_SCORE,
         BIASED_RANDOM_WALK_SCORE,
         UNDIRECTED_RANDOM_WALK_SCORE,
+        RANDOM_WALK_SCORE_WITHOUT_SEEDS,
+        BIASED_RANDOM_WALK_SCORE_WITHOUT_SEEDS,
         HYPERRANK,
+        HYPERRANK_WITHOUT_SEEDS,
     }
 
     public enum Feature {

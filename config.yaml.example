@@ -528,10 +528,22 @@ engines:
             r: [10, 100, 250, 500, 750, 1000, 2500, 5000, 10000]
             nf: [0, 10, 100, 500, 1000]
             ef: [0, 10, 100, 500, 1000]
+        random_walk_without_seeds:
+          name: Random Walk Score (Without Seed Nodes)
+          params:
+            l: [1, 2, 3, 4, 5, 6]
+            r: [10, 100, 250, 500, 750, 1000, 2500, 5000, 10000, 100000]
+            nf: [0, 10, 100, 500, 1000]
+            ef: [0, 10, 100, 500, 1000]
         hyperrank:
           name: HyperRank
           params:
-            d: [0, 0.25, 0.5, 0.85, 1]
+            d: [0, 0.15, 0.25, 0.5, 0.75, 0.85, 1]
+            n: [1000, 10000, 100000, 1000000]
+        hyperrank_without_seed_nodes:
+          name: HyperRank (Without Seed Nodes)
+          params:
+            d: [0, 0.15, 0.25, 0.5, 0.75, 0.85, 1]
             n: [1000, 10000, 100000, 1000000]
 
   hgoe-syns-inex-2009-3t-nl:

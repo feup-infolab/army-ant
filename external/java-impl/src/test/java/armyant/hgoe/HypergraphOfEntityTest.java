@@ -273,6 +273,10 @@ public class HypergraphOfEntityTest {
         System.out.println("Node 2 neighbors: " + n2Neighbors);
         assert n2Neighbors.equals(new HashSet<>(Arrays.asList(0, 1, 5)));
 
+        // The degree of a node is the number of edges that contain it.
+        int n2Degree = g.getVertexDegree(2);
+        assert n2Degree == 3;
+
         int previousNumVertices = g.getNumberOfVertices();
         int previousNumEdges = g.getNumberOfEdges();
         int removeNodeID = 2;

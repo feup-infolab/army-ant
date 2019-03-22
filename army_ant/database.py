@@ -55,7 +55,7 @@ class MongoDatabase(Database):
         self.db = self.client[self.db_name]
 
     async def store(self, index):
-        logger.info("Storing metadata for all documents")
+        logger.info("Storing metadata for all results")
         async for doc in index:
             logger.debug("Storing metadata for %s" % doc.doc_id)
             self.db['documents'].update_one(
