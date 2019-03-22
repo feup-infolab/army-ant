@@ -509,56 +509,6 @@ plot_small_graph_with_metrics <- function(g, metrics=list("PR"="pr", "PR Sim"="p
   }
 }
 
-toy_example <- function() {
-  print_latex_matrix <- function(m, digits=0) {
-    m <- as.matrix(m)
-    x <- xtable(m, align=rep("", ncol(m)+1), digits=digits)
-    print(
-      x, floating=FALSE, tabular.environment="bmatrix",
-      hline.after=NULL, include.rownames=FALSE, include.colnames=FALSE)
-  }
-
-  g <- make_graph(c(1,2, 2,3, 3,1, 4,1, 4,3, 4,5, 6,4, 6,7))
-  n <- vcount(g)
-
-  cat("\n==> Plot\n")
-  set.seed(1337)
-  pdf(file = "output/fatigued_pagerank-toy_example_graph.pdf", width = 5, height = 5)
-  plot(g, vertex.color="#ecd078", vertex.size=30)
-  dev.off()
-
-  cat("\n==> Adjacency\n")
-  A <- as_adj(g)
-  print_latex_matrix(A)
-
-  cat("\n==> H\n")
-  H <- t(as_adj(g))
-  H <- as(H, "dgTMatrix")
-  H@x <- H@x / colSums(H)[H@j + 1]
-  print_latex_matrix(H, digits=2)
-
-  cat("\n==> a^T\n")
-  a <- Matrix(0, nrow=n)
-  a[setdiff(1:n, unique(H@j+1)), ] <- 1
-  print_latex_matrix(t(a))
-
-  # TODO generate prints for remaining
-
-  # Additive smoothing (a.k.a. Laplace smoothing) of the normalized indegree as a stochastic vector
-  alpha <- 0.1
-  inv_deg_in <- degree(g, mode = "in", normalized = FALSE)
-  inv_deg_in <- 1 - (inv_deg_in + alpha) / ((n-1) + alpha*sum(inv_deg_in))
-  inv_deg_in <- inv_deg_in / sum(inv_deg_in)
-
-  v <- Matrix(runif(n))
-  v <- v / norm(v)
-  last_v <- Matrix(1/n, n)
-
-  H <- as(inv_deg_in * H, "dgTMatrix")
-  H@x <- H@x / colSums(H)[H@j + 1]
-}
-#toy_example()
-
 # -------------------------------------------------------------------------------------------------------------------#
 #
 # MAIN
@@ -572,7 +522,7 @@ toy_example <- function() {
 # g <- make_graph(c(1,2, 2,3, 3,2, 4,2, 4,3, 3,1, 4,5, 5,3, 3,6, 6,7, 7,8, 8,1, 8,3))
 # g <- make_graph(c(1,2, 2,3, 3,1, 4,1, 4,3, 4,5, 6,4, 6,7))
 # g <- make_graph(c(1,2, 2,4, 4,3, 3,2))
-# g <- read_graph(gzfile("~/Data/facebook_combined.txt.gz"), format = "edgelist")
+g <- read_graph(gzfile("~/Data/facebook_combined.txt.gz"), format = "edgelist")
 
 # system.time(
 #   g <- read_graph(
@@ -581,22 +531,27 @@ toy_example <- function() {
 # system.time(names(edge_attr(g))[which(names(edge_attr(g)) == "transitions")] <- "weight")
 # save(g, file = "/media/vdb1/output/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.RData")
 
-#system.time(load("/media/vdb1/output/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.RData"))
-system.time(load("~/Data/wikipedia/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.RData"))
+# system.time(load("/media/vdb1/output/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.RData"))
+# system.time(load("~/Data/wikipedia/simplewiki_link_graph-article_namespace-with_transitions-20190201T1204.RData"))
 
 #
 # Node ranking metrics
 #
 
-system.time(V(g)$indegree <- degree(g, mode = "in"))
+# system.time(V(g)$indegree <- degree(g, mode = "in"))
 system.time(V(g)$pr <- page_rank(g)$vector)
-system.time(V(g)$hits_authority <- authority_score(g)$vector)
+# system.time(V(g)$hits_authority <- authority_score(g)$vector)
 
-# pr_sim <- page_rank_simulation(g, steps=1000)
-# V(g)$pr_sim <- pr_sim$vector
-# V(g)$pr_sim_iter <- pr_sim$iterations
-#
-# pr_iter <- page_rank_power_iteration(g)
+system.time(pr_sim <- page_rank_simulation(g, steps=1000))
+V(g)$pr_sim <- pr_sim$vector
+V(g)$pr_sim_iter <- pr_sim$iterations
+
+system.time(pr_sim_single <- page_rank_simulation_iter(g, 1, d=0.85, vcount(g) * 1000))
+pr_sim_single <- list(vector = pr_sim_single / max(pr_sim_single), iterations = vcount(g) * 1000)
+V(g)$pr_sim_single <- pr_sim_single$vector
+V(g)$pr_sim_single_iter <- pr_sim_single$iterations
+
+# system.time(pr_iter <- page_rank_power_iteration(g))
 # V(g)$pr_iter <- pr_iter$vector
 # V(g)$pr_iter_iter <- pr_iter$iterations
 #
@@ -608,24 +563,8 @@ system.time(V(g)$hits_authority <- authority_score(g)$vector)
 # V(g)$fpr_sim_without_teleport <- fpr_sim_without_teleport$vector
 # V(g)$fpr_sim_without_teleport_iter <- fpr_sim_without_teleport$iterations
 
-system.time(fpr_out_indegree <- fatigued_page_rank_power_iteration(g, fatigue_method = "out_indegree"))
-V(g)$fpr_out_indegree <- fpr_out_indegree$vector
-V(g)$fpr_out_indegree_iter <- fpr_out_indegree$iterations
-
-eval <- list(
-  indegree=c(
-    pearson=cor(strength(g, mode = "in"), degree(g, mode = "in"), method = "pearson"),
-    spearman=cor(strength(g, mode = "in"), degree(g, mode = "in"), method = "spearman")),
-  pr=c(
-    pearson=cor(strength(g, mode = "in"), V(g)$pr, method = "pearson"),
-    spearman=cor(strength(g, mode = "in"), V(g)$pr, method = "spearman")),
-  hits_authority=c(
-    pearson=cor(strength(g, mode = "in"), V(g)$hits_authority, method = "pearson"),
-    spearman=cor(strength(g, mode = "in"), V(g)$hits_authority, method = "spearman")),
-  fpr_out_indegree=c(
-    pearson=cor(strength(g, mode = "in"), V(g)$fpr_out_indegree, method = "pearson"),
-    spearman=cor(strength(g, mode = "in"), V(g)$fpr_out_indegree, method = "spearman"))
-)
-eval
+# system.time(fpr_out_indegree <- fatigued_page_rank_power_iteration(g, fatigue_method = "out_indegree"))
+# V(g)$fpr_out_indegree <- fpr_out_indegree$vector
+# V(g)$fpr_out_indegree_iter <- fpr_out_indegree$iterations
 
 save.image()

@@ -1,8 +1,6 @@
 source('setup.R')
 
-binwidth <- 0.05
-
-plot_weights_per_type <- function(data) {
+plot_weights_per_type <- function(data, binwidth=0.05) {
   data <- split(data, data$Type)
   data <- lapply(data, function(d) {
     df <- as.data.frame(table(cut(d$Weight, seq(0, 1, binwidth), seq(0, 1-binwidth, binwidth))))
