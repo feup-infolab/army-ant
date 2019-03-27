@@ -515,11 +515,15 @@ engines:
         id: random_walk
         params:
           l: 2
-          r: 1000
+          r: 100
           nf: 0
           ef: 0
-          d: 0.85
-          n: 50000
+          d: 0.15
+          n: 100000
+          norm: false
+          expansion: true
+          directed: true
+          weighted: false
       functions:
         random_walk:
           name: Random Walk Score
@@ -528,23 +532,17 @@ engines:
             r: [10, 100, 250, 500, 750, 1000, 2500, 5000, 10000]
             nf: [0, 10, 100, 500, 1000]
             ef: [0, 10, 100, 500, 1000]
-        random_walk_without_seeds:
-          name: Random Walk Score (Without Seed Nodes)
-          params:
-            l: [1, 2, 3, 4, 5, 6]
-            r: [10, 100, 250, 500, 750, 1000, 2500, 5000, 10000, 100000]
-            nf: [0, 10, 100, 500, 1000]
-            ef: [0, 10, 100, 500, 1000]
+            expansion: [true, false]
+            directed: [true, false]
+            weighted: [true, false]
         hyperrank:
           name: HyperRank
           params:
             d: [0, 0.15, 0.25, 0.5, 0.75, 0.85, 1]
             n: [1000, 10000, 100000, 1000000]
-        hyperrank_without_seed_nodes:
-          name: HyperRank (Without Seed Nodes)
-          params:
-            d: [0, 0.15, 0.25, 0.5, 0.75, 0.85, 1]
-            n: [1000, 10000, 100000, 1000000]
+            expansion: [true, false]
+            weighted: [true, false]
+            norm: [true, false]
 
   hgoe-syns-inex-2009-3t-nl:
     name: INEX 2009 3T-NL - Hypergraph-of-Entity (Synonyms)

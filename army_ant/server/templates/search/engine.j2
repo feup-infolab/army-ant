@@ -5,28 +5,32 @@
   </div>
   {% endif %}
 
-  <div class="column {% if is_evaluation %} col-5 {% else %} col-6 {% endif %}">
-    <div class="columns">
-      <div class="column">
-        <!-- form radio control -->
-        <select class="form-select select-sm" id="engine" name="engine">
-          {% for app_engine in app.engines %}
-          <option value="{{app_engine}}" {% if engine == app_engine %} selected="selected" {% endif %}>
-            {{app.engines[app_engine].name}}
-          </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="column d-hide">
-        <!-- form radio control -->
-        <select class="form-select select-sm" id="ranking-function" name="ranking_function">
-          <!-- Dynamically loaded -->
-        </select>
-      </div>
-    </div>
+  <div class="column">
+    <!-- form radio control -->
+    <select class="form-select select-sm" id="engine" name="engine">
+      {% for app_engine in app.engines %}
+      <option value="{{app_engine}}" {% if engine == app_engine %} selected="selected" {% endif %}>
+        {{app.engines[app_engine].name}}
+      </option>
+      {% endfor %}
+    </select>
   </div>
 
+  {% if is_evaluation %}
+  <div class="col-1 d-hide">
+    <label class="form-label label-sm" for="engine">Ranking</label>
+  </div>
+  {% endif %}
+
+  <div class="column d-hide">
+    <!-- form radio control -->
+    <select class="form-select select-sm" id="ranking-function" name="ranking_function">
+      <!-- Dynamically loaded -->
+    </select>
+  </div>
+</div>
+
+<div class="form-group">
   <div class="column">
     <div id="ranking-params" class="columns">
       <!-- Dynamically loaded -->
@@ -36,7 +40,7 @@
 
 <script type="text/javascript">
   (function() {
-    var engines = {{ app['engines']|tojson }};
+    var engines = {{ app['engines']|dump_json }};
     var queryParams = getQueryStrings();
     var rankingFunction = queryParams.ranking_function;
     var rankingParams = {};
@@ -63,6 +67,7 @@
 
       if (Object.keys(funcs).length > 0) {
         $('#ranking-function').parent('.column').removeClass('d-hide');
+        $('#ranking-function').parent('.column').prev('.col-1').removeClass('d-hide');
 
         for (var func in funcs) {
           var $func = $('<option>')
@@ -81,6 +86,7 @@
         }
       } else {
         $('#ranking-function').parent('.column').addClass('d-hide');
+        $('#ranking-function').parent('.column').prev('.col-1').addClass('d-hide');
       }
     }
 
@@ -117,11 +123,12 @@
           .attr('id', 'ranking-param-' + param)
           .attr('name', 'ranking_param_' + param);
 
-        $('<div>').addClass('col-2').append($label).appendTo($formGroup);
-        $('<div>').addClass('col-10').append($select).appendTo($formGroup);
+        $('<div>').addClass('col-5').append($label).appendTo($formGroup);
+        $('<div>').addClass('col-7').append($select).appendTo($formGroup);
 
         var $column = $('<div>')
-          .addClass('column')
+          .addClass('column col-3')
+          .css('margin-bottom', '.5em')
           .append($formGroup);
 
         $('#ranking-params').append($column);
@@ -135,11 +142,11 @@
           {% if is_evaluation %}
           $param.attr('selected', 'selected');
           {% else %}
-          if (rankingParams[param]) {
+          if (param in rankingParams) {
             if(params[param][i] == rankingParams[param]) {
                 $param.attr('selected', 'selected');
             }
-          } else if (defaultParams && defaultParams[param] && params[param][i] == defaultParams[param]) {
+          } else if (defaultParams && param in defaultParams && params[param][i] == defaultParams[param]) {
             $param.attr('selected', 'selected');
           }
           {% endif %}

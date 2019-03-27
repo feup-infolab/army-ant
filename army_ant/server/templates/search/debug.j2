@@ -117,7 +117,7 @@
     var tabContentID = $activeTab.find('a').first().attr('href');
     $activeTab.addClass('active');
     $(tabContentID).removeClass('d-hide');
-    
+
     $('#learn .tab-item a').on('click', function(e) {
       e.preventDefault();
 
@@ -129,7 +129,7 @@
     });
 
     $(document).on('click', '[href="#score-components-plot"]', function(e) {
-      var visScoreComponents = new ScoreComponents({{ results|results_to_json }}, '#score-components-plot');
+      var visScoreComponents = new ScoreComponents({{ results|dump_json }}, '#score-components-plot');
       visScoreComponents.render();
     });
   })();

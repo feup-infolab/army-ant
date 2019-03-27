@@ -98,15 +98,22 @@ code {
 }
 .eval .table.metadata > * > tr > th {
   width: 15em;
+  text-align: left;
+}
+.eval .table.metadata > * > tr > td {
+  text-align: left;
 }
 .eval .table.values-per-param > * > tr > th {
   width: 15em;
 }
 
-.detail .table tr {
+.detail .table.effectiveness {
+  margin-top: 2em;
+}
+.detail .table.effectiveness tr {
   background-color: #f7f7f7;
 }
-.detail .table th, .detail .table td {
+.detail .table.effectiveness th, .detail .table.effectiveness td {
   white-space: normal;
   text-align: center;
   padding: 0.5em;
@@ -127,7 +134,7 @@ code {
 }
 
 .detail {
-  margin: 2em 0;
+  margin: 0;
   min-height: 1em;
 }
 .wide-table-container {

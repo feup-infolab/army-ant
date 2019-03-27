@@ -1063,8 +1063,10 @@ public class HypergraphOfEntity extends Engine {
         randomStep(randomNodeID, remainingSteps - 1, path, isDirected, isBiased, nodeFatigue, edgeFatigue);
     }
 
-    public ResultSet hyperRankSearch(IntSet seedNodeIDs, Task task, boolean isBiased, float d, int n) {
-        logger.info("Searching using HyperRank (d = {}, n = {})", d, n);
+    public ResultSet hyperRankSearch(IntSet seedNodeIDs, Task task, float d, int n, boolean isWeighted,
+            boolean useDegreeNormalization) {
+        logger.info("Searching using HyperRank (d = {}, n = {}, weighted = {}, degree_normalization = {})",
+                d, n, isWeighted, useDegreeNormalization);
 
         // An atom is either a node or a hyperedge (we follow the same nomenclature as HypergraphDB)
         Int2FloatOpenHashMap atomVisits = new Int2FloatOpenHashMap();
@@ -1073,7 +1075,7 @@ public class HypergraphOfEntity extends Engine {
         trace.goDown();
 
         int nodeID;
-        if (isBiased) {
+        if (isWeighted) {
             trace.add("Selecting start seed node non-uniformly at random");
             Float[] nodeWeights = seedNodeIDs.stream().map(this.nodeWeights::getValueAsFloat).toArray(Float[]::new);
             nodeID = sampleNonUniformlyAtRandom(seedNodeIDs.toIntArray(), ArrayUtils.toPrimitive(nodeWeights));
@@ -1091,7 +1093,7 @@ public class HypergraphOfEntity extends Engine {
 
             // Teleport either by chance or if it's a sink.
             if (random() > d || edgeIDs.isEmpty()) {
-                if (isBiased) {
+                if (isWeighted) {
                     trace.add("Found a sink, teleporting non-uniformly at random to a seed node");
                     Float[] nodeWeights = seedNodeIDs.stream().map(this.nodeWeights::getValueAsFloat)
                             .toArray(Float[]::new);
@@ -1104,7 +1106,7 @@ public class HypergraphOfEntity extends Engine {
             }
 
             int randomEdgeID;
-            if (isBiased) {
+            if (isWeighted) {
                 Float[] edgeWeights = edgeIDs.stream().map(this.edgeWeights::getValueAsFloat).toArray(Float[]::new);
                 randomEdgeID = sampleNonUniformlyAtRandom(edgeIDs.toIntArray(), ArrayUtils.toPrimitive(edgeWeights));
             } else {
@@ -1128,7 +1130,7 @@ public class HypergraphOfEntity extends Engine {
                 continue;
             }
 
-            if (isBiased) {
+            if (isWeighted) {
                 Float[] nodeWeights = nodeIDs.stream().map(this.nodeWeights::getValueAsFloat).toArray(Float[]::new);
                 nodeID = sampleNonUniformlyAtRandom(nodeIDs.toIntArray(), ArrayUtils.toPrimitive(nodeWeights));
             } else {
@@ -1154,13 +1156,15 @@ public class HypergraphOfEntity extends Engine {
                 RankableAtom rankableAtom = (RankableAtom) atom;
                 logger.debug("Ranking atom {} using RANDOM_WALK_SCORE", rankableAtom);
 
-                // Unnormalized HyperRank with "document" length normalization
-                /*double norm = task == Task.DOCUMENT_RETRIEVAL ? graph.getEdgeDegree(atomID)
-                        : graph.getVertexDegree(atomID);
-                double score = atomVisits.get(atomID) / norm;*/
+                double norm = 1;
+                if (useDegreeNormalization) {
+                    norm = task == Task.DOCUMENT_RETRIEVAL ? graph.getEdgeDegree(atomID)
+                            : graph.getVertexDegree(atomID);
+                }
 
-                // Unnormalized HyperRank
-                double score = atomVisits.get(atomID);
+                // Unnormalized HyperRank (with or without degree normalization,
+                // similar to document length normalization)
+                double score = atomVisits.get(atomID) / norm;
 
                 resultSet.addResult(
                         new Result(score, rankableAtom.getID(), rankableAtom.getName(), rankableAtom.getLabel()));
@@ -1194,10 +1198,10 @@ public class HypergraphOfEntity extends Engine {
     }
 
     public ResultSet randomWalkSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights, Task task,
-                                      int walkLength, int walkRepeats, boolean isDirected, boolean isBiased,
-                                      int nodeFatigue, int edgeFatigue) {
-        logger.info("Searching using Random Walk Score (l = {}, r = {}, nf = {}, ef = {})",
-            walkLength, walkRepeats, nodeFatigue, edgeFatigue);
+            int walkLength, int walkRepeats, int nodeFatigue, int edgeFatigue, boolean isDirected, boolean isWeighted) {
+        logger.info(
+                "Searching using Random Walk Score (l = {}, r = {}, nf = {}, ef = {}, directed = {}, weighted = {})",
+                walkLength, walkRepeats, nodeFatigue, edgeFatigue, isDirected, isWeighted);
 
         // An atom is either a node or a hyperedge (we follow the same nomenclature as HypergraphDB)
         Int2FloatOpenHashMap weightedAtomVisitProbability = new Int2FloatOpenHashMap();
@@ -1214,7 +1218,7 @@ public class HypergraphOfEntity extends Engine {
 
             for (int i = 0; i < walkRepeats; i++) {
                 grph.path.Path randomPath = randomWalk(
-                    seedNodeID, walkLength, isDirected, isBiased, nodeFatigue, edgeFatigue);
+                    seedNodeID, walkLength, isDirected, isWeighted, nodeFatigue, edgeFatigue);
 
                 StringBuilder messageRandomPath = new StringBuilder();
                 for (int j = 0; j < randomPath.getNumberOfVertices(); j++) {
@@ -1495,7 +1499,7 @@ public class HypergraphOfEntity extends Engine {
 
         List<String> tokens = analyze(query);
         IntSet queryTermNodeIDs = getQueryTermNodeIDs(tokens);
-        logger.info("{} query nodes found for [ {} ]", queryTermNodeIDs.size(), query);
+        logger.info("Found {} query nodes found for [ {} ]", queryTermNodeIDs.size(), query);
         trace.add("Mapping query terms [ %s ] to query term nodes", StringUtils.join(tokens, ", "));
         trace.goDown();
         for (int queryTermNodeID : queryTermNodeIDs) {
@@ -1506,7 +1510,9 @@ public class HypergraphOfEntity extends Engine {
         IntSet seedNodeIDs = null;
         Map<Integer, Double> seedNodeWeights = null;
 
-        if (!function.name().endsWith("_WITHOUT_SEEDS")) {
+        boolean useQueryExpansion = Boolean.valueOf(params.getOrDefault("expansion", "false"));
+
+        if (useQueryExpansion) {
             seedNodeIDs = getSeedNodeIDs(queryTermNodeIDs);
             //System.out.println("Seed Nodes: " + seedNodeIDs.stream().map(nodeID -> nodeID + "=" + nodeIndex.getKey(nodeID).toString()).collect(Collectors.toList()));
             trace.add("Mapping query term nodes to seed nodes");
@@ -1518,7 +1524,7 @@ public class HypergraphOfEntity extends Engine {
 
             seedNodeWeights = seedNodeConfidenceWeights(seedNodeIDs, queryTermNodeIDs);
             //System.out.println("Seed Node Confidence Weights: " + seedNodeWeights);
-            logger.info("{} seed nodes weights calculated for [ {} ]", seedNodeWeights.size(), query);
+            logger.info("Expanded [ {} ] to {} weighted seed nodes", query, seedNodeWeights.size());
             trace.add("Calculating confidence weight for seed nodes");
             trace.goDown();
             for (Map.Entry<Integer, Double> entry : seedNodeWeights.entrySet()) {
@@ -1530,28 +1536,25 @@ public class HypergraphOfEntity extends Engine {
         ResultSet resultSet;
         switch (function) {
             case HYPERRANK:
-            case HYPERRANK_WITHOUT_SEEDS:
                 resultSet = hyperRankSearch(
-                    function.name().endsWith("_WITHOUT_SEEDS") ? queryTermNodeIDs : seedNodeIDs,
-                    task, function == RankingFunction.BIASED_RANDOM_WALK_SCORE,
+                    useQueryExpansion ? seedNodeIDs : queryTermNodeIDs,
+                    task,
                     Float.valueOf(params.getOrDefault("d", String.valueOf(DEFAULT_DAMPING_FACTOR))),
-                    Integer.valueOf(params.getOrDefault("n", String.valueOf(DEFAULT_MAX_ITERATIONS))));
+                    Integer.valueOf(params.getOrDefault("n", String.valueOf(DEFAULT_MAX_ITERATIONS))),
+                    Boolean.valueOf(params.getOrDefault("weighted", "false")),
+                    Boolean.valueOf(params.getOrDefault("norm", "false")));
                 break;
-            case UNDIRECTED_RANDOM_WALK_SCORE:
             case RANDOM_WALK_SCORE:
-            case BIASED_RANDOM_WALK_SCORE:
-            case RANDOM_WALK_SCORE_WITHOUT_SEEDS:
-            case BIASED_RANDOM_WALK_SCORE_WITHOUT_SEEDS:
                 resultSet = randomWalkSearch(
-                        function.name().endsWith("_WITHOUT_SEEDS") ? queryTermNodeIDs : seedNodeIDs,
-                        function.name().endsWith("_WITHOUT_SEEDS") ? new HashMap<>() : seedNodeWeights,
+                        useQueryExpansion ? seedNodeIDs : queryTermNodeIDs,
+                        useQueryExpansion ? seedNodeWeights : new HashMap<>(),
                         task,
                         Integer.valueOf(params.getOrDefault("l", String.valueOf(DEFAULT_WALK_LENGTH))),
                         Integer.valueOf(params.getOrDefault("r", String.valueOf(DEFAULT_WALK_REPEATS))),
-                        function != RankingFunction.UNDIRECTED_RANDOM_WALK_SCORE,
-                        function == RankingFunction.BIASED_RANDOM_WALK_SCORE,
                         Integer.valueOf(params.getOrDefault("nf", String.valueOf(DEFAULT_FATIQUE))),
-                        Integer.valueOf(params.getOrDefault("ef", String.valueOf(DEFAULT_FATIQUE))));
+                        Integer.valueOf(params.getOrDefault("ef", String.valueOf(DEFAULT_FATIQUE))),
+                        Boolean.valueOf(params.getOrDefault("directed", "true")),
+                        Boolean.valueOf(params.getOrDefault("weighted", "false")));
                 break;
             case ENTITY_WEIGHT:
             case JACCARD_SCORE:
@@ -1894,12 +1897,7 @@ public class HypergraphOfEntity extends Engine {
         ENTITY_WEIGHT,
         JACCARD_SCORE,
         RANDOM_WALK_SCORE,
-        BIASED_RANDOM_WALK_SCORE,
-        UNDIRECTED_RANDOM_WALK_SCORE,
-        RANDOM_WALK_SCORE_WITHOUT_SEEDS,
-        BIASED_RANDOM_WALK_SCORE_WITHOUT_SEEDS,
         HYPERRANK,
-        HYPERRANK_WITHOUT_SEEDS,
     }
 
     public enum Feature {

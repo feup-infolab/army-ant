@@ -14,6 +14,7 @@ JPype1==0.6.2
 joblib==0.11
 pandas==0.22.0
 ruamel.yaml==0.15.35
+yamlordereddictloader==0.4.0
 yarl==0.16.0
 unidecode==1.0.22
 joblib==0.11

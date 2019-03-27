@@ -44,6 +44,9 @@ from army_ant.util.stats import gmean
 
 logger = logging.getLogger(__name__)
 
+pd.set_option("display.height", 10)
+
+
 #
 # TODO FIXME REQUIRES CRITICAL AND MASSIVE REFACTORING!
 # Evaluation metrics should be calculated in separate functions and reused by all evaluators.
@@ -859,6 +862,9 @@ class EvaluationTaskManager(object):
                     df.loc[max_idx, metric] = '<b>%s</b>' % float_format(df[metric][max_idx])
                     df.loc[~df.index.isin([max_idx]), metric] = df.loc[~df.index.isin([max_idx]), metric].apply(
                         float_format)
+                df.Parameters = df.Parameters.apply(
+                    lambda param_str: '<br>'.join(s for s in param_str[1:-1].split(', '))
+                    if param_str != 'No parameters' else param_str)
                 tmp_file.write(df.to_html(
                     index=False,
                     escape=False,

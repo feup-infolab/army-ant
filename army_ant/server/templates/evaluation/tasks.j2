@@ -99,134 +99,128 @@
         </td>
       </tr>
       {% endif %}
-
-      {% if task.stats and task.stats|length > 0 %}
-      <tr>
-        <th>Total Query Time</th>
-        <td>
-          {% if task.stats|length < 2 %}
-          {% for stat in task.stats.values() %}
-          {{ stat['total_query_time'] / 1000 }}s
-          {% endfor %}
-          {% else %}
-          <div class="total-query-time-chart">
-            <!-- Dynamically loaded -->
-          </div>
-          {% endif %}
-        </td>
-      </tr>
-
-      <tr>
-        <th>Average Query Time</th>
-        <td>
-          {% if task.stats|length < 2 %}
-          {% for stat in task.stats.values() %}
-          {{ stat['avg_query_time'] / 1000 }}s
-          {% endfor %}
-          {% else %}
-          <div class="avg-query-time-chart">
-            <!-- Dynamically loaded -->
-          </div>
-          {% endif %}
-        </td>
-      </tr>
-      {% endif %}
-
-      {% if task.eval_format in ("inex", "inex-xer", "trec") %}
-
-      <!-- START INEX METADATA -->
-      <tr>
-        <th>Topics Path</th>
-        <td>
-          <div class="columns">
-            <div class="column">{{ task.topics_path }}</div>
-            <div class="column text-right">{{ task.topics_filename }}</div>
-          </div>
-        </td>
-      </tr>
-      <tr>
-        <th>Assessments Path</th>
-        <td>
-          <div class="columns">
-            <div class="column">{{ task.assessments_path }}</div>
-            <div class="column text-right">{{ task.assessments_filename }}</div>
-          </div>
-        </td>
-      </tr>
-      <!-- END INEX METADATA -->
-
-      {% elif task.eval_format == "ll-api" %}
-
-      <!-- START LL-API METADATA -->
-      <tr>
-        <th>Base URL</th>
-        <td>{{ task.base_url }}</td>
-      </tr>
-      <tr>
-        <th>API Key</th>
-        <td>{{ task.api_key }}</td>
-      </tr>
-      <!-- END LL-API METADATA -->
-
-      {% endif %}
-
-      {% if task.eval_format == "inex-xer" %}
-      <tr>
-        <th>Filter by ID Filename</th>
-        <td>{{ task.valid_ids_filename}}</td>
-      </tr>
-      {% endif %}
     </table>
 
     <!-- START DETAIL -->
     {% if task.status == 3 and task.results %}
     <div class="d-hide detail">
-      <div class="columns">
-        <div class="column">
-          <table class="table table-scroll table-sm">
-            <thead>
-              {% if task.results %}
-              {% set result = task.results.values()|first %}
+      <table class="table table-striped table-sm metadata">
+        {% if task.stats and task.stats|length > 0 %}
+        <tr>
+          <th>Total Query Time</th>
+          <td>
+            {% if task.stats|length < 2 %}
+            {% for stat in task.stats.values() %}
+            {{ stat['total_query_time'] / 1000 }}s
+            {% endfor %}
+            {% else %}
+            <div class="total-query-time-chart">
+              <!-- Dynamically loaded -->
+            </div>
+            {% endif %}
+          </td>
+        </tr>
 
-              {% if result.ranking_params %}
-              {% for param_name in result.ranking_params.keys() %}
-              <th>{{ param_name }}</th>
-              {% endfor %}
-              {% endif %}
+        <tr>
+          <th>Average Query Time</th>
+          <td>
+            {% if task.stats|length < 2 %}
+            {% for stat in task.stats.values() %}
+            {{ stat['avg_query_time'] / 1000 }}s
+            {% endfor %}
+            {% else %}
+            <div class="avg-query-time-chart">
+              <!-- Dynamically loaded -->
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endif %}
 
-              {% if result.metrics %}
-              {% for metric in result.metrics.keys() %}
-              <th>{{ metric }}</th>
-              {% endfor %}
-              {% endif %}
+        {% if task.eval_format in ("inex", "inex-xer", "trec") %}
 
-              {% endif %}
-            </thead>
-            <tbody>
-              {% for params_id, results in task.results.items() %}
-              <tr>
-                {% if results.ranking_params %}
-                {% for param_value in results.ranking_params.values() %}
-                <th>{{ param_value }}</th>
-                {% endfor %}
-                {% endif %}
+        <!-- START INEX METADATA -->
+        <tr>
+          <th>Topics Path</th>
+          <td>
+            <div class="columns">
+              <div class="column">{{ task.topics_path }}</div>
+              <div class="column text-right">{{ task.topics_filename }}</div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <th>Assessments Path</th>
+          <td>
+            <div class="columns">
+              <div class="column">{{ task.assessments_path }}</div>
+              <div class="column text-right">{{ task.assessments_filename }}</div>
+            </div>
+          </td>
+        </tr>
+        <!-- END INEX METADATA -->
 
-                {% for metric in results.metrics %}
-                <td>{{ results.metrics[metric]|round(6) }}</td>
-                {% endfor %}
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        {% elif task.eval_format == "ll-api" %}
 
-      <div class="columns">
-        <div class="column">
-          <div class="details-chart">
-            <!-- Dynamically loaded -->
-          </div>
-        </div>
+        <!-- START LL-API METADATA -->
+        <tr>
+          <th>Base URL</th>
+          <td>{{ task.base_url }}</td>
+        </tr>
+        <tr>
+          <th>API Key</th>
+          <td>{{ task.api_key }}</td>
+        </tr>
+        <!-- END LL-API METADATA -->
+
+        {% endif %}
+
+        {% if task.eval_format == "inex-xer" %}
+        <tr>
+          <th>Filter by ID Filename</th>
+          <td>{{ task.valid_ids_filename}}</td>
+        </tr>
+        {% endif %}
+      </table>
+
+      <table class="table table-scroll table-sm effectiveness">
+        <thead>
+          {% if task.results %}
+          {% set result = task.results.values()|first %}
+
+          {% if result.ranking_params %}
+          {% for param_name in result.ranking_params.keys() %}
+          <th>{{ param_name }}</th>
+          {% endfor %}
+          {% endif %}
+
+          {% if result.metrics %}
+          {% for metric in result.metrics.keys() %}
+          <th>{{ metric }}</th>
+          {% endfor %}
+          {% endif %}
+
+          {% endif %}
+        </thead>
+        <tbody>
+          {% for params_id, results in task.results.items() %}
+          <tr>
+            {% if results.ranking_params %}
+            {% for param_value in results.ranking_params.values() %}
+            <th>{{ param_value }}</th>
+            {% endfor %}
+            {% endif %}
+
+            {% for metric in results.metrics %}
+            <td>{{ results.metrics[metric]|round(6) }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="details-chart">
+        <!-- Dynamically loaded -->
       </div>
     </div>
     {% elif task.status == 4 and task.eval_format == 'll-api' %}
@@ -243,7 +237,7 @@
       <!-- START STATUS -->
       <div class="column">
         <span class="label label-rounded label-primary status">
-          {{ task.status.name }} 
+          {{ task.status.name }}
         </span>
       </div>
       <!-- END STATUS -->

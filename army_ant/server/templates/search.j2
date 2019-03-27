@@ -10,7 +10,7 @@
 {% block content %}
 <form class="form-horizontal">
   <div class="form-group">
-    <div class="column col-mr-auto">
+    <div class="column">
       <!-- form input control -->
       <div class="input-group">
         <select class="form-select" id="task" name="task">
@@ -27,7 +27,7 @@
       </div>
     </div>
 
-    <div class="column col-3">
+    <div class="column col-auto">
       <!-- form switch control -->
       <label class="form-switch">
         <input type="checkbox" id="debug" name="debug" {% if debug == 'on' %} checked="checked" {% endif %}/>

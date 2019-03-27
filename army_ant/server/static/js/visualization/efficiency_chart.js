@@ -5,7 +5,7 @@ function EfficiencyChart(data, selector) {
 
 EfficiencyChart.prototype.render = function() {
   //$(this.selector).css('height', ((this.data[0].length-1) * 30) + 'px');
-  
+
   var config = {
     bindto: this.selector,
     data: {
@@ -15,7 +15,8 @@ EfficiencyChart.prototype.render = function() {
       labels: false
     },
     size: {
-      height: 100
+      height: 75,
+      width: 350
     },
     axis: {
       x: {

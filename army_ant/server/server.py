@@ -1,15 +1,16 @@
-from datetime import datetime
-
-import aiohttp_jinja2
 import asyncio
-import jinja2
 import json
 import logging
 import math
 import os
 import tempfile
 import time
+from datetime import datetime
+
+import aiohttp_jinja2
+import jinja2
 import yaml
+import yamlordereddictloader
 from aiohttp import web
 from aiohttp.client_exceptions import ClientOSError
 from jpype import *
@@ -18,7 +19,7 @@ from army_ant.database import Database
 from army_ant.evaluation import EvaluationTask, EvaluationTaskManager
 from army_ant.exception import ArmyAntException
 from army_ant.index import Index, Result
-from army_ant.util import set_dict_defaults, params_id_to_str
+from army_ant.util import params_id_to_str, set_dict_defaults
 from army_ant.util.text import AhoCorasickEntityExtractor
 
 logger = logging.getLogger(__name__)
@@ -39,14 +40,14 @@ def timestamp_to_date(timestamp):
     return datetime.fromtimestamp(int(round(timestamp / 1000)))
 
 
-def results_to_json(results):
+def dump_json(results):
     try:
         return json.dumps([r.__dict__ for r in results])
     except:
         return json.dumps(results)
 
 
-def serialize_json(obj):
+def to_serializable(obj):
     if isinstance(obj, Result):
         return obj.__dict__
     return obj
@@ -85,7 +86,7 @@ async def search(request):
     ranking_params = {}
     for k in request.GET.keys():
         if k.startswith('ranking_param_'):
-            _, _, param_name = k.split('_')
+            _, _, param_name = k.split('_', 2)
             param_value = request.GET.get(k)
             ranking_params[param_name] = param_value
 
@@ -172,7 +173,7 @@ async def search(request):
 
     fmt = request.GET.get('format', 'html')
     if fmt == 'json':
-        return web.json_response(response, dumps=lambda obj: json.dumps(obj, default=serialize_json))
+        return web.json_response(response, dumps=lambda obj: json.dumps(obj, default=to_serializable))
     else:
         return response
 
@@ -378,13 +379,13 @@ async def service_ner(request):
 
     if not 'SINGLETONS' in request.app:
         request.app['SINGLETONS'] = {}
-    
+
     if not 'ac_ner' in request.app['SINGLETONS']:
         request.app['SINGLETONS']['ac_ner'] = AhoCorasickEntityExtractor(
             list_path=request.app['defaults']['service']['ner']['entity_list'])
 
     ac_ner = request.app['SINGLETONS']['ac_ner']
-    
+
     entities = ac_ner.extract(data['text'])
 
     return web.json_response({
@@ -478,7 +479,7 @@ async def error_middleware(request, handler):
 
 
 def run_app(loop, host, port, path=None):
-    config = yaml.load(open('config.yaml'))
+    config = yaml.load(open('config.yaml'), Loader=yamlordereddictloader.Loader)
 
     app = web.Application(client_max_size=50 * 1024 * 1024, middlewares=[error_middleware], loop=loop)
 
@@ -499,7 +500,7 @@ def run_app(loop, host, port, path=None):
         app,
         loader=jinja2.FileSystemLoader('army_ant/server/templates'),
         filters={
-            'results_to_json': results_to_json,
+            'dump_json': dump_json,
             'timestamp_to_date': timestamp_to_date,
             'params_id_to_str': params_id_to_str,
             'ranking_model_page_exists': ranking_model_page_exists,

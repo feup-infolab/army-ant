@@ -7,7 +7,7 @@ EffectivenessChart.prototype.getPalette = function(n) {
   var step = d3.scale.linear()
     .domain([1, n])
     .range([1, 50]);
-  
+
   var domain = [];
   for (var i=1; i < n; i++) {
     domain.push(step(i));

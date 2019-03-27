@@ -25,6 +25,7 @@ import psycopg2
 import tensorflow as tf
 import tensorflow_ranking as tfr
 import yaml
+import yamlordereddictloader
 from aiogremlin import Cluster
 from aiohttp.client_exceptions import ClientConnectorError
 from jpype import (JavaException, JBoolean, JClass, JDouble, JPackage, JString,
@@ -52,7 +53,7 @@ class JavaIndex(Index):
     CLASSPATH = 'external/java-impl/target/java-impl-%s-jar-with-dependencies.jar' % VERSION
     INSTANCES = {}
 
-    config = yaml.load(open('config.yaml'))
+    config = yaml.load(open('config.yaml'), Loader=yamlordereddictloader.Loader)
     jvm_config = config['defaults'].get('jvm', {})
     MEMORY_MB = int(jvm_config.get('memory', '5120'))
     OTHER_ARGS = jvm_config.get('other_args')
