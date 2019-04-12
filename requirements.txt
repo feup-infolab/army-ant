@@ -38,4 +38,4 @@ aiohttp_jinja2==0.14.0
 jinja2==2.10
 tensorflow==1.12.0
 tensorflow_ranking==0.1.0
-keras==2.2.4
+rpy2==3.0.1
