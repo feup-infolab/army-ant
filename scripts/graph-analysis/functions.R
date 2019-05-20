@@ -67,4 +67,4 @@ idf_p <- plot_funcs(idf_funcs, list(N=N, n=n)) +
 
 show(idf_p)
 #ggsave(filename = "output/idf_funcs.pdf", plot = idf_p, width = 7, height = 3, device=cairo_pdf)
-ggsave(filename = "output/idf_funcs.pdf", plot = idf_p, width = 4.5, height = 3)
+ggsave(filename = "output/idf_funcs.pdf", plot = idf_p, width = 4.5, height = 3, device=cairo_pdf)

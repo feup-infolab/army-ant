@@ -11,7 +11,7 @@ pacman::p_load(
   dplyr,
   logging,
   sigmoid,
-  #Cairo,
+  Cairo,
   scales
 )
 
