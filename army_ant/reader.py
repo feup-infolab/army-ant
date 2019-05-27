@@ -49,9 +49,9 @@ class Reader(object):
         elif source_reader == 'inex_dbpedia':
             return INEXReader(source_path, include_dbpedia=True, limit=limit)
         elif source_reader == 'inex_dir':
-            return INEXDirectoryReader(source_path, include_dbpedia=False)
+            return INEXDirectoryReader(source_path, include_dbpedia=False, limit=limit)
         elif source_reader == 'inex_dir_dbpedia':
-            return INEXDirectoryReader(source_path, include_dbpedia=True)
+            return INEXDirectoryReader(source_path, include_dbpedia=True, limit=limit)
         elif source_reader == 'living_labs':
             return LivingLabsReader(source_path, limit)
         elif source_reader == 'wapo':
@@ -330,10 +330,13 @@ class INEXReader(Reader):
 
 
 class INEXDirectoryReader(Reader):
-    def __init__(self, source_path, include_dbpedia=False, use_memory=False):
+    def __init__(self, source_path, include_dbpedia=False, use_memory=False, limit=None):
         super(INEXDirectoryReader, self).__init__(source_path)
 
         self.use_memory = use_memory
+        self.limit = limit
+
+        self.counter = 0
 
         file_paths = glob.glob(os.path.join(source_path, '*.tar.bz2'))
 
@@ -380,6 +383,8 @@ class INEXDirectoryReader(Reader):
 
     def __next__(self):
         try:
+            if self.limit is not None and self.counter >= self.limit: raise StopIteration
+            self.counter += 1
             return next(self.it)
         except StopIteration:
             if not self.use_memory:

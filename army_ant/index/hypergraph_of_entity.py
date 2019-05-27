@@ -131,10 +131,10 @@ class HypergraphOfEntity(JavaIndex):
                     java.util.Arrays.asList(entities))
                 corpus.append(jDoc)
 
-                if len(corpus) % (HypergraphOfEntity.BLOCK_SIZE // 10) == 0:
+                if len(corpus) % (JavaIndex.BLOCK_SIZE // 10) == 0:
                     logger.info("%d documents preloaded" % len(corpus))
 
-                if len(corpus) >= HypergraphOfEntity.BLOCK_SIZE:
+                if len(corpus) >= JavaIndex.BLOCK_SIZE:
                     logger.info("Indexing batch of %d documents using %s" % (len(corpus), index_features_str))
                     hgoe.indexCorpus(java.util.Arrays.asList(corpus))
                     corpus = []
