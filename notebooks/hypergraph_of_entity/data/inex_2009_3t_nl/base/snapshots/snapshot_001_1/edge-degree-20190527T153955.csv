@@ -1,0 +1,25 @@
+Edge ID,Type,Degree
+0,DocumentEdge,3
+1,RelatedToEdge,3
+2,ContainedInEdge,3
+3,ContainedInEdge,2
+4,ContainedInEdge,2
+5,ContainedInEdge,3
+6,ContainedInEdge,3
+7,ContainedInEdge,3
+8,ContainedInEdge,3
+9,ContainedInEdge,3
+10,ContainedInEdge,3
+11,ContainedInEdge,3
+12,ContainedInEdge,2
+13,ContainedInEdge,3
+14,ContainedInEdge,2
+15,ContainedInEdge,2
+16,ContainedInEdge,3
+17,ContainedInEdge,3
+18,ContainedInEdge,3
+19,ContainedInEdge,3
+20,ContainedInEdge,3
+21,ContainedInEdge,3
+22,ContainedInEdge,2
+23,ContainedInEdge,3
