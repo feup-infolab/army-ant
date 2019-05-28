@@ -321,4 +321,9 @@ public class HypergraphOfEntityTest {
          * getInEdges => includes directed incoming edges and all undirected edges.
          */
     }
+
+    public void testDiameterComputation() throws HypergraphException, IOException {
+        HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
+        hgoe.export("export-stats", "/tmp/hgoe-stats");
+    }
 }

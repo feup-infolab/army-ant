@@ -76,6 +76,8 @@ import edu.mit.jwi.item.IWordID;
 import edu.mit.jwi.item.POS;
 import grph.algo.AllPaths;
 import grph.algo.ConnectedComponentsAlgorithm;
+import grph.algo.DensityAlgorithm;
+import grph.algo.distance.DistanceMatrixBasedDiameterAlgorithm;
 import grph.in_memory.InMemoryGrph;
 import grph.io.ParseException;
 import grph.path.ArrayListPath;
@@ -1883,6 +1885,44 @@ public class HypergraphOfEntity extends Engine {
                     csvPrinter.printRecord(edgeID, edgeIndex.getKey(edgeID).getClass().getSimpleName(),
                             graph.getEdgeDegree(edgeID));
                 }
+                csvPrinter.flush();
+            }
+        } else if (feature.equals("export-stats")) {
+            Path path = Paths.get(workdir, String.format("stats-%s.csv", now));
+            try (BufferedWriter writer = Files.newBufferedWriter(path);
+                    CSVPrinter csvPrinter = new CSVPrinter(writer,
+                            CSVFormat.DEFAULT.withHeader("Statistic", "Value"))) {
+
+                csvPrinter.printRecord("Vertices", graph.getNumberOfVertices());
+                csvPrinter.printRecord("Directed Hyperedges", graph.getNumberOfDirectedHyperEdges());
+                csvPrinter.printRecord("Undirected Hyperedges", graph.getNumberOfUndirectedEdges());
+                csvPrinter.printRecord("Total Hyperedges", graph.getNumberOfHyperEdges());
+
+                csvPrinter.printRecord("Num Sources", graph.getSources().size());
+                csvPrinter.printRecord("Num Sinks", graph.getSinks().size());
+
+                // csvPrinter.printRecord("Min InEdge Degree", graph.getMinInEdgeDegrees());
+                // csvPrinter.printRecord("Max InEdge Degree", graph.getMaxInEdgeDegrees());
+                // csvPrinter.printRecord("Min InVertex Degree", graph.getMinInVertexDegrees());
+                // csvPrinter.printRecord("Max InVertex Degree", graph.getMaxInVertexDegrees());
+                // csvPrinter.printRecord("Min OutEdge Degree", graph.getMinOutEdgeDegrees());
+                // csvPrinter.printRecord("Max OutEdge Degree", graph.getMaxOutEdgeDegrees());
+                // csvPrinter.printRecord("Min OutVertex Degree", graph.getMinOutVertexDegrees());
+                // csvPrinter.printRecord("Max OutVertex Degree", graph.getMaxOutVertexDegrees());
+
+                // csvPrinter.printRecord("Max Clique Size", graph.getMaximumClique().size());
+                DensityAlgorithm densityAlgorithm = new DensityAlgorithm();
+                csvPrinter.printRecord("Density", densityAlgorithm.compute(graph));
+                // csvPrinter.printRecord("LCC Size", graph.getLargestConnectedComponent().size());
+                // csvPrinter.printRecord("Diameter", graph.getDiameter());
+                // csvPrinter.printRecord("Radius", graph.getRadius());
+                // csvPrinter.printRecord("Avg Clustering Coefficient", graph.getAverageClusteringCoefficient());
+                // csvPrinter.printRecord("Avg Degree", graph.getAverageDegree());
+                // csvPrinter.printRecord("Min Vertex Cover", graph.getMinimumVertexCover());
+                // csvPrinter.printRecord("Max Independent Set", graph.getMaximumIndependentSet());
+                // csvPrinter.printRecord("Triangles", graph.getNumberOfTriangles());
+                // csvPrinter.printRecord("Num Isolated Vertices", graph.getIsolatedVertices().size());
+
                 csvPrinter.flush();
             }
         } else {
