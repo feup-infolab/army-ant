@@ -5,7 +5,7 @@ base_outdir="/opt/army-ant/analysis/inex_2009_3t_nl-snapshots"
 
 for snapshot_name in $(ls $base_dir | sort)
 do
-    echo "===> Inspecting snapshot $snapshot_name"
+    echo "==> Inspecting $snapshot_name"
 
     time ./army-ant.py inspect \
         --index-location "$base_dir/$snapshot_name" \

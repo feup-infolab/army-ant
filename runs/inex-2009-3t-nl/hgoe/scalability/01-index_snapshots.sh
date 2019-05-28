@@ -8,7 +8,7 @@ for num_docs in $snapshots_num_docs
 do
     snapshot_name="snapshot_$(printf '%.3d' $snapshot)_$num_docs"
 
-    echo "===> Indexing snapshot $snapshot ($snapshot_name)"
+    echo "==> Indexing snapshot $snapshot ($snapshot_name)"
 
     time ./army-ant.py index \
         --source-path "/opt/army-ant/collections/inex-2009-3t-nl/corpus" \
