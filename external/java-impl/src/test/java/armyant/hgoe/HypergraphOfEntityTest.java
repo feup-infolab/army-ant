@@ -322,7 +322,7 @@ public class HypergraphOfEntityTest {
          */
     }
 
-    public void testDiameterComputation() throws HypergraphException, IOException {
+    public void testExportStats() throws HypergraphException, IOException {
         HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
         hgoe.export("export-stats", "/tmp/hgoe-stats");
     }

@@ -74,10 +74,25 @@ import edu.mit.jwi.item.ISynset;
 import edu.mit.jwi.item.IWord;
 import edu.mit.jwi.item.IWordID;
 import edu.mit.jwi.item.POS;
+import grph.Grph.MaxIndependentSetAlgorithm;
+import grph.Grph.MinVertexCoverAlgorithm;
 import grph.algo.AllPaths;
+import grph.algo.AverageDegreeAlgorithm;
 import grph.algo.ConnectedComponentsAlgorithm;
 import grph.algo.DensityAlgorithm;
+import grph.algo.RadiusAlgorithm;
+import grph.algo.clustering.AvgClusteringCoefficientAlgorithm;
+import grph.algo.clustering.ClusteringCoefficient;
+import grph.algo.degree.MaxInEdgeDegreeAlgorithm;
+import grph.algo.degree.MaxInVertexDegreeAlgorithm;
+import grph.algo.degree.MaxOutEdgeDegreeAlgorithm;
+import grph.algo.degree.MaxOutVertexDegreeAlgorithm;
+import grph.algo.degree.MinInEdgeDegreeAlgorithm;
+import grph.algo.degree.MinInVertexDegreeAlgorithm;
+import grph.algo.degree.MinOutEdgeDegreeAlgorithm;
+import grph.algo.degree.MinOutVertexDegreeAlgorithm;
 import grph.algo.distance.DistanceMatrixBasedDiameterAlgorithm;
+import grph.algo.search.DistanceListsBasedDiameterAlgorithm;
 import grph.in_memory.InMemoryGrph;
 import grph.io.ParseException;
 import grph.path.ArrayListPath;
@@ -90,6 +105,7 @@ import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import toools.collections.primitive.LucIntHashSet;
+import toools.math.Distribution;
 
 /**
  * Created by jldevezas on 2017-10-23.
@@ -862,6 +878,7 @@ public class HypergraphOfEntity extends Engine {
         try {
             ObjectInputStream input = new ObjectInputStream(new FileInputStream(hypergraphFile));
             this.graph = (InMemoryGrph) input.readObject();
+            this.graph.initAlgorithms();
             input.close();
         } catch (ClassNotFoundException | IOException e) {
             logger.warn("Cannot read hypergraph from {}", hypergraphFile);
@@ -1826,105 +1843,148 @@ public class HypergraphOfEntity extends Engine {
         return summary;
     }
 
-    public void export(String feature, String workdir) throws IOException {
+    public void exportNodeWeights(String workdir) throws IOException {
         String now = isoDateFormat.format(new Date());
 
+        Path path = Paths.get(workdir, String.format("node-weights-%s.csv", now));
+        logger.info("Saving node weights to {}", path);
+        try (BufferedWriter writer = Files.newBufferedWriter(path);
+                CSVPrinter csvPrinter = new CSVPrinter(writer,
+                        CSVFormat.DEFAULT.withHeader("Node ID", "Type", "Weight"))) {
+            for (int nodeID : graph.getVertices()) {
+                csvPrinter.printRecord(nodeID, nodeIndex.getKey(nodeID).getClass().getSimpleName(),
+                        nodeWeights.getValueAsFloat(nodeID));
+            }
+            csvPrinter.flush();
+        }
+    }
+
+    public void exportEdgeWeights(String workdir) throws IOException {
+        String now = isoDateFormat.format(new Date());
+
+        Path path = Paths.get(workdir, String.format("edge-weights-%s.csv", now));
+        logger.info("Saving edge weights to {}", path);
+        try (BufferedWriter writer = Files.newBufferedWriter(path);
+                CSVPrinter csvPrinter = new CSVPrinter(writer,
+                        CSVFormat.DEFAULT.withHeader("Edge ID", "Type", "Weight"))) {
+            for (int edgeID : graph.getEdges()) {
+                csvPrinter.printRecord(edgeID, edgeIndex.getKey(edgeID).getClass().getSimpleName(),
+                        edgeWeights.getValueAsFloat(edgeID));
+            }
+            csvPrinter.flush();
+        }
+    }
+
+    public void exportNodeDegree(String workdir) throws IOException {
+        String now = isoDateFormat.format(new Date());
+
+        Path path = Paths.get(workdir, String.format("node-degree-%s.csv", now));
+        logger.info("Saving node degrees to {}", path);
+        try (BufferedWriter writer = Files.newBufferedWriter(path);
+                CSVPrinter csvPrinter = new CSVPrinter(writer,
+                        CSVFormat.DEFAULT.withHeader("Node ID", "Type", "Degree"))) {
+            for (int nodeID : graph.getVertices()) {
+                csvPrinter.printRecord(nodeID, nodeIndex.getKey(nodeID).getClass().getSimpleName(),
+                        graph.getVertexDegree(nodeID));
+            }
+            csvPrinter.flush();
+        }
+    }
+
+    public void exportEdgeDegree(String workdir) throws IOException {
+        String now = isoDateFormat.format(new Date());
+
+        Path path = Paths.get(workdir, String.format("edge-degree-%s.csv", now));
+        logger.info("Saving edge degrees to {}", path);
+        try (BufferedWriter writer = Files.newBufferedWriter(path);
+                CSVPrinter csvPrinter = new CSVPrinter(writer,
+                        CSVFormat.DEFAULT.withHeader("Edge ID", "Type", "Degree"))) {
+            for (int edgeID : graph.getEdges()) {
+                csvPrinter.printRecord(edgeID, edgeIndex.getKey(edgeID).getClass().getSimpleName(),
+                        graph.getEdgeDegree(edgeID));
+            }
+            csvPrinter.flush();
+        }
+    }
+
+    public void exportStats(String workdir) throws IOException {
+        String now = isoDateFormat.format(new Date());
+
+        Path path = Paths.get(workdir, String.format("stats-%s.csv", now));
+        try (BufferedWriter writer = Files.newBufferedWriter(path);
+                CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("Statistic", "Value"))) {
+
+            logger.info("Computing general statistics");
+            csvPrinter.printRecord("Vertices", graph.getNumberOfVertices());
+            csvPrinter.printRecord("Directed Hyperedges", graph.getNumberOfDirectedHyperEdges());
+            csvPrinter.printRecord("Undirected Hyperedges", graph.getNumberOfUndirectedEdges());
+            csvPrinter.printRecord("Total Hyperedges", graph.getNumberOfHyperEdges());
+            csvPrinter.printRecord("Num Sources", graph.getSources().size());
+            csvPrinter.printRecord("Num Sinks", graph.getSinks().size());
+
+            logger.info("Computing average clustering coefficient");
+            csvPrinter.printRecord("Avg. Clustering Coefficient", graph.getAverageClusteringCoefficient());
+            csvPrinter.flush();
+
+            logger.info("Computing diameter");
+            DistanceListsBasedDiameterAlgorithm diameterAlgorithn = new DistanceListsBasedDiameterAlgorithm();
+            csvPrinter.printRecord("Diameter", diameterAlgorithn.compute(graph));
+            csvPrinter.flush();
+
+            logger.info("Computing average degree");
+            csvPrinter.printRecord("Avg. Degree", graph.getAverageDegree());
+            csvPrinter.flush();
+
+            logger.info("Computing minimum degree of incoming edges");
+            csvPrinter.printRecord("Min InEdge Degree", graph.getMinInEdgeDegrees());
+            csvPrinter.flush();
+
+            logger.info("Computing maximum degree of incoming edges");
+            csvPrinter.printRecord("Max InEdge Degree", graph.getMaxInEdgeDegrees());
+            csvPrinter.flush();
+
+            logger.info("Computing minimum degree of incoming vertices");
+            csvPrinter.printRecord("Min InVertex Degree", graph.getMinInVertexDegrees());
+            csvPrinter.flush();
+
+            logger.info("Computing maximum degree of incoming vertices");
+            csvPrinter.printRecord("Max InVertex Degree", graph.getMaxInVertexDegrees());
+            csvPrinter.flush();
+
+            logger.info("Computing minimum degree of outgoing edges");
+            csvPrinter.printRecord("Min OutEdge Degree", graph.getMinOutEdgeDegrees());
+            csvPrinter.flush();
+
+            logger.info("Computing maximum degree of outgoing edges");
+            csvPrinter.printRecord("Max OutEdge Degree", graph.getMaxOutEdgeDegrees());
+            csvPrinter.flush();
+
+            logger.info("Computing minimum degree of outgoing vertices");
+            csvPrinter.printRecord("Min OutVertex Degree", graph.getMinOutVertexDegrees());
+            csvPrinter.flush();
+
+            logger.info("Computing minimum degree of outgoing vertices");
+            csvPrinter.printRecord("Max OutVertex Degree", graph.getMaxOutVertexDegrees());
+            csvPrinter.flush();
+        }
+    }
+
+    public void export(String feature, String workdir) throws IOException {
         if (!Files.exists(Paths.get(workdir))) {
             logger.info("Creating working directory: {}", workdir);
             Files.createDirectories(Paths.get(workdir));
         }
 
         if (feature.equals("export-node-weights")) {
-            Path path = Paths.get(workdir, String.format("node-weights-%s.csv", now));
-            logger.info("Saving node weights to {}", path);
-            try (BufferedWriter writer = Files.newBufferedWriter(path);
-                 CSVPrinter csvPrinter = new CSVPrinter(
-                         writer, CSVFormat.DEFAULT.withHeader("Node ID", "Type", "Weight"))) {
-                for (int nodeID : graph.getVertices()) {
-                    csvPrinter.printRecord(
-                            nodeID,
-                            nodeIndex.getKey(nodeID).getClass().getSimpleName(),
-                            nodeWeights.getValueAsFloat(nodeID));
-                }
-                csvPrinter.flush();
-            }
+            exportNodeWeights(workdir);
         } else if (feature.equals("export-edge-weights")) {
-            Path path = Paths.get(workdir, String.format("edge-weights-%s.csv", now));
-            logger.info("Saving edge weights to {}", path);
-            try (BufferedWriter writer = Files.newBufferedWriter(path);
-                 CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("Edge ID", "Type", "Weight"))) {
-                for (int edgeID : graph.getEdges()) {
-                    csvPrinter.printRecord(
-                            edgeID,
-                            edgeIndex.getKey(edgeID).getClass().getSimpleName(),
-                            edgeWeights.getValueAsFloat(edgeID));
-                }
-                csvPrinter.flush();
-            }
+            exportEdgeWeights(workdir);
         } else if (feature.equals("export-node-degree")) {
-            Path path = Paths.get(workdir, String.format("node-degree-%s.csv", now));
-            logger.info("Saving node degrees to {}", path);
-            try (BufferedWriter writer = Files.newBufferedWriter(path);
-                    CSVPrinter csvPrinter = new CSVPrinter(writer,
-                            CSVFormat.DEFAULT.withHeader("Node ID", "Type", "Degree"))) {
-                for (int nodeID : graph.getVertices()) {
-                    csvPrinter.printRecord(
-                        nodeID,
-                        nodeIndex.getKey(nodeID).getClass().getSimpleName(),
-                        graph.getVertexDegree(nodeID));
-                }
-                csvPrinter.flush();
-            }
+            exportNodeDegree(workdir);
         } else if (feature.equals("export-edge-degree")) {
-            Path path = Paths.get(workdir, String.format("edge-degree-%s.csv", now));
-            logger.info("Saving edge degrees to {}", path);
-            try (BufferedWriter writer = Files.newBufferedWriter(path);
-                    CSVPrinter csvPrinter = new CSVPrinter(writer,
-                            CSVFormat.DEFAULT.withHeader("Edge ID", "Type", "Degree"))) {
-                for (int edgeID : graph.getEdges()) {
-                    csvPrinter.printRecord(edgeID, edgeIndex.getKey(edgeID).getClass().getSimpleName(),
-                            graph.getEdgeDegree(edgeID));
-                }
-                csvPrinter.flush();
-            }
+            exportEdgeDegree(workdir);
         } else if (feature.equals("export-stats")) {
-            Path path = Paths.get(workdir, String.format("stats-%s.csv", now));
-            try (BufferedWriter writer = Files.newBufferedWriter(path);
-                    CSVPrinter csvPrinter = new CSVPrinter(writer,
-                            CSVFormat.DEFAULT.withHeader("Statistic", "Value"))) {
-
-                csvPrinter.printRecord("Vertices", graph.getNumberOfVertices());
-                csvPrinter.printRecord("Directed Hyperedges", graph.getNumberOfDirectedHyperEdges());
-                csvPrinter.printRecord("Undirected Hyperedges", graph.getNumberOfUndirectedEdges());
-                csvPrinter.printRecord("Total Hyperedges", graph.getNumberOfHyperEdges());
-
-                csvPrinter.printRecord("Num Sources", graph.getSources().size());
-                csvPrinter.printRecord("Num Sinks", graph.getSinks().size());
-
-                // csvPrinter.printRecord("Min InEdge Degree", graph.getMinInEdgeDegrees());
-                // csvPrinter.printRecord("Max InEdge Degree", graph.getMaxInEdgeDegrees());
-                // csvPrinter.printRecord("Min InVertex Degree", graph.getMinInVertexDegrees());
-                // csvPrinter.printRecord("Max InVertex Degree", graph.getMaxInVertexDegrees());
-                // csvPrinter.printRecord("Min OutEdge Degree", graph.getMinOutEdgeDegrees());
-                // csvPrinter.printRecord("Max OutEdge Degree", graph.getMaxOutEdgeDegrees());
-                // csvPrinter.printRecord("Min OutVertex Degree", graph.getMinOutVertexDegrees());
-                // csvPrinter.printRecord("Max OutVertex Degree", graph.getMaxOutVertexDegrees());
-
-                // csvPrinter.printRecord("Max Clique Size", graph.getMaximumClique().size());
-                DensityAlgorithm densityAlgorithm = new DensityAlgorithm();
-                csvPrinter.printRecord("Density", densityAlgorithm.compute(graph));
-                // csvPrinter.printRecord("LCC Size", graph.getLargestConnectedComponent().size());
-                // csvPrinter.printRecord("Diameter", graph.getDiameter());
-                // csvPrinter.printRecord("Radius", graph.getRadius());
-                // csvPrinter.printRecord("Avg Clustering Coefficient", graph.getAverageClusteringCoefficient());
-                // csvPrinter.printRecord("Avg Degree", graph.getAverageDegree());
-                // csvPrinter.printRecord("Min Vertex Cover", graph.getMinimumVertexCover());
-                // csvPrinter.printRecord("Max Independent Set", graph.getMaximumIndependentSet());
-                // csvPrinter.printRecord("Triangles", graph.getNumberOfTriangles());
-                // csvPrinter.printRecord("Num Isolated Vertices", graph.getIsolatedVertices().size());
-
-                csvPrinter.flush();
-            }
+            exportStats(workdir);
         } else {
             logger.error("Invalid feature {}", feature);
         }
