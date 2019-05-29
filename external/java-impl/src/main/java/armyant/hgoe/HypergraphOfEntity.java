@@ -1921,6 +1921,7 @@ public class HypergraphOfEntity extends Engine {
             csvPrinter.printRecord("Total Hyperedges", graph.getNumberOfHyperEdges());
             csvPrinter.printRecord("Num Sources", graph.getSources().size());
             csvPrinter.printRecord("Num Sinks", graph.getSinks().size());
+            csvPrinter.flush();
 
             logger.info("Computing average clustering coefficient");
             csvPrinter.printRecord("Avg. Clustering Coefficient", graph.getAverageClusteringCoefficient());
