@@ -22,8 +22,13 @@ import java.util.IntSummaryStatistics;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -74,6 +79,7 @@ import edu.mit.jwi.item.ISynset;
 import edu.mit.jwi.item.IWord;
 import edu.mit.jwi.item.IWordID;
 import edu.mit.jwi.item.POS;
+import grph.GrphAlgorithm;
 import grph.Grph.MaxIndependentSetAlgorithm;
 import grph.Grph.MinVertexCoverAlgorithm;
 import grph.algo.AllPaths;
@@ -92,6 +98,7 @@ import grph.algo.degree.MinInVertexDegreeAlgorithm;
 import grph.algo.degree.MinOutEdgeDegreeAlgorithm;
 import grph.algo.degree.MinOutVertexDegreeAlgorithm;
 import grph.algo.distance.DistanceMatrixBasedDiameterAlgorithm;
+import grph.algo.distance.FourSweepIterativeFringeDiameterAlgorithm;
 import grph.algo.search.DistanceListsBasedDiameterAlgorithm;
 import grph.in_memory.InMemoryGrph;
 import grph.io.ParseException;
@@ -102,8 +109,10 @@ import it.unimi.dsi.fastutil.floats.FloatList;
 import it.unimi.dsi.fastutil.ints.Int2DoubleOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import toools.collections.primitive.IntCursor;
 import toools.collections.primitive.LucIntHashSet;
 import toools.math.Distribution;
 
@@ -295,11 +304,11 @@ public class HypergraphOfEntity extends Engine {
         int documentEdgeID = getOrCreateUndirectedEdge(documentEdge);
 
         // Deprecated, because the probability of visiting a document node is minimal.
-        /*DocumentNode documentNode = new DocumentNode(document.getDocID(), document.getTitle());
-        int sourceDocumentNodeID = getOrCreateNode(documentNode);
-        synchronized (this) {
-            graph.addToUndirectedHyperEdge(edgeID, sourceDocumentNodeID);
-        }*/
+        /*
+         * DocumentNode documentNode = new DocumentNode(document.getDocID(), document.getTitle()); int
+         * sourceDocumentNodeID = getOrCreateNode(documentNode); synchronized (this) {
+         * graph.addToUndirectedHyperEdge(edgeID, sourceDocumentNodeID); }
+         */
 
         Set<Integer> targetEntityNodeIDs = indexEntities(document);
         addNodesToUndirectedHyperEdge(documentEdgeID, targetEntityNodeIDs);
@@ -396,7 +405,7 @@ public class HypergraphOfEntity extends Engine {
                     edgeIDs.put(subjectNode, edgeID);
                 }
 
-                synchronized(this) {
+                synchronized (this) {
                     graph.addToUndirectedHyperEdge(edgeID, this.nodeIndex.get(objectNode));
                 }
             }
@@ -407,10 +416,10 @@ public class HypergraphOfEntity extends Engine {
 
     private Set<Integer> indexEntities(Document document) {
         switch (this.entityIndexingStrategy) {
-            case DOCUMENT_COOCCURRENCE:
-                return indexEntitiesUsingDocumentCooccurrence(document);
-            case GROUP_BY_SUBJECT:
-                return indexEntitiesUsingGroupingBySubject(document);
+        case DOCUMENT_COOCCURRENCE:
+            return indexEntitiesUsingDocumentCooccurrence(document);
+        case GROUP_BY_SUBJECT:
+            return indexEntitiesUsingGroupingBySubject(document);
         }
 
         return new HashSet<>();
@@ -418,10 +427,7 @@ public class HypergraphOfEntity extends Engine {
 
     private void linkTextAndKnowledge() {
         logger.info("Building trie from term nodes");
-        Trie.TrieBuilder trieBuilder = Trie.builder()
-                .ignoreOverlaps()
-                .ignoreCase()
-                .onlyWholeWords();
+        Trie.TrieBuilder trieBuilder = Trie.builder().ignoreOverlaps().ignoreCase().onlyWholeWords();
 
         for (int termNodeID : graph.getVertices()) {
             Node termNode = nodeIndex.getKey(termNodeID);
@@ -437,8 +443,7 @@ public class HypergraphOfEntity extends Engine {
             Node entityNode = nodeIndex.getKey(entityNodeID);
             if (entityNode instanceof EntityNode) {
                 Collection<Emit> emits = trie.parseText(entityNode.getName());
-                Set<Integer> termNodes = emits.stream()
-                        .map(e -> nodeIndex.get(new TermNode(e.getKeyword())))
+                Set<Integer> termNodes = emits.stream().map(e -> nodeIndex.get(new TermNode(e.getKeyword())))
                         .collect(Collectors.toSet());
 
                 if (termNodes.isEmpty()) continue;
@@ -494,7 +499,8 @@ public class HypergraphOfEntity extends Engine {
         }
     }
 
-    private void linkContextuallySimilarTerms() throws IOException, ParseException, ParserConfigurationException, SAXException {
+    private void linkContextuallySimilarTerms()
+            throws IOException, ParseException, ParserConfigurationException, SAXException {
         logger.info("Creating links between terms that are contextually similar ({terms})");
 
         File simnetFile = Paths.get(featuresPath, CONTEXT_FEATURES_FILENAME).toFile();
@@ -502,7 +508,7 @@ public class HypergraphOfEntity extends Engine {
         uncompressedSimnetFile.deleteOnExit();
 
         try (GZIPInputStream input = new GZIPInputStream(new FileInputStream(simnetFile));
-             FileOutputStream output = new FileOutputStream(uncompressedSimnetFile)) {
+                FileOutputStream output = new FileOutputStream(uncompressedSimnetFile)) {
             byte[] buffer = new byte[4096];
             int length;
             while ((length = input.read(buffer)) > 0) {
@@ -581,14 +587,12 @@ public class HypergraphOfEntity extends Engine {
     private float computeRelatedToHyperEdgeWeight(int edgeID) {
         IntSet entityNodeIDs = graph.getUndirectedHyperEdgeVertices(edgeID);
 
-        float weight = entityNodeIDs.parallelStream()
-                .map(entityNodeID -> {
-                    IntSet neighborNodeIDs = graph.getNeighbours(entityNodeID);
-                    neighborNodeIDs.retainAll(entityNodeIDs);
-                    neighborNodeIDs.remove(entityNodeID.intValue());
-                    return (float) neighborNodeIDs.size() / entityNodeIDs.size();
-                })
-                .reduce(0f, (a, b) -> a + b);
+        float weight = entityNodeIDs.parallelStream().map(entityNodeID -> {
+            IntSet neighborNodeIDs = graph.getNeighbours(entityNodeID);
+            neighborNodeIDs.retainAll(entityNodeIDs);
+            neighborNodeIDs.remove(entityNodeID.intValue());
+            return (float) neighborNodeIDs.size() / entityNodeIDs.size();
+        }).reduce(0f, (a, b) -> a + b);
 
         weight /= entityNodeIDs.size();
 
@@ -624,8 +628,10 @@ public class HypergraphOfEntity extends Engine {
                 edgeWeights.setValue(edgeID, computeContainedInHyperEdgeWeight(edgeID));
             } else if (edge instanceof RelatedToEdge) {
                 edgeWeights.setValue(edgeID, computeRelatedToHyperEdgeWeight(edgeID));
-                /*logger.warn("Using random weight for related-to edges (TESTING ONLY)");
-                edgeWeights.setValue(edgeID, (float) Math.random());*/
+                /*
+                 * logger.warn("Using random weight for related-to edges (TESTING ONLY)"); edgeWeights.setValue(edgeID,
+                 * (float) Math.random());
+                 */
             } else if (edge instanceof SynonymEdge) {
                 edgeWeights.setValue(edgeID, computeSynonymHyperEdgeWeight(edgeID));
             } else if (edge instanceof ContextEdge) {
@@ -712,24 +718,24 @@ public class HypergraphOfEntity extends Engine {
 
         for (Feature feature : features) {
             switch (feature) {
-                case SYNONYMS:
-                    linkSynonyms();
-                    break;
-                case CONTEXT:
-                    linkContextuallySimilarTerms();
-                    break;
-                case WEIGHT:
-                    computeWeights();
-                    break;
-                case PRUNE:
-                    prune();
-                    break;
+            case SYNONYMS:
+                linkSynonyms();
+                break;
+            case CONTEXT:
+                linkContextuallySimilarTerms();
+                break;
+            case WEIGHT:
+                computeWeights();
+                break;
+            case PRUNE:
+                prune();
+                break;
             }
         }
 
         // FIXME Requires too much memory to compute, but since it's only used for entityWeight, I disabled it.
         // TODO Consider deprecating or completely removing entityWeight from HGoE.
-        //createReachabilityIndex();
+        // createReachabilityIndex();
     }
 
     @Override
@@ -756,10 +762,8 @@ public class HypergraphOfEntity extends Engine {
         avgTimePerDocument = counter > 1 ? (avgTimePerDocument * (counter - 1) + time) / counter : time;
 
         if (counter % 100 == 0) {
-            logger.info(
-                    "{} indexed documents in {} ({}/doc, {} docs/h)",
-                    counter, formatMillis(totalTime), formatMillis(avgTimePerDocument),
-                    counter * 3600000 / totalTime);
+            logger.info("{} indexed documents in {} ({}/doc, {} docs/h)", counter, formatMillis(totalTime),
+                    formatMillis(avgTimePerDocument), counter * 3600000 / totalTime);
         }
     }
 
@@ -954,21 +958,18 @@ public class HypergraphOfEntity extends Engine {
     // TODO Can be improved with an edge index per edge type: Map<Class<? extends Edge>, Set<Integer>>
     private IntSet getUndirectedNeighborsPerEdgeType(int sourceNodeID, Class edgeType) {
         IntSet result = new LucIntHashSet(10);
-        result.addAll(graph.getEdgesIncidentTo(sourceNodeID).stream()
-                .filter(edgeID -> {
-                    Edge edge = edgeIndex.getKey(edgeID);
-                    return edgeType.isInstance(edge);
-                })
-                .flatMap(edgeID -> {
-                    IntSet nodeIDs = new LucIntHashSet(10);
-                    if (graph.isDirectedHyperEdge(edgeID)) {
-                        nodeIDs.addAll(graph.getVerticesIncidentToEdge(edgeID));
-                    } else {
-                        nodeIDs.addAll(graph.getUndirectedHyperEdgeVertices(edgeID));
-                    }
-                    return nodeIDs.stream().filter(nodeID -> !nodeID.equals(sourceNodeID));
-                })
-                .collect(Collectors.toSet()));
+        result.addAll(graph.getEdgesIncidentTo(sourceNodeID).stream().filter(edgeID -> {
+            Edge edge = edgeIndex.getKey(edgeID);
+            return edgeType.isInstance(edge);
+        }).flatMap(edgeID -> {
+            IntSet nodeIDs = new LucIntHashSet(10);
+            if (graph.isDirectedHyperEdge(edgeID)) {
+                nodeIDs.addAll(graph.getVerticesIncidentToEdge(edgeID));
+            } else {
+                nodeIDs.addAll(graph.getUndirectedHyperEdgeVertices(edgeID));
+            }
+            return nodeIDs.stream().filter(nodeID -> !nodeID.equals(sourceNodeID));
+        }).collect(Collectors.toSet()));
         return result;
     }
 
@@ -985,7 +986,7 @@ public class HypergraphOfEntity extends Engine {
         linkedQueryTermNodes.addAll(neighborIDs);
         linkedQueryTermNodes.retainAll(queryTermNodeIDs);
 
-        //if (neighborIDs.isEmpty()) return 0;
+        // if (neighborIDs.isEmpty()) return 0;
 
         return (double) linkedQueryTermNodes.size() / neighborIDs.size();
     }
@@ -1012,10 +1013,9 @@ public class HypergraphOfEntity extends Engine {
     private double perSeedScoreAllPaths(int entityNodeID, int seedNodeID, double seedWeight) {
         double perSeedScore = 0d;
 
-        List<grph.path.Path> paths = AllPaths.compute(entityNodeID, graph, SEARCH_MAX_DISTANCE, MAX_PATHS_PER_PAIR, false)
-                .stream()
-                .flatMap(Collection::stream)
-                .filter(path -> path.containsVertex(seedNodeID))
+        List<grph.path.Path> paths = AllPaths
+                .compute(entityNodeID, graph, SEARCH_MAX_DISTANCE, MAX_PATHS_PER_PAIR, false).stream()
+                .flatMap(Collection::stream).filter(path -> path.containsVertex(seedNodeID))
                 .collect(Collectors.toList());
 
         for (grph.path.Path path : paths) {
@@ -1028,20 +1028,20 @@ public class HypergraphOfEntity extends Engine {
 
     // TODO Should follow Bellaachia2013 for random walks on hypergraphs (Equation 14)
     private grph.path.Path randomWalk(int startNodeID, int length, boolean isDirected, boolean isBiased,
-                                      int nodeFatigue, int edgeFatigue) {
+            int nodeFatigue, int edgeFatigue) {
         grph.path.Path path = new ArrayListPath();
         path.setSource(startNodeID);
-        randomStep(startNodeID, length, path, isDirected, isBiased, nodeFatigue, edgeFatigue);
+        randomStep(startNodeID, length, path, isDirected, isBiased, nodeFatigue, edgeFatigue, 0);
         return path;
     }
 
     private void randomStep(int nodeID, int remainingSteps, grph.path.Path path, boolean isDirected, boolean isBiased,
-                            int nodeFatigue, int edgeFatigue) {
+            int nodeFatigue, int edgeFatigue, float restartProb) {
         if (remainingSteps == 0 || nodeFatigueStatus.containsKey(nodeID)) return;
 
         if (nodeFatigue > 0) {
             // Decrement fatigue for all nodes
-            for (Iterator<Map.Entry<Integer, Integer>> it = nodeFatigueStatus.entrySet().iterator(); it.hasNext(); ) {
+            for (Iterator<Map.Entry<Integer, Integer>> it = nodeFatigueStatus.entrySet().iterator(); it.hasNext();) {
                 Map.Entry<Integer, Integer> entry = it.next();
                 if (entry.getValue() > 0) {
                     entry.setValue(entry.getValue() - 1);
@@ -1055,7 +1055,7 @@ public class HypergraphOfEntity extends Engine {
 
         if (edgeFatigue > 0) {
             // Decrement fatigue for all edges
-            for (Iterator<Map.Entry<Integer, Integer>> it = edgeFatigueStatus.entrySet().iterator(); it.hasNext(); ) {
+            for (Iterator<Map.Entry<Integer, Integer>> it = edgeFatigueStatus.entrySet().iterator(); it.hasNext();) {
                 Map.Entry<Integer, Integer> entry = it.next();
                 if (entry.getValue() > 0) {
                     entry.setValue(entry.getValue() - 1);
@@ -1074,8 +1074,7 @@ public class HypergraphOfEntity extends Engine {
 
         if (logger.isTraceEnabled()) {
             logger.trace("Selectable out edges for random step: {}", String.join(", ", edgeIDs.stream()
-                .map(edgeID -> ((Edge)edgeIndex.getKey(edgeID)).toString())
-                .toArray(String[]::new)));
+                    .map(edgeID -> ((Edge) edgeIndex.getKey(edgeID)).toString()).toArray(String[]::new)));
         }
 
         if (edgeIDs.isEmpty()) return;
@@ -1104,9 +1103,11 @@ public class HypergraphOfEntity extends Engine {
         }
 
         if (logger.isTraceEnabled()) {
-            logger.trace("Selectable nodes for random step: {}", String.join(", ", nodeIDs.stream()
-                .map(selectableNodeID -> ((Node)nodeIndex.getKey(selectableNodeID)).toString())
-                .toArray(String[]::new)));
+            logger.trace("Selectable nodes for random step: {}",
+                    String.join(", ",
+                            nodeIDs.stream()
+                                    .map(selectableNodeID -> ((Node) nodeIndex.getKey(selectableNodeID)).toString())
+                                    .toArray(String[]::new)));
         }
 
         if (nodeIDs.isEmpty()) return;
@@ -1119,13 +1120,13 @@ public class HypergraphOfEntity extends Engine {
         }
 
         path.extend(randomEdgeID, randomNodeID);
-        randomStep(randomNodeID, remainingSteps - 1, path, isDirected, isBiased, nodeFatigue, edgeFatigue);
+        randomStep(randomNodeID, remainingSteps - 1, path, isDirected, isBiased, nodeFatigue, edgeFatigue, restartProb);
     }
 
     public ResultSet hyperRankSearch(IntSet seedNodeIDs, Task task, float d, int n, boolean isWeighted,
             boolean useDegreeNormalization) {
-        logger.info("Searching using HyperRank (d = {}, n = {}, weighted = {}, degree_normalization = {})",
-                d, n, isWeighted, useDegreeNormalization);
+        logger.info("Searching using HyperRank (d = {}, n = {}, weighted = {}, degree_normalization = {})", d, n,
+                isWeighted, useDegreeNormalization);
 
         // An atom is either a node or a hyperedge (we follow the same nomenclature as HypergraphDB)
         Int2FloatOpenHashMap atomVisits = new Int2FloatOpenHashMap();
@@ -1266,8 +1267,8 @@ public class HypergraphOfEntity extends Engine {
         Int2FloatOpenHashMap weightedAtomVisitProbability = new Int2FloatOpenHashMap();
         Int2DoubleOpenHashMap atomCoverage = new Int2DoubleOpenHashMap();
 
-        trace.add("Random Walk Score (l = %d, r = %d, nf = %d, ef = {})",
-            walkLength, walkRepeats, nodeFatigue, edgeFatigue);
+        trace.add("Random Walk Score (l = %d, r = %d, nf = %d, ef = {})", walkLength, walkRepeats, nodeFatigue,
+                edgeFatigue);
         trace.goDown();
 
         for (int seedNodeID : seedNodeIDs) {
@@ -1276,21 +1277,20 @@ public class HypergraphOfEntity extends Engine {
             trace.goDown();
 
             for (int i = 0; i < walkRepeats; i++) {
-                grph.path.Path randomPath = randomWalk(
-                    seedNodeID, walkLength, isDirected, isWeighted, nodeFatigue, edgeFatigue);
+                grph.path.Path randomPath = randomWalk(seedNodeID, walkLength, isDirected, isWeighted, nodeFatigue,
+                        edgeFatigue);
 
                 StringBuilder messageRandomPath = new StringBuilder();
                 for (int j = 0; j < randomPath.getNumberOfVertices(); j++) {
                     if (j > 0) {
-                        messageRandomPath
-                            .append(" -> ")
-                            .append(edgeIndex.getKey(randomPath.getEdgeHeadingToVertexAt(j)).toString())
-                            .append(" -> ");
+                        messageRandomPath.append(" -> ")
+                                .append(edgeIndex.getKey(randomPath.getEdgeHeadingToVertexAt(j)).toString())
+                                .append(" -> ");
                     }
                     messageRandomPath.append(nodeIndex.getKey(randomPath.getVertexAt(j)).toString());
                 }
                 trace.add(messageRandomPath.toString().replace("%", "%%"));
-                //trace.goDown();
+                // trace.goDown();
 
                 for (int j = 0; j < randomPath.getNumberOfVertices(); j++) {
                     if (task == Task.DOCUMENT_RETRIEVAL) {
@@ -1311,7 +1311,7 @@ public class HypergraphOfEntity extends Engine {
                     }
                 }
 
-                //trace.goUp();
+                // trace.goUp();
             }
 
             trace.goUp();
@@ -1319,12 +1319,14 @@ public class HypergraphOfEntity extends Engine {
             int maxVisits = Arrays.stream(atomVisits.values().toIntArray()).max().orElse(0);
             trace.add("max(visits from seed node %s) = %d", nodeIndex.getKey(seedNodeID), maxVisits);
 
-            /*for (Map.Entry<Integer, Integer> entry : atomVisits.int2IntEntrySet()) {
-                System.out.println(nodeIndex.getKey(entry.getKey()).toString() + " -> " + entry.getValue());
-            }*/
+            /*
+             * for (Map.Entry<Integer, Integer> entry : atomVisits.int2IntEntrySet()) {
+             * System.out.println(nodeIndex.getKey(entry.getKey()).toString() + " -> " + entry.getValue()); }
+             */
 
-            /*trace.add("Accumulating visit probability, weighted by seed node confidence");
-            trace.goDown();*/
+            /*
+             * trace.add("Accumulating visit probability, weighted by seed node confidence"); trace.goDown();
+             */
             for (int atomID : atomVisits.keySet()) {
                 atomCoverage.addTo(atomID, 1);
                 synchronized (this) {
@@ -1332,22 +1334,23 @@ public class HypergraphOfEntity extends Engine {
                             (k, v) -> (v == null ? 0 : v) + (float) atomVisits.get(atomID) / maxVisits
                                     * seedNodeWeights.getOrDefault(seedNodeID, 1d).floatValue());
                 }
-                /*trace.add("score(%s) += visits(%s) * w(%s)",
-                        nodeIndex.getKey(nodeID),
-                        nodeIndex.getKey(nodeID),
-                        nodeIndex.getKey(seedNodeID));
-                trace.goDown();
-                trace.add("P(visit(%s)) = %f", nodeIndex.getKey(nodeID).toString(), (float) nodeVisits.get(nodeID) / maxVisits);
-                trace.add("w(%s) = %f", nodeIndex.getKey(seedNodeID), seedNodeWeights.getOrDefault(seedNodeID, 1d));
-                trace.add("score(%s) = %f", nodeIndex.getKey(nodeID), weightedNodeVisitProbability.get(nodeID));
-                trace.goUp();*/
+                /*
+                 * trace.add("score(%s) += visits(%s) * w(%s)", nodeIndex.getKey(nodeID), nodeIndex.getKey(nodeID),
+                 * nodeIndex.getKey(seedNodeID)); trace.goDown(); trace.add("P(visit(%s)) = %f",
+                 * nodeIndex.getKey(nodeID).toString(), (float) nodeVisits.get(nodeID) / maxVisits);
+                 * trace.add("w(%s) = %f", nodeIndex.getKey(seedNodeID), seedNodeWeights.getOrDefault(seedNodeID, 1d));
+                 * trace.add("score(%s) = %f", nodeIndex.getKey(nodeID), weightedNodeVisitProbability.get(nodeID));
+                 * trace.goUp();
+                 */
             }
 
-            /*trace.add("%d visited nodes", atomVisits.size());
-            trace.goUp();*/
+            /*
+             * trace.add("%d visited nodes", atomVisits.size()); trace.goUp();
+             */
 
-            /*trace.goUp();
-            trace.goUp();*/
+            /*
+             * trace.goUp(); trace.goUp();
+             */
         }
 
         trace.goUp();
@@ -1381,10 +1384,10 @@ public class HypergraphOfEntity extends Engine {
                 // Random Walk Score
                 double score = atomCoverage.get(atomID) * weightedAtomVisitProbability.get(atomID);
 
-                //if (score > PROBABILITY_THRESHOLD) {
-                    resultSet.addResult(
-                            new Result(score, rankableAtom.getID(), rankableAtom.getName(), rankableAtom.getLabel()));
-                //}
+                // if (score > PROBABILITY_THRESHOLD) {
+                resultSet.addResult(
+                        new Result(score, rankableAtom.getID(), rankableAtom.getName(), rankableAtom.getLabel()));
+                // }
             }
         }
 
@@ -1420,7 +1423,7 @@ public class HypergraphOfEntity extends Engine {
 
     // FIXME ALL_PATHS and DIJKSTRA do not work for hypergraphs
     public double entityWeight(int entityNodeID, IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights,
-                               boolean withCoverage, PerSeedScoreMethod method) {
+            boolean withCoverage, PerSeedScoreMethod method) {
         double score = 0d;
 
         // Get all paths between the entity and a seed node (within a maximum distance; null by default).
@@ -1428,10 +1431,10 @@ public class HypergraphOfEntity extends Engine {
             int seedNodeID = entry.getKey();
             double seedWeight = entry.getValue();
             switch (method) {
-                case ALL_PATHS:
-                    score += perSeedScoreAllPaths(entityNodeID, seedNodeID, seedWeight);
-                case DIJKSTA:
-                    score += perSeedScoreDijkstra(entityNodeID, seedNodeID, seedWeight);
+            case ALL_PATHS:
+                score += perSeedScoreAllPaths(entityNodeID, seedNodeID, seedWeight);
+            case DIJKSTA:
+                score += perSeedScoreDijkstra(entityNodeID, seedNodeID, seedWeight);
             }
         }
 
@@ -1443,38 +1446,30 @@ public class HypergraphOfEntity extends Engine {
         return score;
     }
 
-    /*private Set<Node> getNeighborhood(Node node, int depth) {
-        return getNeighborhood(node, depth, new HashSet<>());
-    }
+    /*
+     * private Set<Node> getNeighborhood(Node node, int depth) { return getNeighborhood(node, depth, new HashSet<>()); }
+     *
+     * private Set<Node> getNeighborhood(Node node, int depth, Set<Node> visited) { visited.add(node);
+     *
+     * Set<Node> neighborhood = new HashSet<>();
+     *
+     * if (depth == 0) return neighborhood;
+     *
+     * Collection<Node> neighbors = graph.getUndirectedNeighborsPerEdgeType(node); neighborhood.addAll(neighbors);
+     *
+     * for (Node neighbor : neighbors) { if (visited.contains(neighbor)) continue;
+     * neighborhood.addAll(getNeighborhood(neighbor, depth - 1, visited)); }
+     *
+     * return neighborhood; }
+     */
 
-    private Set<Node> getNeighborhood(Node node, int depth, Set<Node> visited) {
-        visited.add(node);
-
-        Set<Node> neighborhood = new HashSet<>();
-
-        if (depth == 0) return neighborhood;
-
-        Collection<Node> neighbors = graph.getUndirectedNeighborsPerEdgeType(node);
-        neighborhood.addAll(neighbors);
-
-        for (Node neighbor : neighbors) {
-            if (visited.contains(neighbor)) continue;
-            neighborhood.addAll(getNeighborhood(neighbor, depth - 1, visited));
-        }
-
-        return neighborhood;
-    }*/
-
-    /*public void updateQuerySubgraph(Set<Node> queryTermNodes) {
-        logger.info("Updating query subgraph");
-        Set<Node> nodes = new HashSet<>();
-        for (Node queryTermNode : queryTermNodes) {
-            nodes.addAll(getNeighborhood(queryTermNode, 0));
-        }
-        System.out.println(this.graph.getVertexCount() + " : " + this.graph.getEdgeCount());
-        this.graph = FilterUtils.createInducedSubgraph(nodes, graph);
-        System.out.println(this.graph.getVertexCount() + " : " + this.graph.getEdgeCount());
-    }*/
+    /*
+     * public void updateQuerySubgraph(Set<Node> queryTermNodes) { logger.info("Updating query subgraph"); Set<Node>
+     * nodes = new HashSet<>(); for (Node queryTermNode : queryTermNodes) { nodes.addAll(getNeighborhood(queryTermNode,
+     * 0)); } System.out.println(this.graph.getVertexCount() + " : " + this.graph.getEdgeCount()); this.graph =
+     * FilterUtils.createInducedSubgraph(nodes, graph); System.out.println(this.graph.getVertexCount() + " : " +
+     * this.graph.getEdgeCount()); }
+     */
 
     private double jaccardSimilarity(IntSet a, IntSet b) {
         IntSet intersect = new IntOpenHashSet(a);
@@ -1502,7 +1497,7 @@ public class HypergraphOfEntity extends Engine {
     }
 
     public ResultSet entityIteratorSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights, Task task,
-                                          RankingFunction function) {
+            RankingFunction function) {
         ResultSet resultSet = new ResultSet();
         resultSet.setTrace(trace);
 
@@ -1514,20 +1509,20 @@ public class HypergraphOfEntity extends Engine {
 
                 double score;
                 switch (function) {
-                    case ENTITY_WEIGHT:
-                        score = entityWeight(nodeID, seedNodeIDs, seedNodeWeights);
-                        break;
-                    case JACCARD_SCORE:
-                        score = jaccardScore(nodeID, seedNodeWeights);
-                        break;
-                    default:
-                        logger.warn("Ranking function {} is unsupported for entity iterator search", function);
-                        score = 0d;
+                case ENTITY_WEIGHT:
+                    score = entityWeight(nodeID, seedNodeIDs, seedNodeWeights);
+                    break;
+                case JACCARD_SCORE:
+                    score = jaccardScore(nodeID, seedNodeWeights);
+                    break;
+                default:
+                    logger.warn("Ranking function {} is unsupported for entity iterator search", function);
+                    score = 0d;
                 }
 
                 if (score > 0) {
                     synchronized (this) {
-                        //resultSet.addReplaceResult(new Result(score, entityNode));
+                        // resultSet.addReplaceResult(new Result(score, entityNode));
                         resultSet.addResult(new Result(score, entityNode.getID(), entityNode.getName(), "entity"));
                     }
                 }
@@ -1573,7 +1568,8 @@ public class HypergraphOfEntity extends Engine {
 
         if (useQueryExpansion) {
             seedNodeIDs = getSeedNodeIDs(queryTermNodeIDs);
-            //System.out.println("Seed Nodes: " + seedNodeIDs.stream().map(nodeID -> nodeID + "=" + nodeIndex.getKey(nodeID).toString()).collect(Collectors.toList()));
+            // System.out.println("Seed Nodes: " + seedNodeIDs.stream().map(nodeID -> nodeID + "=" +
+            // nodeIndex.getKey(nodeID).toString()).collect(Collectors.toList()));
             trace.add("Mapping query term nodes to seed nodes");
             trace.goDown();
             for (int seedNodeID : seedNodeIDs) {
@@ -1582,7 +1578,7 @@ public class HypergraphOfEntity extends Engine {
             trace.goUp();
 
             seedNodeWeights = seedNodeConfidenceWeights(seedNodeIDs, queryTermNodeIDs);
-            //System.out.println("Seed Node Confidence Weights: " + seedNodeWeights);
+            // System.out.println("Seed Node Confidence Weights: " + seedNodeWeights);
             logger.info("Expanded [ {} ] to {} weighted seed nodes", query, seedNodeWeights.size());
             trace.add("Calculating confidence weight for seed nodes");
             trace.goDown();
@@ -1594,34 +1590,30 @@ public class HypergraphOfEntity extends Engine {
 
         ResultSet resultSet;
         switch (function) {
-            case HYPERRANK:
-                resultSet = hyperRankSearch(
-                    useQueryExpansion ? seedNodeIDs : queryTermNodeIDs,
-                    task,
+        case HYPERRANK:
+            resultSet = hyperRankSearch(useQueryExpansion ? seedNodeIDs : queryTermNodeIDs, task,
                     Float.valueOf(params.getOrDefault("d", String.valueOf(DEFAULT_DAMPING_FACTOR))),
                     Integer.valueOf(params.getOrDefault("n", String.valueOf(DEFAULT_MAX_ITERATIONS))),
                     Boolean.valueOf(params.getOrDefault("weighted", "false")),
                     Boolean.valueOf(params.getOrDefault("norm", "false")));
-                break;
-            case RANDOM_WALK_SCORE:
-                resultSet = randomWalkSearch(
-                        useQueryExpansion ? seedNodeIDs : queryTermNodeIDs,
-                        useQueryExpansion ? seedNodeWeights : new HashMap<>(),
-                        task,
-                        Integer.valueOf(params.getOrDefault("l", String.valueOf(DEFAULT_WALK_LENGTH))),
-                        Integer.valueOf(params.getOrDefault("r", String.valueOf(DEFAULT_WALK_REPEATS))),
-                        Integer.valueOf(params.getOrDefault("nf", String.valueOf(DEFAULT_FATIQUE))),
-                        Integer.valueOf(params.getOrDefault("ef", String.valueOf(DEFAULT_FATIQUE))),
-                        Boolean.valueOf(params.getOrDefault("directed", "true")),
-                        Boolean.valueOf(params.getOrDefault("weighted", "false")));
-                break;
-            case ENTITY_WEIGHT:
-            case JACCARD_SCORE:
-                resultSet = entityIteratorSearch(seedNodeIDs, seedNodeWeights, task, function);
-                break;
-            default:
-                logger.warn("Ranking function {} is unsupported", function);
-                resultSet = ResultSet.empty();
+            break;
+        case RANDOM_WALK_SCORE:
+            resultSet = randomWalkSearch(useQueryExpansion ? seedNodeIDs : queryTermNodeIDs,
+                    useQueryExpansion ? seedNodeWeights : new HashMap<>(), task,
+                    Integer.valueOf(params.getOrDefault("l", String.valueOf(DEFAULT_WALK_LENGTH))),
+                    Integer.valueOf(params.getOrDefault("r", String.valueOf(DEFAULT_WALK_REPEATS))),
+                    Integer.valueOf(params.getOrDefault("nf", String.valueOf(DEFAULT_FATIQUE))),
+                    Integer.valueOf(params.getOrDefault("ef", String.valueOf(DEFAULT_FATIQUE))),
+                    Boolean.valueOf(params.getOrDefault("directed", "true")),
+                    Boolean.valueOf(params.getOrDefault("weighted", "false")));
+            break;
+        case ENTITY_WEIGHT:
+        case JACCARD_SCORE:
+            resultSet = entityIteratorSearch(seedNodeIDs, seedNodeWeights, task, function);
+            break;
+        default:
+            logger.warn("Ranking function {} is unsupported", function);
+            resultSet = ResultSet.empty();
         }
 
         long end = System.currentTimeMillis();
@@ -1643,13 +1635,13 @@ public class HypergraphOfEntity extends Engine {
 
         Map<String, Integer> nodeCountPerType = new HashMap<>();
         for (int nodeID : graph.getVertices()) {
-            nodeCountPerType.compute(
-                    nodeIndex.getKey(nodeID).getClass().getSimpleName(),
-                    (k, v) -> {
-                        if (v == null) v = 1;
-                        else v += 1;
-                        return v;
-                    });
+            nodeCountPerType.compute(nodeIndex.getKey(nodeID).getClass().getSimpleName(), (k, v) -> {
+                if (v == null)
+                    v = 1;
+                else
+                    v += 1;
+                return v;
+            });
         }
 
         for (Map.Entry<String, Integer> entry : nodeCountPerType.entrySet()) {
@@ -1672,13 +1664,13 @@ public class HypergraphOfEntity extends Engine {
         for (int edgeID : graph.getEdges()) {
             if (!graph.isDirectedHyperEdge(edgeID)) continue;
 
-            directedEdgeCountPerType.compute(
-                    edgeIndex.getKey(edgeID).getClass().getSimpleName(),
-                    (k, v) -> {
-                        if (v == null) v = 1;
-                        else v += 1;
-                        return v;
-                    });
+            directedEdgeCountPerType.compute(edgeIndex.getKey(edgeID).getClass().getSimpleName(), (k, v) -> {
+                if (v == null)
+                    v = 1;
+                else
+                    v += 1;
+                return v;
+            });
         }
 
         for (Map.Entry<String, Integer> entry : directedEdgeCountPerType.entrySet()) {
@@ -1694,13 +1686,13 @@ public class HypergraphOfEntity extends Engine {
         for (int edgeID : graph.getEdges()) {
             if (graph.isDirectedHyperEdge(edgeID)) continue;
 
-            undirectedEdgeCountPerType.compute(
-                    edgeIndex.getKey(edgeID).getClass().getSimpleName(),
-                    (k, v) -> {
-                        if (v == null) v = 1;
-                        else v += 1;
-                        return v;
-                    });
+            undirectedEdgeCountPerType.compute(edgeIndex.getKey(edgeID).getClass().getSimpleName(), (k, v) -> {
+                if (v == null)
+                    v = 1;
+                else
+                    v += 1;
+                return v;
+            });
         }
 
         for (Map.Entry<String, Integer> entry : undirectedEdgeCountPerType.entrySet()) {
@@ -1711,8 +1703,8 @@ public class HypergraphOfEntity extends Engine {
     }
 
     /**
-     * How many synonyms (i.e., terms in the tail of a SynonymEdge) link terms in two or more documents?
-     * How many distinct documents on average do synonym terms link?
+     * How many synonyms (i.e., terms in the tail of a SynonymEdge) link terms in two or more documents? How many
+     * distinct documents on average do synonym terms link?
      *
      * @return Synonym information trace.
      */
@@ -1725,7 +1717,7 @@ public class HypergraphOfEntity extends Engine {
         Trace summary = new Trace(String.format("%s SUMMARY", edgeTypeStr.toUpperCase()));
 
         if ((edgeType == SynonymEdge.class && !features.contains(Feature.SYNONYMS))
-            || (edgeType == ContextEdge.class && !features.contains(Feature.CONTEXT))) {
+                || (edgeType == ContextEdge.class && !features.contains(Feature.CONTEXT))) {
             summary.add("Feature disabled in this index");
             return summary;
         }
@@ -1748,8 +1740,8 @@ public class HypergraphOfEntity extends Engine {
                             for (int docEdgeID : graph.getEdgesIncidentTo(neighborNodeID)) {
                                 Edge docEdge = edgeIndex.getKey(docEdgeID);
                                 if (docEdge instanceof DocumentEdge) {
-                                    baseToDocs.computeIfAbsent(baseTermNodeID, k ->
-                                            new HashSet<>(Collections.singletonList(docEdgeID)));
+                                    baseToDocs.computeIfAbsent(baseTermNodeID,
+                                            k -> new HashSet<>(Collections.singletonList(docEdgeID)));
                                     baseToDocs.computeIfPresent(baseTermNodeID, (k, v) -> {
                                         v.add(docEdgeID);
                                         return v;
@@ -1762,14 +1754,11 @@ public class HypergraphOfEntity extends Engine {
             }
         }
 
-        long pathsBetweenDocs = baseToDocs.entrySet().stream()
-                .filter(entry -> entry.getValue().size() > 1)
-                .count();
+        long pathsBetweenDocs = baseToDocs.entrySet().stream().filter(entry -> entry.getValue().size() > 1).count();
 
         summary.add("%10d paths established between documents", pathsBetweenDocs);
 
-        IntSummaryStatistics statsLinkedDocsPerEdgeType = baseToDocs.values().stream()
-                .mapToInt(Set::size)
+        IntSummaryStatistics statsLinkedDocsPerEdgeType = baseToDocs.values().stream().mapToInt(Set::size)
                 .summaryStatistics();
 
         summary.add("%10.2f documents linked on average per %s", statsLinkedDocsPerEdgeType.getAverage(), edgeTypeStr);
@@ -1783,7 +1772,7 @@ public class HypergraphOfEntity extends Engine {
     public Trace getNodeList() {
         Trace summary = new Trace("Nodes");
 
-        Class[] nodeClasses = {TermNode.class, EntityNode.class};
+        Class[] nodeClasses = { TermNode.class, EntityNode.class };
 
         for (Class nodeClass : nodeClasses) {
             summary.add(nodeClass.getSimpleName());
@@ -1806,7 +1795,7 @@ public class HypergraphOfEntity extends Engine {
     public Trace getHyperedgeList() {
         Trace summary = new Trace("Hyperedges");
 
-        Class[] hyperedgeClasses = {DocumentEdge.class, RelatedToEdge.class, ContainedInEdge.class};
+        Class[] hyperedgeClasses = { DocumentEdge.class, RelatedToEdge.class, ContainedInEdge.class };
 
         for (Class edgeClass : hyperedgeClasses) {
             summary.add(edgeClass.getSimpleName());
@@ -1820,18 +1809,15 @@ public class HypergraphOfEntity extends Engine {
 
                     if (graph.isDirectedHyperEdge(edgeID)) {
                         Set<String> tail = graph.getDirectedHyperEdgeTail(edgeID).stream()
-                                .map(nodeID -> nodeIndex.getKey(nodeID).getName())
-                                .collect(Collectors.toSet());
+                                .map(nodeID -> nodeIndex.getKey(nodeID).getName()).collect(Collectors.toSet());
 
                         Set<String> head = graph.getDirectedHyperEdgeHead(edgeID).stream()
-                                .map(nodeID -> nodeIndex.getKey(nodeID).getName())
-                                .collect(Collectors.toSet());
+                                .map(nodeID -> nodeIndex.getKey(nodeID).getName()).collect(Collectors.toSet());
 
                         summary.add("%10d %.4f %s -> %s", edgeID, edgeWeight, tail, head);
                     } else {
                         Set<String> nodes = graph.getUndirectedHyperEdgeVertices(edgeID).stream()
-                                .map(nodeID -> nodeIndex.getKey(nodeID).getName())
-                                .collect(Collectors.toSet());
+                                .map(nodeID -> nodeIndex.getKey(nodeID).getName()).collect(Collectors.toSet());
                         summary.add("%10d %.4f %s", edgeID, edgeWeight, nodes);
                     }
                 }
@@ -1841,6 +1827,37 @@ public class HypergraphOfEntity extends Engine {
         }
 
         return summary;
+    }
+
+    public InMemoryGrph toBipartiteGraph() {
+        logger.info("Converting hypergraph to bipartite graph");
+
+        InMemoryGrph g = new InMemoryGrph();
+
+        for (IntCursor nodeCursor : IntCursor.fromFastUtil(graph.getVertices())) {
+            g.addVertex(nodeCursor.value);
+        }
+
+        for (IntCursor edgeCursor : IntCursor.fromFastUtil(graph.getEdges())) {
+            int connectorNode = g.getNextVertexAvailable();
+
+            if (graph.isDirectedHyperEdge(edgeCursor.value)) {
+                for (int source : graph.getDirectedHyperEdgeTail(edgeCursor.value)) {
+                    g.addDirectedSimpleEdge(source, connectorNode);
+
+                }
+
+                for (int target : graph.getDirectedHyperEdgeHead(edgeCursor.value)) {
+                    g.addDirectedSimpleEdge(connectorNode, target);
+                }
+            } else {
+                for (int source : graph.getUndirectedHyperEdgeVertices(edgeCursor.value)) {
+                    g.addUndirectedSimpleEdge(source, connectorNode);
+                }
+            }
+        }
+
+        return g;
     }
 
     public void exportNodeWeights(String workdir) throws IOException {
@@ -1907,6 +1924,92 @@ public class HypergraphOfEntity extends Engine {
         }
     }
 
+    // TODO FIXME algorithm doesn't work yet
+    public int estimateDiameter(int numStartNodes, int walkLength, int walkRepeats) {
+        logger.info("Randomly selecting start nodes");
+        int[] startNodeIDs = new int[numStartNodes];
+        for (int i = 0; i < numStartNodes; i++) {
+            startNodeIDs[i] = sampleUniformlyAtRandom(graph.getVertices().toIntArray());
+        }
+
+        logger.info("Issuing {} random walks of length {} for {} start nodes", walkRepeats, walkLength, numStartNodes);
+
+        ConcurrentMap<Integer, ConcurrentMap<Integer, Integer>> nodeDistance = new ConcurrentHashMap<>();
+
+        for (int i = 0; i < numStartNodes; i++) {
+            final int ii = i;
+
+            IntStream.range(0, walkRepeats).parallel().forEach(j -> {
+                grph.path.Path path = randomWalk(startNodeIDs[ii], walkLength, false, false, 0, 0);
+
+                for (int k = 0; k < path.getNumberOfVertices(); k++) {
+                    int v = path.getVertexAt(k);
+                    Integer prevDist = null;
+
+                    if (!nodeDistance.containsKey(v)) nodeDistance.put(v, new ConcurrentHashMap<>());
+
+                    for (int l = k + 1; l < path.getNumberOfVertices(); l++) {
+                        int w = path.getVertexAt(l);
+
+                        if (v == w) continue;
+
+                        int newDist = prevDist == null ? l - k : prevDist + 1;
+                        if (!nodeDistance.get(v).containsKey(w) || nodeDistance.get(v).get(w) > newDist) {
+                            nodeDistance.get(v).put(w, newDist);
+                        }
+                        prevDist = nodeDistance.get(v).get(w);
+                    }
+                }
+            });
+        }
+
+        logger.info("Finding maximum shortest distance");
+        int maxDist = 0;
+        for (ConcurrentMap<Integer, Integer> minDists : nodeDistance.values()) {
+            int maxMinDist = minDists.values().stream().mapToInt(Integer::intValue).max().orElseGet(() -> 0);
+            if (maxMinDist > maxDist) maxDist = maxMinDist;
+        }
+
+        return maxDist;
+    }
+
+    public float estimateClusteringCoefficient(int numStartNodes, int numNeighbors) {
+        logger.info("Sampling nodes uniformly at random");
+        int[] startNodeIDs = new int[numStartNodes];
+        for (int i = 0; i < numStartNodes; i++) {
+            startNodeIDs[i] = sampleUniformlyAtRandom(graph.getVertices().toIntArray());
+        }
+
+        logger.info("Computing two-node clustering coefficient for sampled nodes and a sample of their neighbors");
+
+        float sumTwoNodeClusCoef = 0;
+        int numPairs = 0;
+
+        for (int startNodeID : startNodeIDs) {
+            IntSet startNodeEdgeIDs = graph.getEdgesIncidentTo(startNodeID);
+
+            int[] neighborIDs = graph.getNeighbours(startNodeID).toIntArray();
+            IntArrays.shuffle(neighborIDs, new Random());
+
+            for (int neighborID : IntArrays.trim(neighborIDs, numNeighbors)) {
+                IntSet neighborEdgeIDs = graph.getEdgesIncidentTo(neighborID);
+
+                IntSet commonEdgeIDs = new LucIntHashSet(startNodeEdgeIDs.size());
+                commonEdgeIDs.addAll(startNodeEdgeIDs);
+                commonEdgeIDs.retainAll(neighborEdgeIDs);
+
+                IntSet allEdgeIDs = new LucIntHashSet(startNodeEdgeIDs.size() + neighborEdgeIDs.size());
+                allEdgeIDs.addAll(startNodeEdgeIDs);
+                allEdgeIDs.addAll(neighborEdgeIDs);
+
+                sumTwoNodeClusCoef += (float) commonEdgeIDs.size() / allEdgeIDs.size();
+                numPairs++;
+            }
+        }
+
+        return sumTwoNodeClusCoef / numPairs;
+    }
+
     public void exportStats(String workdir) throws IOException {
         String now = isoDateFormat.format(new Date());
 
@@ -1923,13 +2026,12 @@ public class HypergraphOfEntity extends Engine {
             csvPrinter.printRecord("Num Sinks", graph.getSinks().size());
             csvPrinter.flush();
 
-            logger.info("Computing average clustering coefficient");
-            csvPrinter.printRecord("Avg. Clustering Coefficient", graph.getAverageClusteringCoefficient());
+            logger.info("Estimating average clustering coefficient");
+            csvPrinter.printRecord("Avg. Clustering Coefficient", estimateClusteringCoefficient(10, 20));
             csvPrinter.flush();
 
-            logger.info("Computing diameter");
-            DistanceListsBasedDiameterAlgorithm diameterAlgorithn = new DistanceListsBasedDiameterAlgorithm();
-            csvPrinter.printRecord("Diameter", diameterAlgorithn.compute(graph));
+            logger.info("Estimating diameter with random walks");
+            csvPrinter.printRecord("Diameter", estimateDiameter(5, 1000, 100));
             csvPrinter.flush();
 
             logger.info("Computing average degree");

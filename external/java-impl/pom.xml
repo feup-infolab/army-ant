@@ -176,6 +176,7 @@
                 <version>2.22.1</version>
                 <configuration>
                     <useSystemClassLoader>false</useSystemClassLoader>
+                    <!--argLine>-Xmx4g</argLine-->
                 </configuration>
             </plugin>
 
