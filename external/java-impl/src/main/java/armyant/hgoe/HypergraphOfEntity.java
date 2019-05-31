@@ -1957,52 +1957,34 @@ public class HypergraphOfEntity extends Engine {
     }*/
 
     // TODO FIXME algorithm doesn't work yet
-    public int estimateDiameter(int numStartNodes, int walkLength, int walkRepeats) {
-        logger.info("Randomly selecting start nodes");
-        int[] startNodeIDs = new int[numStartNodes];
-        for (int i = 0; i < numStartNodes; i++) {
+    /**
+     * Estimate diameter by generating multiple paths between two nodes.
+     *
+     * Two random nodes are selected and a random walker is launched for either node. If the paths intersect,
+     * then there is a path between the two nodes. We trim the paths after and before the first intersecting node,
+     * respectively, and joint the two segments to form a path between the two nodes. We repeat this process several
+     * times for the same pair of nodes, and then over multiple combinations of nodes. We compute the maximum.
+     */
+    public int estimateDiameter(int numNodePairs, int walkLength, int walkRepeats) {
+        logger.info("Randomly selecting start and corresponding end nodes");
+
+        int[] startNodeIDs = new int[numNodePairs];
+        int[] endNodeIDs = new int[numNodePairs];
+
+        for (int i = 0; i < numNodePairs; i++) {
             startNodeIDs[i] = sampleUniformlyAtRandom(graph.getVertices().toIntArray());
+            endNodeIDs[i] = sampleUniformlyAtRandom(graph.getVertices().toIntArray());
         }
 
-        logger.info("Issuing {} random walks of length {} for {} start nodes", walkRepeats, walkLength, numStartNodes);
+        grph.path.Path startPath = randomWalk(startNodeIDs[0], walkLength, false, false, 0, 0);
+        grph.path.Path endPath = randomWalk(endNodeIDs[0], walkLength, false, false, 0, 0);
 
-        ConcurrentMap<Integer, ConcurrentMap<Integer, Integer>> nodeDistance = new ConcurrentHashMap<>();
+        IntSet commonNodes = startPath.toVertexSet();
+        commonNodes.retainAll(endPath.toVertexSet());
 
-        for (int i = 0; i < numStartNodes; i++) {
-            final int ii = i;
+        System.out.println(String.join(" -> ", commonNodes.stream().toArray(String[]::new)));
 
-            IntStream.range(0, walkRepeats).parallel().forEach(j -> {
-                grph.path.Path path = randomWalk(startNodeIDs[ii], walkLength, false, false, 0, 0);
-
-                for (int k = 0; k < path.getNumberOfVertices(); k++) {
-                    int v = path.getVertexAt(k);
-                    Integer prevDist = null;
-
-                    if (!nodeDistance.containsKey(v)) nodeDistance.put(v, new ConcurrentHashMap<>());
-
-                    for (int l = k + 1; l < path.getNumberOfVertices(); l++) {
-                        int w = path.getVertexAt(l);
-
-                        if (v == w) continue;
-
-                        int newDist = prevDist == null ? l - k : prevDist + 1;
-                        if (!nodeDistance.get(v).containsKey(w) || nodeDistance.get(v).get(w) > newDist) {
-                            nodeDistance.get(v).put(w, newDist);
-                        }
-                        prevDist = nodeDistance.get(v).get(w);
-                    }
-                }
-            });
-        }
-
-        logger.info("Finding maximum shortest distance");
-        int maxDist = 0;
-        for (ConcurrentMap<Integer, Integer> minDists : nodeDistance.values()) {
-            int maxMinDist = minDists.values().stream().mapToInt(Integer::intValue).max().orElseGet(() -> 0);
-            if (maxMinDist > maxDist) maxDist = maxMinDist;
-        }
-
-        return maxDist;
+        return 0;
     }
 
     public float estimateClusteringCoefficient(int numStartNodes, int numNeighbors) {
@@ -2097,7 +2079,7 @@ public class HypergraphOfEntity extends Engine {
             csvPrinter.flush();*/
 
             logger.info("Estimating diameter with random walks");
-            csvPrinter.printRecord("Diameter", estimateDiameter(10, 10));
+            csvPrinter.printRecord("Diameter", estimateDiameter(10, 1000, 10));
             csvPrinter.flush();
         }
     }
