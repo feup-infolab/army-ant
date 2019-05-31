@@ -71,6 +71,7 @@ import armyant.structures.ResultSet;
 import armyant.structures.Trace;
 import armyant.structures.Triple;
 import armyant.structures.yaml.PruneConfig;
+import armyant.util.ClusteringCoefficientAccumulator;
 import edu.mit.jwi.IRAMDictionary;
 import edu.mit.jwi.RAMDictionary;
 import edu.mit.jwi.data.ILoadPolicy;
@@ -99,6 +100,7 @@ import grph.algo.degree.MinOutEdgeDegreeAlgorithm;
 import grph.algo.degree.MinOutVertexDegreeAlgorithm;
 import grph.algo.distance.DistanceMatrixBasedDiameterAlgorithm;
 import grph.algo.distance.FourSweepIterativeFringeDiameterAlgorithm;
+import grph.algo.k_shortest_paths.RandomWalkBasedKShortestPaths;
 import grph.algo.search.DistanceListsBasedDiameterAlgorithm;
 import grph.in_memory.InMemoryGrph;
 import grph.io.ParseException;
@@ -110,6 +112,7 @@ import it.unimi.dsi.fastutil.ints.Int2DoubleOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrays;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import toools.collections.primitive.IntCursor;
@@ -1924,6 +1927,35 @@ public class HypergraphOfEntity extends Engine {
         }
     }
 
+    /*public int estimateDiameter(int numStartNodes, int numEndNodes) {
+        RandomWalkBasedKShortestPaths shortestPathsAlgorithm = new RandomWalkBasedKShortestPaths();
+        NumericalProperty weights = new NumericalProperty("weight");
+
+        logger.info("Setting edge weights to unitary");
+        IntIterator edgeIterator = graph.getEdges().iterator();
+        while (edgeIterator.hasNext()) {
+            weights.setValue(edgeIterator.nextInt(), 0f);
+        }
+
+        logger.info("Randomly selecting start nodes");
+        int[] startNodeIDs = new int[numStartNodes];
+        for (int i = 0; i < numStartNodes; i++) {
+            startNodeIDs[i] = sampleUniformlyAtRandom(graph.getVertices().toIntArray());
+        }
+
+        for (int i=0; i < startNodeIDs.length; i++) {
+            logger.info("Randomly selecting end nodes for start node {} and computing shortest path lengths", i);
+            int[] endNodeIDs = new int[numEndNodes];
+            for (int j = 0; j < numStartNodes; j++) {
+                endNodeIDs[j] = sampleUniformlyAtRandom(graph.getVertices().toIntArray());
+                logger.info("Finding path from node {} to node {}", startNodeIDs[i], endNodeIDs[j]);
+                shortestPathsAlgorithm.compute(graph, startNodeIDs[i], endNodeIDs[j], 1, new NumericalProperty("weight"));
+            }
+        }
+
+        return 0;
+    }*/
+
     // TODO FIXME algorithm doesn't work yet
     public int estimateDiameter(int numStartNodes, int walkLength, int walkRepeats) {
         logger.info("Randomly selecting start nodes");
@@ -1974,24 +2006,21 @@ public class HypergraphOfEntity extends Engine {
     }
 
     public float estimateClusteringCoefficient(int numStartNodes, int numNeighbors) {
-        logger.info("Sampling nodes uniformly at random");
+        logger.info("Sampling {} nodes uniformly at random", numStartNodes);
         int[] startNodeIDs = new int[numStartNodes];
         for (int i = 0; i < numStartNodes; i++) {
             startNodeIDs[i] = sampleUniformlyAtRandom(graph.getVertices().toIntArray());
         }
 
-        logger.info("Computing two-node clustering coefficient for sampled nodes and a sample of their neighbors");
+        logger.info("Computing two-node clustering coefficient for {} sampled neighbors", numNeighbors);
 
-        float sumTwoNodeClusCoef = 0;
-        int numPairs = 0;
-
-        for (int startNodeID : startNodeIDs) {
+        return Arrays.stream(startNodeIDs).mapToObj(startNodeID -> {
             IntSet startNodeEdgeIDs = graph.getEdgesIncidentTo(startNodeID);
 
             int[] neighborIDs = graph.getNeighbours(startNodeID).toIntArray();
             IntArrays.shuffle(neighborIDs, new Random());
 
-            for (int neighborID : IntArrays.trim(neighborIDs, numNeighbors)) {
+            return Arrays.stream(IntArrays.trim(neighborIDs, numNeighbors)).parallel().mapToObj(neighborID -> {
                 IntSet neighborEdgeIDs = graph.getEdgesIncidentTo(neighborID);
 
                 IntSet commonEdgeIDs = new LucIntHashSet(startNodeEdgeIDs.size());
@@ -2002,12 +2031,13 @@ public class HypergraphOfEntity extends Engine {
                 allEdgeIDs.addAll(startNodeEdgeIDs);
                 allEdgeIDs.addAll(neighborEdgeIDs);
 
-                sumTwoNodeClusCoef += (float) commonEdgeIDs.size() / allEdgeIDs.size();
-                numPairs++;
-            }
-        }
-
-        return sumTwoNodeClusCoef / numPairs;
+                return new ClusteringCoefficientAccumulator((float) commonEdgeIDs.size() / allEdgeIDs.size());
+            }).reduce(new ClusteringCoefficientAccumulator(),
+                    (accumulator, clusteringCoefficient) -> accumulator.addClusteringCoefficient(clusteringCoefficient))
+              .getAvgClusteringCoefficientAsAccumulator();
+        }).reduce(new ClusteringCoefficientAccumulator(), (accumulator, clusteringCoefficient) ->
+                accumulator.addClusteringCoefficient(clusteringCoefficient))
+          .getAvgClusteringCoefficient();
     }
 
     public void exportStats(String workdir) throws IOException {
@@ -2026,15 +2056,7 @@ public class HypergraphOfEntity extends Engine {
             csvPrinter.printRecord("Num Sinks", graph.getSinks().size());
             csvPrinter.flush();
 
-            logger.info("Estimating average clustering coefficient");
-            csvPrinter.printRecord("Avg. Clustering Coefficient", estimateClusteringCoefficient(10, 20));
-            csvPrinter.flush();
-
-            logger.info("Estimating diameter with random walks");
-            csvPrinter.printRecord("Diameter", estimateDiameter(5, 1000, 100));
-            csvPrinter.flush();
-
-            logger.info("Computing average degree");
+            /*logger.info("Computing average degree");
             csvPrinter.printRecord("Avg. Degree", graph.getAverageDegree());
             csvPrinter.flush();
 
@@ -2068,6 +2090,14 @@ public class HypergraphOfEntity extends Engine {
 
             logger.info("Computing minimum degree of outgoing vertices");
             csvPrinter.printRecord("Max OutVertex Degree", graph.getMaxOutVertexDegrees());
+            csvPrinter.flush();
+
+            logger.info("Estimating average clustering coefficient");
+            csvPrinter.printRecord("Avg. Clustering Coefficient", estimateClusteringCoefficient(5000, 100000));
+            csvPrinter.flush();*/
+
+            logger.info("Estimating diameter with random walks");
+            csvPrinter.printRecord("Diameter", estimateDiameter(10, 10));
             csvPrinter.flush();
         }
     }
