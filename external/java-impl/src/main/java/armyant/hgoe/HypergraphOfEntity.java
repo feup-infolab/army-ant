@@ -1976,15 +1976,54 @@ public class HypergraphOfEntity extends Engine {
             endNodeIDs[i] = sampleUniformlyAtRandom(graph.getVertices().toIntArray());
         }
 
-        grph.path.Path startPath = randomWalk(startNodeIDs[0], walkLength, false, false, 0, 0);
-        grph.path.Path endPath = randomWalk(endNodeIDs[0], walkLength, false, false, 0, 0);
+        List<Integer> shortestDistances = new ArrayList<>();
+        for (int i = 0; i < numNodePairs; i++) {
+            logger.info("Processing {} walk repeats for node pair {} out of {}", walkRepeats, i+1, numNodePairs);
+            Integer shortestDistance = null;
 
-        IntSet commonNodes = startPath.toVertexSet();
-        commonNodes.retainAll(endPath.toVertexSet());
+            for (int j = 0; j < walkRepeats; j++) {
+                Integer distance = null;
 
-        System.out.println(String.join(" -> ", commonNodes.stream().toArray(String[]::new)));
+                grph.path.Path startPath = randomWalk(startNodeIDs[i], walkLength, false, false, 0, 0);
+                grph.path.Path endPath = randomWalk(endNodeIDs[i], walkLength, false, false, 0, 0);
 
-        return 0;
+                if (distance == null && (startPath.getLength() > 0 || endPath.getLength() > 0)) {
+                    distance = 0;
+                }
+
+                Integer firstCommonNodeID = null;
+                IntSet endPathNodes = endPath.toVertexSet();
+
+                for (int k = 0; k < startPath.getNumberOfVertices(); k++) {
+                    distance++;
+                    if (endPathNodes.contains(startPath.getVertexAt(k))) {
+                        firstCommonNodeID = startPath.getVertexAt(k);
+                        break;
+                    }
+                }
+
+                if (firstCommonNodeID != null) {
+                    boolean foundFirstCommonNode = false;
+                    for (int k = 0; k < endPath.getNumberOfVertices(); k++) {
+                        if (!foundFirstCommonNode && endPath.getVertexAt(k) == firstCommonNodeID) {
+                            foundFirstCommonNode = true;
+                        }
+
+                        if (foundFirstCommonNode) {
+                            distance++;
+                        }
+                    }
+                }
+
+                if (shortestDistance == null || distance < shortestDistance) {
+                    shortestDistance = distance;
+                }
+            }
+
+            shortestDistances.add(shortestDistance);
+        }
+
+        return shortestDistances.stream().mapToInt(Integer::intValue).max().getAsInt();
     }
 
     public float estimateClusteringCoefficient(int numStartNodes, int numNeighbors) {
@@ -2079,7 +2118,7 @@ public class HypergraphOfEntity extends Engine {
             csvPrinter.flush();*/
 
             logger.info("Estimating diameter with random walks");
-            csvPrinter.printRecord("Diameter", estimateDiameter(10, 1000, 10));
+            csvPrinter.printRecord("Diameter", estimateDiameter(30, 1000, 1000));
             csvPrinter.flush();
         }
     }
