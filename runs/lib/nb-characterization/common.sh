@@ -78,7 +78,7 @@ snapshots_export_degrees() {
     done
 }
 
-snapshots_exports_stats() {
+snapshots_export_stats() {
     base_dir=$1
     base_outdir=$2
 
