@@ -1956,16 +1956,15 @@ public class HypergraphOfEntity extends Engine {
         return 0;
     }*/
 
-    // TODO FIXME algorithm doesn't work yet
     /**
-     * Estimate diameter by generating multiple paths between two nodes.
+     * Estimate shortest distances between pairs of random nodes using intersecting random walks.
      *
      * Two random nodes are selected and a random walker is launched for either node. If the paths intersect,
      * then there is a path between the two nodes. We trim the paths after and before the first intersecting node,
      * respectively, and joint the two segments to form a path between the two nodes. We repeat this process several
-     * times for the same pair of nodes, and then over multiple combinations of nodes. We compute the maximum.
+     * times for the same pair of nodes, and then over multiple combinations of nodes.
      */
-    public int estimateDiameter(int numNodePairs, int walkLength, int walkRepeats) {
+    public int[] estimateShortestDistances(int numNodePairs, int walkLength, int walkRepeats) {
         logger.info("Randomly selecting start and corresponding end nodes");
 
         int[] startNodeIDs = new int[numNodePairs];
@@ -1976,12 +1975,10 @@ public class HypergraphOfEntity extends Engine {
             endNodeIDs[i] = sampleUniformlyAtRandom(graph.getVertices().toIntArray());
         }
 
-        List<Integer> shortestDistances = new ArrayList<>();
-        for (int i = 0; i < numNodePairs; i++) {
+        int[] shortestDistances = IntStream.range(0, numNodePairs).map(i -> {
             logger.info("Processing {} walk repeats for node pair {} out of {}", walkRepeats, i+1, numNodePairs);
-            Integer shortestDistance = null;
 
-            for (int j = 0; j < walkRepeats; j++) {
+            int shortestDistance = IntStream.range(0, walkRepeats).parallel().map(j -> {
                 Integer distance = null;
 
                 grph.path.Path startPath = randomWalk(startNodeIDs[i], walkLength, false, false, 0, 0);
@@ -2015,15 +2012,13 @@ public class HypergraphOfEntity extends Engine {
                     }
                 }
 
-                if (shortestDistance == null || distance < shortestDistance) {
-                    shortestDistance = distance;
-                }
-            }
+                return distance;
+            }).min().getAsInt();
 
-            shortestDistances.add(shortestDistance);
-        }
+            return shortestDistance;
+        }).toArray();
 
-        return shortestDistances.stream().mapToInt(Integer::intValue).max().getAsInt();
+        return shortestDistances;
     }
 
     public float estimateClusteringCoefficient(int numStartNodes, int numNeighbors) {
@@ -2077,7 +2072,7 @@ public class HypergraphOfEntity extends Engine {
             csvPrinter.printRecord("Num Sinks", graph.getSinks().size());
             csvPrinter.flush();
 
-            /*logger.info("Computing average degree");
+            logger.info("Computing average degree");
             csvPrinter.printRecord("Avg. Degree", graph.getAverageDegree());
             csvPrinter.flush();
 
@@ -2113,12 +2108,15 @@ public class HypergraphOfEntity extends Engine {
             csvPrinter.printRecord("Max OutVertex Degree", graph.getMaxOutVertexDegrees());
             csvPrinter.flush();
 
-            logger.info("Estimating average clustering coefficient");
+            logger.info("Estimating average two-node clustering coefficient using node sampling");
             csvPrinter.printRecord("Avg. Clustering Coefficient", estimateClusteringCoefficient(5000, 100000));
-            csvPrinter.flush();*/
+            csvPrinter.flush();
 
-            logger.info("Estimating diameter with random walks");
-            csvPrinter.printRecord("Diameter", estimateDiameter(30, 1000, 1000));
+            logger.info("Estimating average path length and diameter using random walks");
+            int [] shortestDistances = estimateShortestDistances(30, 1000, 1000);
+            csvPrinter.printRecord("Diameter", Arrays.stream(shortestDistances).max().getAsInt());
+            csvPrinter.printRecord("Avg. Path Length",
+                (float) Arrays.stream(shortestDistances).sum() / shortestDistances.length);
             csvPrinter.flush();
         }
     }
