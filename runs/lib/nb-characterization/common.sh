@@ -37,6 +37,11 @@ snapshots_index() {
     index_path=$2
     snapshots_num_docs=$3
 
+    echo $source_path
+    echo $index_path
+    echo $snapshots_num_docs
+    exit 1
+
     snapshot=1
 
     for num_docs in $snapshots_num_docs
