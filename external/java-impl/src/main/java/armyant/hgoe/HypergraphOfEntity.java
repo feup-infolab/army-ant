@@ -1902,10 +1902,14 @@ public class HypergraphOfEntity extends Engine {
         logger.info("Saving node degrees to {}", path);
         try (BufferedWriter writer = Files.newBufferedWriter(path);
                 CSVPrinter csvPrinter = new CSVPrinter(writer,
-                        CSVFormat.DEFAULT.withHeader("Node ID", "Type", "Degree"))) {
-            for (int nodeID : graph.getVertices()) {
-                csvPrinter.printRecord(nodeID, nodeIndex.getKey(nodeID).getClass().getSimpleName(),
-                        graph.getVertexDegree(nodeID));
+                        CSVFormat.DEFAULT.withHeader("NodeID", "Type", "Degree", "InDegree", "OutDegree"))) {
+            for (IntCursor nodeCursor : IntCursor.fromFastUtil(graph.getVertices())) {
+                csvPrinter.printRecord(
+                    nodeCursor.value,
+                    nodeIndex.getKey(nodeCursor.value).getClass().getSimpleName(),
+                    graph.getVertexDegree(nodeCursor.value),
+                    graph.getInVertexDegree(nodeCursor.value),
+                    graph.getOutVertexDegree(nodeCursor.value));
             }
             csvPrinter.flush();
         }
@@ -1918,10 +1922,18 @@ public class HypergraphOfEntity extends Engine {
         logger.info("Saving edge degrees to {}", path);
         try (BufferedWriter writer = Files.newBufferedWriter(path);
                 CSVPrinter csvPrinter = new CSVPrinter(writer,
-                        CSVFormat.DEFAULT.withHeader("Edge ID", "Type", "Degree"))) {
-            for (int edgeID : graph.getEdges()) {
-                csvPrinter.printRecord(edgeID, edgeIndex.getKey(edgeID).getClass().getSimpleName(),
-                        graph.getEdgeDegree(edgeID));
+                        CSVFormat.DEFAULT.withHeader(
+                            "EdgeID", "Type", "IsDirected", "Degree", "TailDegree", "HeadDegree"))) {
+            for (IntCursor edgeCursor : IntCursor.fromFastUtil(graph.getEdges())) {
+                csvPrinter.printRecord(
+                    edgeCursor.value,
+                    edgeIndex.getKey(edgeCursor.value).getClass().getSimpleName(),
+                    graph.isDirectedHyperEdge(edgeCursor.value),
+                    graph.getEdgeDegree(edgeCursor.value),
+                    graph.isDirectedHyperEdge(edgeCursor.value) ?
+                        graph.getDirectedHyperEdgeTail(edgeCursor.value).size() : "",
+                    graph.isDirectedHyperEdge(edgeCursor.value) ?
+                        graph.getDirectedHyperEdgeHead(edgeCursor.value).size() : "");
             }
             csvPrinter.flush();
         }
