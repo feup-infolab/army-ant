@@ -1927,35 +1927,6 @@ public class HypergraphOfEntity extends Engine {
         }
     }
 
-    /*public int estimateDiameter(int numStartNodes, int numEndNodes) {
-        RandomWalkBasedKShortestPaths shortestPathsAlgorithm = new RandomWalkBasedKShortestPaths();
-        NumericalProperty weights = new NumericalProperty("weight");
-
-        logger.info("Setting edge weights to unitary");
-        IntIterator edgeIterator = graph.getEdges().iterator();
-        while (edgeIterator.hasNext()) {
-            weights.setValue(edgeIterator.nextInt(), 0f);
-        }
-
-        logger.info("Randomly selecting start nodes");
-        int[] startNodeIDs = new int[numStartNodes];
-        for (int i = 0; i < numStartNodes; i++) {
-            startNodeIDs[i] = sampleUniformlyAtRandom(graph.getVertices().toIntArray());
-        }
-
-        for (int i=0; i < startNodeIDs.length; i++) {
-            logger.info("Randomly selecting end nodes for start node {} and computing shortest path lengths", i);
-            int[] endNodeIDs = new int[numEndNodes];
-            for (int j = 0; j < numStartNodes; j++) {
-                endNodeIDs[j] = sampleUniformlyAtRandom(graph.getVertices().toIntArray());
-                logger.info("Finding path from node {} to node {}", startNodeIDs[i], endNodeIDs[j]);
-                shortestPathsAlgorithm.compute(graph, startNodeIDs[i], endNodeIDs[j], 1, new NumericalProperty("weight"));
-            }
-        }
-
-        return 0;
-    }*/
-
     /**
      * Estimate shortest distances between pairs of random nodes using intersecting random walks.
      *
@@ -2056,6 +2027,32 @@ public class HypergraphOfEntity extends Engine {
           .getAvgClusteringCoefficient();
     }
 
+    /**
+     * Computes the general mixed hypergraph density that takes into account directed and undirected hyperedges.
+     */
+    public double computeDensity() {
+        long n = graph.getNumberOfVertices();
+        long m = graph.getNumberOfEdges();
+
+        long accumU = 0;
+        long accumD = 0;
+
+        for (IntCursor edgeCursor : IntCursor.fromFastUtil(graph.getEdges())) {
+            if (graph.isUndirectedHyperEdge(edgeCursor.value)) {
+                int k = graph.getEdgeDegree(edgeCursor.value);
+                accumU += k;
+            } else if (graph.isDirectedHyperEdge(edgeCursor.value)) {
+                int k1 = graph.getDirectedHyperEdgeTail(edgeCursor.value).size();
+                int k2 = graph.getDirectedHyperEdgeHead(edgeCursor.value).size();
+                accumD += k1 + k2;
+            }
+        }
+
+        // Denominator multiplied by 2 to account for all directed and undirected hyperedges,
+        // assuming a combination of two simples hypergraphs, one directed and one undirected.
+        return (double) (2 * accumU + accumD) / (2 * (n + m) * (n + m - 1));
+    }
+
     public void exportStats(String workdir) throws IOException {
         String now = isoDateFormat.format(new Date());
 
@@ -2070,6 +2067,10 @@ public class HypergraphOfEntity extends Engine {
             csvPrinter.printRecord("Total Hyperedges", graph.getNumberOfHyperEdges());
             csvPrinter.printRecord("Num Sources", graph.getSources().size());
             csvPrinter.printRecord("Num Sinks", graph.getSinks().size());
+            csvPrinter.flush();
+
+            logger.info("Computing general hypergraph density");
+            csvPrinter.printRecord("Density", computeDensity());
             csvPrinter.flush();
 
             logger.info("Computing average degree");
