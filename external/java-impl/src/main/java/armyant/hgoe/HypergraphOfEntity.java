@@ -1985,12 +1985,12 @@ public class HypergraphOfEntity extends Engine {
                 if (firstCommonNodeID != null) {
                     boolean foundFirstCommonNode = false;
                     for (int k = 0; k < endPath.getNumberOfVertices(); k++) {
-                        if (!foundFirstCommonNode && endPath.getVertexAt(k) == firstCommonNodeID) {
-                            foundFirstCommonNode = true;
-                        }
-
                         if (foundFirstCommonNode) {
                             distance++;
+                        }
+
+                        if (!foundFirstCommonNode && endPath.getVertexAt(k) == firstCommonNodeID) {
+                            foundFirstCommonNode = true;
                         }
                     }
                 }
