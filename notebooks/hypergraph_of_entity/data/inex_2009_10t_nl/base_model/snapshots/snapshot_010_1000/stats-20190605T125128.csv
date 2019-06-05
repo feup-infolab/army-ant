@@ -1,0 +1,20 @@
+Statistic,Value
+Vertices,146634
+Directed Hyperedges,49773
+Undirected Hyperedges,1998
+Total Hyperedges,51771
+Num Sources,0
+Num Sinks,0
+Density,4.738996598617914E-6
+Avg. Degree,0.7061254552150251
+Min InEdge Degree,1
+Max InEdge Degree,740
+Min InVertex Degree,11
+Max InVertex Degree,130043
+Min OutEdge Degree,1
+Max OutEdge Degree,1731
+Min OutVertex Degree,11
+Max OutVertex Degree,130043
+Avg. Clustering Coefficient,0.16101333
+Diameter,14
+Avg. Path Length,7.233333
