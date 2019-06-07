@@ -95,6 +95,7 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import toools.collections.primitive.IntCursor;
 import toools.collections.primitive.LucIntHashSet;
 import toools.collections.primitive.LucIntSet;
+import toools.exceptions.NotYetImplementedException;
 
 /**
  * Created by jldevezas on 2017-10-23.
@@ -870,6 +871,16 @@ public class HypergraphOfEntity extends Engine {
         }
 
         return true;
+    }
+
+    public void unload() {
+        this.nodeIndex = null;
+        this.edgeIndex = null;
+        this.reachabilityIndex = null;
+        this.nodeWeights = null;
+        this.edgeWeights = null;
+        this.graph = null;
+        System.gc();
     }
 
     private IntSet getQueryTermNodeIDs(List<String> terms) {
@@ -2102,9 +2113,13 @@ public class HypergraphOfEntity extends Engine {
     }
 
     public void exportStats(String workdir) throws IOException {
+        exportStats(workdir, "stats");
+    }
+
+    public void exportStats(String workdir, String prefix) throws IOException {
         String now = isoDateFormat.format(new Date());
 
-        Path path = Paths.get(workdir, String.format("stats-%s.csv", now));
+        Path path = Paths.get(workdir, String.format("%s-%s.csv", prefix, now));
         try (BufferedWriter writer = Files.newBufferedWriter(path);
                 CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("Statistic", "Value"))) {
 
@@ -2185,6 +2200,29 @@ public class HypergraphOfEntity extends Engine {
         }
     }
 
+    public void exportRandomHypergraphStats(String workdir) throws IOException {
+        exportRandomHypergraphStats(workdir, true);
+    }
+
+    public void exportRandomHypergraphStats(String workdir, boolean reload) throws IOException {
+        /*logger.info("Getting number of nodes from original hypergraph and unloading it");
+        int numNodes = graph.getNumberOfVertices();
+        unload();
+
+        InMemoryGrph randomGraph = new InMemoryGrph();
+
+        logger.info("Adding {} nodes", numNodes);
+        for (int i=0; i < numNodes; i++) {
+            randomGraph.addVertex();
+        }
+
+        logger.info("Wiring ");
+
+        logger.info("Reloading hypergraph");
+        load();*/
+        throw new NotYetImplementedException("Requires a model for generating a random hypergraph");
+    }
+
     public void export(String feature, String workdir) throws IOException {
         if (!Files.exists(Paths.get(workdir))) {
             logger.info("Creating working directory: {}", workdir);
@@ -2203,6 +2241,8 @@ public class HypergraphOfEntity extends Engine {
             exportStats(workdir);
         } else if (feature.equals("export-space-usage")) {
             exportSpaceUsage(workdir);
+        } else if (feature.equals("export-random-hypergraph-stats")) {
+            exportRandomHypergraphStats(workdir);
         } else {
             logger.error("Invalid feature {}", feature);
         }

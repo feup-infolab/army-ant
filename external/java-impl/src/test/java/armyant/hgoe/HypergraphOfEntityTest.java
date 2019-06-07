@@ -327,6 +327,11 @@ public class HypergraphOfEntityTest {
         hgoe.export("export-stats", "/tmp/hgoe-stats");
     }
 
+    public void testExportRandomHypergraphStats() throws HypergraphException, IOException {
+        HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
+        hgoe.export("export-random-hypergraph-stats", "/tmp/hgoe-stats");
+    }
+
     public void testExportNodeDegree() throws HypergraphException, IOException {
         HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
         hgoe.export("export-node-degree", "/tmp/hgoe-stats");
