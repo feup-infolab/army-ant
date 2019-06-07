@@ -24,11 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -39,6 +36,7 @@ import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -80,28 +78,8 @@ import edu.mit.jwi.item.ISynset;
 import edu.mit.jwi.item.IWord;
 import edu.mit.jwi.item.IWordID;
 import edu.mit.jwi.item.POS;
-import grph.GrphAlgorithm;
-import grph.Grph.MaxIndependentSetAlgorithm;
-import grph.Grph.MinVertexCoverAlgorithm;
 import grph.algo.AllPaths;
-import grph.algo.AverageDegreeAlgorithm;
 import grph.algo.ConnectedComponentsAlgorithm;
-import grph.algo.DensityAlgorithm;
-import grph.algo.RadiusAlgorithm;
-import grph.algo.clustering.AvgClusteringCoefficientAlgorithm;
-import grph.algo.clustering.ClusteringCoefficient;
-import grph.algo.degree.MaxInEdgeDegreeAlgorithm;
-import grph.algo.degree.MaxInVertexDegreeAlgorithm;
-import grph.algo.degree.MaxOutEdgeDegreeAlgorithm;
-import grph.algo.degree.MaxOutVertexDegreeAlgorithm;
-import grph.algo.degree.MinInEdgeDegreeAlgorithm;
-import grph.algo.degree.MinInVertexDegreeAlgorithm;
-import grph.algo.degree.MinOutEdgeDegreeAlgorithm;
-import grph.algo.degree.MinOutVertexDegreeAlgorithm;
-import grph.algo.distance.DistanceMatrixBasedDiameterAlgorithm;
-import grph.algo.distance.FourSweepIterativeFringeDiameterAlgorithm;
-import grph.algo.k_shortest_paths.RandomWalkBasedKShortestPaths;
-import grph.algo.search.DistanceListsBasedDiameterAlgorithm;
 import grph.in_memory.InMemoryGrph;
 import grph.io.ParseException;
 import grph.path.ArrayListPath;
@@ -112,12 +90,11 @@ import it.unimi.dsi.fastutil.ints.Int2DoubleOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrays;
-import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import toools.collections.primitive.IntCursor;
 import toools.collections.primitive.LucIntHashSet;
-import toools.math.Distribution;
+import toools.collections.primitive.LucIntSet;
 
 /**
  * Created by jldevezas on 2017-10-23.
@@ -1895,6 +1872,44 @@ public class HypergraphOfEntity extends Engine {
         }
     }
 
+    public int getDirectedInVertexDegree(int v) {
+        LucIntSet inEdges = graph.getInOnlyEdges(v);
+        int indegree = 0;
+
+        for (IntCursor c : IntCursor.fromFastUtil(inEdges)) {
+            int e = c.value;
+
+            if (graph.isDirectedHyperEdge(e)) {
+                indegree += graph.getDirectedHyperEdgeTail(e).size();
+            }
+        }
+
+        return indegree;
+    }
+
+    public int getDirectedOutVertexDegree(int v) {
+        LucIntSet outEdges = graph.getOutOnlyEdges(v);
+        int outdegree = 0;
+
+        for (IntCursor c : IntCursor.fromFastUtil(outEdges)) {
+            int e = c.value;
+
+            if (graph.isDirectedHyperEdge(e)) {
+                outdegree += graph.getDirectedHyperEdgeHead(e).size();
+            }
+        }
+
+        return outdegree;
+    }
+
+    public int getDirectedInEdgeDegree(int v) {
+        return graph.getInOnlyEdges(v).size();
+    }
+
+    public int getDirectedOutEdgeDegree(int v) {
+        return graph.getOutOnlyEdges(v).size();
+    }
+
     public void exportNodeDegree(String workdir) throws IOException {
         String now = isoDateFormat.format(new Date());
 
@@ -1902,38 +1917,59 @@ public class HypergraphOfEntity extends Engine {
         logger.info("Saving node degrees to {}", path);
         try (BufferedWriter writer = Files.newBufferedWriter(path);
                 CSVPrinter csvPrinter = new CSVPrinter(writer,
-                        CSVFormat.DEFAULT.withHeader("NodeID", "Type", "Degree", "InDegree", "OutDegree"))) {
+                        CSVFormat.DEFAULT.withHeader(
+                            "NodeID", "Type", "Name", "VertexDegree", "EdgeDegree", "InVertexDegree", "OutVertexDegree",
+                            "InEdgeDegree", "OutEdgeDegree", "DirectedInVertexDegree", "DirectedOutVertexDegree",
+                            "DirectedInEdgeDegree", "DirectedOutEdgeDegree"))) {
             for (IntCursor nodeCursor : IntCursor.fromFastUtil(graph.getVertices())) {
+                Node node = nodeIndex.getKey(nodeCursor.value);
+
                 csvPrinter.printRecord(
                     nodeCursor.value,
-                    nodeIndex.getKey(nodeCursor.value).getClass().getSimpleName(),
+                    node.getClass().getSimpleName(),
+                    node.getName(),
                     graph.getVertexDegree(nodeCursor.value),
+                    graph.getEdgeDegree(nodeCursor.value),
                     graph.getInVertexDegree(nodeCursor.value),
-                    graph.getOutVertexDegree(nodeCursor.value));
+                    graph.getOutVertexDegree(nodeCursor.value),
+                    graph.getInEdgeDegree(nodeCursor.value),
+                    graph.getOutEdgeDegree(nodeCursor.value),
+                    getDirectedInVertexDegree(nodeCursor.value),
+                    getDirectedOutVertexDegree(nodeCursor.value),
+                    getDirectedInEdgeDegree(nodeCursor.value),
+                    getDirectedOutEdgeDegree(nodeCursor.value));
             }
             csvPrinter.flush();
         }
     }
 
-    public void exportEdgeDegree(String workdir) throws IOException {
+    public void exportEdgeCardinality(String workdir) throws IOException {
         String now = isoDateFormat.format(new Date());
 
-        Path path = Paths.get(workdir, String.format("edge-degree-%s.csv", now));
+        Path path = Paths.get(workdir, String.format("edge-cardinality-%s.csv", now));
         logger.info("Saving edge degrees to {}", path);
         try (BufferedWriter writer = Files.newBufferedWriter(path);
                 CSVPrinter csvPrinter = new CSVPrinter(writer,
                         CSVFormat.DEFAULT.withHeader(
-                            "EdgeID", "Type", "IsDirected", "Degree", "TailDegree", "HeadDegree"))) {
+                            "EdgeID", "Type", "IsDirected", "Degree", "UndirectedDegree", "TailDegree", "HeadDegree"))) {
             for (IntCursor edgeCursor : IntCursor.fromFastUtil(graph.getEdges())) {
+                int undirectedCardinality = graph.isUndirectedHyperEdge(edgeCursor.value) ?
+                    graph.getUndirectedHyperEdgeVertices(edgeCursor.value).size() : 0;
+
+                int tailCardinality = graph.isDirectedHyperEdge(edgeCursor.value) ?
+                    graph.getDirectedHyperEdgeTail(edgeCursor.value).size() : 0;
+
+                int headCardinality = graph.isDirectedHyperEdge(edgeCursor.value) ?
+                    graph.getDirectedHyperEdgeHead(edgeCursor.value).size() : 0;
+
                 csvPrinter.printRecord(
                     edgeCursor.value,
                     edgeIndex.getKey(edgeCursor.value).getClass().getSimpleName(),
                     graph.isDirectedHyperEdge(edgeCursor.value),
-                    graph.getEdgeDegree(edgeCursor.value),
-                    graph.isDirectedHyperEdge(edgeCursor.value) ?
-                        graph.getDirectedHyperEdgeTail(edgeCursor.value).size() : "",
-                    graph.isDirectedHyperEdge(edgeCursor.value) ?
-                        graph.getDirectedHyperEdgeHead(edgeCursor.value).size() : "");
+                    undirectedCardinality + tailCardinality + headCardinality,
+                    undirectedCardinality,
+                    tailCardinality,
+                    headCardinality);
             }
             csvPrinter.flush();
         }
@@ -2134,6 +2170,21 @@ public class HypergraphOfEntity extends Engine {
         }
     }
 
+    public void exportSpaceUsage(String workdir) throws IOException {
+        String now = isoDateFormat.format(new Date());
+
+        Path path = Paths.get(workdir, String.format("space-usage-%s.csv", now));
+        try (BufferedWriter writer = Files.newBufferedWriter(path);
+                CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("Statistic", "Value"))) {
+
+            logger.info("Computing disk space and memory usage");
+            csvPrinter.printRecord(
+                "Disk (Bytes)", FileUtils.sizeOfDirectoryAsBigInteger(this.directory));
+            csvPrinter.printRecord(
+                "Memory (Bytes)", Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
+        }
+    }
+
     public void export(String feature, String workdir) throws IOException {
         if (!Files.exists(Paths.get(workdir))) {
             logger.info("Creating working directory: {}", workdir);
@@ -2146,10 +2197,12 @@ public class HypergraphOfEntity extends Engine {
             exportEdgeWeights(workdir);
         } else if (feature.equals("export-node-degree")) {
             exportNodeDegree(workdir);
-        } else if (feature.equals("export-edge-degree")) {
-            exportEdgeDegree(workdir);
+        } else if (feature.equals("export-edge-cardinality")) {
+            exportEdgeCardinality(workdir);
         } else if (feature.equals("export-stats")) {
             exportStats(workdir);
+        } else if (feature.equals("export-space-usage")) {
+            exportSpaceUsage(workdir);
         } else {
             logger.error("Invalid feature {}", feature);
         }

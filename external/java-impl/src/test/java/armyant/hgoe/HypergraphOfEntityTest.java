@@ -327,9 +327,18 @@ public class HypergraphOfEntityTest {
         hgoe.export("export-stats", "/tmp/hgoe-stats");
     }
 
-    public void testExportDegree() throws HypergraphException, IOException {
+    public void testExportNodeDegree() throws HypergraphException, IOException {
         HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
         hgoe.export("export-node-degree", "/tmp/hgoe-stats");
-        hgoe.export("export-edge-degree", "/tmp/hgoe-stats");
+    }
+
+    public void testExportEdgeCardinality() throws HypergraphException, IOException {
+        HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
+        hgoe.export("export-edge-cardinality", "/tmp/hgoe-stats");
+    }
+
+    public void testExportSpaceUsage() throws HypergraphException, IOException {
+        HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
+        hgoe.export("export-space-usage", "/tmp/hgoe-stats");
     }
 }
