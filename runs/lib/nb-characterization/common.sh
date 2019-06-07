@@ -16,7 +16,7 @@ export_degrees() {
         --index-location "$index_path" \
         --index-type "hgoe" \
         --workdir "$base_outdir" \
-        --feature "export-edge-degree"
+        --feature "export-edge-cardinality"
 }
 
 export_stats() {
@@ -74,7 +74,7 @@ snapshots_export_degrees() {
             --index-location "$base_dir/$snapshot_name" \
             --index-type "hgoe" \
             --workdir "$base_outdir/$snapshot_name" \
-            --feature "export-edge-degree"
+            --feature "export-edge-cardinality"
     done
 }
 
