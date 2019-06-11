@@ -1,4 +1,4 @@
-EdgeID,Type,IsDirected,Degree,UndirectedDegree,TailDegree,HeadDegree
+EdgeID,Type,IsDirected,Cardinality,UndirectedCardinality,TailCardinality,HeadCardinality
 0,DocumentEdge,false,2290,2290,0,0
 1,DocumentEdge,false,814,814,0,0
 2,DocumentEdge,false,320,320,0,0
