@@ -1962,7 +1962,8 @@ public class HypergraphOfEntity extends Engine {
         try (BufferedWriter writer = Files.newBufferedWriter(path);
                 CSVPrinter csvPrinter = new CSVPrinter(writer,
                         CSVFormat.DEFAULT.withHeader(
-                            "EdgeID", "Type", "IsDirected", "Degree", "UndirectedDegree", "TailDegree", "HeadDegree"))) {
+                            "EdgeID", "Type", "IsDirected", "Cardinality", "UndirectedCardinality",
+                            "TailCardinality", "HeadCardinality"))) {
             for (IntCursor edgeCursor : IntCursor.fromFastUtil(graph.getEdges())) {
                 int undirectedCardinality = graph.isUndirectedHyperEdge(edgeCursor.value) ?
                     graph.getUndirectedHyperEdgeVertices(edgeCursor.value).size() : 0;
