@@ -93,3 +93,19 @@ snapshots_export_stats() {
             --feature "export-stats"
     done
 }
+
+snapshots_export_space_usage() {
+    base_dir=$1
+    base_outdir=$2
+
+    for snapshot_name in $(ls $base_dir | sort)
+    do
+        echo "==> Exporting node and hyperedge space usage for $snapshot_name"
+
+        time ./army-ant.py inspect \
+            --index-location "$base_dir/$snapshot_name" \
+            --index-type "hgoe" \
+            --workdir "$base_outdir/$snapshot_name" \
+            --feature "export-space-usage"
+    done
+}
