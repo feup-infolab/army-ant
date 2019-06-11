@@ -1,0 +1,1218 @@
+NodeID,Type,Name,VertexDegree,EdgeDegree,InVertexDegree,OutVertexDegree,InEdgeDegree,OutEdgeDegree,DirectedInVertexDegree,DirectedOutVertexDegree,DirectedInEdgeDegree,DirectedOutEdgeDegree
+0,EntityNode,United States presidential election,1123,2,1123,1123,2,2,0,0,0,0
+1,EntityNode,Stephen A. Douglas,1123,3,1123,1123,3,2,1,0,1,0
+2,EntityNode,Barack Obama,1123,3,1123,1123,3,2,2,0,1,0
+3,EntityNode,U.S. Census Bureau,1123,3,1123,1123,3,2,1,0,1,0
+4,EntityNode,"United States presidential election, 1924",1123,3,1123,1123,3,2,1,0,1,0
+5,EntityNode,"United States presidential election, 1928",1123,3,1123,1123,3,2,1,0,1,0
+6,EntityNode,"United States presidential election, 1932",1123,3,1123,1123,3,2,1,0,1,0
+7,EntityNode,"United States presidential election, 1936",1123,3,1123,1123,3,2,1,0,1,0
+8,EntityNode,Republican,1123,3,1123,1123,3,2,1,0,1,0
+9,EntityNode,"United States presidential election, 1940",1123,3,1123,1123,3,2,1,0,1,0
+10,EntityNode,"United States presidential election, 1944",1123,3,1123,1123,3,2,1,0,1,0
+11,EntityNode,"United States presidential election, 1948",1123,3,1123,1123,3,2,1,0,1,0
+12,EntityNode,List of United States presidential elections by Electoral College margin,1123,3,1123,1123,3,2,2,0,1,0
+13,EntityNode,"United States presidential election, 1952",1123,3,1123,1123,3,2,1,0,1,0
+14,EntityNode,"United States presidential election, 1956",1123,3,1123,1123,3,2,1,0,1,0
+15,EntityNode,George W. Bush,1123,3,1123,1123,3,2,1,0,1,0
+16,EntityNode,"United States presidential election, 1960",1123,3,1123,1123,3,2,1,0,1,0
+17,EntityNode,"United States presidential election, 1964",1123,3,1123,1123,3,2,1,0,1,0
+18,EntityNode,"United States presidential election, 1792",1123,3,1123,1123,3,2,1,0,1,0
+19,EntityNode,"United States presidential election, 1968",1123,3,1123,1123,3,2,1,0,1,0
+20,EntityNode,"United States presidential election, 1789",1123,3,1123,1123,3,2,1,0,1,0
+21,EntityNode,"United States presidential election, 1972",1123,3,1123,1123,3,2,1,0,1,0
+22,EntityNode,Bob Barr,1123,3,1123,1123,3,2,2,0,1,0
+23,EntityNode,"United States presidential election, 1976",1123,3,1123,1123,3,2,1,0,1,0
+24,EntityNode,"United States presidential election, 1980",1123,3,1123,1123,3,2,1,0,1,0
+25,EntityNode,1984,1123,3,1123,1123,3,2,1,0,1,0
+26,EntityNode,"United States presidential election, 1796",1123,3,1123,1123,3,2,1,0,1,0
+27,EntityNode,Ralph Nader,1123,3,1123,1123,3,2,2,0,1,0
+28,EntityNode,"United States presidential election, 1988",1123,3,1123,1123,3,2,1,0,1,0
+29,EntityNode,"United States presidential election, 1992",1123,3,1123,1123,3,2,1,0,1,0
+30,EntityNode,"United States presidential election, 1996",1123,3,1123,1123,3,2,1,0,1,0
+31,EntityNode,"United States presidential election, 1812",1123,3,1123,1123,3,2,1,0,1,0
+32,EntityNode,"United States presidential election, 2000",1123,3,1123,1123,3,2,1,0,1,0
+33,EntityNode,"United States presidential election, 2004",1123,3,1123,1123,3,2,1,0,1,0
+34,EntityNode,"United States presidential election, 1800",1123,3,1123,1123,3,2,1,0,1,0
+35,EntityNode,List by state,1123,3,1123,1123,3,2,2,0,1,0
+36,EntityNode,"United States presidential election, 2008",1123,3,1123,1123,3,2,1,0,1,0
+37,EntityNode,"United States presidential election, 1824",1123,3,1123,1123,3,2,1,0,1,0
+38,EntityNode,Herbert Hoover,1123,3,1123,1123,3,2,2,0,1,0
+39,EntityNode,Cynthia McKinney,1123,3,1123,1123,3,2,1,0,1,0
+40,EntityNode,Alson Streeter,1123,3,1123,1123,3,2,2,0,1,0
+41,EntityNode,"United States presidential election, 1804",1123,3,1123,1123,3,2,1,0,1,0
+42,EntityNode,Constitution,1123,3,1123,1123,3,2,1,0,1,0
+43,EntityNode,United States Senate,1123,2,1123,1123,2,2,0,0,0,0
+44,EntityNode,Union Labor,1123,3,1123,1123,3,2,2,0,1,0
+45,EntityNode,House of Representatives,1123,2,1123,1123,2,2,0,0,0,0
+46,EntityNode,Grover Cleveland,1123,3,1123,1123,3,2,2,0,1,0
+47,EntityNode,plurality,1123,2,1123,1123,2,2,0,0,0,0
+48,EntityNode,Democrat,1123,3,1123,1123,3,2,1,0,1,0
+49,EntityNode,Socialist,1123,3,1123,1123,3,2,1,0,1,0
+50,EntityNode,Harry S. Truman,1123,3,1123,1123,3,2,1,0,1,0
+51,EntityNode,John Kerry,1123,3,1123,1123,3,2,1,0,1,0
+52,EntityNode,Norman Thomas,1123,3,1123,1123,3,2,1,0,1,0
+53,EntityNode,"United States presidential election, 1892",1123,3,1123,1123,3,2,1,0,1,0
+54,EntityNode,Thomas E. Dewey,1123,2,1123,1123,2,2,0,0,0,0
+55,EntityNode,Twentieth Amendment to the United States Constitution,1123,3,1123,1123,3,2,1,0,1,0
+56,EntityNode,John Adams,1123,3,1123,1123,3,2,1,0,1,0
+57,EntityNode,Independent,1123,2,1123,1123,2,2,0,0,0,0
+58,EntityNode,Benjamin Harrison,1123,3,1123,1123,3,2,2,0,1,0
+59,EntityNode,Franklin D. Roosevelt,1123,3,1123,1123,3,2,2,0,1,0
+60,EntityNode,absolute majority,1123,2,1123,1123,2,2,0,0,0,0
+61,EntityNode,"United States presidential election, 1808",1123,3,1123,1123,3,2,1,0,1,0
+62,EntityNode,Andrew Jackson,1123,3,1123,1123,3,2,2,0,1,0
+63,EntityNode,George Washington,1123,3,1123,1123,3,2,1,0,1,0
+64,EntityNode,James Weaver,1123,3,1123,1123,3,2,1,0,1,0
+65,EntityNode,Strom Thurmond,1123,3,1123,1123,3,2,2,0,1,0
+66,EntityNode,Alf Landon,1123,3,1123,1123,3,2,2,0,1,0
+67,EntityNode,States' Rights Democratic,1123,2,1123,1123,2,2,0,0,0,0
+68,EntityNode,John Jay,1123,3,1123,1123,3,2,1,0,1,0
+69,EntityNode,John Quincy Adams,1123,3,1123,1123,3,2,1,0,1,0
+70,EntityNode,Populist,1123,3,1123,1123,3,2,1,0,1,0
+71,EntityNode,Henry A. Wallace,1123,2,1123,1123,2,2,0,0,0,0
+72,EntityNode,Robert H. Harrison,1123,3,1123,1123,3,2,2,0,1,0
+73,EntityNode,Prohibition,1123,2,1123,1123,2,2,0,0,0,0
+74,EntityNode,Union,1123,3,1123,1123,3,2,1,0,1,0
+75,EntityNode,Labor,1123,3,1123,1123,3,2,1,0,1,0
+76,EntityNode,Henry Clay,1123,2,1123,1123,2,2,0,0,0,0
+77,EntityNode,John Bidwell,1123,3,1123,1123,3,2,1,0,1,0
+78,EntityNode,William Lemke,1123,3,1123,1123,3,2,1,0,1,0
+79,EntityNode,Progressive,1123,2,1123,1123,2,2,0,0,0,0
+80,EntityNode,Chuck Baldwin,1123,3,1123,1123,3,2,2,0,1,0
+81,EntityNode,John Rutledge,1123,3,1123,1123,3,2,1,0,1,0
+82,EntityNode,"United States presidential election, 1876",1123,3,1123,1123,3,2,1,0,1,0
+83,EntityNode,"United States presidential election, 1896",1123,3,1123,1123,3,2,1,0,1,0
+84,EntityNode,Dwight D. Eisenhower,1123,3,1123,1123,3,2,1,0,1,0
+85,EntityNode,"United States presidential election, 1888",1123,3,1123,1123,3,2,1,0,1,0
+86,EntityNode,William McKinley,1123,3,1123,1123,3,2,1,0,1,0
+87,EntityNode,American election campaigns in the 19th century,1123,3,1123,1123,3,2,2,0,1,0
+88,EntityNode,United States presidential primary,1123,2,1123,1123,2,2,0,0,0,0
+89,EntityNode,constitutional amendments,1123,2,1123,1123,2,2,0,0,0,0
+90,EntityNode,Federalist Party (United States),1123,3,1123,1123,3,2,1,0,1,0
+91,EntityNode,United States presidential nominating convention,1123,2,1123,1123,2,2,0,0,0,0
+92,EntityNode,William Jennings Bryan,1123,3,1123,1123,3,2,2,0,1,0
+93,EntityNode,presidential nominating conventions,1123,2,1123,1123,2,2,0,0,0,0
+94,EntityNode,Wendell Willkie,1123,2,1123,1123,2,2,0,0,0,0
+95,EntityNode,presidential primary elections and caucuses,1123,2,1123,1123,2,2,0,0,0,0
+96,EntityNode,George Clinton (vice president),1123,3,1123,1123,3,2,2,0,1,0
+97,EntityNode,Democratic-Republican,1123,3,1123,1123,3,2,1,0,1,0
+98,EntityNode,political party,1123,2,1123,1123,2,2,0,0,0,0
+99,EntityNode,"United States presidential election, 1900",1123,3,1123,1123,3,2,1,0,1,0
+100,EntityNode,United States Constitution,1123,3,1123,1123,3,2,1,0,1,0
+101,EntityNode,Adlai Stevenson,1123,3,1123,1123,3,2,2,0,1,0
+102,EntityNode,Thomas Jefferson,1123,3,1123,1123,3,2,1,0,1,0
+103,EntityNode,primary election,1123,2,1123,1123,2,2,0,0,0,0
+104,EntityNode,James Monroe,1123,2,1123,1123,2,2,0,0,0,0
+105,EntityNode,Nullifier,1123,2,1123,1123,2,2,0,0,0,0
+106,EntityNode,Thomas Pinckney,1123,2,1123,1123,2,2,0,0,0,0
+107,EntityNode,Aaron Burr,1123,3,1123,1123,3,2,2,0,1,0
+108,EntityNode,William Wirt,1123,3,1123,1123,3,2,2,0,1,0
+109,EntityNode,Samuel Adams,1123,3,1123,1123,3,2,1,0,1,0
+110,EntityNode,Anti-Masonic,1123,3,1123,1123,3,2,1,0,1,0
+111,EntityNode,"United States presidential election, 1836",1123,3,1123,1123,3,2,1,0,1,0
+112,EntityNode,Martin Van Buren,1123,3,1123,1123,3,2,3,0,1,0
+113,EntityNode,Oliver Ellsworth,1123,3,1123,1123,3,2,1,0,1,0
+114,EntityNode,William H. Crawford,1123,3,1123,1123,3,2,2,0,1,0
+115,EntityNode,William Henry Harrison,1123,3,1123,1123,3,2,2,0,1,0
+116,EntityNode,Whig Party (United States),1123,3,1123,1123,3,2,1,0,1,0
+117,EntityNode,Hugh Lawson White,1123,3,1123,1123,3,2,3,0,1,0
+118,EntityNode,"United States presidential election, 1828",1123,3,1123,1123,3,2,1,0,1,0
+119,EntityNode,Daniel Webster,1123,3,1123,1123,3,2,2,0,1,0
+120,EntityNode,Willie Person Mangum,1123,3,1123,1123,3,2,2,0,1,0
+121,EntityNode,PollyVote,1123,2,1123,1123,2,2,0,0,0,0
+122,EntityNode,National Republican,1123,3,1123,1123,3,2,1,0,1,0
+123,EntityNode,"United States presidential election, 1832",1123,3,1123,1123,3,2,1,0,1,0
+124,EntityNode,"United States presidential election, 1840",1123,3,1123,1123,3,2,1,0,1,0
+125,EntityNode,Winfield Scott Hancock,1123,3,1123,1123,3,2,3,0,1,0
+126,EntityNode,Charles Cotesworth Pinckney,1123,3,1123,1123,3,2,1,0,1,0
+127,EntityNode,"United States presidential election, 1820",1123,3,1123,1123,3,2,1,0,1,0
+128,EntityNode,John Floyd,1123,3,1123,1123,3,2,2,0,1,0
+129,EntityNode,"United States presidential election, 1844",1123,3,1123,1123,3,2,1,0,1,0
+130,EntityNode,caucus,1123,3,1123,1123,3,2,1,0,1,0
+131,EntityNode,Iowa,1123,3,1123,1123,3,2,1,0,1,0
+132,EntityNode,John G. Schmitz,1123,3,1123,1123,3,2,2,0,1,0
+133,EntityNode,U.S. territories,1123,2,1123,1123,2,2,0,0,0,0
+134,EntityNode,New Hampshire,1123,3,1123,1123,3,2,1,0,1,0
+135,EntityNode,"United States presidential election, 1848",1123,3,1123,1123,3,2,1,0,1,0
+136,EntityNode,"United States presidential election, 1852",1123,3,1123,1123,3,2,1,0,1,0
+137,EntityNode,Democratic,1123,2,1123,1123,2,2,0,0,0,0
+138,EntityNode,"United States presidential election, 1856",1123,3,1123,1123,3,2,1,0,1,0
+139,EntityNode,"United States presidential election, 1860",1123,3,1123,1123,3,2,1,0,1,0
+140,EntityNode,ticket,1123,3,1123,1123,3,2,1,0,1,0
+141,EntityNode,"United States presidential election, 1864",1123,3,1123,1123,3,2,1,0,1,0
+142,EntityNode,superdelegate,1123,2,1123,1123,2,2,0,0,0,0
+143,EntityNode,"United States presidential election, 1868",1123,3,1123,1123,3,2,1,0,1,0
+144,EntityNode,"United States presidential election, 1872",1123,3,1123,1123,3,2,1,0,1,0
+145,EntityNode,District of Columbia,1123,3,1123,1123,3,2,2,0,1,0
+146,EntityNode,Election Day,1123,2,1123,1123,2,2,0,0,0,0
+147,EntityNode,"United States presidential election, 1880",1123,3,1123,1123,3,2,1,0,1,0
+148,EntityNode,sex,1123,3,1123,1123,3,2,1,0,1,0
+149,EntityNode,"United States presidential election, 1884",1123,3,1123,1123,3,2,1,0,1,0
+150,EntityNode,race or color,1123,3,1123,1123,3,2,2,0,1,0
+151,EntityNode,"United States presidential election, 1816",1123,3,1123,1123,3,2,1,0,1,0
+152,EntityNode,age for citizens eighteen years or older,1123,3,1123,1123,3,2,2,0,1,0
+153,EntityNode,"United States presidential election, 1904",1123,3,1123,1123,3,2,1,0,1,0
+154,EntityNode,"United States presidential election, 1908",1123,3,1123,1123,3,2,1,0,1,0
+155,EntityNode,ballot access,1123,3,1123,1123,3,2,2,0,1,0
+156,EntityNode,"United States presidential election, 1912",1123,3,1123,1123,3,2,1,0,1,0
+157,EntityNode,write-in candidate,1123,3,1123,1123,3,2,1,0,1,0
+158,EntityNode,"United States presidential election, 1916",1123,3,1123,1123,3,2,1,0,1,0
+159,EntityNode,Mickey Mouse,1123,2,1123,1123,2,2,0,0,0,0
+160,EntityNode,"United States presidential election, 1920",1123,3,1123,1123,3,2,1,0,1,0
+161,EntityNode,Stephen Colbert,1123,3,1123,1123,3,2,2,0,1,0
+162,EntityNode,United States Congress,1123,3,1123,1123,3,2,1,0,1,0
+163,EntityNode,Millard Fillmore,1123,3,1123,1123,3,2,1,0,1,0
+164,EntityNode,President of the United States,1123,2,1123,1123,2,2,0,0,0,0
+165,EntityNode,Electoral College (United States),1123,2,1123,1123,2,2,0,0,0,0
+166,EntityNode,James Buchanan,1123,3,1123,1123,3,2,1,0,1,0
+167,EntityNode,Al Gore,1123,3,1123,1123,3,2,1,0,1,0
+168,EntityNode,Maine,1123,2,1123,1123,2,2,0,0,0,0
+169,EntityNode,Vice President of the United States,1123,3,1123,1123,3,2,1,0,1,0
+170,EntityNode,plurality voting system,1123,3,1123,1123,3,2,1,0,1,0
+171,EntityNode,American Party,1123,3,1123,1123,3,2,1,0,1,0
+172,EntityNode,Green,1123,3,1123,1123,3,2,1,0,1,0
+173,EntityNode,United States,1123,2,1123,1123,2,2,0,0,0,0
+174,EntityNode,James Madison,1123,3,1123,1123,3,2,1,0,1,0
+175,EntityNode,primary elections,1123,2,1123,1123,2,2,0,0,0,0
+176,EntityNode,Greenback,1123,3,1123,1123,3,2,1,0,1,0
+177,EntityNode,Elections in the United States,1123,2,1123,1123,2,2,0,0,0,0
+178,EntityNode,indirect election,1123,3,1123,1123,3,2,1,0,1,0
+179,EntityNode,faithless elector,1123,3,1123,1123,3,2,2,0,1,0
+180,EntityNode,Nebraska,1123,3,1123,1123,3,2,1,0,1,0
+181,EntityNode,nominating conventions,1123,2,1123,1123,2,2,0,0,0,0
+182,EntityNode,Twelfth Amendment to the United States Constitution,1123,3,1123,1123,3,2,1,0,1,0
+183,EntityNode,President of the Senate,1123,2,1123,1123,2,2,0,0,0,0
+184,EntityNode,political parties,1123,2,1123,1123,2,2,0,0,0,0
+185,EntityNode,Abraham Lincoln,1123,3,1123,1123,3,2,2,0,1,0
+186,EntityNode,Article Two of the United States Constitution,1123,3,1123,1123,3,2,2,0,1,0
+187,EntityNode,joint session,1123,3,1123,1123,3,2,2,0,1,0
+188,EntityNode,U.S. state,1123,3,1123,1123,3,2,1,0,1,0
+189,EntityNode,John C. Breckinridge,1123,3,1123,1123,3,2,1,0,1,0
+190,EntityNode,Southern Democrat,1123,3,1123,1123,3,2,2,0,1,0
+191,EntityNode,Representatives,1123,2,1123,1123,2,2,0,0,0,0
+192,EntityNode,Federal government of the United States,1123,2,1123,1123,2,2,0,0,0,0
+193,EntityNode,John Bell,1123,3,1123,1123,3,2,2,0,1,0
+194,EntityNode,John St. John,1123,3,1123,1123,3,2,1,0,1,0
+195,EntityNode,Governor,1123,3,1123,1123,3,2,1,0,1,0
+196,EntityNode,23rd Amendment,1123,3,1123,1123,3,2,1,0,1,0
+197,EntityNode,Constitutional Union,1123,3,1123,1123,3,2,1,0,1,0
+198,EntityNode,John McCain,1123,3,1123,1123,3,2,2,0,1,0
+199,EntityNode,Benjamin Butler,1123,3,1123,1123,3,2,2,0,1,0
+200,EntityNode,DeWitt Clinton,1123,3,1123,1123,3,2,2,0,1,0
+201,EntityNode,Northern Democrat,1123,3,1123,1123,3,2,2,0,1,0
+202,EntityNode,Ronald Reagan,1123,3,1123,1123,3,2,2,0,1,0
+203,EntityNode,"Washington, D.C.",1123,3,1123,1123,3,2,2,0,1,0
+204,EntityNode,Secretary of State,1123,3,1123,1123,3,2,1,0,1,0
+205,EntityNode,Libertarian,1123,3,1123,1123,3,2,1,0,1,0
+206,EntityNode,National Union Party (United States),1123,3,1123,1123,3,2,1,0,1,0
+207,EntityNode,James G. Blaine,1123,2,1123,1123,2,2,0,0,0,0
+208,EntityNode,Jimmy Carter,1123,3,1123,1123,3,2,1,0,1,0
+209,EntityNode,George B. McClellan,1123,3,1123,1123,3,2,1,0,1,0
+210,EntityNode,state legislature,1123,3,1123,1123,3,2,1,0,1,0
+211,EntityNode,Alexander Hamilton,1123,3,1123,1123,3,2,1,0,1,0
+212,EntityNode,Rufus King,1123,3,1123,1123,3,2,1,0,1,0
+213,EntityNode,unpledged elector,1123,3,1123,1123,3,2,1,0,1,0
+214,EntityNode,famous 1804 duel,1123,3,1123,1123,3,2,2,0,1,0
+215,EntityNode,Bill Clinton,1123,3,1123,1123,3,2,2,0,1,0
+216,EntityNode,John Woolley,1123,3,1123,1123,3,2,1,0,1,0
+217,EntityNode,George H. W. Bush,1123,3,1123,1123,3,2,1,0,1,0
+218,EntityNode,Theodore Roosevelt,1123,3,1123,1123,3,2,1,0,1,0
+219,EntityNode,Michael Dukakis,1123,3,1123,1123,3,2,1,0,1,0
+220,EntityNode,Alton B. Parker,1123,3,1123,1123,3,2,2,0,1,0
+221,EntityNode,Eugene V. Debs,1123,2,1123,1123,2,2,0,0,0,0
+222,EntityNode,Silas Swallow,1123,3,1123,1123,3,2,1,0,1,0
+223,EntityNode,Ross Perot,1123,3,1123,1123,3,2,2,0,1,0
+224,EntityNode,Barry Goldwater,1123,2,1123,1123,2,2,0,0,0,0
+225,EntityNode,United States presidential election debates,1123,2,1123,1123,2,2,0,0,0,0
+226,EntityNode,William Howard Taft,1123,3,1123,1123,3,2,3,0,1,0
+227,EntityNode,Bob Dole,1123,3,1123,1123,3,2,2,0,1,0
+228,EntityNode,Reform,1123,3,1123,1123,3,2,1,0,1,0
+229,EntityNode,Eugene Chafin,1123,3,1123,1123,3,2,1,0,1,0
+230,EntityNode,Woodrow Wilson,1123,3,1123,1123,3,2,2,0,1,0
+231,EntityNode,John F. Kennedy,1123,3,1123,1123,3,2,1,0,1,0
+232,EntityNode,George McGovern,1123,3,1123,1123,3,2,1,0,1,0
+233,EntityNode,James M. Cox,1123,3,1123,1123,3,2,1,0,1,0
+234,EntityNode,James K. Polk,1123,3,1123,1123,3,2,1,0,1,0
+235,EntityNode,Texas,1123,2,1123,1123,2,2,0,0,0,0
+236,EntityNode,American,1123,3,1123,1123,3,2,1,0,1,0
+237,EntityNode,California,1123,3,1123,1123,3,2,1,0,1,0
+238,EntityNode,Richard Nixon,1123,3,1123,1123,3,2,2,0,1,0
+239,EntityNode,Georgia,1123,3,1123,1123,3,2,1,0,1,0
+240,EntityNode,Bull-Moose,1123,3,1123,1123,3,2,1,0,1,0
+241,EntityNode,Mason-Dixon Line,1123,3,1123,1123,3,2,3,0,1,0
+242,EntityNode,Harry F. Byrd,1123,3,1123,1123,3,2,1,0,1,0
+243,EntityNode,Liberty,1123,2,1123,1123,2,2,0,0,0,0
+244,EntityNode,James G. Birney,1123,2,1123,1123,2,2,0,0,0,0
+245,EntityNode,Franklin Pierce,1123,3,1123,1123,3,2,1,0,1,0
+246,EntityNode,Zachary Taylor,1123,3,1123,1123,3,2,1,0,1,0
+247,EntityNode,Calvin Coolidge,1123,3,1123,1123,3,2,1,0,1,0
+248,EntityNode,Lewis Cass,1123,3,1123,1123,3,2,1,0,1,0
+249,EntityNode,Gerald Ford,1123,3,1123,1123,3,2,2,0,1,0
+250,EntityNode,Arkansas,1123,2,1123,1123,2,2,0,0,0,0
+251,EntityNode,Lyndon B. Johnson,1123,3,1123,1123,3,2,2,0,1,0
+252,EntityNode,Warren G. Harding,1123,3,1123,1123,3,2,1,0,1,0
+253,EntityNode,John W. Davis,1123,3,1123,1123,3,2,1,0,1,0
+254,EntityNode,"Robert M. La Follette, Sr.",1123,3,1123,1123,3,2,1,0,1,0
+255,EntityNode,Free Soil,1123,3,1123,1123,3,2,2,0,1,0
+256,EntityNode,Stephen Douglas,1123,3,1123,1123,3,2,1,0,1,0
+257,EntityNode,Charles Evans Hughes,1123,2,1123,1123,2,2,0,0,0,0
+258,EntityNode,Hubert Humphrey,1123,3,1123,1123,3,2,1,0,1,0
+259,EntityNode,John B. Anderson,1123,3,1123,1123,3,2,2,0,1,0
+260,EntityNode,Edward Clark,1123,3,1123,1123,3,2,2,0,1,0
+261,EntityNode,Allan L. Benson,1123,3,1123,1123,3,2,2,0,1,0
+262,EntityNode,Al Smith,1123,3,1123,1123,3,2,1,0,1,0
+263,EntityNode,George Wallace,1123,2,1123,1123,2,2,0,0,0,0
+264,EntityNode,Winfield Scott,1123,3,1123,1123,3,2,2,0,1,0
+265,EntityNode,American Independent,1123,3,1123,1123,3,2,1,0,1,0
+266,EntityNode,James Hanly,1123,2,1123,1123,2,2,0,0,0,0
+267,EntityNode,John P. Hale,1123,3,1123,1123,3,2,2,0,1,0
+268,EntityNode,Ulysses S. Grant,1123,3,1123,1123,3,2,1,0,1,0
+269,EntityNode,Walter Mondale,1123,3,1123,1123,3,2,1,0,1,0
+270,EntityNode,Horatio Seymour,1123,3,1123,1123,3,2,2,0,1,0
+271,EntityNode,Horace Greeley,1123,2,1123,1123,2,2,0,0,0,0
+272,EntityNode,Clinton B. Fisk,1123,3,1123,1123,3,2,2,0,1,0
+273,EntityNode,Liberal Republican,1123,3,1123,1123,3,2,1,0,1,0
+274,EntityNode,Thomas A. Hendricks,1123,2,1123,1123,2,2,0,0,0,0
+275,EntityNode,B. Gratz Brown,1123,3,1123,1123,3,2,2,0,1,0
+276,EntityNode,Federal Election Commission,1123,2,1123,1123,2,2,0,0,0,0
+277,EntityNode,Rutherford B. Hayes,1123,3,1123,1123,3,2,1,0,1,0
+278,EntityNode,Charles J. Jenkins,1123,2,1123,1123,2,2,0,0,0,0
+279,EntityNode,Samuel J. Tilden,1123,3,1123,1123,3,2,2,0,1,0
+280,EntityNode,Office of the Clerk,1123,3,1123,1123,3,2,1,0,1,0
+281,EntityNode,Voter turnout,1123,3,1123,1123,3,2,2,0,1,0
+282,EntityNode,James A. Garfield,1123,3,1123,1123,3,2,1,0,1,0
+283,EntityNode,Cochrane Theatre,123,2,123,123,2,2,0,0,0,0
+284,EntityNode,Cochrane (disambiguation),123,1,123,123,1,1,0,0,0,0
+285,EntityNode,"Cochrane, Wisconsin",123,3,123,123,3,2,1,0,1,0
+286,EntityNode,"Cochrane, Chile",123,3,123,123,3,2,1,0,1,0
+287,EntityNode,Zefram Cochrane,123,3,123,123,3,2,1,0,1,0
+288,EntityNode,Kuala Lumpur,123,3,123,123,3,2,2,0,1,0
+289,EntityNode,Alexander Cochrane,123,2,123,123,2,2,0,0,0,0
+290,EntityNode,Star Trek,123,3,123,123,3,2,2,0,1,0
+291,EntityNode,John Cochrane,123,3,123,123,3,2,1,0,1,0
+292,EntityNode,Cochrane Defense,123,2,123,123,2,2,0,0,0,0
+293,EntityNode,"Cochrane, Alberta",123,3,123,123,3,2,1,0,1,0
+294,EntityNode,Cochrane,123,2,123,123,2,2,0,0,0,0
+295,EntityNode,Cochrane Street,123,3,123,123,3,2,1,0,1,0
+296,EntityNode,Battle of New Orleans,123,3,123,123,3,2,1,0,1,0
+297,EntityNode,Warp drive,123,3,123,123,3,2,2,0,1,0
+298,EntityNode,"Cochrane Lake, Alberta",123,3,123,123,3,2,2,0,1,0
+299,EntityNode,Ralph Cochrane,123,3,123,123,3,2,1,0,1,0
+300,EntityNode,"Cochrane District, Ontario",123,3,123,123,3,2,2,0,1,0
+301,EntityNode,Johnnie Cochran,123,3,123,123,3,2,1,0,1,0
+302,EntityNode,Cochrane River,123,3,123,123,3,2,1,0,1,0
+303,EntityNode,War of 1812,123,3,123,123,3,2,2,0,1,0
+304,EntityNode,Chess,123,3,123,123,3,2,1,0,1,0
+305,EntityNode,Cochrane Collaboration,123,2,123,123,2,2,0,0,0,0
+306,EntityNode,"Cochrane, Unorganized, North Part, Ontario",123,3,123,123,3,2,3,0,1,0
+307,EntityNode,USS Cochrane (DDG-21),123,3,123,123,3,2,2,0,1,0
+308,EntityNode,"Cochrane, Ontario",123,3,123,123,3,2,1,0,1,0
+309,EntityNode,OJ Simpson,123,3,123,123,3,2,1,0,1,0
+310,EntityNode,Cochrane Lake,123,3,123,123,3,2,1,0,1,0
+311,EntityNode,Thomas Cochrane,123,2,123,123,2,2,0,0,0,0
+312,TermNode,cochran,123,2,123,123,1,2,0,1,0,1
+313,TermNode,scottish,123,1,123,123,1,1,0,0,0,0
+314,TermNode,surnam,123,1,123,123,1,1,0,0,0,0
+315,TermNode,famou,1217,2,1217,1217,2,2,0,0,0,0
+316,TermNode,peopl,123,1,123,123,1,1,0,0,0,0
+317,TermNode,alexand,1217,2,1217,1217,2,2,0,0,0,0
+318,TermNode,british,123,1,123,123,1,1,0,0,0,0
+319,TermNode,command,123,1,123,123,1,1,0,0,0,0
+320,TermNode,battl,123,1,123,123,1,1,0,0,0,0
+321,TermNode,new,1217,4,1217,1217,2,4,0,2,0,2
+322,TermNode,orlean,123,1,123,123,1,1,0,0,0,0
+323,TermNode,war,123,2,123,123,1,2,0,1,0,1
+324,TermNode,1812,1217,4,1217,1217,2,4,0,2,0,2
+325,TermNode,john,1217,20,1217,1217,2,20,0,18,0,18
+326,TermNode,chess,123,2,123,123,1,2,0,1,0,1
+327,TermNode,player,123,1,123,123,1,1,0,0,0,0
+328,TermNode,johnni,123,1,123,123,1,1,0,0,0,0
+329,TermNode,high,123,1,123,123,1,1,0,0,0,0
+330,TermNode,profil,123,1,123,123,1,1,0,0,0,0
+331,TermNode,attornei,123,1,123,123,1,1,0,0,0,0
+332,TermNode,repres,1217,2,1217,1217,2,2,0,0,0,0
+333,TermNode,simpson,123,2,123,123,1,2,0,1,0,1
+334,TermNode,ralph,1217,4,1217,1217,2,4,0,2,0,2
+335,TermNode,world,1217,2,1217,1217,2,2,0,0,0,0
+336,TermNode,air,123,1,123,123,1,1,0,0,0,0
+337,TermNode,marshal,123,1,123,123,1,1,0,0,0,0
+338,TermNode,thoma,1217,2,1217,1217,2,2,0,0,0,0
+339,TermNode,naval,123,1,123,123,1,1,0,0,0,0
+340,TermNode,captain,123,1,123,123,1,1,0,0,0,0
+341,TermNode,napoleon,123,1,123,123,1,1,0,0,0,0
+342,TermNode,zefram,123,2,123,123,1,2,0,1,0,1
+343,TermNode,inventor,123,1,123,123,1,1,0,0,0,0
+344,TermNode,warp,123,2,123,123,1,2,0,1,0,1
+345,TermNode,drive,123,2,123,123,1,2,0,1,0,1
+346,TermNode,star,123,2,123,123,1,2,0,1,0,1
+347,TermNode,trek,123,2,123,123,1,2,0,1,0,1
+348,TermNode,well,1217,2,1217,1217,2,2,0,0,0,0
+349,TermNode,numer,1217,2,1217,1217,2,2,0,0,0,0
+350,TermNode,starship,123,1,123,123,1,1,0,0,0,0
+351,TermNode,planet,123,1,123,123,1,1,0,0,0,0
+352,TermNode,univers,1217,2,1217,1217,2,2,0,0,0,0
+353,TermNode,unit,1217,2,1217,1217,2,2,0,0,0,0
+354,TermNode,measur,123,1,123,123,1,1,0,0,0,0
+355,TermNode,name,1217,2,1217,1217,2,2,0,0,0,0
+356,TermNode,mai,1217,2,1217,1217,2,2,0,0,0,0
+357,TermNode,also,1217,2,1217,1217,2,2,0,0,0,0
+358,TermNode,mean,1217,2,1217,1217,2,2,0,0,0,0
+359,TermNode,follow,1217,2,1217,1217,2,2,0,0,0,0
+360,TermNode,place,1217,2,1217,1217,2,2,0,0,0,0
+361,TermNode,alberta,123,3,123,123,1,3,0,2,0,2
+362,TermNode,canada,123,1,123,123,1,1,0,0,0,0
+363,TermNode,lake,123,3,123,123,1,3,0,2,0,2
+364,TermNode,district,1217,4,1217,1217,2,4,0,2,0,2
+365,TermNode,ontario,123,4,123,123,1,4,0,3,0,3
+366,TermNode,unorgan,123,1,123,123,1,1,0,0,0,0
+367,TermNode,north,123,2,123,123,1,2,0,1,0,1
+368,TermNode,part,1217,3,1217,1217,2,3,0,1,0,1
+369,TermNode,wisconsin,123,2,123,123,1,2,0,1,0,1
+370,TermNode,state,1217,6,1217,1217,2,6,0,4,0,4
+371,TermNode,chile,123,2,123,123,1,2,0,1,0,1
+372,TermNode,river,123,2,123,123,1,2,0,1,0,1
+373,TermNode,dominica,123,1,123,123,1,1,0,0,0,0
+374,TermNode,street,123,2,123,123,1,2,0,1,0,1
+375,TermNode,hong,123,1,123,123,1,1,0,0,0,0
+376,TermNode,kong,123,1,123,123,1,1,0,0,0,0
+377,TermNode,jalan,123,1,123,123,1,1,0,0,0,0
+378,TermNode,kampung,123,1,123,123,1,1,0,0,0,0
+379,TermNode,pandan,123,1,123,123,1,1,0,0,0,0
+380,TermNode,kuala,123,2,123,123,1,2,0,1,0,1
+381,TermNode,lumpur,123,2,123,123,1,2,0,1,0,1
+382,TermNode,see,1217,2,1217,1217,2,2,0,0,0,0
+383,TermNode,collabor,123,1,123,123,1,1,0,0,0,0
+384,TermNode,review,123,1,123,123,1,1,0,0,0,0
+385,TermNode,biomed,123,1,123,123,1,1,0,0,0,0
+386,TermNode,trial,123,1,123,123,1,1,0,0,0,0
+387,TermNode,result,1217,2,1217,1217,2,2,0,0,0,0
+388,TermNode,research,123,1,123,123,1,1,0,0,0,0
+389,TermNode,theatr,123,1,123,123,1,1,0,0,0,0
+390,TermNode,uss,123,2,123,123,1,2,0,1,0,1
+391,TermNode,ddg,123,2,123,123,1,2,0,1,0,1
+392,TermNode,defens,123,1,123,123,1,1,0,0,0,0
+393,TermNode,page,123,1,123,123,1,1,0,0,0,0
+394,TermNode,list,1217,4,1217,1217,2,4,0,2,0,2
+395,TermNode,articl,1217,2,1217,1217,2,2,0,0,0,0
+396,TermNode,associ,123,1,123,123,1,1,0,0,0,0
+397,TermNode,titl,123,1,123,123,1,1,0,0,0,0
+398,TermNode,intern,123,1,123,123,1,1,0,0,0,0
+399,TermNode,linkl,123,1,123,123,1,1,0,0,0,0
+400,TermNode,wish,123,1,123,123,1,1,0,0,0,0
+401,TermNode,chang,123,1,123,123,1,1,0,0,0,0
+402,TermNode,link,1217,2,1217,1217,2,2,0,0,0,0
+403,TermNode,point,1217,2,1217,1217,2,2,0,0,0,0
+404,TermNode,directli,1217,2,1217,1217,2,2,0,0,0,0
+405,TermNode,intend,123,1,123,123,1,1,0,0,0,0
+406,TermNode,current,1123,1,1123,1123,1,1,0,0,0,0
+407,TermNode,presidenti,1123,1,1123,1123,1,1,0,0,0,0
+408,TermNode,elect,1123,1,1123,1123,1,1,0,0,0,0
+409,TermNode,2008,1123,2,1123,1123,1,2,0,1,0,1
+410,TermNode,presid,1123,1,1123,1123,1,1,0,0,0,0
+411,TermNode,vice,1123,3,1123,1123,1,3,0,2,0,2
+412,TermNode,indirect,1123,2,1123,1123,1,2,0,1,0,1
+413,TermNode,occur,1123,1,1123,1123,1,1,0,0,0,0
+414,TermNode,count,1123,1,1123,1123,1,1,0,0,0,0
+415,TermNode,begin,1123,1,1123,1123,1,1,0,0,0,0
+416,TermNode,year,1123,1,1123,1123,1,1,0,0,0,0
+417,TermNode,1792,1123,2,1123,1123,1,2,0,1,0,1
+418,TermNode,dai,1123,1,1123,1123,1,1,0,0,0,0
+419,TermNode,tuesdai,1123,1,1123,1123,1,1,0,0,0,0
+420,TermNode,first,1123,1,1123,1123,1,1,0,0,0,0
+421,TermNode,mondai,1123,1,1123,1123,1,1,0,0,0,0
+422,TermNode,novemb,1123,1,1123,1123,1,1,0,0,0,0
+423,TermNode,voter,1123,2,1123,1123,1,2,0,1,0,1
+424,TermNode,cast,1123,1,1123,1123,1,1,0,0,0,0
+425,TermNode,ballot,1123,2,1123,1123,1,2,0,1,0,1
+426,TermNode,slate,1123,1,1123,1123,1,1,0,0,0,0
+427,TermNode,elector,1123,3,1123,1123,1,3,0,2,0,2
+428,TermNode,u.,1123,1,1123,1123,1,1,0,0,0,0
+429,TermNode,colleg,1123,1,1123,1123,1,1,0,0,0,0
+430,TermNode,turn,1123,1,1123,1123,1,1,0,0,0,0
+431,TermNode,recent,1123,1,1123,1123,1,1,0,0,0,0
+432,TermNode,2004,1123,2,1123,1123,1,2,0,1,0,1
+433,TermNode,next,1123,1,1123,1123,1,1,0,0,0,0
+434,TermNode,schedul,1123,1,1123,1123,1,1,0,0,0,0
+435,TermNode,process,1123,1,1123,1123,1,1,0,0,0,0
+436,TermNode,regul,1123,1,1123,1123,1,1,0,0,0,0
+437,TermNode,combin,1123,1,1123,1123,1,1,0,0,0,0
+438,TermNode,feder,1123,1,1123,1123,1,1,0,0,0,0
+439,TermNode,law,1123,1,1123,1123,1,1,0,0,0,0
+440,TermNode,alloc,1123,1,1123,1123,1,1,0,0,0,0
+441,TermNode,number,1123,1,1123,1123,1,1,0,0,0,0
+442,TermNode,equal,1123,1,1123,1123,1,1,0,0,0,0
+443,TermNode,senat,1123,1,1123,1123,1,1,0,0,0,0
+444,TermNode,congress,1123,2,1123,1123,1,2,0,1,0,1
+445,TermNode,addition,1123,1,1123,1123,1,1,0,0,0,0
+446,TermNode,washington,1123,3,1123,1123,1,3,0,2,0,2
+447,TermNode,d.c,1123,2,1123,1123,1,2,0,1,0,1
+448,TermNode,given,1123,1,1123,1123,1,1,0,0,0,0
+449,TermNode,held,1123,1,1123,1123,1,1,0,0,0,0
+450,TermNode,smallest,1123,1,1123,1123,1,1,0,0,0,0
+451,TermNode,territori,1123,1,1123,1123,1,1,0,0,0,0
+452,TermNode,constitut,1123,1,1123,1123,1,1,0,0,0,0
+453,TermNode,legislatur,1123,1,1123,1123,1,1,0,0,0,0
+454,TermNode,allow,1123,1,1123,1123,1,1,0,0,0,0
+455,TermNode,design,1123,1,1123,1123,1,1,0,0,0,0
+456,TermNode,method,1123,1,1123,1123,1,1,0,0,0,0
+457,TermNode,choos,1123,1,1123,1123,1,1,0,0,0,0
+458,TermNode,thu,1123,1,1123,1123,1,1,0,0,0,0
+459,TermNode,popular,1123,1,1123,1123,1,1,0,0,0,0
+460,TermNode,vote,1123,1,1123,1123,1,1,0,0,0,0
+461,TermNode,conduct,1123,1,1123,1123,1,1,0,0,0,0
+462,TermNode,variou,1123,1,1123,1123,1,1,0,0,0,0
+463,TermNode,govern,1123,1,1123,1123,1,1,0,0,0,0
+464,TermNode,chosen,1123,1,1123,1123,1,1,0,0,0,0
+465,TermNode,anyon,1123,1,1123,1123,1,1,0,0,0,0
+466,TermNode,rare,1123,1,1123,1123,1,1,0,0,0,0
+467,TermNode,except,1123,1,1123,1123,1,1,0,0,0,0
+468,TermNode,like,1123,1,1123,1123,1,1,0,0,0,0
+469,TermNode,unpledg,1123,1,1123,1123,1,1,0,0,0,0
+470,TermNode,faithless,1123,2,1123,1123,1,2,0,1,0,1
+471,TermNode,candid,1123,1,1123,1123,1,1,0,0,0,0
+472,TermNode,certifi,1123,1,1123,1123,1,1,0,0,0,0
+473,TermNode,earli,1123,1,1123,1123,1,1,0,0,0,0
+474,TermNode,januari,1123,1,1123,1123,1,1,0,0,0,0
+475,TermNode,final,1123,1,1123,1123,1,1,0,0,0,0
+476,TermNode,judg,1123,1,1123,1123,1,1,0,0,0,0
+477,TermNode,last,1123,1,1123,1123,1,1,0,0,0,0
+478,TermNode,seriou,1123,1,1123,1123,1,1,0,0,0,0
+479,TermNode,disput,1123,1,1123,1123,1,1,0,0,0,0
+480,TermNode,2000,1123,2,1123,1123,1,2,0,1,0,1
+481,TermNode,nomin,1123,1,1123,1123,1,1,0,0,0,0
+482,TermNode,includ,1123,1,1123,1123,1,1,0,0,0,0
+483,TermNode,primari,1123,1,1123,1123,1,1,0,0,0,0
+484,TermNode,convent,1123,1,1123,1123,1,1,0,0,0,0
+485,TermNode,never,1123,1,1123,1123,1,1,0,0,0,0
+486,TermNode,specifi,1123,1,1123,1123,1,1,0,0,0,0
+487,TermNode,instead,1123,1,1123,1123,1,1,0,0,0,0
+488,TermNode,develop,1123,1,1123,1123,1,1,0,0,0,0
+489,TermNode,polit,1123,1,1123,1123,1,1,0,0,0,0
+490,TermNode,parti,1123,1,1123,1123,1,1,0,0,0,0
+491,TermNode,histori,1123,1,1123,1123,1,1,0,0,0,0
+492,TermNode,two,1123,2,1123,1123,1,2,0,1,0,1
+493,TermNode,origin,1123,1,1123,1123,1,1,0,0,0,0
+494,TermNode,establish,1123,1,1123,1123,1,1,0,0,0,0
+495,TermNode,compromis,1123,1,1123,1123,1,1,0,0,0,0
+496,TermNode,framer,1123,1,1123,1123,1,1,0,0,0,0
+497,TermNode,want,1123,1,1123,1123,1,1,0,0,0,0
+498,TermNode,prefer,1123,1,1123,1123,1,1,0,0,0,0
+499,TermNode,nation,1123,1,1123,1123,1,1,0,0,0,0
+500,TermNode,size,1123,1,1123,1123,1,1,0,0,0,0
+501,TermNode,deleg,1123,1,1123,1123,1,1,0,0,0,0
+502,TermNode,hous,1123,1,1123,1123,1,1,0,0,0,0
+503,TermNode,ratif,1123,1,1123,1123,1,1,0,0,0,0
+504,TermNode,23rd,1123,2,1123,1123,1,2,0,1,0,1
+505,TermNode,amend,1123,1,1123,1123,1,1,0,0,0,0
+506,TermNode,1961,1123,1,1123,1123,1,1,0,0,0,0
+507,TermNode,columbia,1123,2,1123,1123,1,2,0,1,0,1
+508,TermNode,grant,1123,2,1123,1123,1,2,0,1,0,1
+509,TermNode,least,1123,1,1123,1123,1,1,0,0,0,0
+510,TermNode,popul,1123,1,1123,1123,1,1,0,0,0,0
+511,TermNode,howev,1123,1,1123,1123,1,1,0,0,0,0
+512,TermNode,system,1123,2,1123,1123,1,2,0,1,0,1
+513,TermNode,could,1123,1,1123,1123,1,1,0,0,0,0
+514,TermNode,differ,1123,1,1123,1123,1,1,0,0,0,0
+515,TermNode,highest,1123,1,1123,1123,1,1,0,0,0,0
+516,TermNode,becam,1123,1,1123,1123,1,1,0,0,0,0
+517,TermNode,second,1123,1,1123,1123,1,1,0,0,0,0
+518,TermNode,present,1123,1,1123,1123,1,1,0,0,0,0
+519,TermNode,problem,1123,1,1123,1123,1,1,0,0,0,0
+520,TermNode,1800,1123,2,1123,1123,1,2,0,1,0,1
+521,TermNode,aaron,1123,2,1123,1123,1,2,0,1,0,1
+522,TermNode,burr,1123,2,1123,1123,1,2,0,1,0,1
+523,TermNode,receiv,1123,1,1123,1123,1,1,0,0,0,0
+524,TermNode,jefferson,1123,2,1123,1123,1,2,0,1,0,1
+525,TermNode,challeng,1123,1,1123,1123,1,1,0,0,0,0
+526,TermNode,jefferson',1123,1,1123,1123,1,1,0,0,0,0
+527,TermNode,offic,1123,1,1123,1123,1,1,0,0,0,0
+528,TermNode,end,1123,1,1123,1123,1,1,0,0,0,0
+529,TermNode,due,1123,1,1123,1123,1,1,0,0,0,0
+530,TermNode,hamilton,1123,2,1123,1123,1,2,0,1,0,1
+531,TermNode,influenc,1123,1,1123,1123,1,1,0,0,0,0
+532,TermNode,creat,1123,1,1123,1123,1,1,0,0,0,0
+533,TermNode,deep,1123,1,1123,1123,1,1,0,0,0,0
+534,TermNode,rivalri,1123,1,1123,1123,1,1,0,0,0,0
+535,TermNode,1804,1123,3,1123,1123,1,3,0,2,0,2
+536,TermNode,duel,1123,2,1123,1123,1,2,0,1,0,1
+537,TermNode,respons,1123,1,1123,1123,1,1,0,0,0,0
+538,TermNode,12th,1123,1,1123,1123,1,1,0,0,0,0
+539,TermNode,pass,1123,1,1123,1123,1,1,0,0,0,0
+540,TermNode,requir,1123,1,1123,1123,1,1,0,0,0,0
+541,TermNode,distinct,1123,1,1123,1123,1,1,0,0,0,0
+542,TermNode,on,1123,1,1123,1123,1,1,0,0,0,0
+543,TermNode,anoth,1123,1,1123,1123,1,1,0,0,0,0
+544,TermNode,rule,1123,1,1123,1123,1,1,0,0,0,0
+545,TermNode,win,1123,1,1123,1123,1,1,0,0,0,0
+546,TermNode,major,1123,1,1123,1123,1,1,0,0,0,0
+547,TermNode,select,1123,1,1123,1123,1,1,0,0,0,0
+548,TermNode,decid,1123,1,1123,1123,1,1,0,0,0,0
+549,TermNode,purpos,1123,1,1123,1123,1,1,0,0,0,0
+550,TermNode,inaugur,1123,1,1123,1123,1,1,0,0,0,0
+551,TermNode,act,1123,1,1123,1123,1,1,0,0,0,0
+552,TermNode,neither,1123,1,1123,1123,1,1,0,0,0,0
+553,TermNode,determin,1123,1,1123,1123,1,1,0,0,0,0
+554,TermNode,shall,1123,1,1123,1123,1,1,0,0,0,0
+555,TermNode,pursuant,1123,1,1123,1123,1,1,0,0,0,0
+556,TermNode,20th,1123,1,1123,1123,1,1,0,0,0,0
+557,TermNode,1824,1123,2,1123,1123,1,2,0,1,0,1
+558,TermNode,andrew,1123,2,1123,1123,1,2,0,1,0,1
+559,TermNode,jackson,1123,2,1123,1123,1,2,0,1,0,1
+560,TermNode,plural,1123,1,1123,1123,1,1,0,0,0,0
+561,TermNode,thrown,1123,1,1123,1123,1,1,0,0,0,0
+562,TermNode,quinci,1123,1,1123,1123,1,1,0,0,0,0
+563,TermNode,adam,1123,1,1123,1123,1,1,0,0,0,0
+564,TermNode,case,1123,1,1123,1123,1,1,0,0,0,0
+565,TermNode,ferment,1123,1,1123,1123,1,1,0,0,0,0
+566,TermNode,time,1123,1,1123,1123,1,1,0,0,0,0
+567,TermNode,speaker,1123,1,1123,1123,1,1,0,0,0,0
+568,TermNode,henri,1123,1,1123,1123,1,1,0,0,0,0
+569,TermNode,clai,1123,1,1123,1123,1,1,0,0,0,0
+570,TermNode,constitution,1123,6,1123,1123,1,6,0,5,0,5
+571,TermNode,manner,1123,1,1123,1123,1,1,0,0,0,0
+572,TermNode,within,1123,1,1123,1123,1,1,0,0,0,0
+573,TermNode,gradual,1123,1,1123,1123,1,1,0,0,0,0
+574,TermNode,throughout,1123,1,1123,1123,1,1,0,0,0,0
+575,TermNode,began,1123,1,1123,1123,1,1,0,0,0,0
+576,TermNode,help,1123,1,1123,1123,1,1,0,0,0,0
+577,TermNode,overal,1123,1,1123,1123,1,1,0,0,0,0
+578,TermNode,nationwid,1123,1,1123,1123,1,1,0,0,0,0
+579,TermNode,todai,1123,1,1123,1123,1,1,0,0,0,0
+580,TermNode,fail,1123,1,1123,1123,1,1,0,0,0,0
+581,TermNode,get,1123,1,1123,1123,1,1,0,0,0,0
+582,TermNode,still,1123,1,1123,1123,1,1,0,0,0,0
+583,TermNode,1876,1123,2,1123,1123,1,2,0,1,0,1
+584,TermNode,1888,1123,2,1123,1123,1,2,0,1,0,1
+585,TermNode,submit,1123,1,1123,1123,1,1,0,0,0,0
+586,TermNode,seek,1123,1,1123,1123,1,1,0,0,0,0
+587,TermNode,replac,1123,1,1123,1123,1,1,0,0,0,0
+588,TermNode,direct,1123,1,1123,1123,1,1,0,0,0,0
+589,TermNode,none,1123,1,1123,1123,1,1,0,0,0,0
+590,TermNode,ever,1123,1,1123,1123,1,1,0,0,0,0
+591,TermNode,successfulli,1123,1,1123,1123,1,1,0,0,0,0
+592,TermNode,processmain,1123,1,1123,1123,1,1,0,0,0,0
+593,TermNode,modern,1123,1,1123,1123,1,1,0,0,0,0
+594,TermNode,consist,1123,1,1123,1123,1,1,0,0,0,0
+595,TermNode,seri,1123,1,1123,1123,1,1,0,0,0,0
+596,TermNode,caucus,1123,2,1123,1123,1,2,0,1,0,1
+597,TermNode,evolv,1123,1,1123,1123,1,1,0,0,0,0
+598,TermNode,clear,1123,1,1123,1123,1,1,0,0,0,0
+599,TermNode,field,1123,1,1123,1123,1,1,0,0,0,0
+600,TermNode,run,1123,1,1123,1123,1,1,0,0,0,0
+601,TermNode,local,1123,1,1123,1123,1,1,0,0,0,0
+602,TermNode,hold,1123,1,1123,1123,1,1,0,0,0,0
+603,TermNode,other,1123,1,1123,1123,1,1,0,0,0,0
+604,TermNode,us,1123,1,1123,1123,1,1,0,0,0,0
+605,TermNode,stagger,1123,1,1123,1123,1,1,0,0,0,0
+606,TermNode,june,1123,1,1123,1123,1,1,0,0,0,0
+607,TermNode,iowa,1123,2,1123,1123,1,2,0,1,0,1
+608,TermNode,hampshir,1123,1,1123,1123,1,1,0,0,0,0
+609,TermNode,tradition,1123,1,1123,1123,1,1,0,0,0,0
+610,TermNode,caucu,1123,1,1123,1123,1,1,0,0,0,0
+611,TermNode,respect,1123,1,1123,1123,1,1,0,0,0,0
+612,TermNode,gener,1123,1,1123,1123,1,1,0,0,0,0
+613,TermNode,offici,1123,1,1123,1123,1,1,0,0,0,0
+614,TermNode,usual,1123,1,1123,1123,1,1,0,0,0,0
+615,TermNode,summer,1123,1,1123,1123,1,1,0,0,0,0
+616,TermNode,depend,1123,1,1123,1123,1,1,0,0,0,0
+617,TermNode,state',1123,1,1123,1123,1,1,0,0,0,0
+618,TermNode,actual,1123,1,1123,1123,1,1,0,0,0,0
+619,TermNode,award,1123,1,1123,1123,1,1,0,0,0,0
+620,TermNode,bound,1123,1,1123,1123,1,1,0,0,0,0
+621,TermNode,simpli,1123,1,1123,1123,1,1,0,0,0,0
+622,TermNode,express,1123,1,1123,1123,1,1,0,0,0,0
+623,TermNode,opinion,1123,1,1123,1123,1,1,0,0,0,0
+624,TermNode,unlik,1123,1,1123,1123,1,1,0,0,0,0
+625,TermNode,addit,1123,1,1123,1123,1,1,0,0,0,0
+626,TermNode,democrat,1123,4,1123,1123,1,4,0,3,0,3
+627,TermNode,republican,1123,5,1123,1123,1,5,0,4,0,4
+628,TermNode,whomev,1123,1,1123,1123,1,1,0,0,0,0
+629,TermNode,top,1123,1,1123,1123,1,1,0,0,0,0
+630,TermNode,expans,1123,1,1123,1123,1,1,0,0,0,0
+631,TermNode,group,1123,1,1123,1123,1,1,0,0,0,0
+632,TermNode,call,1123,1,1123,1123,1,1,0,0,0,0
+633,TermNode,superdeleg,1123,1,1123,1123,1,1,0,0,0,0
+634,TermNode,leader,1123,1,1123,1123,1,1,0,0,0,0
+635,TermNode,party',1123,1,1123,1123,1,1,0,0,0,0
+636,TermNode,nomine,1123,1,1123,1123,1,1,0,0,0,0
+637,TermNode,ticket,1123,2,1123,1123,1,2,0,1,0,1
+638,TermNode,choic,1123,1,1123,1123,1,1,0,0,0,0
+639,TermNode,basic,1123,1,1123,1123,1,1,0,0,0,0
+640,TermNode,rubber,1123,1,1123,1123,1,1,0,0,0,0
+641,TermNode,stamp,1123,1,1123,1123,1,1,0,0,0,0
+642,TermNode,realli,1123,1,1123,1123,1,1,0,0,0,0
+643,TermNode,amalgam,1123,1,1123,1123,1,1,0,0,0,0
+644,TermNode,separ,1123,1,1123,1123,1,1,0,0,0,0
+645,TermNode,simultan,1123,1,1123,1123,1,1,0,0,0,0
+646,TermNode,singl,1123,1,1123,1123,1,1,0,0,0,0
+647,TermNode,elig,1123,1,1123,1123,1,1,0,0,0,0
+648,TermNode,individu,1123,1,1123,1123,1,1,0,0,0,0
+649,TermNode,set,1123,1,1123,1123,1,1,0,0,0,0
+650,TermNode,level,1123,1,1123,1123,1,1,0,0,0,0
+651,TermNode,suffrag,1123,1,1123,1123,1,1,0,0,0,0
+652,TermNode,cannot,1123,1,1123,1123,1,1,0,0,0,0
+653,TermNode,deni,1123,1,1123,1123,1,1,0,0,0,0
+654,TermNode,ground,1123,1,1123,1123,1,1,0,0,0,0
+655,TermNode,race,1123,2,1123,1123,1,2,0,1,0,1
+656,TermNode,color,1123,2,1123,1123,1,2,0,1,0,1
+657,TermNode,sex,1123,2,1123,1123,1,2,0,1,0,1
+658,TermNode,ag,1123,1,1123,1123,1,1,0,0,0,0
+659,TermNode,citizen,1123,1,1123,1123,1,1,0,0,0,0
+660,TermNode,eighteen,1123,2,1123,1123,1,2,0,1,0,1
+661,TermNode,older,1123,2,1123,1123,1,2,0,1,0,1
+662,TermNode,beyond,1123,1,1123,1123,1,1,0,0,0,0
+663,TermNode,qualif,1123,1,1123,1123,1,1,0,0,0,0
+664,TermNode,endors,1123,1,1123,1123,1,1,0,0,0,0
+665,TermNode,pledg,1123,1,1123,1123,1,1,0,0,0,0
+666,TermNode,specif,1123,1,1123,1123,1,1,0,0,0,0
+667,TermNode,mani,1123,1,1123,1123,1,1,0,0,0,0
+668,TermNode,blanket,1123,1,1123,1123,1,1,0,0,0,0
+669,TermNode,particular,1123,1,1123,1123,1,1,0,0,0,0
+670,TermNode,line,1123,2,1123,1123,1,2,0,1,0,1
+671,TermNode,appear,1123,1,1123,1123,1,1,0,0,0,0
+672,TermNode,legal,1123,1,1123,1123,1,1,0,0,0,0
+673,TermNode,known,1123,1,1123,1123,1,1,0,0,0,0
+674,TermNode,access,1123,2,1123,1123,1,2,0,1,0,1
+675,TermNode,candidate',1123,1,1123,1123,1,1,0,0,0,0
+676,TermNode,pre,1123,1,1123,1123,1,1,0,0,0,0
+677,TermNode,everi,1123,1,1123,1123,1,1,0,0,0,0
+678,TermNode,secur,1123,1,1123,1123,1,1,0,0,0,0
+679,TermNode,whose,1123,1,1123,1123,1,1,0,0,0,0
+680,TermNode,warrant,1123,1,1123,1123,1,1,0,0,0,0
+681,TermNode,formal,1123,1,1123,1123,1,1,0,0,0,0
+682,TermNode,effect,1123,1,1123,1123,1,1,0,0,0,0
+683,TermNode,provid,1123,1,1123,1123,1,1,0,0,0,0
+684,TermNode,suffici,1123,1,1123,1123,1,1,0,0,0,0
+685,TermNode,signatur,1123,1,1123,1123,1,1,0,0,0,0
+686,TermNode,3rd,1123,1,1123,1123,1,1,0,0,0,0
+687,TermNode,fashion,1123,1,1123,1123,1,1,0,0,0,0
+688,TermNode,wai,1123,1,1123,1123,1,1,0,0,0,0
+689,TermNode,one',1123,1,1123,1123,1,1,0,0,0,0
+690,TermNode,written,1123,1,1123,1123,1,1,0,0,0,0
+691,TermNode,write,1123,2,1123,1123,1,2,0,1,0,1
+692,TermNode,fulfil,1123,1,1123,1123,1,1,0,0,0,0
+693,TermNode,distast,1123,1,1123,1123,1,1,0,0,0,0
+694,TermNode,ridicul,1123,1,1123,1123,1,1,0,0,0,0
+695,TermNode,mickei,1123,1,1123,1123,1,1,0,0,0,0
+696,TermNode,mous,1123,1,1123,1123,1,1,0,0,0,0
+697,TermNode,comedian,1123,1,1123,1123,1,1,0,0,0,0
+698,TermNode,stephen,1123,4,1123,1123,1,4,0,3,0,3
+699,TermNode,colbert,1123,2,1123,1123,1,2,0,1,0,1
+700,TermNode,event,1123,1,1123,1123,1,1,0,0,0,0
+701,TermNode,won,1123,1,1123,1123,1,1,0,0,0,0
+702,TermNode,area,1123,1,1123,1123,1,1,0,0,0,0
+703,TermNode,collegemain,1123,1,1123,1123,1,1,0,0,0,0
+704,TermNode,winner,1123,1,1123,1123,1,1,0,0,0,0
+705,TermNode,take,1123,1,1123,1123,1,1,0,0,0,0
+706,TermNode,main,1123,1,1123,1123,1,1,0,0,0,0
+707,TermNode,nebraska,1123,2,1123,1123,1,2,0,1,0,1
+708,TermNode,opt,1123,1,1123,1123,1,1,0,0,0,0
+709,TermNode,give,1123,1,1123,1123,1,1,0,0,0,0
+710,TermNode,statewid,1123,1,1123,1123,1,1,0,0,0,0
+711,TermNode,congression,1123,1,1123,1123,1,1,0,0,0,0
+712,TermNode,meet,1123,1,1123,1123,1,1,0,0,0,0
+713,TermNode,capit,1123,1,1123,1123,1,1,0,0,0,0
+714,TermNode,wednesdai,1123,1,1123,1123,1,1,0,0,0,0
+715,TermNode,decemb,1123,1,1123,1123,1,1,0,0,0,0
+716,TermNode,although,1123,1,1123,1123,1,1,0,0,0,0
+717,TermNode,member,1123,1,1123,1123,1,1,0,0,0,0
+718,TermNode,technic,1123,1,1123,1123,1,1,0,0,0,0
+719,TermNode,punish,1123,1,1123,1123,1,1,0,0,0,0
+720,TermNode,person,1123,2,1123,1123,1,2,0,1,0,1
+721,TermNode,total,1123,1,1123,1123,1,1,0,0,0,0
+722,TermNode,open,1123,1,1123,1123,1,1,0,0,0,0
+723,TermNode,sit,1123,1,1123,1123,1,1,0,0,0,0
+724,TermNode,capac,1123,1,1123,1123,1,1,0,0,0,0
+725,TermNode,read,1123,1,1123,1123,1,1,0,0,0,0
+726,TermNode,aloud,1123,1,1123,1123,1,1,0,0,0,0
+727,TermNode,joint,1123,2,1123,1123,1,2,0,1,0,1
+728,TermNode,session,1123,2,1123,1123,1,2,0,1,0,1
+729,TermNode,incom,1123,1,1123,1123,1,1,0,0,0,0
+730,TermNode,270,1123,1,1123,1123,1,1,0,0,0,0
+731,TermNode,outlin,1123,1,1123,1123,1,1,0,0,0,0
+732,TermNode,unless,1123,1,1123,1123,1,1,0,0,0,0
+733,TermNode,controversi,1123,1,1123,1123,1,1,0,0,0,0
+734,TermNode,mention,1123,1,1123,1123,1,1,0,0,0,0
+735,TermNode,larg,1123,1,1123,1123,1,1,0,0,0,0
+736,TermNode,public,1123,1,1123,1123,1,1,0,0,0,0
+737,TermNode,ey,1123,1,1123,1123,1,1,0,0,0,0
+738,TermNode,sinc,1123,1,1123,1123,1,1,0,0,0,0
+739,TermNode,base,1123,1,1123,1123,1,1,0,0,0,0
+740,TermNode,trend,1123,1,1123,1123,1,1,0,0,0,0
+741,TermNode,decad,1123,1,1123,1123,1,1,0,0,0,0
+742,TermNode,almost,1123,1,1123,1123,1,1,0,0,0,0
+743,TermNode,alwai,1123,1,1123,1123,1,1,0,0,0,0
+744,TermNode,incumb,1123,1,1123,1123,1,1,0,0,0,0
+745,TermNode,former,1123,1,1123,1123,1,1,0,0,0,0
+746,TermNode,governor,1123,2,1123,1123,1,2,0,1,0,1
+747,TermNode,either,1123,1,1123,1123,1,1,0,0,0,0
+748,TermNode,previous,1123,1,1123,1123,1,1,0,0,0,0
+749,TermNode,serv,1123,1,1123,1123,1,1,0,0,0,0
+750,TermNode,dwight,1123,2,1123,1123,1,2,0,1,0,1
+751,TermNode,eisenhow,1123,1,1123,1123,1,1,0,0,0,0
+752,TermNode,ultim,1123,1,1123,1123,1,1,0,0,0,0
+753,TermNode,1952,1123,2,1123,1123,1,2,0,1,0,1
+754,TermNode,experi,1123,1,1123,1123,1,1,0,0,0,0
+755,TermNode,observ,1123,1,1123,1123,1,1,0,0,0,0
+756,TermNode,secretari,1123,1,1123,1123,1,1,0,0,0,0
+757,TermNode,step,1123,1,1123,1123,1,1,0,0,0,0
+758,TermNode,stone,1123,1,1123,1123,1,1,0,0,0,0
+759,TermNode,white,1123,2,1123,1123,1,2,0,1,0,1
+760,TermNode,five,1123,1,1123,1123,1,1,0,0,0,0
+761,TermNode,six,1123,1,1123,1123,1,1,0,0,0,0
+762,TermNode,1801,1123,1,1123,1123,1,1,0,0,0,0
+763,TermNode,1841,1123,1,1123,1123,1,1,0,0,0,0
+764,TermNode,gone,1123,1,1123,1123,1,1,0,0,0,0
+765,TermNode,jame,1123,1,1123,1123,1,1,0,0,0,0
+766,TermNode,buchanan,1123,2,1123,1123,1,2,0,1,0,1
+767,TermNode,contemporari,1123,1,1123,1123,1,1,0,0,0,0
+768,TermNode,success,1123,1,1123,1123,1,1,0,0,0,0
+769,TermNode,clearli,1123,1,1123,1123,1,1,0,0,0,0
+770,TermNode,favor,1123,1,1123,1123,1,1,0,0,0,0
+771,TermNode,four,1123,1,1123,1123,1,1,0,0,0,0
+772,TermNode,jimmi,1123,1,1123,1123,1,1,0,0,0,0
+773,TermNode,carter,1123,2,1123,1123,1,2,0,1,0,1
+774,TermNode,ronald,1123,2,1123,1123,1,2,0,1,0,1
+775,TermNode,reagan,1123,2,1123,1123,1,2,0,1,0,1
+776,TermNode,bill,1123,2,1123,1123,1,2,0,1,0,1
+777,TermNode,clinton,1123,5,1123,1123,1,5,0,4,0,4
+778,TermNode,georg,1123,1,1123,1123,1,1,0,0,0,0
+779,TermNode,bush,1123,3,1123,1123,1,3,0,2,0,2
+780,TermNode,geograph,1123,1,1123,1123,1,1,0,0,0,0
+781,TermNode,california,1123,2,1123,1123,1,2,0,1,0,1
+782,TermNode,texa,1123,1,1123,1123,1,1,0,0,0,0
+783,TermNode,south,1123,1,1123,1123,1,1,0,0,0,0
+784,TermNode,mason,1123,2,1123,1123,1,2,0,1,0,1
+785,TermNode,dixon,1123,2,1123,1123,1,2,0,1,0,1
+786,TermNode,east,1123,1,1123,1123,1,1,0,0,0,0
+787,TermNode,georgia,1123,2,1123,1123,1,2,0,1,0,1
+788,TermNode,arkansa,1123,1,1123,1123,1,1,0,0,0,0
+789,TermNode,sixteen,1123,1,1123,1123,1,1,0,0,0,0
+790,TermNode,seven,1123,1,1123,1123,1,1,0,0,0,0
+791,TermNode,fifteen,1123,1,1123,1123,1,1,0,0,0,0
+792,TermNode,1945,1123,1,1123,1123,1,1,0,0,0,0
+793,TermNode,1974,1123,1,1123,1123,1,1,0,0,0,0
+794,TermNode,warren,1123,2,1123,1123,1,2,0,1,0,1
+795,TermNode,hard,1123,1,1123,1123,1,1,0,0,0,0
+796,TermNode,1920,1123,2,1123,1123,1,2,0,1,0,1
+797,TermNode,kennedi,1123,1,1123,1123,1,1,0,0,0,0
+798,TermNode,1960,1123,2,1123,1123,1,2,0,1,0,1
+799,TermNode,lewi,1123,1,1123,1123,1,1,0,0,0,0
+800,TermNode,cass,1123,2,1123,1123,1,2,0,1,0,1
+801,TermNode,1848,1123,2,1123,1123,1,2,0,1,0,1
+802,TermNode,dougla,1123,1,1123,1123,1,1,0,0,0,0
+803,TermNode,1860,1123,2,1123,1123,1,2,0,1,0,1
+804,TermNode,barri,1123,1,1123,1123,1,1,0,0,0,0
+805,TermNode,goldwat,1123,1,1123,1123,1,1,0,0,0,0
+806,TermNode,1964,1123,2,1123,1123,1,2,0,1,0,1
+807,TermNode,mcgovern,1123,2,1123,1123,1,2,0,1,0,1
+808,TermNode,1972,1123,2,1123,1123,1,2,0,1,0,1
+809,TermNode,kerri,1123,1,1123,1123,1,1,0,0,0,0
+810,TermNode,lost,1123,1,1123,1123,1,1,0,0,0,0
+811,TermNode,garfield,1123,2,1123,1123,1,2,0,1,0,1
+812,TermNode,fourteen,1123,1,1123,1123,1,1,0,0,0,0
+813,TermNode,probabl,1123,1,1123,1123,1,1,0,0,0,0
+814,TermNode,2009,1123,1,1123,1123,1,1,0,0,0,0
+815,TermNode,2013,1123,1,1123,1123,1,1,0,0,0,0
+816,TermNode,term,1123,1,1123,1123,1,1,0,0,0,0
+817,TermNode,order,1123,1,1123,1123,1,1,0,0,0,0
+818,TermNode,candidates2,1123,1,1123,1123,1,1,0,0,0,0
+819,TermNode,1st,1123,1,1123,1123,1,1,0,0,0,0
+820,TermNode,1789,1123,2,1123,1123,1,2,0,1,0,1
+821,TermNode,jai,1123,1,1123,1123,1,1,0,0,0,0
+822,TermNode,robert,1123,3,1123,1123,1,3,0,2,0,2
+823,TermNode,harrison,1123,4,1123,1123,1,4,0,3,0,3
+824,TermNode,rutledg,1123,1,1123,1123,1,1,0,0,0,0
+825,TermNode,2nd,1123,1,1123,1123,1,1,0,0,0,0
+826,TermNode,federalist,1123,2,1123,1123,1,2,0,1,0,1
+827,TermNode,1796,1123,2,1123,1123,1,2,0,1,0,1
+828,TermNode,pincknei,1123,1,1123,1123,1,1,0,0,0,0
+829,TermNode,samuel,1123,3,1123,1123,1,3,0,2,0,2
+830,TermNode,oliv,1123,1,1123,1123,1,1,0,0,0,0
+831,TermNode,ellsworth,1123,2,1123,1123,1,2,0,1,0,1
+832,TermNode,4th,1123,1,1123,1123,1,1,0,0,0,0
+833,TermNode,charl,1123,1,1123,1123,1,1,0,0,0,0
+834,TermNode,cotesworth,1123,2,1123,1123,1,2,0,1,0,1
+835,TermNode,5th,1123,1,1123,1123,1,1,0,0,0,0
+836,TermNode,6th,1123,1,1123,1123,1,1,0,0,0,0
+837,TermNode,1808,1123,2,1123,1123,1,2,0,1,0,1
+838,TermNode,madison,1123,2,1123,1123,1,2,0,1,0,1
+839,TermNode,monro,1123,1,1123,1123,1,1,0,0,0,0
+840,TermNode,7th,1123,1,1123,1123,1,1,0,0,0,0
+841,TermNode,dewitt,1123,2,1123,1123,1,2,0,1,0,1
+842,TermNode,8th,1123,1,1123,1123,1,1,0,0,0,0
+843,TermNode,1816,1123,2,1123,1123,1,2,0,1,0,1
+844,TermNode,rufu,1123,1,1123,1123,1,1,0,0,0,0
+845,TermNode,king,1123,2,1123,1123,1,2,0,1,0,1
+846,TermNode,9th,1123,1,1123,1123,1,1,0,0,0,0
+847,TermNode,1820,1123,2,1123,1123,1,2,0,1,0,1
+848,TermNode,oppos,1123,1,1123,1123,1,1,0,0,0,0
+849,TermNode,10th,1123,1,1123,1123,1,1,0,0,0,0
+850,TermNode,william,1123,8,1123,1123,1,8,0,7,0,7
+851,TermNode,crawford,1123,2,1123,1123,1,2,0,1,0,1
+852,TermNode,11th,1123,1,1123,1123,1,1,0,0,0,0
+853,TermNode,1828,1123,2,1123,1123,1,2,0,1,0,1
+854,TermNode,1832,1123,2,1123,1123,1,2,0,1,0,1
+855,TermNode,floyd,1123,2,1123,1123,1,2,0,1,0,1
+856,TermNode,nullifi,1123,1,1123,1123,1,1,0,0,0,0
+857,TermNode,wirt,1123,2,1123,1123,1,2,0,1,0,1
+858,TermNode,anti,1123,2,1123,1123,1,2,0,1,0,1
+859,TermNode,13th,1123,1,1123,1123,1,1,0,0,0,0
+860,TermNode,1836,1123,2,1123,1123,1,2,0,1,0,1
+861,TermNode,martin,1123,2,1123,1123,1,2,0,1,0,1
+862,TermNode,van,1123,2,1123,1123,1,2,0,1,0,1
+863,TermNode,buren,1123,2,1123,1123,1,2,0,1,0,1
+864,TermNode,whig,1123,2,1123,1123,1,2,0,1,0,1
+865,TermNode,hugh,1123,2,1123,1123,1,2,0,1,0,1
+866,TermNode,lawson,1123,2,1123,1123,1,2,0,1,0,1
+867,TermNode,daniel,1123,2,1123,1123,1,2,0,1,0,1
+868,TermNode,webster,1123,2,1123,1123,1,2,0,1,0,1
+869,TermNode,willi,1123,1,1123,1123,1,1,0,0,0,0
+870,TermNode,mangum,1123,2,1123,1123,1,2,0,1,0,1
+871,TermNode,14th,1123,1,1123,1123,1,1,0,0,0,0
+872,TermNode,1840,1123,2,1123,1123,1,2,0,1,0,1
+873,TermNode,15th,1123,1,1123,1123,1,1,0,0,0,0
+874,TermNode,1844,1123,2,1123,1123,1,2,0,1,0,1
+875,TermNode,polk,1123,2,1123,1123,1,2,0,1,0,1
+876,TermNode,birnei,1123,1,1123,1123,1,1,0,0,0,0
+877,TermNode,liberti,1123,1,1123,1123,1,1,0,0,0,0
+878,TermNode,16th,1123,1,1123,1123,1,1,0,0,0,0
+879,TermNode,zachari,1123,1,1123,1123,1,1,0,0,0,0
+880,TermNode,taylor,1123,2,1123,1123,1,2,0,1,0,1
+881,TermNode,free,1123,2,1123,1123,1,2,0,1,0,1
+882,TermNode,soil,1123,2,1123,1123,1,2,0,1,0,1
+883,TermNode,17th,1123,1,1123,1123,1,1,0,0,0,0
+884,TermNode,1852,1123,2,1123,1123,1,2,0,1,0,1
+885,TermNode,franklin,1123,3,1123,1123,1,3,0,2,0,2
+886,TermNode,pierc,1123,1,1123,1123,1,1,0,0,0,0
+887,TermNode,winfield,1123,3,1123,1123,1,3,0,2,0,2
+888,TermNode,scott,1123,3,1123,1123,1,3,0,2,0,2
+889,TermNode,hale,1123,2,1123,1123,1,2,0,1,0,1
+890,TermNode,18th,1123,1,1123,1123,1,1,0,0,0,0
+891,TermNode,1856,1123,2,1123,1123,1,2,0,1,0,1
+892,TermNode,frémont,1123,1,1123,1123,1,1,0,0,0,0
+893,TermNode,millard,1123,2,1123,1123,1,2,0,1,0,1
+894,TermNode,fillmor,1123,1,1123,1123,1,1,0,0,0,0
+895,TermNode,american,1123,5,1123,1123,1,5,0,4,0,4
+896,TermNode,19th,1123,2,1123,1123,1,2,0,1,0,1
+897,TermNode,abraham,1123,2,1123,1123,1,2,0,1,0,1
+898,TermNode,lincoln,1123,2,1123,1123,1,2,0,1,0,1
+899,TermNode,breckinridg,1123,1,1123,1123,1,1,0,0,0,0
+900,TermNode,southern,1123,2,1123,1123,1,2,0,1,0,1
+901,TermNode,bell,1123,2,1123,1123,1,2,0,1,0,1
+902,TermNode,union,1123,5,1123,1123,1,5,0,4,0,4
+903,TermNode,northern,1123,2,1123,1123,1,2,0,1,0,1
+904,TermNode,1864,1123,2,1123,1123,1,2,0,1,0,1
+905,TermNode,mcclellan,1123,2,1123,1123,1,2,0,1,0,1
+906,TermNode,21st,1123,1,1123,1123,1,1,0,0,0,0
+907,TermNode,1868,1123,2,1123,1123,1,2,0,1,0,1
+908,TermNode,ulyss,1123,1,1123,1123,1,1,0,0,0,0
+909,TermNode,horatio,1123,2,1123,1123,1,2,0,1,0,1
+910,TermNode,seymour,1123,2,1123,1123,1,2,0,1,0,1
+911,TermNode,22nd,1123,1,1123,1123,1,1,0,0,0,0
+912,TermNode,1872,1123,2,1123,1123,1,2,0,1,0,1
+913,TermNode,horac,1123,1,1123,1123,1,1,0,0,0,0
+914,TermNode,greelei,1123,1,1123,1123,1,1,0,0,0,0
+915,TermNode,liber,1123,1,1123,1123,1,1,0,0,0,0
+916,TermNode,hendrick,1123,1,1123,1123,1,1,0,0,0,0
+917,TermNode,gratz,1123,2,1123,1123,1,2,0,1,0,1
+918,TermNode,brown,1123,2,1123,1123,1,2,0,1,0,1
+919,TermNode,jenkin,1123,1,1123,1123,1,1,0,0,0,0
+920,TermNode,rutherford,1123,2,1123,1123,1,2,0,1,0,1
+921,TermNode,hay,1123,1,1123,1123,1,1,0,0,0,0
+922,TermNode,tilden,1123,2,1123,1123,1,2,0,1,0,1
+923,TermNode,24th,1123,1,1123,1123,1,1,0,0,0,0
+924,TermNode,1880,1123,2,1123,1123,1,2,0,1,0,1
+925,TermNode,hancock,1123,2,1123,1123,1,2,0,1,0,1
+926,TermNode,weaver,1123,2,1123,1123,1,2,0,1,0,1
+927,TermNode,greenback,1123,2,1123,1123,1,2,0,1,0,1
+928,TermNode,25th,1123,1,1123,1123,1,1,0,0,0,0
+929,TermNode,1884,1123,2,1123,1123,1,2,0,1,0,1
+930,TermNode,grover,1123,2,1123,1123,1,2,0,1,0,1
+931,TermNode,cleveland,1123,2,1123,1123,1,2,0,1,0,1
+932,TermNode,blain,1123,1,1123,1123,1,1,0,0,0,0
+933,TermNode,prohibit,1123,1,1123,1123,1,1,0,0,0,0
+934,TermNode,benjamin,1123,3,1123,1123,1,3,0,2,0,2
+935,TermNode,butler,1123,2,1123,1123,1,2,0,1,0,1
+936,TermNode,26th,1123,1,1123,1123,1,1,0,0,0,0
+937,TermNode,fisk,1123,2,1123,1123,1,2,0,1,0,1
+938,TermNode,alson,1123,2,1123,1123,1,2,0,1,0,1
+939,TermNode,streeter,1123,2,1123,1123,1,2,0,1,0,1
+940,TermNode,labor,1123,3,1123,1123,1,3,0,2,0,2
+941,TermNode,27th,1123,1,1123,1123,1,1,0,0,0,0
+942,TermNode,1892,1123,2,1123,1123,1,2,0,1,0,1
+943,TermNode,populist,1123,2,1123,1123,1,2,0,1,0,1
+944,TermNode,bidwel,1123,1,1123,1123,1,1,0,0,0,0
+945,TermNode,28th,1123,1,1123,1123,1,1,0,0,0,0
+946,TermNode,1896,1123,2,1123,1123,1,2,0,1,0,1
+947,TermNode,mckinlei,1123,1,1123,1123,1,1,0,0,0,0
+948,TermNode,jen,1123,1,1123,1123,1,1,0,0,0,0
+949,TermNode,bryan,1123,2,1123,1123,1,2,0,1,0,1
+950,TermNode,29th,1123,1,1123,1123,1,1,0,0,0,0
+951,TermNode,1900,1123,2,1123,1123,1,2,0,1,0,1
+952,TermNode,woollei,1123,1,1123,1123,1,1,0,0,0,0
+953,TermNode,30th,1123,1,1123,1123,1,1,0,0,0,0
+954,TermNode,1904,1123,2,1123,1123,1,2,0,1,0,1
+955,TermNode,theodor,1123,1,1123,1123,1,1,0,0,0,0
+956,TermNode,roosevelt,1123,3,1123,1123,1,3,0,2,0,2
+957,TermNode,alton,1123,2,1123,1123,1,2,0,1,0,1
+958,TermNode,parker,1123,2,1123,1123,1,2,0,1,0,1
+959,TermNode,eugen,1123,1,1123,1123,1,1,0,0,0,0
+960,TermNode,deb,1123,1,1123,1123,1,1,0,0,0,0
+961,TermNode,socialist,1123,2,1123,1123,1,2,0,1,0,1
+962,TermNode,sila,1123,1,1123,1123,1,1,0,0,0,0
+963,TermNode,swallow,1123,2,1123,1123,1,2,0,1,0,1
+964,TermNode,31st,1123,1,1123,1123,1,1,0,0,0,0
+965,TermNode,1908,1123,2,1123,1123,1,2,0,1,0,1
+966,TermNode,howard,1123,2,1123,1123,1,2,0,1,0,1
+967,TermNode,taft,1123,2,1123,1123,1,2,0,1,0,1
+968,TermNode,chafin,1123,2,1123,1123,1,2,0,1,0,1
+969,TermNode,32nd,1123,1,1123,1123,1,1,0,0,0,0
+970,TermNode,1912,1123,2,1123,1123,1,2,0,1,0,1
+971,TermNode,woodrow,1123,2,1123,1123,1,2,0,1,0,1
+972,TermNode,wilson,1123,2,1123,1123,1,2,0,1,0,1
+973,TermNode,bull,1123,2,1123,1123,1,2,0,1,0,1
+974,TermNode,moos,1123,1,1123,1123,1,1,0,0,0,0
+975,TermNode,33rd,1123,1,1123,1123,1,1,0,0,0,0
+976,TermNode,1916,1123,2,1123,1123,1,2,0,1,0,1
+977,TermNode,evan,1123,1,1123,1123,1,1,0,0,0,0
+978,TermNode,allan,1123,2,1123,1123,1,2,0,1,0,1
+979,TermNode,benson,1123,2,1123,1123,1,2,0,1,0,1
+980,TermNode,hanli,1123,1,1123,1123,1,1,0,0,0,0
+981,TermNode,34th,1123,1,1123,1123,1,1,0,0,0,0
+982,TermNode,cox,1123,2,1123,1123,1,2,0,1,0,1
+983,TermNode,35th,1123,1,1123,1123,1,1,0,0,0,0
+984,TermNode,1924,1123,2,1123,1123,1,2,0,1,0,1
+985,TermNode,calvin,1123,2,1123,1123,1,2,0,1,0,1
+986,TermNode,coolidg,1123,1,1123,1123,1,1,0,0,0,0
+987,TermNode,davi,1123,1,1123,1123,1,1,0,0,0,0
+988,TermNode,follett,1123,1,1123,1123,1,1,0,0,0,0
+989,TermNode,progress,1123,1,1123,1123,1,1,0,0,0,0
+990,TermNode,36th,1123,1,1123,1123,1,1,0,0,0,0
+991,TermNode,1928,1123,2,1123,1123,1,2,0,1,0,1
+992,TermNode,herbert,1123,2,1123,1123,1,2,0,1,0,1
+993,TermNode,hoover,1123,2,1123,1123,1,2,0,1,0,1
+994,TermNode,smith,1123,2,1123,1123,1,2,0,1,0,1
+995,TermNode,37th,1123,1,1123,1123,1,1,0,0,0,0
+996,TermNode,1932,1123,2,1123,1123,1,2,0,1,0,1
+997,TermNode,norman,1123,2,1123,1123,1,2,0,1,0,1
+998,TermNode,38th,1123,1,1123,1123,1,1,0,0,0,0
+999,TermNode,1936,1123,2,1123,1123,1,2,0,1,0,1
+1000,TermNode,alf,1123,2,1123,1123,1,2,0,1,0,1
+1001,TermNode,landon,1123,2,1123,1123,1,2,0,1,0,1
+1002,TermNode,lemk,1123,1,1123,1123,1,1,0,0,0,0
+1003,TermNode,39th,1123,1,1123,1123,1,1,0,0,0,0
+1004,TermNode,1940,1123,2,1123,1123,1,2,0,1,0,1
+1005,TermNode,wendel,1123,1,1123,1123,1,1,0,0,0,0
+1006,TermNode,willki,1123,1,1123,1123,1,1,0,0,0,0
+1007,TermNode,40th,1123,1,1123,1123,1,1,0,0,0,0
+1008,TermNode,1944,1123,2,1123,1123,1,2,0,1,0,1
+1009,TermNode,dewei,1123,1,1123,1123,1,1,0,0,0,0
+1010,TermNode,41st,1123,1,1123,1123,1,1,0,0,0,0
+1011,TermNode,1948,1123,2,1123,1123,1,2,0,1,0,1
+1012,TermNode,harri,1123,1,1123,1123,1,1,0,0,0,0
+1013,TermNode,truman,1123,2,1123,1123,1,2,0,1,0,1
+1014,TermNode,strom,1123,2,1123,1123,1,2,0,1,0,1
+1015,TermNode,thurmond,1123,2,1123,1123,1,2,0,1,0,1
+1016,TermNode,right,1123,1,1123,1123,1,1,0,0,0,0
+1017,TermNode,wallac,1123,1,1123,1123,1,1,0,0,0,0
+1018,TermNode,42nd,1123,1,1123,1123,1,1,0,0,0,0
+1019,TermNode,adlai,1123,2,1123,1123,1,2,0,1,0,1
+1020,TermNode,stevenson,1123,2,1123,1123,1,2,0,1,0,1
+1021,TermNode,43rd,1123,1,1123,1123,1,1,0,0,0,0
+1022,TermNode,1956,1123,2,1123,1123,1,2,0,1,0,1
+1023,TermNode,44th,1123,1,1123,1123,1,1,0,0,0,0
+1024,TermNode,richard,1123,2,1123,1123,1,2,0,1,0,1
+1025,TermNode,nixon,1123,2,1123,1123,1,2,0,1,0,1
+1026,TermNode,byrd,1123,2,1123,1123,1,2,0,1,0,1
+1027,TermNode,45th,1123,1,1123,1123,1,1,0,0,0,0
+1028,TermNode,lyndon,1123,2,1123,1123,1,2,0,1,0,1
+1029,TermNode,johnson,1123,2,1123,1123,1,2,0,1,0,1
+1030,TermNode,46th,1123,1,1123,1123,1,1,0,0,0,0
+1031,TermNode,1968,1123,2,1123,1123,1,2,0,1,0,1
+1032,TermNode,hubert,1123,2,1123,1123,1,2,0,1,0,1
+1033,TermNode,humphrei,1123,1,1123,1123,1,1,0,0,0,0
+1034,TermNode,independ,1123,1,1123,1123,1,1,0,0,0,0
+1035,TermNode,47th,1123,1,1123,1123,1,1,0,0,0,0
+1036,TermNode,schmitz,1123,2,1123,1123,1,2,0,1,0,1
+1037,TermNode,48th,1123,1,1123,1123,1,1,0,0,0,0
+1038,TermNode,1976,1123,2,1123,1123,1,2,0,1,0,1
+1039,TermNode,gerald,1123,2,1123,1123,1,2,0,1,0,1
+1040,TermNode,ford,1123,2,1123,1123,1,2,0,1,0,1
+1041,TermNode,49th,1123,1,1123,1123,1,1,0,0,0,0
+1042,TermNode,1980,1123,2,1123,1123,1,2,0,1,0,1
+1043,TermNode,anderson,1123,2,1123,1123,1,2,0,1,0,1
+1044,TermNode,edward,1123,2,1123,1123,1,2,0,1,0,1
+1045,TermNode,clark,1123,2,1123,1123,1,2,0,1,0,1
+1046,TermNode,libertarian,1123,2,1123,1123,1,2,0,1,0,1
+1047,TermNode,50th,1123,1,1123,1123,1,1,0,0,0,0
+1048,TermNode,1984,1123,2,1123,1123,1,2,0,1,0,1
+1049,TermNode,walter,1123,2,1123,1123,1,2,0,1,0,1
+1050,TermNode,mondal,1123,1,1123,1123,1,1,0,0,0,0
+1051,TermNode,51st,1123,1,1123,1123,1,1,0,0,0,0
+1052,TermNode,1988,1123,2,1123,1123,1,2,0,1,0,1
+1053,TermNode,michael,1123,2,1123,1123,1,2,0,1,0,1
+1054,TermNode,dukaki,1123,1,1123,1123,1,1,0,0,0,0
+1055,TermNode,52nd,1123,1,1123,1123,1,1,0,0,0,0
+1056,TermNode,1992,1123,2,1123,1123,1,2,0,1,0,1
+1057,TermNode,ross,1123,2,1123,1123,1,2,0,1,0,1
+1058,TermNode,perot,1123,2,1123,1123,1,2,0,1,0,1
+1059,TermNode,53rd,1123,1,1123,1123,1,1,0,0,0,0
+1060,TermNode,1996,1123,2,1123,1123,1,2,0,1,0,1
+1061,TermNode,bob,1123,3,1123,1123,1,3,0,2,0,2
+1062,TermNode,dole,1123,2,1123,1123,1,2,0,1,0,1
+1063,TermNode,reform,1123,2,1123,1123,1,2,0,1,0,1
+1064,TermNode,54th,1123,1,1123,1123,1,1,0,0,0,0
+1065,TermNode,gore,1123,2,1123,1123,1,2,0,1,0,1
+1066,TermNode,nader,1123,2,1123,1123,1,2,0,1,0,1
+1067,TermNode,green,1123,2,1123,1123,1,2,0,1,0,1
+1068,TermNode,55th,1123,1,1123,1123,1,1,0,0,0,0
+1069,TermNode,56th,1123,1,1123,1123,1,1,0,0,0,0
+1070,TermNode,2008to,1123,1,1123,1123,1,1,0,0,0,0
+1071,TermNode,mccain,1123,2,1123,1123,1,2,0,1,0,1
+1072,TermNode,barack,1123,2,1123,1123,1,2,0,1,0,1
+1073,TermNode,obama,1123,2,1123,1123,1,2,0,1,0,1
+1074,TermNode,barr,1123,2,1123,1123,1,2,0,1,0,1
+1075,TermNode,chuck,1123,2,1123,1123,1,2,0,1,0,1
+1076,TermNode,baldwin,1123,2,1123,1123,1,2,0,1,0,1
+1077,TermNode,cynthia,1123,2,1123,1123,1,2,0,1,0,1
+1078,TermNode,mckinnei,1123,1,1123,1123,1,1,0,0,0,0
+1079,TermNode,less,1123,1,1123,1123,1,1,0,0,0,0
+1080,TermNode,absolut,1123,1,1123,1123,1,1,0,0,0,0
+1081,TermNode,lose,1123,1,1123,1123,1,1,0,0,0,0
+1082,TermNode,turnout,1123,2,1123,1123,1,2,0,1,0,1
+1083,TermNode,declin,1123,1,1123,1123,1,1,0,0,0,0
+1084,TermNode,show,1123,1,1123,1123,1,1,0,0,0,0
+1085,TermNode,notic,1123,1,1123,1123,1,1,0,0,0,0
+1086,TermNode,increas,1123,1,1123,1123,1,1,0,0,0,0
+1087,TermNode,decreas,1123,1,1123,1123,1,1,0,0,0,0
+1088,TermNode,registr,1123,1,1123,1123,1,1,0,0,0,0
+1089,TermNode,rate,1123,1,1123,1123,1,1,0,0,0,0
+1090,TermNode,vari,1123,1,1123,1123,1,1,0,0,0,0
+1091,TermNode,greater,1123,1,1123,1123,1,1,0,0,0,0
+1092,TermNode,outreach,1123,1,1123,1123,1,1,0,0,0,0
+1093,TermNode,program,1123,1,1123,1123,1,1,0,0,0,0
+1094,TermNode,swell,1123,1,1123,1123,1,1,0,0,0,0
+1095,TermNode,despit,1123,1,1123,1123,1,1,0,0,0,0
+1096,TermNode,greatli,1123,1,1123,1123,1,1,0,0,0,0
+1097,TermNode,improv,1123,1,1123,1123,1,1,0,0,0,0
+1098,TermNode,456,1123,1,1123,1123,1,1,0,0,0,0
+1099,TermNode,vap,1123,1,1123,1123,1,1,0,0,0,0
+1100,TermNode,"215,694,000",1123,1,1123,1123,1,1,0,0,0,0
+1101,TermNode,"122,295,345",1123,1,1123,1123,1,1,0,0,0,0
+1102,TermNode,SLOT_NUM,1123,1,1123,1123,1,1,0,0,0,0
+1103,TermNode,"205,815,000",1123,1,1123,1123,1,1,0,0,0,0
+1104,TermNode,"105,586,274",1123,1,1123,1123,1,1,0,0,0,0
+1105,TermNode,"196,511,000",1123,1,1123,1123,1,1,0,0,0,0
+1106,TermNode,"96,456,345",1123,1,1123,1123,1,1,0,0,0,0
+1107,TermNode,"189,529,000",1123,1,1123,1123,1,1,0,0,0,0
+1108,TermNode,"104,405,155",1123,1,1123,1123,1,1,0,0,0,0
+1109,TermNode,"182,778,000",1123,1,1123,1123,1,1,0,0,0,0
+1110,TermNode,"91,594,693",1123,1,1123,1123,1,1,0,0,0,0
+1111,TermNode,"174,466,000",1123,1,1123,1123,1,1,0,0,0,0
+1112,TermNode,"92,652,680",1123,1,1123,1123,1,1,0,0,0,0
+1113,TermNode,"164,597,000",1123,1,1123,1123,1,1,0,0,0,0
+1114,TermNode,"86,515,221",1123,1,1123,1123,1,1,0,0,0,0
+1115,TermNode,"152,309,190",1123,1,1123,1123,1,1,0,0,0,0
+1116,TermNode,"81,555,789",1123,1,1123,1123,1,1,0,0,0,0
+1117,TermNode,"140,776,000",1123,1,1123,1123,1,1,0,0,0,0
+1118,TermNode,"77,718,554",1123,1,1123,1123,1,1,0,0,0,0
+1119,TermNode,"120,328,186",1123,1,1123,1123,1,1,0,0,0,0
+1120,TermNode,"73,199,998",1123,1,1123,1123,1,1,0,0,0,0
+1121,TermNode,"114,090,000",1123,1,1123,1123,1,1,0,0,0,0
+1122,TermNode,"70,644,592",1123,1,1123,1123,1,1,0,0,0,0
+1123,TermNode,"109,159,000",1123,1,1123,1123,1,1,0,0,0,0
+1124,TermNode,"68,838,204",1123,1,1123,1123,1,1,0,0,0,0
+1125,TermNode,report,1123,1,1123,1123,1,1,0,0,0,0
+1126,TermNode,censu,1123,1,1123,1123,1,1,0,0,0,0
+1127,TermNode,bureau,1123,2,1123,1123,1,2,0,1,0,1
+1128,TermNode,necessarili,1123,1,1123,1123,1,1,0,0,0,0
+1129,TermNode,signific,1123,1,1123,1123,1,1,0,0,0,0
+1130,TermNode,inelig,1123,1,1123,1123,1,1,0,0,0,0
+1131,TermNode,non,1123,1,1123,1123,1,1,0,0,0,0
+1132,TermNode,felon,1123,1,1123,1123,1,1,0,0,0,0
+1133,TermNode,mental,1123,1,1123,1123,1,1,0,0,0,0
+1134,TermNode,incompet,1123,1,1123,1123,1,1,0,0,0,0
+1135,TermNode,somewhat,1123,1,1123,1123,1,1,0,0,0,0
+1136,TermNode,lower,1123,1,1123,1123,1,1,0,0,0,0
+1137,TermNode,regist,1123,1,1123,1123,1,1,0,0,0,0
+1138,TermNode,1994,1123,1,1123,1123,1,1,0,0,0,0
+1139,TermNode,approxim,1123,1,1123,1123,1,1,0,0,0,0
+1140,TermNode,million,1123,1,1123,1123,1,1,0,0,0,0
+1141,TermNode,around,1123,1,1123,1123,1,1,0,0,0,0
+1142,TermNode,estim,1123,1,1123,1123,1,1,0,0,0,0
+1143,TermNode,note,1123,1,1123,1123,1,1,0,0,0,0
+1144,TermNode,drop,1123,1,1123,1123,1,1,0,0,0,0
+1145,TermNode,percentag,1123,1,1123,1123,1,1,0,0,0,0
+1146,TermNode,attribut,1123,1,1123,1123,1,1,0,0,0,0
+1147,TermNode,franchis,1123,1,1123,1123,1,1,0,0,0,0
+1148,TermNode,old,1123,1,1123,1123,1,1,0,0,0,0
+1149,TermNode,restrict,1123,1,1123,1123,1,1,0,0,0,0
+1150,TermNode,scientif,1123,1,1123,1123,1,1,0,0,0,0
+1151,TermNode,forecast,1123,1,1123,1123,1,1,0,0,0,0
+1152,TermNode,pollyvot,1123,1,1123,1123,1,1,0,0,0,0
+1153,TermNode,fivethirtyeight,1123,1,1123,1123,1,1,0,0,0,0
+1154,TermNode,debat,1123,1,1123,1123,1,1,0,0,0,0
+1155,TermNode,margin,1123,2,1123,1123,1,2,0,1,0,1
+1156,TermNode,campaign,1123,1,1123,1123,1,1,0,0,0,0
+1157,TermNode,centuri,1123,1,1123,1123,1,1,0,0,0,0
+1158,TermNode,http,1123,1,1123,1123,1,1,0,0,0,0
+1159,TermNode,www.fairvote.org,1123,1,1123,1123,1,1,0,0,0,0
+1160,TermNode,e_colleg,1123,1,1123,1123,1,1,0,0,0,0
+1161,TermNode,faithless.htm,1123,1,1123,1123,1,1,0,0,0,0
+1162,TermNode,defin,1123,1,1123,1123,1,1,0,0,0,0
+1163,TermNode,abil,1123,1,1123,1123,1,1,0,0,0,0
+1164,TermNode,per,1123,1,1123,1123,1,1,0,0,0,0
+1165,TermNode,status,1123,1,1123,1123,1,1,0,0,0,0
+1166,TermNode,came,1123,1,1123,1123,1,1,0,0,0,0
+1167,TermNode,di,1123,1,1123,1123,1,1,0,0,0,0
+1168,TermNode,commiss,1123,1,1123,1123,1,1,0,0,0,0
+1169,TermNode,2003,1123,1,1123,1123,1,1,0,0,0,0
+1170,TermNode,retriev,1123,1,1123,1123,1,1,0,0,0,0
+1171,TermNode,2007,1123,1,1123,1123,1,1,0,0,0,0
+1172,TermNode,inform,1123,1,1123,1123,1,1,0,0,0,0
+1173,TermNode,statist,1123,1,1123,1123,1,1,0,0,0,0
+1174,TermNode,clerk,1123,2,1123,1123,1,2,0,1,0,1
+1175,TermNode,date,1123,1,1123,1123,1,1,0,0,0,0
+1176,TermNode,tyler,1123,1,1123,1123,1,1,0,0,0,0
+1177,TermNode,chester,1123,1,1123,1123,1,1,0,0,0,0
+1178,TermNode,arthur,1123,1,1123,1123,1,1,0,0,0,0
+1179,TermNode,even,1123,1,1123,1123,1,1,0,0,0,0
+1180,TermNode,extern,1123,1,1123,1123,1,1,0,0,0,0
+1181,TermNode,project,1123,1,1123,1123,1,1,0,0,0,0
+1182,TermNode,santa,1123,1,1123,1123,1,1,0,0,0,0
+1183,TermNode,barbara,1123,1,1123,1123,1,1,0,0,0,0
+1184,TermNode,"52,000",1123,1,1123,1123,1,1,0,0,0,0
+1185,TermNode,document,1123,1,1123,1123,1,1,0,0,0,0
+1186,TermNode,usa,1123,1,1123,1123,1,1,0,0,0,0
+1187,TermNode,box,1123,1,1123,1123,1,1,0,0,0,0
+1188,TermNode,score,1123,1,1123,1123,1,1,0,0,0,0
+1189,TermNode,teach,1123,1,1123,1123,1,1,0,0,0,0
+1190,TermNode,map,1123,1,1123,1123,1,1,0,0,0,0
+1191,TermNode,counti,1123,1,1123,1123,1,1,0,0,0,0
+1192,TermNode,french,1123,1,1123,1123,1,1,0,0,0,0
+1193,TermNode,languag,1123,1,1123,1123,1,1,0,0,0,0
+1194,TermNode,site,1123,1,1123,1123,1,1,0,0,0,0
+1195,TermNode,dave,1123,1,1123,1123,1,1,0,0,0,0
+1196,TermNode,leip',1123,1,1123,1123,1,1,0,0,0,0
+1197,TermNode,atla,1123,1,1123,1123,1,1,0,0,0,0
+1198,TermNode,view,1123,1,1123,1123,1,1,0,0,0,0
+1199,TermNode,vermont,1123,1,1123,1123,1,1,0,0,0,0
+1200,TermNode,discuss,1123,1,1123,1123,1,1,0,0,0,0
+1201,TermNode,opposit,1123,1,1123,1123,1,1,0,0,0,0
+1202,TermNode,pole,1123,1,1123,1123,1,1,0,0,0,0
+1203,TermNode,alabama,1123,1,1123,1123,1,1,0,0,0,0
+1204,TermNode,live,1123,1,1123,1123,1,1,0,0,0,0
+1205,TermNode,room,1123,1,1123,1123,1,1,0,0,0,0
+1206,TermNode,compil,1123,1,1123,1123,1,1,0,0,0,0
+1207,TermNode,televis,1123,1,1123,1123,1,1,0,0,0,0
+1208,TermNode,ad,1123,1,1123,1123,1,1,0,0,0,0
+1209,TermNode,poll,1123,1,1123,1123,1,1,0,0,0,0
+1210,TermNode,return,1123,1,1123,1123,1,1,0,0,0,0
+1211,TermNode,1787,1123,1,1123,1123,1,1,0,0,0,0
+1212,TermNode,1825,1123,1,1123,1123,1,1,0,0,0,0
+1213,TermNode,close,1123,1,1123,1123,1,1,0,0,0,0
+1214,TermNode,sheppard,1123,1,1123,1123,1,1,0,0,0,0
+1215,TermNode,michigan,1123,1,1123,1123,1,1,0,0,0,0
+1216,TermNode,better,1123,1,1123,1123,1,1,0,0,0,0
