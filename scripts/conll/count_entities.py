@@ -25,30 +25,31 @@ with open(filename, 'r') as fp:
 
     for line in fp:
         line = line.strip()
-        print(line, end=" ")
+        #print(line, end=" ")
 
         if line == '-DOCSTART- -X- O O':
-            print("=> DOCSTART")
+            #print("=> DOCSTART")
             if doc_entities is not None:
                 entities_per_doc.append(doc_entities)
             doc_entities = 0
             curr_tag = None
         elif line == '':
-            print("=> SENTSTART")
+            #print("=> SENTSTART")
             if sent_entities is not None:
                 entities_per_sent.append(sent_entities)
             sent_entities = 0
             curr_tag = None
         else:
             curr_tag = line.split()[3]
-            print("=> TAG: %s" % curr_tag, end=" ")
+            #print("=> TAG: %s" % curr_tag, end=" ")
 
         if prev_tag in set(['I-PER', 'I-ORG', 'I-LOC', 'I-MISC']) and curr_tag != prev_tag:
-            print("=> COUNT ENTITY")
+            #print("=> COUNT ENTITY")
             doc_entities += 1
             sent_entities += 1
         else:
-            print()
+            #print()
+            pass
 
         prev_tag = curr_tag
 
@@ -64,5 +65,9 @@ with open(filename, 'r') as fp:
     print("Tot. ent. p/doc.\t", np.sum(entities_per_doc))
     print("Tot. ent. p/sent.\t", np.sum(entities_per_sent))
 
-    print("Num. docs w/entities\t", np.count_nonzero(entities_per_doc))
-    print("Num. sents w/entities\t", np.count_nonzero(entities_per_sent))
+    print(
+        "Num. docs w/entities\t", np.count_nonzero(entities_per_doc),
+        "\t(%.2f%%)" % (np.count_nonzero(entities_per_doc) / len(entities_per_doc) * 100))
+    print(
+        "Num. sents w/entities\t", np.count_nonzero(entities_per_sent),
+        "\t(%.2f%%)" % (np.count_nonzero(entities_per_sent) / len(entities_per_sent) * 100))
