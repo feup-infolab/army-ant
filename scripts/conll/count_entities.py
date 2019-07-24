@@ -4,6 +4,15 @@
 # count_entities.py
 # José Devezas <joseluisdevezas@gmail.com>
 # 2019-07-23
+#
+# You can also verify the total entities based on the following command:
+#
+# awk '{ print $4 }' ~/Data/CoNLL-2003/eng.train \
+#   | uniq \
+#   | grep -v -E "^O\$" \
+#   | grep -v -E "^\$" \
+#   | grep -E "I-PER|I-ORG|I-LOC|I-MISC" \
+#   | wc -l
 
 import sys
 import numpy as np
