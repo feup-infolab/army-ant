@@ -44,7 +44,7 @@ from army_ant.util.stats import gmean
 
 logger = logging.getLogger(__name__)
 
-pd.set_option("display.height", 10)
+pd.set_option("display.max_rows", 10)
 
 
 #
