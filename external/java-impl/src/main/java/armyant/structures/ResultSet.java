@@ -1,6 +1,5 @@
 package armyant.structures;
 
-import org.apache.commons.collections4.bag.TreeBag;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -9,7 +8,7 @@ import java.util.*;
  * Created by jldevezas on 2017-11-07.
  */
 public class ResultSet implements Iterator<Result>, Iterable<Result> {
-    private TreeBag<Result> results;
+    private SortedSet<Result> results;
     private Map<String, Result> maxResultPerDocID;
     private Long numDocs;
     private Trace trace;
@@ -20,17 +19,17 @@ public class ResultSet implements Iterator<Result>, Iterable<Result> {
     }
 
     public ResultSet() {
-        this(new TreeBag<>((a, b) -> Comparator
+        this(new TreeSet<>((a, b) -> Comparator
             .comparing(Result::getScore)
-            //.thenComparing(Result::getID)
+            .thenComparing(Result::getID)
             .compare(b, a)), null, null);
     }
 
-    public ResultSet(TreeBag<Result> results) {
+    public ResultSet(SortedSet<Result> results) {
         this(results, null, null);
     }
 
-    public ResultSet(TreeBag<Result> results, Long numDocs, Trace trace) {
+    public ResultSet(SortedSet<Result> results, Long numDocs, Trace trace) {
         this.results = results;
         this.maxResultPerDocID = new HashMap<>();
         addReplaceResults(results);
@@ -39,11 +38,11 @@ public class ResultSet implements Iterator<Result>, Iterable<Result> {
         this.resultsIterator = null;
     }
 
-    public TreeBag<Result> getResults() {
+    public SortedSet<Result> getResults() {
         return results;
     }
 
-    public void setResults(TreeBag<Result> results) {
+    public void setResults(TreeSet<Result> results) {
         this.results = results;
     }
 
@@ -85,11 +84,11 @@ public class ResultSet implements Iterator<Result>, Iterable<Result> {
         }
     }
 
-    public void addResults(TreeBag<Result> results) {
+    public void addResults(SortedSet<Result> results) {
         this.results.addAll(results);
     }
 
-    public void addReplaceResults(TreeBag<Result> results) {
+    public void addReplaceResults(SortedSet<Result> results) {
         for (Result result : results) {
             addReplaceResult(result);
         }
