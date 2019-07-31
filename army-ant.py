@@ -119,7 +119,7 @@ class CommandLineInterfaceExtras(object):
 
         print(word1, '~', word2, '=', sim)
 
-    def fetch_dbpedia_entities(self, class_name, output_location):
+    def fetch_dbpedia_entities(self, class_name, output_location, lang='en'):
         limit = 10_000
         offset = 0
         count = 0
@@ -129,7 +129,7 @@ class CommandLineInterfaceExtras(object):
                 logger.info(
                     "Fetching DBpedia entities of class %s (offset=%s, limit=%s)" % (class_name, offset, limit))
 
-                entities = fetch_dbpedia_entity_labels(DBpediaClass[class_name], offset=offset, limit=limit)
+                entities = fetch_dbpedia_entity_labels(DBpediaClass[class_name], lang=lang, offset=offset, limit=limit)
 
                 if len(entities) < 1:
                     break

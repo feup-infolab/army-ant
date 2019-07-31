@@ -27,7 +27,7 @@ class DBpediaClass(Enum):
 #
 
 @memory.cache
-def fetch_dbpedia_entity_labels(dbpedia_class, offset=None, limit=None):
+def fetch_dbpedia_entity_labels(dbpedia_class, lang='en', offset=None, limit=None):
     sparql = SPARQLWrapper(dbpedia_sparql_url)
 
     query = '''
@@ -36,9 +36,9 @@ def fetch_dbpedia_entity_labels(dbpedia_class, offset=None, limit=None):
         WHERE {
           ?entity a %s .
           ?entity rdfs:label ?entityLabel .
-          FILTER (langMatches(lang(?entityLabel), 'en'))
+          FILTER (langMatches(lang(?entityLabel), '%s'))
         }
-    ''' % dbpedia_class.value
+    ''' % (dbpedia_class.value, lang)
     if offset: query += 'OFFSET %d\n' % offset
     if limit:  query += 'LIMIT %d' % limit
 
