@@ -9,7 +9,7 @@ defaults:
     location: /opt/army-ant/eval
   service:
     ner:
-      entity_list: /opt/army-ant/gazetteers/all.txt
+      entity_list: /opt/army-ant/gazetteers/en-all.txt
   depend:
     stanford-ner: /opt/stanford-ner-2015-12-09
   jvm:
