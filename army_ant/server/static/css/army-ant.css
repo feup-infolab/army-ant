@@ -209,3 +209,33 @@ dl dl {
 #task {
   max-width: 8.5em;
 }
+
+#query-type {
+  margin-left: 7.5rem;
+  margin-right: 7.75rem;
+}
+
+#keyword-query:focus {
+  border: .05rem solid #bcc3ce;
+  box-shadow: none;
+}
+
+.form-autocomplete {
+  flex: 1 1 auto;
+}
+.form-autocomplete-input {
+  width: auto !important;
+  height: 1.8rem !important;
+  line-height: 1.2rem !important;
+}
+.form-autocomplete .chip {
+  height: 1.325rem !important;
+  line-height: 1rem !important;
+}
+.chip.highlighted {
+  background: #ccc;
+}
+.menu .menu-item .active {
+  background: #f1f1fc;
+  color: #5755d9;
+}

@@ -8,10 +8,18 @@
 {% set dataset = engine.split('-')[1] %}
 
 {% block content %}
+<ul class="tab" id="query-type">
+  <li class="tab-item" data-query-type="keyword">
+    <a href="#">Keyword Query</a>
+  </li>
+  <li class="tab-item active" data-query-type="entity">
+    <a href="#">Entity Query</a>
+  </li>
+</ul>
+
 <form class="form-horizontal">
   <div class="form-group">
     <div class="column">
-      <!-- form input control -->
       <div class="input-group">
         <select class="form-select" id="task" name="task">
           <option value="document_retrieval"
@@ -21,14 +29,59 @@
           <option value="term_retrieval"
             {% if task == 'term_retrieval' %} selected="selected" {% endif %}>Terms</option>
         </select>
-        <input class="form-input" type="text" id="query" name="query" placeholder="Search"
-          value="{{ query if query }}" />
+
+        <!-- Keyword query -->
+        <input class="form-input query d-hide" type="text" id="keyword-query" name="query"
+          placeholder="Type keywords here" value="{{ query if query }}" />
+
+        <!-- START: Entity query -->
+        <div class="form-autocomplete query" id="entity-query">
+          <!-- autocomplete input container -->
+          <div class="form-autocomplete-input form-input">
+
+            <!-- autocomplete chips -->
+            <div class="chip">
+              Thor Odinson
+              <a href="#" class="btn btn-clear" aria-label="Close" role="button"></a>
+            </div>
+
+            <div class="chip">
+              Blah
+              <a href="#" class="btn btn-clear" aria-label="Close" role="button"></a>
+            </div>
+
+            <!-- autocomplete real input box -->
+            <input class="form-input" type="text" id="entity-query-input" autocomplete="off"
+              placeholder="Type entity name here">
+          </div>
+
+          <!-- autocomplete suggestion list -->
+          <ul class="menu d-hide">
+            <!-- menu list items -->
+            <li class="menu-item">
+              <a href="#">
+                <div class="tile">
+                  <span class="text-primary text-bold">Met</span>allica
+                </div>
+              </a>
+            </li>
+
+            <li class="menu-item">
+              <a href="#">
+                <div class="tile">
+                  Slayer
+                </div>
+              </a>
+            </li>
+          </ul>
+        </div>
+        <!-- END: Entity query -->
+
         <button class="btn btn-primary btn input-group-btn">Search</button>
       </div>
     </div>
 
     <div class="column col-auto">
-      <!-- form switch control -->
       <label class="form-switch">
         <input type="checkbox" id="debug" name="debug" {% if debug == 'on' %} checked="checked" {% endif %}/>
         <i class="form-icon"></i> Learn mode
@@ -78,7 +131,153 @@
 
 <script type="text/javascript">
   (function() {
-    document.getElementById("query").focus();
+    document.getElementById("keyword-query").focus();
+
+    // Avoid anchor hash action in tabs
+    $(".tab-item a").on("click", function(e) {
+      e.preventDefault();
+      return true;
+    });
+
+    // Query type selection tabs
+    $("#query-type .tab-item").on("click", function(e) {
+      let queryType = $(this).data("query-type");
+      $(".tab-item").removeClass("active");
+      $(this).addClass("active");
+
+      $(".query").addClass("d-hide");
+      if (queryType === "entity") {
+        $("#entity-query").removeClass("d-hide");
+        document.getElementById("entity-query-input").focus();
+      } else {
+        // Default is keyword
+        $("#keyword-query").removeClass("d-hide");
+        document.getElementById("keyword-query").focus();
+      }
+    });
+
+    function closeEntityQueryMenu() {
+      $(".form-autocomplete-input .chip.highlighted").removeClass("highlighted");
+      $(".form-autocomplete .menu").addClass("d-hide");
+    }
+
+    function stripSpan(item) {
+      var $span = $(item).find("span");
+      var spanText = $span.text();
+      return $span.before(spanText).remove();
+    }
+
+    $("body").on("click", function(e) {
+      closeEntityQueryMenu();
+    });
+
+    // Entity name input control
+    $("#entity-query-input").on("keyup", function(e) {
+      switch (e.keyCode) {
+        case 8: // BACKSPACE
+          var inputVal = $(".form-autocomplete-input input[type='text']").val();
+          let $lastChip = $(".form-autocomplete-input .chip").last();
+          if (inputVal == "") {
+            if ($lastChip.hasClass("highlighted")) {
+              $lastChip.remove();
+            } else {
+              $lastChip.addClass("highlighted");
+            }
+          }
+          break;
+
+        case 13: // ENTER
+          let selectedEntity = $(".form-autocomplete .menu .menu-item a.active .tile").text();
+          console.log(selectedEntity);
+
+          if (selectedEntity) {
+            var entityName = selectedEntity;
+            closeEntityQueryMenu();
+          } else {
+            var entityName = $(this).val();
+          }
+
+          let $closeButton = $('<a>')
+            .addClass("btn btn-clear")
+            .attr("href", "#")
+            .attr("aria-label", "Close")
+            .attr("role", "button");
+
+          let $chip = $("<div>")
+            .addClass("chip")
+            .append(entityName)
+            .append($closeButton);
+
+          if ($(".form-autocomplete-input .chip").length == 0) {
+            $(".form-autocomplete-input").prepend($chip);
+          } else {
+            $(".form-autocomplete-input .chip").last().after($chip);
+          }
+
+          $(this).val("");
+
+          return false;
+
+        case 27: // ESCAPE
+          closeEntityQueryMenu();
+          break;
+
+        case 38: // UP
+          var $active = $(".menu-item a.active").first();
+          if ($active.length == 0) {
+            $(".menu-item").last().find("a").addClass("active");
+          } else {
+            let $a = $(".menu-item a.active").parents("li").prev("li").find("a");
+
+            if ($a.length == 0) {
+              $a = $(".menu-item a").last();
+            }
+
+            $(".menu-item a").removeClass("active");
+            $a.addClass("active");
+          }
+          break;
+
+        case 40: // DOWN
+          var $active = $(".menu-item a.active").first();
+          if ($active.length == 0) {
+            $(".menu-item").first().find("a").addClass("active");
+          } else {
+            let $a = $(".menu-item a.active").parents("li").next("li").find("a");
+
+            if ($a.length == 0) {
+              $a = $(".menu-item a").first();
+            }
+
+            $(".menu-item a").removeClass("active");
+            $a.addClass("active");
+          }
+          break;
+
+        default:
+          // Show menu
+          $(".form-autocomplete .menu").removeClass("d-hide");
+
+          // Make matches bold
+          var inputText = $(".form-autocomplete-input input[type='text']").val();
+          $(".form-autocomplete .menu .menu-item a .tile").forEach(function(item) {
+            stripSpan(item);
+
+            var itemText = $(item).text().trim();
+            if (itemText != "" && inputText != "" && itemText.toLowerCase().includes(inputText.toLowerCase())) {
+              var html = itemText.replace(
+                new RegExp("(" + inputText + ")", "ig"),
+                '<span class="text-primary text-bold">$1</span>');
+              $(item).empty().append($(html));
+            }
+          });
+      }
+    });
+
+    // Entity chip delete
+    $(".form-autocomplete").on("click", ".chip a[aria-label='Close']", function(e) {
+      $(this).parent(".chip").remove();
+    });
   })();
 </script>
 {% endblock %}
