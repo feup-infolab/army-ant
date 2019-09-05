@@ -34,6 +34,7 @@ import org.ahocorasick.trie.Emit;
 import org.ahocorasick.trie.Trie;
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
+import org.apache.commons.collections4.trie.PatriciaTrie;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.io.FileUtils;
@@ -136,6 +137,7 @@ public class HypergraphOfEntity extends Engine {
     private BidiMap<Node, Integer> nodeIndex;
     private BidiMap<Edge, Integer> edgeIndex;
     private Map<Integer, IntSet> reachabilityIndex;
+    private PatriciaTrie<String> entityNameTrie;
     private Trace trace;
 
     private long counter;
@@ -529,6 +531,34 @@ public class HypergraphOfEntity extends Engine {
                 contextEdgeAux.put(edgeID, embeddingSims);
             }
         });
+    }
+
+    public void prepareAutocomplete() {
+        logger.info("Preparing autocomplete trie");
+
+        this.entityNameTrie = new PatriciaTrie<>();
+        this.entityNameTrie.putAll(
+            this.nodeIndex.keySet().stream()
+                    .filter(n -> n instanceof EntityNode)
+                    .collect(Collectors.toMap(Node::getName, Node::getName)));
+    }
+
+    public List<String> autocomplete(String substring) {
+        if (this.entityNameTrie == null) {
+            prepareAutocomplete();
+        }
+
+        List<String> matches = new ArrayList<>();
+
+        matches.addAll(
+            this.entityNameTrie
+                .prefixMap(substring)
+                .values()
+                .stream()
+                .limit(10)
+                .collect(Collectors.toList()));
+
+        return matches;
     }
 
     private float probalisticIDF(int numDocs, int numDocsWithTerm) {

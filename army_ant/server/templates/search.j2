@@ -171,6 +171,42 @@
       closeEntityQueryMenu();
     });
 
+    function addSelectedEntity() {
+      let selectedEntity = $(".form-autocomplete .menu .menu-item a.active .tile").text();
+
+      if (selectedEntity) {
+        var entityName = selectedEntity;
+        closeEntityQueryMenu();
+      } else {
+        var entityName = $(this).val();
+      }
+
+      let $closeButton = $('<a>')
+        .addClass("btn btn-clear")
+        .attr("href", "#")
+        .attr("aria-label", "Close")
+        .attr("role", "button");
+
+      let $chip = $("<div>")
+        .addClass("chip")
+        .append(entityName)
+        .append($closeButton);
+
+      if ($(".form-autocomplete-input .chip").length == 0) {
+        $(".form-autocomplete-input").prepend($chip);
+      } else {
+        $(".form-autocomplete-input .chip").last().after($chip);
+      }
+
+      $("#entity-query-input").val("");
+    }
+
+    // Click on entity name from autocomplete
+    $(".form-autocomplete .menu-item a").on("click", function(e) {
+      $(this).addClass("active");
+      addSelectedEntity();
+    });
+
     // Entity name input control
     $("#entity-query-input").on("keyup", function(e) {
       switch (e.keyCode) {
@@ -187,35 +223,7 @@
           break;
 
         case 13: // ENTER
-          let selectedEntity = $(".form-autocomplete .menu .menu-item a.active .tile").text();
-          console.log(selectedEntity);
-
-          if (selectedEntity) {
-            var entityName = selectedEntity;
-            closeEntityQueryMenu();
-          } else {
-            var entityName = $(this).val();
-          }
-
-          let $closeButton = $('<a>')
-            .addClass("btn btn-clear")
-            .attr("href", "#")
-            .attr("aria-label", "Close")
-            .attr("role", "button");
-
-          let $chip = $("<div>")
-            .addClass("chip")
-            .append(entityName)
-            .append($closeButton);
-
-          if ($(".form-autocomplete-input .chip").length == 0) {
-            $(".form-autocomplete-input").prepend($chip);
-          } else {
-            $(".form-autocomplete-input .chip").last().after($chip);
-          }
-
-          $(this).val("");
-
+          addSelectedEntity();
           return false;
 
         case 27: // ESCAPE

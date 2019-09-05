@@ -178,6 +178,40 @@ async def search(request):
         return response
 
 
+async def autocomplete(request):
+    engine = request.GET.get('engine')
+    if engine is None:
+        engine = list(request.app['engines'].keys())[0]
+
+    substring = request.GET.get('substring')
+    debug = request.GET.get('debug', 'off')
+    error = None
+
+    if substring:
+        try:
+            loop = asyncio.get_event_loop()
+            index = Index.open(
+                request.app['engines'][engine]['index']['location'],
+                request.app['engines'][engine]['index']['type'],
+                loop)
+            matches = await index.autocomplete(substring)
+        except (ArmyAntException, ClientOSError) as e:
+            error = e
+    else:
+        matches = []
+
+    if error:
+        respose = {
+            'error': str(error)
+        }
+    else:
+        response = {
+            'matches': matches
+        }
+
+    return web.json_response(response, dumps=lambda obj: json.dumps(obj, default=to_serializable))
+
+
 async def evaluation_get(request):
     manager = EvaluationTaskManager(
         request.app['defaults']['db']['location'],
@@ -510,6 +544,7 @@ def run_app(loop, host, port, path=None):
 
     app.router.add_get('/', home, name='home')
     app.router.add_get('/search', search, name='search')
+    app.router.add_get('/autocomplete', autocomplete, name='autocomplete')
     app.router.add_get('/evaluation', evaluation, name='evaluation')
     app.router.add_post('/evaluation', evaluation)
     app.router.add_delete('/evaluation', evaluation, name='evaluation_delete')

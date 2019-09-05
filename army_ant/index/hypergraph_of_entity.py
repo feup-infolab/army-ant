@@ -77,13 +77,23 @@ class HypergraphOfEntity(JavaIndex):
         self.index_features = [HypergraphOfEntity.Feature[index_feature] for index_feature in index_features]
 
     async def load(self):
-        if self.index_location in JavaIndex.INSTANCES:
+        if self.index_location in HypergraphOfEntity.INSTANCES:
             logger.warning("%s is already loaded, skipping" % self.index_location)
             return
         features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value) for index_feature in
                     self.index_features]
-        JavaIndex.INSTANCES[self.index_location] = HypergraphOfEntity.JHypergraphOfEntityInMemory(
+        HypergraphOfEntity.INSTANCES[self.index_location] = HypergraphOfEntity.JHypergraphOfEntityInMemory(
             self.index_location, java.util.Arrays.asList(features))
+        HypergraphOfEntity.INSTANCES[self.index_location].prepareAutocomplete()
+
+    def ensure_loaded(self):
+        if not self.index_location in HypergraphOfEntity.INSTANCES:
+            features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value) for index_feature in
+                        self.index_features]
+            hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(
+                self.index_location, java.util.Arrays.asList(features))
+            hgoe.prepareAutocomplete()
+            HypergraphOfEntity.INSTANCES[self.index_location] = hgoe
 
     async def index(self, features_location=None):
         try:
@@ -190,14 +200,8 @@ class HypergraphOfEntity(JavaIndex):
         num_docs = 0
         trace = None
         try:
-            if self.index_location in HypergraphOfEntity.INSTANCES:
-                hgoe = HypergraphOfEntity.INSTANCES[self.index_location]
-            else:
-                features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value) for index_feature in
-                            self.index_features]
-                hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(
-                    self.index_location, java.util.Arrays.asList(features))
-                HypergraphOfEntity.INSTANCES[self.index_location] = hgoe
+            self.ensure_loaded()
+            hgoe = HypergraphOfEntity.INSTANCES[self.index_location]
 
             task = HypergraphOfEntity.JTask.valueOf(task.value)
             results = hgoe.search(query, offset, limit, task, ranking_function, ranking_params, debug)
@@ -212,15 +216,13 @@ class HypergraphOfEntity(JavaIndex):
 
     async def inspect(self, feature, workdir):
         try:
-            if self.index_location in HypergraphOfEntity.INSTANCES:
-                hgoe = HypergraphOfEntity.INSTANCES[self.index_location]
-            else:
-                features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value) for index_feature in
-                            self.index_features]
-                hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(
-                    self.index_location, java.util.Arrays.asList(features))
-                HypergraphOfEntity.INSTANCES[self.index_location] = hgoe
-
+            self.ensure_loaded()
+            hgoe = HypergraphOfEntity.INSTANCES[self.index_location]
             hgoe.inspect(feature, workdir)
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
+
+    async def autocomplete(self, substring):
+        self.ensure_loaded()
+        hgoe = HypergraphOfEntity.INSTANCES[self.index_location]
+        return [m for m in hgoe.autocomplete(substring)]
