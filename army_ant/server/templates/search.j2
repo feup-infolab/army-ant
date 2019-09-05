@@ -38,17 +38,11 @@
         <div class="form-autocomplete query" id="entity-query">
           <!-- autocomplete input container -->
           <div class="form-autocomplete-input form-input">
-
             <!-- autocomplete chips -->
-            <div class="chip">
+            <!--div class="chip">
               Thor Odinson
               <a href="#" class="btn btn-clear" aria-label="Close" role="button"></a>
-            </div>
-
-            <div class="chip">
-              Blah
-              <a href="#" class="btn btn-clear" aria-label="Close" role="button"></a>
-            </div>
+            </div-->
 
             <!-- autocomplete real input box -->
             <input class="form-input" type="text" id="entity-query-input" autocomplete="off"
@@ -58,21 +52,13 @@
           <!-- autocomplete suggestion list -->
           <ul class="menu d-hide">
             <!-- menu list items -->
-            <li class="menu-item">
+            <!--li class="menu-item">
               <a href="#">
                 <div class="tile">
                   <span class="text-primary text-bold">Met</span>allica
                 </div>
               </a>
-            </li>
-
-            <li class="menu-item">
-              <a href="#">
-                <div class="tile">
-                  Slayer
-                </div>
-              </a>
-            </li>
+            </li-->
           </ul>
         </div>
         <!-- END: Entity query -->
@@ -178,7 +164,7 @@
         var entityName = selectedEntity;
         closeEntityQueryMenu();
       } else {
-        var entityName = $(this).val();
+        var entityName = $("#entity-query-input").val();
       }
 
       let $closeButton = $('<a>')
@@ -202,16 +188,24 @@
     }
 
     // Click on entity name from autocomplete
-    $(".form-autocomplete .menu-item a").on("click", function(e) {
+    $("body").on("click", ".form-autocomplete .menu-item a", function(e) {
       $(this).addClass("active");
       addSelectedEntity();
     });
 
+    function autocomplete(substring, callback) {
+      var engine = $("#engine").val();
+      $.getJSON("{{ url('autocomplete') }}?engine=" + engine + "&substring=" + substring, callback);
+    }
+
+    var autoCompleteEvent = null;
     // Entity name input control
     $("#entity-query-input").on("keyup", function(e) {
+      var enter = false;
+
       switch (e.keyCode) {
         case 8: // BACKSPACE
-          var inputVal = $(".form-autocomplete-input input[type='text']").val();
+          var inputVal = $("#entity-query-input").val();
           let $lastChip = $(".form-autocomplete-input .chip").last();
           if (inputVal == "") {
             if ($lastChip.hasClass("highlighted")) {
@@ -224,7 +218,7 @@
 
         case 13: // ENTER
           addSelectedEntity();
-          return false;
+          enter = true;
 
         case 27: // ESCAPE
           closeEntityQueryMenu();
@@ -265,9 +259,39 @@
         default:
           // Show menu
           $(".form-autocomplete .menu").removeClass("d-hide");
+      }
+
+      if (e.keyCode >= 37 && e.keyCode <= 40 || e.keyCode == 8) {
+        return !enter;
+      }
+
+      if (autoCompleteEvent) {
+        autoCompleteEvent.abort();
+      }
+
+      var inputText = $(".form-autocomplete-input input[type='text']").val();
+      autocompleteEvent = autocomplete(inputText, function(data) {
+        $(".form-autocomplete .menu").empty();
+        if (data.error || data.matches.length < 1) {
+          $(".form-autocomplete .menu").addClass("d-hide");
+        } else {
+          for (let i = 0; i < data.matches.length; i++) {
+            let $tile = $("<div>")
+              .addClass("tile")
+              .append(data.matches[i]);
+
+            let $a = $("<a>")
+              .attr("href", "#")
+              .append($tile);
+
+            let $menuItem = $("<li>")
+              .addClass("menu-item")
+              .append($a);
+
+            $(".form-autocomplete .menu").append($menuItem);
+          }
 
           // Make matches bold
-          var inputText = $(".form-autocomplete-input input[type='text']").val();
           $(".form-autocomplete .menu .menu-item a .tile").forEach(function(item) {
             stripSpan(item);
 
@@ -279,7 +303,10 @@
               $(item).empty().append($(html));
             }
           });
-      }
+        }
+      });
+
+      return !enter;
     });
 
     // Entity chip delete
