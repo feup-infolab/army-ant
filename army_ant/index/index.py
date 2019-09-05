@@ -49,6 +49,10 @@ class Index(object):
         entity_retrieval = 'ENTITY_RETRIEVAL'
         term_retrieval = 'TERM_RETRIEVAL'
 
+    class QueryTypes(Enum):
+        keyword = 'KEYWORD_QUERY'
+        entity = 'ENTITY_QUERY'
+
     @staticmethod
     def __preloaded_key__(index_location, index_type):
         return '%s::%s' % (index_location, index_type)
@@ -147,8 +151,14 @@ class Index(object):
         """Indexes the documents and yields documents to store in the database."""
         raise ArmyAntException("Index not implemented for %s" % self.__class__.__name__)
 
-    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
+    async def search(self, query, offset, limit, query_type=None, task=None,
+                     ranking_function=None, ranking_params=None, debug=False):
         raise ArmyAntException("Search not implemented for %s" % self.__class__.__name__)
 
     async def inspect(self, feature, workdir='.'):
         raise ArmyAntException("Inspect not implemented for %s" % self.__class__.__name__)
+
+    async def autocomplete(self, substring):
+        return {
+            'matches': []
+        }

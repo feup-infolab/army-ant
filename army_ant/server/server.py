@@ -93,6 +93,7 @@ async def search(request):
     debug = request.GET.get('debug', 'off')
 
     task = request.GET.get('task')
+    query_type = request.GET.get('type')
     query = request.GET.get('query')
     error = None
     trace = None
@@ -107,10 +108,11 @@ async def search(request):
             loop = asyncio.get_event_loop()
             index = Index.open(
                 request.app['engines'][engine]['index']['location'],
-                request.app['engines'][engine]['index']['type'],
-                loop)
+                request.app['engines'][engine]['index']['type'], loop)
             engine_response = await index.search(
-                query, offset, limit, task, ranking_function, ranking_params or None, debug == 'on')
+                query, offset, limit, query_type=query_type, task=task,
+                ranking_function=ranking_function, ranking_params=(ranking_params or None),
+                debug=(debug == 'on'))
 
             num_docs = len(engine_response['results'])
             if engine_response['numDocs']: num_docs = engine_response['numDocs']
@@ -146,6 +148,7 @@ async def search(request):
             'index_features': index_features,
             'task': task,
             'query': query,
+            'query_type': query_type,
             'debug': debug,
             'time': end_time - start_time,
             'error': str(error)
@@ -158,6 +161,7 @@ async def search(request):
             'rankingFunction': ranking_function,
             'rankingParams': ranking_params,
             'query': query,
+            'query_type': query_type,
             'debug': debug,
             'time': end_time - start_time,
             'offset': offset,

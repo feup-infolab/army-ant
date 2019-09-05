@@ -926,6 +926,19 @@ public class HypergraphOfEntity extends Engine {
         return termNodes;
     }
 
+    private IntSet getQueryEntityNodeIDs(List<String> entities) {
+        IntSet entityNodes = new LucIntHashSet(10);
+
+        for (String entity : entities) {
+            EntityNode entityNode = new EntityNode(new Entity(entity));
+            if (nodeIndex.containsKey(entityNode)) {
+                entityNodes.add(nodeIndex.get(entityNode).intValue());
+            }
+        }
+
+        return entityNodes;
+    }
+
     public boolean containsNode(Node node) {
         return nodeIndex.containsKey(node);
     }
@@ -1555,40 +1568,54 @@ public class HypergraphOfEntity extends Engine {
 
     @Override
     public ResultSet search(String query, int offset, int limit) throws IOException {
-        return search(query, offset, limit, Task.DOCUMENT_RETRIEVAL);
+        return search(query, offset, limit, QueryType.KEYWORD_QUERY, Task.DOCUMENT_RETRIEVAL);
     }
 
-    public ResultSet search(String query, int offset, int limit, Task task) throws IOException {
+    public ResultSet search(String query, int offset, int limit, QueryType queryType, Task task) throws IOException {
         Map<String, String> params = new HashMap<>();
         params.put("l", String.valueOf(DEFAULT_WALK_LENGTH));
         params.put("r", String.valueOf(DEFAULT_WALK_REPEATS));
-        return search(query, offset, limit, task, RankingFunction.RANDOM_WALK_SCORE, params, false);
+        return search(query, offset, limit, queryType, task, RankingFunction.RANDOM_WALK_SCORE, params, false);
     }
 
-    public ResultSet search(String query, int offset, int limit, Task task, RankingFunction function,
-            Map<String, String> params, boolean debug) throws IOException {
+    public ResultSet search(String query, int offset, int limit, QueryType queryType, Task task,
+            RankingFunction function, Map<String, String> params, boolean debug) throws IOException {
         long start = System.currentTimeMillis();
 
         trace.reset();
         trace.setEnabled(debug);
 
-        List<String> tokens = analyze(query);
-        IntSet queryTermNodeIDs = getQueryTermNodeIDs(tokens);
-        logger.info("Found {} query nodes found for [ {} ]", queryTermNodeIDs.size(), query);
-        trace.add("Mapping query terms [ %s ] to query term nodes", StringUtils.join(tokens, ", "));
+        boolean useQueryExpansion = Boolean.valueOf(params.getOrDefault("expansion", "false"));
+
+        List<String> tokens;
+        IntSet queryNodeIDs;
+        if (queryType == QueryType.ENTITY_QUERY) {
+            tokens = Arrays.stream(query.split("\\|\\|"))
+                    .map(String::trim)
+                    .collect(Collectors.toList());
+            queryNodeIDs = getQueryEntityNodeIDs(tokens);
+            if (useQueryExpansion) {
+                logger.warn("Query expansion is always disabled for entity queries");
+                useQueryExpansion = false;
+            }
+        } else {
+            tokens = analyze(query);
+            queryNodeIDs = getQueryTermNodeIDs(tokens);
+        }
+
+        logger.info("Found {} query nodes found for [ {} ]", queryNodeIDs.size(), query);
+        trace.add("Mapping query terms/entities [ %s ] to query term/entity nodes", StringUtils.join(tokens, ", "));
         trace.goDown();
-        for (int queryTermNodeID : queryTermNodeIDs) {
-            trace.add(nodeIndex.getKey(queryTermNodeID).toString());
+        for (int queryNodeID : queryNodeIDs) {
+            trace.add(nodeIndex.getKey(queryNodeID).toString());
         }
         trace.goUp();
 
         IntSet seedNodeIDs = null;
         Map<Integer, Double> seedNodeWeights = null;
 
-        boolean useQueryExpansion = Boolean.valueOf(params.getOrDefault("expansion", "false"));
-
         if (useQueryExpansion) {
-            seedNodeIDs = getSeedNodeIDs(queryTermNodeIDs);
+            seedNodeIDs = getSeedNodeIDs(queryNodeIDs);
             // System.out.println("Seed Nodes: " + seedNodeIDs.stream().map(nodeID -> nodeID + "=" +
             // nodeIndex.getKey(nodeID).toString()).collect(Collectors.toList()));
             trace.add("Mapping query term nodes to seed nodes");
@@ -1598,7 +1625,7 @@ public class HypergraphOfEntity extends Engine {
             }
             trace.goUp();
 
-            seedNodeWeights = seedNodeConfidenceWeights(seedNodeIDs, queryTermNodeIDs);
+            seedNodeWeights = seedNodeConfidenceWeights(seedNodeIDs, queryNodeIDs);
             // System.out.println("Seed Node Confidence Weights: " + seedNodeWeights);
             logger.info("Expanded [ {} ] to {} weighted seed nodes", query, seedNodeWeights.size());
             trace.add("Calculating confidence weight for seed nodes");
@@ -1612,14 +1639,14 @@ public class HypergraphOfEntity extends Engine {
         ResultSet resultSet;
         switch (function) {
         case HYPERRANK:
-            resultSet = hyperRankSearch(useQueryExpansion ? seedNodeIDs : queryTermNodeIDs, task,
+            resultSet = hyperRankSearch(useQueryExpansion ? seedNodeIDs : queryNodeIDs, task,
                     Float.valueOf(params.getOrDefault("d", String.valueOf(DEFAULT_DAMPING_FACTOR))),
                     Integer.valueOf(params.getOrDefault("n", String.valueOf(DEFAULT_MAX_ITERATIONS))),
                     Boolean.valueOf(params.getOrDefault("weighted", "false")),
                     Boolean.valueOf(params.getOrDefault("norm", "false")));
             break;
         case RANDOM_WALK_SCORE:
-            resultSet = randomWalkSearch(useQueryExpansion ? seedNodeIDs : queryTermNodeIDs,
+            resultSet = randomWalkSearch(useQueryExpansion ? seedNodeIDs : queryNodeIDs,
                     useQueryExpansion ? seedNodeWeights : new HashMap<>(), task,
                     Integer.valueOf(params.getOrDefault("l", String.valueOf(DEFAULT_WALK_LENGTH))),
                     Integer.valueOf(params.getOrDefault("r", String.valueOf(DEFAULT_WALK_REPEATS))),
@@ -2344,5 +2371,10 @@ public class HypergraphOfEntity extends Engine {
         DOCUMENT_RETRIEVAL,
         ENTITY_RETRIEVAL,
         TERM_RETRIEVAL,
+    }
+
+    public enum QueryType {
+        KEYWORD_QUERY,
+        ENTITY_QUERY
     }
 }

@@ -67,10 +67,15 @@ class HypergraphOfEntity(JavaIndex):
         biased_random_walk_without_seeds = 'BIASED_RANDOM_WALK_SCORE_WITHOUT_SEEDS'
         hyperrank = 'HYPERRANK'
 
+    class QueryType(Enum):
+        keyword = 'KEYWORD_QUERY'
+        entity = 'ENTITY_QUERY'
+
     JHypergraphOfEntityInMemory = JavaIndex.armyant.hgoe.HypergraphOfEntity
     JFeature = JClass("armyant.hgoe.HypergraphOfEntity$Feature")
     JRankingFunction = JClass("armyant.hgoe.HypergraphOfEntity$RankingFunction")
     JTask = JClass("armyant.hgoe.HypergraphOfEntity$Task")
+    JQueryType = JClass("armyant.hgoe.HypergraphOfEntity$QueryType")
 
     def __init__(self, reader, index_location, index_features, loop):
         super().__init__(reader, index_location, loop)
@@ -166,7 +171,8 @@ class HypergraphOfEntity(JavaIndex):
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
-    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
+    async def search(self, query, offset, limit, query_type=None, task=None,
+                     ranking_function=None, ranking_params=None, debug=False):
         if ranking_function:
             try:
                 ranking_function = HypergraphOfEntity.RankingFunction[ranking_function]
@@ -175,6 +181,15 @@ class HypergraphOfEntity(JavaIndex):
                 ranking_function = HypergraphOfEntity.RankingFunction['random_walk']
         else:
             ranking_function = HypergraphOfEntity.RankingFunction['random_walk']
+
+        if query_type:
+            try:
+                query_type = HypergraphOfEntity.QueryType[query_type]
+            except (JavaException, KeyError) as e:
+                logger.error("Could not use '%s' as a query type" % query_type)
+                query_type = HypergraphOfEntity.QueryType['keyword']
+        else:
+            query_type = HypergraphOfEntity.QueryType['keyword']
 
         if task:
             if not type(task) is Index.RetrievalTask:
@@ -204,7 +219,8 @@ class HypergraphOfEntity(JavaIndex):
             hgoe = HypergraphOfEntity.INSTANCES[self.index_location]
 
             task = HypergraphOfEntity.JTask.valueOf(task.value)
-            results = hgoe.search(query, offset, limit, task, ranking_function, ranking_params, debug)
+            query_type = HypergraphOfEntity.JQueryType.valueOf(query_type.value)
+            results = hgoe.search(query, offset, limit, query_type, task, ranking_function, ranking_params, debug)
             num_docs = results.getNumDocs()
             trace = results.getTrace()
             results = [Result(result.getScore(), result.getID(), result.getName(), result.getType())

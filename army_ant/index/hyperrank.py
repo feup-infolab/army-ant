@@ -18,5 +18,6 @@ class HyperRank(Index):
         for doc in self.reader:
             yield doc
 
-    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
+    async def search(self, query, offset, limit, query_type=None, task=None,
+                     ranking_function=None, ranking_params=None, debug=False):
         return ResultSet()

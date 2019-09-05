@@ -331,7 +331,8 @@ class TensorFlowRanking(JavaIndex):
         ranker = self.get_estimator(hparams)
         ranker.train(input_fn=lambda: self.input_fn(pd_train_generator), steps=100)
 
-    async def search(self, query, offset, limit, task=None, ranking_function=None, ranking_params=None, debug=False):
+    async def search(self, query, offset, limit, query_type=None, task=None,
+                     ranking_function=None, ranking_params=None, debug=False):
         hparams = tf.contrib.training.HParams(learning_rate=0.05)
         ranker = self.get_estimator(hparams)
 

@@ -225,7 +225,8 @@ class CommandLineInterface(object):
 
                     index = Index.open(index_location, index_type, loop)
                     response = loop.run_until_complete(index.search(
-                        query, offset, limit, task, ranking_function=ranking_function, ranking_params=ranking_params))
+                        query, offset, limit, task=task,
+                        ranking_function=ranking_function, ranking_params=ranking_params))
 
                     if db_location and db_name and db_type:
                         db = Database.factory(db_location, db_name, db_type, loop)

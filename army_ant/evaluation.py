@@ -418,7 +418,8 @@ class TRECEvaluator(FilesystemEvaluator):
                     query, topic_id, self.task.index_type, self.task.index_location))
                 start_time = time.time()
                 engine_response = await self.index.search(
-                    query, 0, 10000, Index.RetrievalTask.document_retrieval, self.task.ranking_function, ranking_params)
+                    query, 0, 10000, task=Index.RetrievalTask.document_retrieval,
+                    ranking_function=self.task.ranking_function, ranking_params=ranking_params)
                 end_time = int(round((time.time() - start_time) * 1000))
                 self.stats[params_id]['query_time'][topic_id] = end_time
 
@@ -521,7 +522,8 @@ class INEXEvaluator(FilesystemEvaluator):
                 query, topic_id, self.task.index_type, self.task.index_location))
             start_time = time.time()
             engine_response = await self.index.search(
-                query, 0, 10000, self.retrieval_task, self.task.ranking_function, ranking_params)
+                query, 0, 10000, task=self.retrieval_task,
+                ranking_function=self.task.ranking_function, ranking_params=ranking_params)
             end_time = int(round((time.time() - start_time) * 1000))
             self.stats[params_id]['query_time'][topic_id] = end_time
 
@@ -635,8 +637,8 @@ class LivingLabsEvaluator(Evaluator):
                         results = pickle.load(f)
                 else:
                     engine_response = await self.index.search(
-                        query['qstr'], 0, 10000, Index.RetrievalTask.document_retrieval,
-                        self.task.ranking_function, self.task.ranking_params)
+                        query['qstr'], 0, 10000, task=Index.RetrievalTask.document_retrieval,
+                        ranking_function=self.task.ranking_function, ranking_params=self.task.ranking_params)
                     results = engine_response['results']
                     with open(pickle_path, 'wb') as f:
                         pickle.dump(results, f)

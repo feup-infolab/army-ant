@@ -8,16 +8,17 @@
 {% set dataset = engine.split('-')[1] %}
 
 {% block content %}
-<ul class="tab" id="query-type">
-  <li class="tab-item" data-query-type="keyword">
+<ul class="tab" id="query-type-tabs">
+  <li class="tab-item {% if query_type != "entity" %} active {% endif %}" data-query-type="keyword">
     <a href="#">Keyword Query</a>
   </li>
-  <li class="tab-item active" data-query-type="entity">
+  <li class="tab-item {% if query_type == "entity" %} active {% endif %}" data-query-type="entity">
     <a href="#">Entity Query</a>
   </li>
 </ul>
 
-<form class="form-horizontal">
+<form class="form-horizontal" id="search-form">
+  <input type="hidden" id="query-type" name="type" value="{{ query_type or "keyword" }}"/>
   <div class="form-group">
     <div class="column">
       <div class="input-group">
@@ -31,22 +32,34 @@
         </select>
 
         <!-- Keyword query -->
-        <input class="form-input query d-hide" type="text" id="keyword-query" name="query"
-          placeholder="Type keywords here" value="{{ query if query }}" />
+        <input class="form-input query {% if query_type == "entity" %} d-hide {% endif %}" type="text" id="keyword-query"
+          placeholder="Type keywords here"
+          {% if query_type != "entity" %} name="query" {% endif %}
+          value="{{ query if query and query_type != "entity" }}" />
 
         <!-- START: Entity query -->
-        <div class="form-autocomplete query" id="entity-query">
+        <div class="form-autocomplete query {% if query_type != "entity" %} d-hide {% endif %}">
+          <input type="hidden" id="entity-query"
+            {% if query_type == "entity" %} name="query" {% endif %}
+            value="{{ query if query and query_type == "entity" }}"/>
           <!-- autocomplete input container -->
           <div class="form-autocomplete-input form-input">
+            {% if query and query_type == "entity" %}
+            {% for entity in query.split("||") %}
             <!-- autocomplete chips -->
-            <!--div class="chip">
-              Thor Odinson
+            <div class="chip">
+              {{ entity }}
               <a href="#" class="btn btn-clear" aria-label="Close" role="button"></a>
-            </div-->
+            </div>
+            {% endfor %}
+            {% endif %}
 
             <!-- autocomplete real input box -->
-            <input class="form-input" type="text" id="entity-query-input" autocomplete="off"
-              placeholder="Type entity name here">
+            <div class="has-icon-left">
+              <input class="form-input" type="text" id="entity-query-input" autocomplete="off"
+                placeholder="Type entity name here">
+              <i class="form-icon loading d-none" id="entity-list-loading"></i>
+            </div>
           </div>
 
           <!-- autocomplete suggestion list -->
@@ -126,19 +139,25 @@
     });
 
     // Query type selection tabs
-    $("#query-type .tab-item").on("click", function(e) {
+    $("#query-type-tabs .tab-item").on("click", function(e) {
       let queryType = $(this).data("query-type");
       $(".tab-item").removeClass("active");
       $(this).addClass("active");
 
       $(".query").addClass("d-hide");
       if (queryType === "entity") {
-        $("#entity-query").removeClass("d-hide");
+        $("#entity-query").parent(".form-autocomplete").removeClass("d-hide");
         document.getElementById("entity-query-input").focus();
+        $("#query-type").val("entity");
+        $("#keyword-query").removeAttr("name");
+        $("#entity-query").attr("name", "query");
       } else {
         // Default is keyword
         $("#keyword-query").removeClass("d-hide");
         document.getElementById("keyword-query").focus();
+        $("#query-type").val("keyword");
+        $("#keyword-query").attr("name", "query");
+        $("#entity-query").removeAttr("name");
       }
     });
 
@@ -167,6 +186,10 @@
         var entityName = $("#entity-query-input").val();
       }
 
+      if (entityName == null || entityName.trim() == "") {
+        return;
+      }
+
       let $closeButton = $('<a>')
         .addClass("btn btn-clear")
         .attr("href", "#")
@@ -185,6 +208,7 @@
       }
 
       $("#entity-query-input").val("");
+      $(".menu-item a.active").removeClass("active");
     }
 
     // Click on entity name from autocomplete
@@ -195,13 +219,21 @@
 
     function autocomplete(substring, callback) {
       var engine = $("#engine").val();
+      $("#entity-list-loading").removeClass("d-none");
       $.getJSON("{{ url('autocomplete') }}?engine=" + engine + "&substring=" + substring, callback);
     }
 
-    var autoCompleteEvent = null;
+    $("#entity-query-input").on("keydown", function(e) {
+      if (e.keyCode == 13 && $(this).val() != "") {
+        return false;
+      }
+      return true;
+    });
+
     // Entity name input control
+    var autoCompleteEvent = null;
     $("#entity-query-input").on("keyup", function(e) {
-      var enter = false;
+      var pressedEnter = false;
 
       switch (e.keyCode) {
         case 8: // BACKSPACE
@@ -218,7 +250,8 @@
 
         case 13: // ENTER
           addSelectedEntity();
-          enter = true;
+          pressedEnter = true;
+          break;
 
         case 27: // ESCAPE
           closeEntityQueryMenu();
@@ -255,63 +288,67 @@
             $a.addClass("active");
           }
           break;
-
-        default:
-          // Show menu
-          $(".form-autocomplete .menu").removeClass("d-hide");
       }
 
-      if (e.keyCode >= 37 && e.keyCode <= 40 || e.keyCode == 8) {
-        return !enter;
-      }
-
-      if (autoCompleteEvent) {
-        autoCompleteEvent.abort();
-      }
-
-      var inputText = $(".form-autocomplete-input input[type='text']").val();
-      autocompleteEvent = autocomplete(inputText, function(data) {
-        $(".form-autocomplete .menu").empty();
-        if (data.error || data.matches.length < 1) {
-          $(".form-autocomplete .menu").addClass("d-hide");
-        } else {
-          for (let i = 0; i < data.matches.length; i++) {
-            let $tile = $("<div>")
-              .addClass("tile")
-              .append(data.matches[i]);
-
-            let $a = $("<a>")
-              .attr("href", "#")
-              .append($tile);
-
-            let $menuItem = $("<li>")
-              .addClass("menu-item")
-              .append($a);
-
-            $(".form-autocomplete .menu").append($menuItem);
-          }
-
-          // Make matches bold
-          $(".form-autocomplete .menu .menu-item a .tile").forEach(function(item) {
-            stripSpan(item);
-
-            var itemText = $(item).text().trim();
-            if (itemText != "" && inputText != "" && itemText.toLowerCase().includes(inputText.toLowerCase())) {
-              var html = itemText.replace(
-                new RegExp("(" + inputText + ")", "ig"),
-                '<span class="text-primary text-bold">$1</span>');
-              $(item).empty().append($(html));
-            }
-          });
+      var inputText = $("#entity-query-input").val();
+      if (!(e.keyCode >= 37 && e.keyCode <= 40) && inputText.trim() != "") {
+        if (autoCompleteEvent) {
+          autoCompleteEvent.abort();
+          $("#entity-list-loading").addClass("d-none");
         }
-      });
 
-      return !enter;
+        autocompleteEvent = autocomplete(inputText, function(data) {
+          $(".form-autocomplete .menu").removeClass("d-hide");
+          $(".form-autocomplete .menu").empty();
+          if (data.error || data.matches.length < 1) {
+            $(".form-autocomplete .menu").addClass("d-hide");
+          } else {
+            for (let i = 0; i < data.matches.length; i++) {
+              let $tile = $("<div>")
+                .addClass("tile")
+                .append(data.matches[i]);
+
+              let $a = $("<a>")
+                .attr("href", "#")
+                .append($tile);
+
+              let $menuItem = $("<li>")
+                .addClass("menu-item")
+                .append($a);
+
+              $(".form-autocomplete .menu").append($menuItem);
+            }
+
+            // Make matches bold
+            $(".form-autocomplete .menu .menu-item a .tile").forEach(function(item) {
+              stripSpan(item);
+
+              var itemText = $(item).text().trim();
+              if (itemText != "" && inputText != "" && itemText.toLowerCase().includes(inputText.toLowerCase())) {
+                var html = itemText.replace(
+                  new RegExp("(" + inputText + ")", "ig"),
+                  '<span class="text-primary text-bold">$1&nbsp;</span>');
+                $(item).empty().append($(html));
+              }
+            });
+          }
+          $("#entity-list-loading").addClass("d-none");
+        });
+      }
+
+      return !pressedEnter;
     });
 
     // Entity chip delete
     $(".form-autocomplete").on("click", ".chip a[aria-label='Close']", function(e) {
       $(this).parent(".chip").remove();
+    });
+
+    $("#search-form").on("submit", function(e) {
+      if ($("#query-type").val() == "entity") {
+        var entityQuery = $(".query .chip").map(function(item) { return $(this).text().trim(); }).get().join("||");
+        $("#entity-query").val(entityQuery);
+      }
     });
   })();
 </script>
