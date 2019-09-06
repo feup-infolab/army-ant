@@ -213,6 +213,7 @@
 
     // Click on entity name from autocomplete
     $("body").on("click", ".form-autocomplete .menu-item a", function(e) {
+      $(".form-autocomplete .menu-item a").removeClass("active");
       $(this).addClass("active");
       addSelectedEntity();
     });
@@ -327,8 +328,8 @@
               if (itemText != "" && inputText != "" && itemText.toLowerCase().includes(inputText.toLowerCase())) {
                 var html = itemText.replace(
                   new RegExp("(" + inputText + ")", "ig"),
-                  '<span class="text-primary text-bold">$1&nbsp;</span>');
-                $(item).empty().append($(html));
+                  '<span class="text-primary text-bold">$1</span>');
+                $(item).empty().append($("<span>" + html + "</span>"));
               }
             });
           }
