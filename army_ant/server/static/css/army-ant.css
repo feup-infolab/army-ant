@@ -225,11 +225,12 @@ dl dl {
 }
 .form-autocomplete-input {
   width: auto !important;
-  height: 1.8rem !important;
+  min-height: 1.8rem !important;
   line-height: 1.2rem !important;
+  flex-direction: row;
 }
 .form-autocomplete .chip {
-  height: 1.325rem !important;
+  height: 1.3rem !important;
   line-height: 1rem !important;
 }
 .chip.highlighted {

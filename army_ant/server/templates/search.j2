@@ -37,7 +37,7 @@
           {% if query_type != "entity" %} name="query" {% endif %}
           value="{{ query if query and query_type != "entity" }}" />
 
-        <!-- START: Entity query -->
+        <!-- Entity query START -->
         <div class="form-autocomplete query {% if query_type != "entity" %} d-hide {% endif %}">
           <input type="hidden" id="entity-query"
             {% if query_type == "entity" %} name="query" {% endif %}
@@ -74,7 +74,7 @@
             </li-->
           </ul>
         </div>
-        <!-- END: Entity query -->
+        <!-- Entity query END -->
 
         <button class="btn btn-primary btn input-group-btn">Search</button>
       </div>
