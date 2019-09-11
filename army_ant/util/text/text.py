@@ -11,6 +11,7 @@ import os
 import pickle
 import re
 import string
+import igraph
 
 import langdetect
 import nltk
@@ -210,3 +211,7 @@ def extract_entities_per_sentence(text, lib='NLTK'):
             entities.append(entities_per_sentence)
 
     return entities
+
+def textrank(text):
+    tokens = analyze(text)
+    print(tokens)

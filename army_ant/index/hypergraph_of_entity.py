@@ -22,6 +22,7 @@ import jpype
 import numpy as np
 import pandas as pd
 import psycopg2
+import summa.keywords as skw
 import tensorflow as tf
 import tensorflow_ranking as tfr
 import yaml
@@ -38,16 +39,14 @@ from army_ant.setup import config_logger
 from army_ant.util import load_gremlin_script, load_sql_script
 from army_ant.util.text import analyze
 
-from . import Index
-from . import JavaIndex
-from . import Result
-from . import ResultSet
+from . import Index, JavaIndex, Result, ResultSet
 
 logger = logging.getLogger(__name__)
 
 
 class HypergraphOfEntity(JavaIndex):
     class Feature(Enum):
+        keywords = 'EXTRACT_KEYWORDS'
         sents = 'SENTENCES'
         syns = 'SYNONYMS'
         context = 'CONTEXT'
@@ -77,6 +76,9 @@ class HypergraphOfEntity(JavaIndex):
     JTask = JClass("armyant.hgoe.HypergraphOfEntity$Task")
     JQueryType = JClass("armyant.hgoe.HypergraphOfEntity$QueryType")
 
+    # Only used with Features.keywords
+    NUM_KEYWORDS = 10
+
     def __init__(self, reader, index_location, index_features, loop):
         super().__init__(reader, index_location, loop)
         self.index_features = [HypergraphOfEntity.Feature[index_feature] for index_feature in index_features]
@@ -104,7 +106,8 @@ class HypergraphOfEntity(JavaIndex):
         try:
             index_features_str = ':'.join([index_feature.value for index_feature in self.index_features])
             features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value)
-                        for index_feature in self.index_features]
+                        for index_feature in self.index_features
+                        if index_feature not in (HypergraphOfEntity.Feature.keywords, )]
 
             if HypergraphOfEntity.Feature.context in self.index_features:
                 if features_location is None:
@@ -140,6 +143,10 @@ class HypergraphOfEntity(JavaIndex):
                     except Exception as e:
                         logger.warning("Triple (%s, %s, %s) skipped" % (s, p, o))
                         logger.exception(e)
+
+                if HypergraphOfEntity.Feature.keywords in self.index_features:
+                    logger.debug("Extracting %d keywords per document using TextRank" % HypergraphOfEntity.NUM_KEYWORDS)
+                    doc.text = skw.keywords(doc.text, ratio=0.3)
 
                 jDoc = HypergraphOfEntity.JDocument(
                     JString(doc.doc_id), doc.title, JString(doc.text), java.util.Arrays.asList(triples),
