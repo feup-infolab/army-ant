@@ -49,7 +49,7 @@
     for (var i=0; i < queryParamNames.length; i++) {
       if (queryParamNames[i].startsWith('ranking_param_')) {
         var parts = queryParamNames[i].split('_');
-        rankingParams[parts[2]] = +queryParams[queryParamNames[i]];
+        rankingParams[parts[2]] = queryParams[queryParamNames[i]];
       }
     }
 
@@ -143,8 +143,8 @@
           $param.attr('selected', 'selected');
           {% else %}
           if (param in rankingParams) {
-            if(params[param][i] == rankingParams[param]) {
-                $param.attr('selected', 'selected');
+            if(params[param][i].toString() == rankingParams[param].toString()) {
+              $param.attr('selected', 'selected');
             }
           } else if (defaultParams && param in defaultParams && params[param][i] == defaultParams[param]) {
             $param.attr('selected', 'selected');
