@@ -215,6 +215,12 @@ def extract_entities_per_sentence(text, lib='NLTK'):
 
 
 def textrank(text, window_size=4, ratio=0.2, cutoff=None):
+    """
+    Simplified version of TextRank:
+      - Without POS tagging (we use every word that passes the analyzer instead);
+      - Without keyword sequence collapsation (we don't need multi-word keywords, because we focus on term-based index)
+    """
+
     assert ratio is None or cutoff is None, "Only one of ratio or cutoff can be provided."
 
     tokens = analyze(text)
