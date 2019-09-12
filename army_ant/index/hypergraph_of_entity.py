@@ -22,7 +22,6 @@ import jpype
 import numpy as np
 import pandas as pd
 import psycopg2
-import summa.keywords as skw
 import tensorflow as tf
 import tensorflow_ranking as tfr
 import yaml
@@ -37,9 +36,10 @@ from army_ant.exception import ArmyAntException
 from army_ant.reader import Document, Entity
 from army_ant.setup import config_logger
 from army_ant.util import load_gremlin_script, load_sql_script
-from army_ant.util.text import analyze
+from army_ant.util.text import textrank
 
 from . import Index, JavaIndex, Result, ResultSet
+
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +56,7 @@ class HypergraphOfEntity(JavaIndex):
         related_to_by_doc = 'RELATED_TO_BY_DOC'
         related_to_by_subj = 'RELATED_TO_BY_SUBJ'
 
+
     class RankingFunction(Enum):
         entity_weight = 'ENTITY_WEIGHT'
         jaccard = 'JACCARD_SCORE'
@@ -66,9 +67,11 @@ class HypergraphOfEntity(JavaIndex):
         biased_random_walk_without_seeds = 'BIASED_RANDOM_WALK_SCORE_WITHOUT_SEEDS'
         hyperrank = 'HYPERRANK'
 
+
     class QueryType(Enum):
         keyword = 'KEYWORD_QUERY'
         entity = 'ENTITY_QUERY'
+
 
     JHypergraphOfEntityInMemory = JavaIndex.armyant.hgoe.HypergraphOfEntity
     JFeature = JClass("armyant.hgoe.HypergraphOfEntity$Feature")
@@ -76,12 +79,11 @@ class HypergraphOfEntity(JavaIndex):
     JTask = JClass("armyant.hgoe.HypergraphOfEntity$Task")
     JQueryType = JClass("armyant.hgoe.HypergraphOfEntity$QueryType")
 
-    # Only used with Features.keywords
-    NUM_KEYWORDS = 10
 
     def __init__(self, reader, index_location, index_features, loop):
         super().__init__(reader, index_location, loop)
         self.index_features = [HypergraphOfEntity.Feature[index_feature] for index_feature in index_features]
+
 
     async def load(self):
         if self.index_location in HypergraphOfEntity.INSTANCES:
@@ -93,6 +95,7 @@ class HypergraphOfEntity(JavaIndex):
             self.index_location, java.util.Arrays.asList(features))
         HypergraphOfEntity.INSTANCES[self.index_location].prepareAutocomplete()
 
+
     def ensure_loaded(self):
         if not self.index_location in HypergraphOfEntity.INSTANCES:
             features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value) for index_feature in
@@ -102,8 +105,13 @@ class HypergraphOfEntity(JavaIndex):
             hgoe.prepareAutocomplete()
             HypergraphOfEntity.INSTANCES[self.index_location] = hgoe
 
+
     async def index(self, features_location=None):
         try:
+            if HypergraphOfEntity.Feature.keywords in self.index_features:
+                    logger.info("Indexing top %.0f%% keywords per document based on TextRank" %
+                                (HypergraphOfEntity.KW_RATIO * 100))
+
             index_features_str = ':'.join([index_feature.value for index_feature in self.index_features])
             features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value)
                         for index_feature in self.index_features
@@ -145,8 +153,9 @@ class HypergraphOfEntity(JavaIndex):
                         logger.exception(e)
 
                 if HypergraphOfEntity.Feature.keywords in self.index_features:
-                    logger.debug("Extracting %d keywords per document using TextRank" % HypergraphOfEntity.NUM_KEYWORDS)
-                    doc.text = skw.keywords(doc.text, ratio=0.3)
+                    logger.debug("Extracting top %.0f%% keywords per document using TextRank" %
+                                 (HypergraphOfEntity.KW_RATIO * 100))
+                    doc.text = textrank(doc.text, ratio=HypergraphOfEntity.KW_RATIO)
 
                 jDoc = HypergraphOfEntity.JDocument(
                     JString(doc.doc_id), doc.title, JString(doc.text), java.util.Arrays.asList(triples),
@@ -177,6 +186,7 @@ class HypergraphOfEntity(JavaIndex):
             hgoe.save()
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
+
 
     async def search(self, query, offset, limit, query_type=None, task=None,
                      ranking_function=None, ranking_params=None, debug=False):
@@ -237,6 +247,7 @@ class HypergraphOfEntity(JavaIndex):
 
         return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()), trace_ascii=trace.toASCII())
 
+
     async def inspect(self, feature, workdir):
         try:
             self.ensure_loaded()
@@ -244,6 +255,7 @@ class HypergraphOfEntity(JavaIndex):
             hgoe.inspect(feature, workdir)
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
+
 
     async def autocomplete(self, substring):
         self.ensure_loaded()

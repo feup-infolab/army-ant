@@ -36,17 +36,22 @@ from army_ant.exception import ArmyAntException
 from army_ant.reader import Document, Entity
 from army_ant.setup import config_logger
 from army_ant.util import load_gremlin_script, load_sql_script
-from army_ant.util.text import analyze
+from army_ant.util.text import textrank
 
 from . import JavaIndex
 from . import LuceneEngine
 from . import Result
 from . import ResultSet
 
+
 logger = logging.getLogger(__name__)
 
 
 class TensorFlowRanking(JavaIndex):
+    class Feature(Enum):
+        keywords = 'EXTRACT_KEYWORDS'
+
+
     FEATURES = ['num_query_terms', 'norm_num_query_terms', 'idf', 'sum_query_tf', 'min_query_tf', 'max_query_tf',
                 'avg_query_tf', 'var_query_tf', 'stream_length', 'sum_norm_tf', 'min_norm_tf', 'max_norm_tf',
                 'avg_norm_tf', 'var_norm_tf', 'url_slashes', 'url_length', 'indegree', 'outdegree', 'pagerank',
@@ -59,13 +64,21 @@ class TensorFlowRanking(JavaIndex):
 
     JLearningToRankHelper = JavaIndex.armyant.lucene.LuceneLearningToRankHelper
 
-    def __init__(self, reader, index_location, loop):
+
+    def __init__(self, reader, index_location, index_features, loop):
         super().__init__(reader, index_location, loop)
         self.lucene_index_location = os.path.join(index_location, 'lucene')
-        self.lucene_engine = LuceneEngine(reader, self.lucene_index_location, loop)
+        self.index_features = [TensorFlowRanking.Feature[index_feature] for index_feature in index_features]
+
+        lucene_index_features = []
+        if TensorFlowRanking.Feature.keywords in self.index_features:
+            lucene_index_features.append(LuceneEngine.Feature.keywords.name)
+
+        self.lucene_engine = LuceneEngine(reader, self.lucene_index_location, lucene_index_features, loop)
         self.graph = OrderedDict()
         self.web_features = {}
         self.scaler_filename = os.path.join(index_location, "scaler.pickle")
+
 
     def load_topics(self, features_location):
         topics = {}
@@ -76,6 +89,7 @@ class TensorFlowRanking(JavaIndex):
                 topics[topic_id] = query
 
         return topics
+
 
     def load_qrels(self, features_location):
         qrels = defaultdict(lambda: {})
@@ -88,12 +102,14 @@ class TensorFlowRanking(JavaIndex):
 
         return qrels
 
+
     def process_web_features(self, doc):
         if not doc.doc_id in self.web_features:
             self.web_features[doc.doc_id] = {}
         self.web_features[doc.doc_id]['url_slashes'] = doc.metadata['url'].count('/')
         self.web_features[doc.doc_id]['url_length'] = len(doc.metadata['url'])
         self.graph[doc.doc_id] = doc.links or []
+
 
     def j_build_graph_based_features(self):
         logger.info("Building graph and computing graph-based features")
@@ -119,6 +135,7 @@ class TensorFlowRanking(JavaIndex):
             j_graph_based_features.put(v['name'], j_features)
 
         return j_graph_based_features
+
 
     def build_train_set(self, ltr_helper, topics, qrels):
         """Compute query features for topics and qrels and prepare the training set."""
@@ -158,6 +175,7 @@ class TensorFlowRanking(JavaIndex):
         # train_set.to_csv('/tmp/features.csv')
 
         return train_set
+
 
     def build_predict_set(self, ltr_helper, query, filter_by_doc_id=None):
         """Compute query features for topics and qrels and prepare the training set."""
@@ -204,6 +222,7 @@ class TensorFlowRanking(JavaIndex):
 
         return doc_ids, predict_set
 
+
     def pandas_generator(self, dataset):
         num_features = TensorFlowRanking.NUM_FEATURES
         list_size = TensorFlowRanking.LIST_SIZE
@@ -232,6 +251,7 @@ class TensorFlowRanking(JavaIndex):
 
         return inner_generator
 
+
     def input_fn(self, pd_generator):
         train_set = tf.data.Dataset.from_generator(
             pd_generator,
@@ -249,10 +269,12 @@ class TensorFlowRanking(JavaIndex):
         train_set = train_set.shuffle(1000).repeat().batch(TensorFlowRanking.BATCH_SIZE)
         return train_set.make_one_shot_iterator().get_next()
 
+
     def example_feature_columns(self):
         feature_names = ["%d" % (i + 1) for i in range(0, TensorFlowRanking.NUM_FEATURES)]
         return {name: tf.feature_column.numeric_column(name, shape=(1,), default_value=0.0)
                 for name in feature_names}
+
 
     def make_score_fn(self):
         def _score_fn(context_features, group_features, mode, params, config):
@@ -274,6 +296,7 @@ class TensorFlowRanking(JavaIndex):
 
         return _score_fn
 
+
     def eval_metric_fns(self):
         metric_fns = {}
         metric_fns.update({
@@ -282,6 +305,7 @@ class TensorFlowRanking(JavaIndex):
         })
 
         return metric_fns
+
 
     def get_estimator(self, hparams):
         def _train_op_fn(loss):
@@ -304,6 +328,7 @@ class TensorFlowRanking(JavaIndex):
                 ranking_head=ranking_head),
             model_dir=os.path.join(self.index_location, 'model'),
             params=hparams)
+
 
     async def index(self, features_location=None):
         if not features_location:
@@ -330,6 +355,7 @@ class TensorFlowRanking(JavaIndex):
         hparams = tf.contrib.training.HParams(learning_rate=0.05)
         ranker = self.get_estimator(hparams)
         ranker.train(input_fn=lambda: self.input_fn(pd_train_generator), steps=100)
+
 
     async def search(self, query, offset, limit, query_type=None, task=None,
                      ranking_function=None, ranking_params=None, debug=False):

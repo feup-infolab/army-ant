@@ -53,6 +53,10 @@ class Index(object):
         keyword = 'KEYWORD_QUERY'
         entity = 'ENTITY_QUERY'
 
+    # One of these is used, but only with Feature.keywords
+    KW_RATIO = 0.2
+    KW_CUTOFF = 10
+
     @staticmethod
     def __preloaded_key__(index_location, index_type):
         return '%s::%s' % (index_location, index_type)
@@ -60,6 +64,7 @@ class Index(object):
     @staticmethod
     def factory(reader, index_location, index_type, loop):
         import army_ant.index as idx
+        index_features = index_type.split(':')[1:]
 
         if index_type == 'gow':
             return idx.GraphOfWord(reader, index_location, loop)
@@ -74,16 +79,13 @@ class Index(object):
         elif index_type == 'goe_csv':
             return idx.GraphOfEntityCSV(reader, index_location, loop)
         elif index_type.startswith('hgoe'):
-            index_features = index_type.split(':')[1:]
             return idx.HypergraphOfEntity(reader, index_location, index_features, loop)
-        elif index_type == 'lucene':
-            return idx.LuceneEngine(reader, index_location, loop)
-        elif index_type == 'tfr':
-            return idx.TensorFlowRanking(reader, index_location, loop)
-        elif index_type == 'lucene_features':
-            return idx.LuceneFeaturesEngine(reader, index_location, loop)
-        elif index_type == 'hyperrank':
-            return idx.HyperRank(reader, index_location, loop)
+        elif index_type.startswith('lucene_features'):
+            return idx.LuceneFeaturesEngine(reader, index_location, index_features, loop)
+        elif index_type.startswith('lucene'):
+            return idx.LuceneEngine(reader, index_location, index_features, loop)
+        elif index_type.startswith('tfr'):
+            return idx.TensorFlowRanking(reader, index_location, index_features, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 
@@ -94,6 +96,8 @@ class Index(object):
         key = Index.__preloaded_key__(index_location, index_type)
         if key in Index.PRELOADED:
             return Index.PRELOADED[key]
+
+        index_features = index_type.split(':')[1:]
 
         if index_type == 'gow':
             return idx.GraphOfWord(None, index_location, loop)
@@ -110,16 +114,13 @@ class Index(object):
         elif index_type == 'gremlin':
             return idx.GremlinServerIndex(None, index_location, loop)
         elif index_type.startswith('hgoe'):
-            index_features = index_type.split(':')[1:]
             return idx.HypergraphOfEntity(None, index_location, index_features, loop)
-        elif index_type == 'lucene':
-            return idx.LuceneEngine(None, index_location, loop)
-        elif index_type == 'tfr':
-            return idx.TensorFlowRanking(None, index_location, loop)
-        elif index_type == 'lucene_features':
-            return idx.LuceneFeaturesEngine(None, index_location, loop)
-        elif index_type == 'hyperrank':
-            return idx.HyperRank(None, index_location, loop)
+        elif index_type.startswith('lucene_features'):
+            return idx.LuceneFeaturesEngine(None, index_location, index_features, loop)
+        elif index_type.startswith('lucene'):
+            return idx.LuceneEngine(None, index_location, index_features, loop)
+        elif index_type.startswith('tfr'):
+            return idx.TensorFlowRanking(None, index_location, index_features, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 

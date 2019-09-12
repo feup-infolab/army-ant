@@ -36,26 +36,42 @@ from army_ant.exception import ArmyAntException
 from army_ant.reader import Document, Entity
 from army_ant.setup import config_logger
 from army_ant.util import load_gremlin_script, load_sql_script
-from army_ant.util.text import analyze
+from army_ant.util.text import textrank
 
 from . import JavaIndex
 from . import Result
 from . import ResultSet
 
+
 logger = logging.getLogger(__name__)
 
 
 class LuceneEngine(JavaIndex):
+    class Feature(Enum):
+        keywords = 'EXTRACT_KEYWORDS'
+
+
     class RankingFunction(Enum):
         tf_idf = 'TF_IDF'
         bm25 = 'BM25'
         dfr = 'DFR'
 
+
     JLuceneEngine = JavaIndex.armyant.lucene.LuceneEngine
     JRankingFunction = JClass("armyant.lucene.LuceneEngine$RankingFunction")
 
+
+    def __init__(self, reader, index_location, index_features, loop):
+        super().__init__(reader, index_location, loop)
+        self.index_features = [LuceneEngine.Feature[index_feature] for index_feature in index_features]
+
+
     async def index(self, features_location=None):
         try:
+            if LuceneEngine.Feature.keywords in self.index_features:
+                    logger.info("Indexing top %.0f%% keywords per document based on TextRank" %
+                                (LuceneEngine.KW_RATIO * 100))
+
             lucene = LuceneEngine.JLuceneEngine(self.index_location)
             lucene.open()
 
@@ -84,6 +100,11 @@ class LuceneEngine(JavaIndex):
                         logger.warning("Triple (%s, %s, %s) skipped" % (s, p, o))
                         logger.exception(e)
 
+                if LuceneEngine.Feature.keywords in self.index_features:
+                    logger.debug("Extracting top %.0f%% keywords per document using TextRank" %
+                                 (LuceneEngine.KW_RATIO * 100))
+                    doc.text = textrank(doc.text, ratio=LuceneEngine.KW_RATIO)
+
                 jDoc = LuceneEngine.JDocument(
                     JString(doc.doc_id), doc.title, JString(doc.text), java.util.Arrays.asList(triples),
                     java.util.Arrays.asList(entities))
@@ -111,6 +132,7 @@ class LuceneEngine(JavaIndex):
             lucene.close()
         except JavaException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
+
 
     async def search(self, query, offset, limit, query_type=None, task=None,
                      ranking_function=None, ranking_params=None, debug=False):
@@ -154,13 +176,25 @@ class LuceneEngine(JavaIndex):
         return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()), trace_ascii=trace.toASCII())
 
 
+
 class LuceneFeaturesEngine(JavaIndex):
+    class Feature(Enum):
+        keywords = 'EXTRACT_KEYWORDS'
+
     JFeaturesHelper = JavaIndex.armyant.lucene.LuceneFeaturesHelper
 
-    def __init__(self, reader, index_location, loop):
+
+    def __init__(self, reader, index_location, index_features, loop):
         super().__init__(reader, index_location, loop)
         self.lucene_index_location = os.path.join(index_location, 'lucene')
-        self.lucene_engine = LuceneEngine(reader, self.lucene_index_location, loop)
+        self.index_features = [LuceneFeaturesEngine.Feature[index_feature] for index_feature in index_features]
+
+        lucene_index_features = []
+        if TensorFlowRanking.Feature.keywords in self.index_features:
+            lucene_index_features.append(LuceneEngine.Feature.keywords.name)
+
+        self.lucene_engine = LuceneEngine(reader, self.lucene_index_location, lucene_index_features, loop)
+
 
     def j_load_features(self, features_location):
         logger.info("Loading query-independent features from %s" % features_location)
@@ -177,6 +211,7 @@ class LuceneFeaturesEngine(JavaIndex):
 
         return j_features
 
+
     async def index(self, features_location=None):
         if not features_location:
             raise ArmyAntException("Must provide a features location with topics.txt and qrels.txt files")
@@ -187,6 +222,7 @@ class LuceneFeaturesEngine(JavaIndex):
         features_helper = LuceneFeaturesEngine.JFeaturesHelper(self.lucene_index_location)
         j_features = self.j_load_features(features_location)
         features_helper.setDocumentFeatures(j_features)
+
 
     async def search(self, query, offset, limit, query_type=None, task=None,
                      ranking_function=None, ranking_params=None, debug=False):

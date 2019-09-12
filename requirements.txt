@@ -27,7 +27,6 @@ scikit-learn==0.20.2
 mysql-connector~=2.1.6
 progressbar2==3.42
 biterm==0.1.5
-summa==1.2.0
 
 #aiogremlin==3.2.4
 #aiocache==0.8.0

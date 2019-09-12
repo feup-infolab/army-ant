@@ -11,8 +11,9 @@ import os
 import pickle
 import re
 import string
-import igraph
+from collections import OrderedDict
 
+import igraph
 import langdetect
 import nltk
 import yaml
@@ -212,6 +213,87 @@ def extract_entities_per_sentence(text, lib='NLTK'):
 
     return entities
 
-def textrank(text):
+
+def textrank(text, window_size=4, ratio=0.2, cutoff=None):
+    assert ratio is None or cutoff is None, "Only one of ratio or cutoff can be provided."
+
     tokens = analyze(text)
-    print(tokens)
+    graph = OrderedDict()
+
+    for n in range(len(tokens)-1):
+        window = tokens[n:n+window_size]
+        for i in range(len(window)):
+            if not window[i] in graph:
+                graph[window[i]] = OrderedDict()
+
+            for j in range(len(window)):
+                if i >= j: continue
+
+                if not window[j] in graph:
+                    graph[window[j]] = OrderedDict()
+
+                graph[window[i]][window[j]] = 1
+
+    g = igraph.Graph(directed=False)
+    g.add_vertices(iter(graph.keys()))
+    edges = [(source, target) for source in graph.keys() for target in graph[source].keys()]
+    g.add_edges(edges)
+    g.vs['pr'] = g.pagerank()
+
+    if ratio is not None:
+        cutoff = round(g.vcount() * ratio)
+
+    keywords = []
+    for i, v in enumerate(sorted(g.vs, key=lambda v: v['pr'], reverse=True)):
+        if i >= cutoff: break
+        keywords.append(v['name'])
+
+    return '\n'.join(keywords)
+
+
+if __name__ == '__main__':
+    texts = [
+        """
+        Tron: Legacy is a 2010 American science fiction action film directed by Joseph Kosinski, in his feature
+        directorial debut, from a screenplay written by Adam Horowitz and Edward Kitsis, based on a story by
+        Horowitz, Kitsis, Brian Klugman and Lee Sternthal. It is a sequel to the 1982 film Tron, whose director
+        Steven Lisberger returned to produce. The cast includes Jeff Bridges and Bruce Boxleitner reprising their
+        roles as Kevin Flynn and Alan Bradley, respectively, as well as Garrett Hedlund, Olivia Wilde, James Frain,
+        Beau Garrett and Michael Sheen. The story follows Flynn's adult son Sam, who responds to a message from his
+        long-lost father and is transported into a virtual reality called "The Grid, " where Sam, his father, and
+        the algorithm Quorra must stop the malevolent program Clu from invading the real world.""",
+
+        """
+        Back to the Future is a 1985 American science fiction film directed by Robert Zemeckis and written by
+        Zemeckis and Bob Gale. It stars Michael J. Fox as teenager Marty McFly, who accidentally travels back
+        in time from 1985 to 1955, where he meets his future parents and becomes his mother's romantic interest.
+        Christopher Lloyd portrays the eccentric scientist Dr. Emmett "Doc" Brown, inventor of the time-traveling
+        DeLorean, who helps Marty repair history and return to 1985. The cast also includes Lea Thompson as Marty's
+        mother Lorraine, Crispin Glover as his father George, and Thomas F. Wilson as Biff Tannen, Marty and George's
+        arch-nemesis.
+
+        Zemeckis and Gale wrote the script after Gale wondered whether he would have befriended his father if they had
+        attended school together. Film studios rejected it until the financial success of Zemeckis' Romancing the
+        Stone. Zemeckis approached Steven Spielberg, who agreed to produce the project at Amblin Entertainment, with
+        Universal Pictures as distributor. Fox was the first choice to play Marty, but he was busy filming his
+        television series Family Ties, and Eric Stoltz was cast; after the filmmakers decided he was wrong for the
+        role, a deal was struck to allow Fox to film Back to the Future without interrupting his television schedule.
+
+        Back to the Future was released on July 3, 1985 and it grossed over $381 million worldwide, becoming the
+        highest-grossing film of 1985. It won the Hugo Award for Best Dramatic Presentation, the Saturn Award for Best
+        Science Fiction Film, and the Academy Award for Best Sound Effects Editing. It received three Academy Award
+        nominations, five BAFTA nominations, and four Golden Globe nominations, including Best Motion Picture (Musical
+        or Comedy). In 2007, the Library of Congress selected it for preservation in the National Film Registry, and in
+        June 2008 the American Film Institute's special AFI's 10 Top 10 designated it the 10th-best science fiction
+        film. The film began a franchise including two sequels, Back to the Future Part II (1989) and Back to the
+        Future Part III (1990), an animated series, a theme park ride, several video games, a number of comic books,
+        and an upcoming stage musical."""
+    ]
+
+    for text in texts:
+        print(re.sub(r'\s+', ' ', text))
+        keywords = textrank(text)
+        print("\nKEYWORDS:")
+        for keyword in keywords:
+            print(" - %s" % keyword)
+        print()

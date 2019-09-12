@@ -180,8 +180,7 @@ public abstract class Engine {
 
         String language = languageDetector.detect(text).or(LdLocale.fromString("en")).getLanguage();
 
-        TokenStream filter = new StandardFilter(tokenizer);
-        filter = new LowerCaseFilter(filter);
+        TokenStream filter = new LowerCaseFilter(tokenizer);
         filter = new StopFilter(filter, getStopwords(language));
         filter = new LengthFilter(filter, MIN_TOKEN_LENGTH, Integer.MAX_VALUE);
         filter = new PatternReplaceFilter(filter, urlPattern, "SLOT_URL", true);
