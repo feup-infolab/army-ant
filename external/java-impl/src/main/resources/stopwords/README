@@ -1,0 +1,1 @@
+The stopwords provided here are the same as the ones provided by PostgreSQL distributions under '/usr/share/postgresql/<version>/tsearch_data/*.stop', however we renamed them to a shorter form (e.g., 'portuguese.stop' was renamed to 'pt.stopwords'), so that we could easily match this to the language string provided by the language detector module.
