@@ -190,7 +190,7 @@ class LuceneFeaturesEngine(JavaIndex):
         self.index_features = [LuceneFeaturesEngine.Feature[index_feature] for index_feature in index_features]
 
         lucene_index_features = []
-        if TensorFlowRanking.Feature.keywords in self.index_features:
+        if LuceneFeaturesEngine.Feature.keywords in self.index_features:
             lucene_index_features.append(LuceneEngine.Feature.keywords.name)
 
         self.lucene_engine = LuceneEngine(reader, self.lucene_index_location, lucene_index_features, loop)

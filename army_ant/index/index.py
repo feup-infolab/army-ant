@@ -49,7 +49,7 @@ class Index(object):
         entity_retrieval = 'ENTITY_RETRIEVAL'
         term_retrieval = 'TERM_RETRIEVAL'
 
-    class QueryTypes(Enum):
+    class QueryType(Enum):
         keyword = 'KEYWORD_QUERY'
         entity = 'ENTITY_QUERY'
 

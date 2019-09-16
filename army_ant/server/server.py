@@ -317,6 +317,7 @@ async def evaluation_post(request):
 
     index_location = request.app['engines'][data['engine']]['index']['location']
     index_type = request.app['engines'][data['engine']]['index']['type']
+    query_type = data.get('query_type')
     ranking_function = data.get('ranking_function')
 
     ranking_params = {}
@@ -329,6 +330,7 @@ async def evaluation_post(request):
         index_location=index_location,
         index_type=index_type,
         eval_format=data['eval-format'],
+        query_type=query_type,
         ranking_function=ranking_function,
         ranking_params=ranking_params or None,
         topics_filename=topics_filename,
@@ -522,6 +524,11 @@ def run_app(loop, host, port, path=None):
     app = web.Application(client_max_size=50 * 1024 * 1024, middlewares=[error_middleware], loop=loop)
 
     app['defaults'] = config.get('defaults', {})
+
+    app['query_types'] = {}
+    for query_type in Index.QueryType:
+        app['query_types'][query_type.name] = query_type.value.replace('_', ' ').title()
+
     app['engines'] = config.get('engines', [])
     for engine in app['engines']:
         if 'message' in app['engines'][engine]:

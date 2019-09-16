@@ -89,8 +89,9 @@ class HypergraphOfEntity(JavaIndex):
         if self.index_location in HypergraphOfEntity.INSTANCES:
             logger.warning("%s is already loaded, skipping" % self.index_location)
             return
-        features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value) for index_feature in
-                    self.index_features]
+        features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value)
+                    for index_feature in self.index_features
+                    if index_feature != HypergraphOfEntity.Feature.keywords]
         HypergraphOfEntity.INSTANCES[self.index_location] = HypergraphOfEntity.JHypergraphOfEntityInMemory(
             self.index_location, java.util.Arrays.asList(features))
         HypergraphOfEntity.INSTANCES[self.index_location].prepareAutocomplete()
@@ -98,8 +99,9 @@ class HypergraphOfEntity(JavaIndex):
 
     def ensure_loaded(self):
         if not self.index_location in HypergraphOfEntity.INSTANCES:
-            features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value) for index_feature in
-                        self.index_features]
+            features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value)
+                        for index_feature in self.index_features
+                        if index_feature != HypergraphOfEntity.Feature.keywords]
             hgoe = HypergraphOfEntity.JHypergraphOfEntityInMemory(
                 self.index_location, java.util.Arrays.asList(features))
             hgoe.prepareAutocomplete()
@@ -115,7 +117,7 @@ class HypergraphOfEntity(JavaIndex):
             index_features_str = ':'.join([index_feature.value for index_feature in self.index_features])
             features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value)
                         for index_feature in self.index_features
-                        if index_feature not in (HypergraphOfEntity.Feature.keywords, )]
+                        if index_feature != HypergraphOfEntity.Feature.keywords]
 
             if HypergraphOfEntity.Feature.context in self.index_features:
                 if features_location is None:

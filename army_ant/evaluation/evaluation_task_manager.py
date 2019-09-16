@@ -56,14 +56,15 @@ class EvaluationTaskStatus(IntEnum):
 
 
 class EvaluationTask(object):
-    def __init__(self, index_location, index_type, eval_format, ranking_function=None, ranking_params=None,
-                 topics_filename=None, topics_path=None, assessments_filename=None, assessments_path=None,
-                 valid_ids_filename=None, valid_ids_path=None,
+    def __init__(self, index_location, index_type, eval_format, query_type=None, ranking_function=None,
+                 ranking_params=None, topics_filename=None, topics_path=None,
+                 assessments_filename=None, assessments_path=None, valid_ids_filename=None, valid_ids_path=None,
                  base_url=None, api_key=None, run_id=None, status=EvaluationTaskStatus.WAITING,
                  topics_md5=None, assessments_md5=None, time=None, _id=None, results=None, stats=None):
         self.index_location = index_location
         self.index_type = index_type
         self.eval_format = eval_format
+        self.query_type = query_type
         self.ranking_function = ranking_function
         self.ranking_params = ranking_params
         self.topics_filename = topics_filename

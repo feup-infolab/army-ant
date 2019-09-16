@@ -374,6 +374,7 @@ class TensorFlowRanking(JavaIndex):
         # print(predict_set)
 
         results = ranker.predict(input_fn=lambda: (predict_set, None))
+        print(list(results))
         results = zip([next(results)[0] for i in range(k)], doc_ids)
         results = sorted(results, key=lambda d: -d[0])
 

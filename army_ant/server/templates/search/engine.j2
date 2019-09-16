@@ -17,6 +17,22 @@
   </div>
 
   {% if is_evaluation %}
+  <div class="col-1">
+    <label class="form-label label-sm" for="query_type">Query Type</label>
+  </div>
+
+  <div class="column">
+    <select class="form-select select-sm" id="query_type" name="type">
+      {% for query_type, query_type_name in app.query_types.items() %}
+      <option value="{{query_type}}" {% if type == query_type %} selected="selected" {% endif %}>
+        {{query_type_name}}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+
+  {% if is_evaluation %}
   <div class="col-1 d-hide">
     <label class="form-label label-sm" for="engine">Ranking</label>
   </div>

@@ -211,9 +211,81 @@ engines:
     ranking:
       default:
         id: tf_idf
-        #params:
-          #k1: 1.2
-          #b: 0.75
+      functions:
+        tf_idf:
+          name: TF-IDF
+        bm25:
+          name: BM25
+          params:
+            k1: [1, 1.2, 1.8]
+            b: [0.5, 0.75, 1]
+        dfr:
+          name: DFR
+          params:
+            BM: [BE, G, P, D, In, Ine, IF]
+            AE: [L, B, Disabled]
+            N: [H1, H2, H3, Z, Disabled]
+
+  lucene-keywords-10-inex-2009-10t-nl:
+    name: INEX 2009 10T-NL - Lucene (Keywords 0.1 ratio)
+    db:
+      name: aa_inex
+    index:
+      type: lucene:keywords
+      location: /opt/army-ant/indexes/inex-2009-10t-nl/lucene-keywords-10
+    ranking:
+      default:
+        id: tf_idf
+      functions:
+        tf_idf:
+          name: TF-IDF
+        bm25:
+          name: BM25
+          params:
+            k1: [1, 1.2, 1.8]
+            b: [0.5, 0.75, 1]
+        dfr:
+          name: DFR
+          params:
+            BM: [BE, G, P, D, In, Ine, IF]
+            AE: [L, B, Disabled]
+            N: [H1, H2, H3, Z, Disabled]
+
+  lucene-keywords-20-inex-2009-10t-nl:
+    name: INEX 2009 10T-NL - Lucene (Keywords 0.2 ratio)
+    db:
+      name: aa_inex
+    index:
+      type: lucene:keywords
+      location: /opt/army-ant/indexes/inex-2009-10t-nl/lucene-keywords-20
+    ranking:
+      default:
+        id: tf_idf
+      functions:
+        tf_idf:
+          name: TF-IDF
+        bm25:
+          name: BM25
+          params:
+            k1: [1, 1.2, 1.8]
+            b: [0.5, 0.75, 1]
+        dfr:
+          name: DFR
+          params:
+            BM: [BE, G, P, D, In, Ine, IF]
+            AE: [L, B, Disabled]
+            N: [H1, H2, H3, Z, Disabled]
+
+  lucene-keywords-30-inex-2009-10t-nl:
+    name: INEX 2009 10T-NL - Lucene (Keywords 0.3 ratio)
+    db:
+      name: aa_inex
+    index:
+      type: lucene:keywords
+      location: /opt/army-ant/indexes/inex-2009-10t-nl/lucene-keywords-30
+    ranking:
+      default:
+        id: tf_idf
       functions:
         tf_idf:
           name: TF-IDF
@@ -230,7 +302,7 @@ engines:
             N: [H1, H2, H3, Z, Disabled]
 
   tfr-inex-2009-10t-nl:
-    name: INEX 10T-NL - TFR Lucene Reranker
+    name: INEX 2009 10T-NL - TFR Lucene Reranker
     db:
       name: aa_inex
     index:
@@ -239,9 +311,6 @@ engines:
     ranking:
       default:
         id: tf_idf
-        #params:
-          #k1: 1.2
-          #b: 0.75
       functions:
         tf_idf:
           name: TF-IDF
@@ -286,6 +355,132 @@ engines:
     index:
       type: hgoe
       location: /opt/army-ant/indexes/inex-2009-10t-nl/hgoe
+      preload: false
+    ranking:
+      default:
+        id: random_walk
+        params:
+          l: 2
+          r: 100
+          nf: 0
+          ef: 0
+          d: 0.15
+          n: 100000
+          norm: false
+          expansion: true
+          directed: true
+          weighted: false
+      functions:
+        random_walk:
+          name: Random Walk Score
+          params:
+            l: [1, 2, 3, 4, 5, 6]
+            r: [10, 100, 250, 500, 750, 1000, 2500, 5000, 10000]
+            nf: [0, 10, 100, 500, 1000]
+            ef: [0, 10, 100, 500, 1000]
+            expansion: [true, false]
+            directed: [true, false]
+            weighted: [true, false]
+        hyperrank:
+          name: HyperRank
+          params:
+            d: [0, 0.15, 0.25, 0.5, 0.75, 0.85, 1]
+            n: [1000, 10000, 100000, 1000000]
+            expansion: [true, false]
+            weighted: [true, false]
+            norm: [true, false]
+
+  hgoe-keywords-10-inex-2009-10t-nl:
+    name: INEX 2009 10T-NL - Hypergraph-of-Entity (Keywords 0.1 ratio)
+    db:
+      name: aa_inex
+    index:
+      type: hgoe:keywords
+      location: /opt/army-ant/indexes/inex-2009-10t-nl/hgoe-keywords-10
+      preload: false
+    ranking:
+      default:
+        id: random_walk
+        params:
+          l: 2
+          r: 100
+          nf: 0
+          ef: 0
+          d: 0.15
+          n: 100000
+          norm: false
+          expansion: true
+          directed: true
+          weighted: false
+      functions:
+        random_walk:
+          name: Random Walk Score
+          params:
+            l: [1, 2, 3, 4, 5, 6]
+            r: [10, 100, 250, 500, 750, 1000, 2500, 5000, 10000]
+            nf: [0, 10, 100, 500, 1000]
+            ef: [0, 10, 100, 500, 1000]
+            expansion: [true, false]
+            directed: [true, false]
+            weighted: [true, false]
+        hyperrank:
+          name: HyperRank
+          params:
+            d: [0, 0.15, 0.25, 0.5, 0.75, 0.85, 1]
+            n: [1000, 10000, 100000, 1000000]
+            expansion: [true, false]
+            weighted: [true, false]
+            norm: [true, false]
+
+  hgoe-keywords-20-inex-2009-10t-nl:
+    name: INEX 2009 10T-NL - Hypergraph-of-Entity (Keywords 0.2 ratio)
+    db:
+      name: aa_inex
+    index:
+      type: hgoe:keywords
+      location: /opt/army-ant/indexes/inex-2009-10t-nl/hgoe-keywords-20
+      preload: false
+    ranking:
+      default:
+        id: random_walk
+        params:
+          l: 2
+          r: 100
+          nf: 0
+          ef: 0
+          d: 0.15
+          n: 100000
+          norm: false
+          expansion: true
+          directed: true
+          weighted: false
+      functions:
+        random_walk:
+          name: Random Walk Score
+          params:
+            l: [1, 2, 3, 4, 5, 6]
+            r: [10, 100, 250, 500, 750, 1000, 2500, 5000, 10000]
+            nf: [0, 10, 100, 500, 1000]
+            ef: [0, 10, 100, 500, 1000]
+            expansion: [true, false]
+            directed: [true, false]
+            weighted: [true, false]
+        hyperrank:
+          name: HyperRank
+          params:
+            d: [0, 0.15, 0.25, 0.5, 0.75, 0.85, 1]
+            n: [1000, 10000, 100000, 1000000]
+            expansion: [true, false]
+            weighted: [true, false]
+            norm: [true, false]
+
+  hgoe-keywords-30-inex-2009-10t-nl:
+    name: INEX 2009 10T-NL - Hypergraph-of-Entity (Keywords 0.3 ratio)
+    db:
+      name: aa_inex
+    index:
+      type: hgoe:keywords
+      location: /opt/army-ant/indexes/inex-2009-10t-nl/hgoe-keywords-30
       preload: false
     ranking:
       default:

@@ -302,24 +302,25 @@ class CommandLineInterface(object):
         if eval_format == 'inex':
             spool_dir = os.path.join(output_dir, 'spool')
 
-            with open(topics_filename, 'rb') as fsrc, tempfile.NamedTemporaryFile(dir=spool_dir, prefix='eval_topics_',
-                                                                                  delete=False) as fdst:
+            with open(topics_filename, 'rb') as fsrc, \
+                    tempfile.NamedTemporaryFile(dir=spool_dir, prefix='eval_topics_', delete=False) as fdst:
                 shutil.copyfileobj(fsrc, fdst)
                 topics_path = fdst.name
 
-            with open(assessments_filename, 'rb') as fsrc, tempfile.NamedTemporaryFile(dir=spool_dir,
-                                                                                       prefix='eval_assessments_',
-                                                                                       delete=False) as fdst:
+            with open(assessments_filename, 'rb') as fsrc, \
+                    tempfile.NamedTemporaryFile(dir=spool_dir, prefix='eval_assessments_', delete=False) as fdst:
                 shutil.copyfileobj(fsrc, fdst)
                 assessments_path = fdst.name
         else:
             topics_path = None
             assessments_path = None
 
+        # FIXME must add query_type, ranking_function and ranking_params
         task = EvaluationTask(
             index_location=index_location,
             index_type=index_type,
             eval_format=eval_format,
+            query_type=None,
             ranking_function=None,
             ranking_params=None,
             topics_filename=topics_filename,

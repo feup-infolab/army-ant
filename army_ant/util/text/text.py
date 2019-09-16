@@ -214,7 +214,7 @@ def extract_entities_per_sentence(text, lib='NLTK'):
     return entities
 
 
-def textrank(text, window_size=4, ratio=0.2, cutoff=None):
+def textrank(text, window_size=4, ratio=0.3, cutoff=None):
     """
     Simplified version of TextRank:
       - Without POS tagging (we use every word that passes the analyzer instead);

@@ -240,3 +240,7 @@ dl dl {
   background: #f1f1fc;
   color: #5755d9;
 }
+
+.modal.generate .form-checkbox, .modal.generate .form-radio {
+  display: inline-block;
+}
