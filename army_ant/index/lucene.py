@@ -101,8 +101,6 @@ class LuceneEngine(JavaIndex):
                         logger.exception(e)
 
                 if LuceneEngine.Feature.keywords in self.index_features:
-                    logger.debug("Extracting top %.0f%% keywords per document using TextRank" %
-                                 (LuceneEngine.KW_RATIO * 100))
                     doc.text = textrank(doc.text, ratio=LuceneEngine.KW_RATIO)
 
                 jDoc = LuceneEngine.JDocument(

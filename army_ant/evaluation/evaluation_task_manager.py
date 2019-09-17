@@ -260,9 +260,10 @@ class EvaluationTaskManager(object):
                     df.loc[max_idx, metric] = '<b>%s</b>' % float_format(df[metric][max_idx])
                     df.loc[~df.index.isin([max_idx]), metric] = df.loc[~df.index.isin([max_idx]), metric].apply(
                         float_format)
-                df.Parameters = df.Parameters.apply(
-                    lambda param_str: '<br>'.join(s for s in param_str[1:-1].split(', '))
-                    if param_str != 'No parameters' else param_str)
+                if 'Parameters' in df:
+                    df.Parameters = df.Parameters.apply(
+                        lambda param_str: '<br>'.join(s for s in param_str[1:-1].split(', '))
+                        if param_str != 'No parameters' else param_str)
                 tmp_file.write(df.to_html(
                     index=False,
                     escape=False,
@@ -335,7 +336,7 @@ class EvaluationTaskManager(object):
     def clean_spool(self):
         valid_spool_filenames = set([])
         for task in self.db['evaluation_tasks'].find():
-            if task['eval_format'] in ('inex', 'inex-xer', 'trec'):
+            if task['eval_format'] in ('inex', 'inex-xer', 'inex-xer-elc', 'trec'):
                 valid_spool_filenames.add(os.path.basename(task['topics_path']))
                 if 'assessments_path' in task and task['assessments_path']:
                     valid_spool_filenames.add(os.path.basename(task['assessments_path']))
@@ -384,7 +385,7 @@ class EvaluationTaskManager(object):
                             self.running = e
                             status = await e.run()
 
-                            if task.eval_format in ('inex', 'inex-xer', 'trec'):
+                            if task.eval_format in ('inex', 'inex-xer', 'inex-xer-elc', 'trec'):
                                 self.save(task, e.results, e.stats)
                                 self.running = None
                             elif task.eval_format == 'll-api':

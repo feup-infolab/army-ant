@@ -525,9 +525,9 @@ def run_app(loop, host, port, path=None):
 
     app['defaults'] = config.get('defaults', {})
 
-    app['query_types'] = {}
-    for query_type in Index.QueryType:
-        app['query_types'][query_type.name] = query_type.value.replace('_', ' ').title()
+    # app['query_types'] = {}
+    # for query_type in Index.QueryType:
+    #     app['query_types'][query_type.name] = query_type.value.replace('_', ' ').title()
 
     app['engines'] = config.get('engines', [])
     for engine in app['engines']:

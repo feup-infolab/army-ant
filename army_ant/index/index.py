@@ -54,7 +54,7 @@ class Index(object):
         entity = 'ENTITY_QUERY'
 
     # One of these is used, but only with Feature.keywords
-    KW_RATIO = 0.2
+    KW_RATIO = 0.05
     KW_CUTOFF = 10
 
     @staticmethod

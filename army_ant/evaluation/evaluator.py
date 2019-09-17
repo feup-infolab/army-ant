@@ -15,9 +15,14 @@ class Evaluator(object):
         import army_ant.evaluation as evl
 
         if task.eval_format == 'inex':
-            return evl.INEXEvaluator(task, eval_location, Index.RetrievalTask.document_retrieval)
+            return evl.INEXEvaluator(task, eval_location, Index.QueryType.keyword,
+                                     Index.RetrievalTask.document_retrieval)
         if task.eval_format == 'inex-xer':
-            return evl.INEXEvaluator(task, eval_location, Index.RetrievalTask.entity_retrieval)
+            return evl.INEXEvaluator(task, eval_location, Index.QueryType.keyword,
+                                     Index.RetrievalTask.entity_retrieval)
+        if task.eval_format == 'inex-xer-elc':
+            return evl.INEXEvaluator(task, eval_location, Index.QueryType.entity,
+                                     Index.RetrievalTask.entity_retrieval)
         if task.eval_format == 'trec':
             return evl.TRECEvaluator(task, eval_location)
         elif task.eval_format == 'll-api':

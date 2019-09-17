@@ -41,11 +41,12 @@ logger = logging.getLogger(__name__)
 
 
 class INEXEvaluator(FilesystemEvaluator):
-    def __init__(self, task, eval_location, retrieval_task):
+    def __init__(self, task, eval_location, query_type, retrieval_task):
         super().__init__(task, eval_location)
 
         self.loop = asyncio.get_event_loop()
         self.index = Index.open(self.task.index_location, self.task.index_type, self.loop)
+        self.query_type = query_type
         self.retrieval_task = retrieval_task
 
     def get_topic_assessments(self):
@@ -119,8 +120,11 @@ class INEXEvaluator(FilesystemEvaluator):
 
             query = get_first(topic.xpath('title/text()'))
             if self.retrieval_task == Index.RetrievalTask.entity_retrieval:
-                categories = topic.xpath('categories/category/text()')
-                query += ' %s' % ' '.join(categories)
+                if self.query_type == Index.QueryType.entity:
+                    query = '||'.join(topic.xpath('entities/entity/text()'))
+                else:
+                    categories = topic.xpath('categories/category/text()')
+                    query += ' %s' % ' '.join(categories)
 
             logger.info("Obtaining results for query '%s' of topic '%s' using '%s' index at '%s'" % (
                 query, topic_id, self.task.index_type, self.task.index_location))

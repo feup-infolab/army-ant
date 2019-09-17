@@ -200,7 +200,7 @@
       if (taskFormat == 'll-api') {
         expandDetailsLLAPI($task, $detail);
       } else {
-        expandDetails($task, $detail);
+        expandDetailsGlobal($task, $detail);
       }
     }
 
@@ -211,16 +211,16 @@
       if (taskFormat == 'll-api') {
         collapseDetailsLLAPI($task, $detail);
       } else {
-        collapseDetails($task, $detail);
+        collapseDetailsGlobal($task, $detail);
       }
     }
 
-    function expandDetails($task, $detail) {
+    function expandDetailsGlobal($task, $detail) {
       $task.find('.expand-btn i.icon').removeClass('icon-plus').addClass('icon-minus');
       $detail.removeClass('d-hide');
     }
 
-    function collapseDetails($task, $detail) {
+    function collapseDetailsGlobal($task, $detail) {
       $task.find('.expand-btn i.icon').removeClass('icon-minus').addClass('icon-plus');
       $detail.addClass('d-hide');
     }

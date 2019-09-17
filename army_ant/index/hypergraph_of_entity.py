@@ -155,8 +155,6 @@ class HypergraphOfEntity(JavaIndex):
                         logger.exception(e)
 
                 if HypergraphOfEntity.Feature.keywords in self.index_features:
-                    logger.debug("Extracting top %.0f%% keywords per document using TextRank" %
-                                 (HypergraphOfEntity.KW_RATIO * 100))
                     doc.text = textrank(doc.text, ratio=HypergraphOfEntity.KW_RATIO)
 
                 jDoc = HypergraphOfEntity.JDocument(
