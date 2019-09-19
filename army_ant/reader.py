@@ -215,9 +215,11 @@ class INEXReader(Reader):
         return re.sub(r'\s+', ' ', ''.join(bdy.xpath('%s/text()' % self.doc_xpath)))
 
     def to_wikipedia_entity(self, page_id, label):
-        return Entity(label, "https://en.wikipedia.org/wiki/%s" % label.replace(' ', '_'))
+        #return Entity(label, "https://en.wikipedia.org/wiki/%s" % label.replace(' ', '_'))
         #return Entity(label, "https://en.wikipedia.org/?curid=%s" % page_id)
-        #return Entity(label, "WP%s" % page_id)
+
+        # This is the required option for the evaluation module to work
+        return Entity(label, "WP%s" % page_id)
 
     def build_triples(self, page_id, title, bdy):
         links = set([])
@@ -293,6 +295,8 @@ class INEXReader(Reader):
             member = self.tar.next()
             if member is None: break
             if not member.name.endswith('.xml'): continue
+
+            # Avoids memory explosition by resetting visited files metadata
             self.tar.members = []
 
             logger.debug("Reading %s" % member.name)

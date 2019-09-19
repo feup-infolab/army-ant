@@ -200,11 +200,12 @@ class HypergraphOfEntity(JavaIndex):
             ranking_function = HypergraphOfEntity.RankingFunction['random_walk']
 
         if query_type:
-            try:
-                query_type = HypergraphOfEntity.QueryType[query_type]
-            except (JavaException, KeyError) as e:
-                logger.error("Could not use '%s' as a query type" % query_type)
-                query_type = HypergraphOfEntity.QueryType['keyword']
+            if not type(query_type) is Index.QueryType:
+                try:
+                    query_type = HypergraphOfEntity.QueryType[query_type]
+                except (JavaException, KeyError) as e:
+                    logger.error("Could not use '%s' as a query type" % query_type)
+                    query_type = HypergraphOfEntity.QueryType['keyword']
         else:
             query_type = HypergraphOfEntity.QueryType['keyword']
 

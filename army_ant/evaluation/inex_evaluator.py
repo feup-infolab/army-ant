@@ -130,7 +130,7 @@ class INEXEvaluator(FilesystemEvaluator):
                 query, topic_id, self.task.index_type, self.task.index_location))
             start_time = time.time()
             engine_response = await self.index.search(
-                query, 0, 10000, task=self.retrieval_task,
+                query, 0, 10000, query_type=self.query_type, task=self.retrieval_task,
                 ranking_function=self.task.ranking_function, ranking_params=ranking_params)
             end_time = int(round((time.time() - start_time) * 1000))
             self.stats[params_id]['query_time'][topic_id] = end_time
@@ -146,8 +146,8 @@ class INEXEvaluator(FilesystemEvaluator):
                 for i, result in zip(range(1, len(results) + 1), results):
                     doc_id = result['id']
                     score = result['score']
-                    relevant = topic_doc_judgements[topic_id][doc_id] > 0 if doc_id in topic_doc_judgements[
-                        topic_id] else False
+                    relevant = topic_doc_judgements[topic_id][doc_id] > 0 \
+                        if doc_id in topic_doc_judgements[topic_id] else False
                     writer.writerow([i, score, doc_id, relevant])
 
         self.stats[params_id]['total_query_time'] = sum([t for t in self.stats[params_id]['query_time'].values()])

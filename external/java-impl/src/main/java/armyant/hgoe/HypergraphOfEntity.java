@@ -1590,15 +1590,17 @@ public class HypergraphOfEntity extends Engine {
         List<String> tokens;
         IntSet queryNodeIDs;
         if (queryType == QueryType.ENTITY_QUERY) {
+            logger.info("Query type: entity query");
             tokens = Arrays.stream(query.split("\\|\\|"))
                     .map(String::trim)
                     .collect(Collectors.toList());
             queryNodeIDs = getQueryEntityNodeIDs(tokens);
             if (useQueryExpansion) {
-                logger.warn("Query expansion is always disabled for entity queries");
+                logger.warn("Query expansion is not supported for entity queries");
                 useQueryExpansion = false;
             }
         } else {
+            logger.info("Query type: keyword query");
             tokens = analyze(query);
             queryNodeIDs = getQueryTermNodeIDs(tokens);
         }
