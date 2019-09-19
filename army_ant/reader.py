@@ -293,6 +293,7 @@ class INEXReader(Reader):
             member = self.tar.next()
             if member is None: break
             if not member.name.endswith('.xml'): continue
+            self.tar.members = []
 
             logger.debug("Reading %s" % member.name)
 

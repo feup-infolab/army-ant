@@ -202,7 +202,7 @@ engines:
             r: [10, 100, 250, 500, 750, 1000, 10000, 100000]
 
   lucene-inex-2009-10t-nl:
-    name: INEX 10T-NL - Lucene
+    name: INEX 2009 10T-NL - Lucene
     db:
       name: aa_inex
     index:
