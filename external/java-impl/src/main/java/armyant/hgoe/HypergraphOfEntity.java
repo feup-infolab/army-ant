@@ -1060,7 +1060,6 @@ public class HypergraphOfEntity extends Engine {
         return perSeedScore;
     }
 
-    // TODO Should follow Bellaachia2013 for random walks on hypergraphs (Equation 14)
     private grph.path.Path randomWalk(int startNodeID, int length, boolean isDirected, boolean isBiased,
             int nodeFatigue, int edgeFatigue) {
         grph.path.Path path = new ArrayListPath();
