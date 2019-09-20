@@ -10,6 +10,7 @@ import json
 import logging
 import math
 import os
+import gc
 import re
 import signal
 import sqlite3
@@ -27,8 +28,8 @@ import tensorflow_ranking as tfr
 import yaml
 from aiogremlin import Cluster
 from aiohttp.client_exceptions import ClientConnectorError
-from jpype import (JavaException, JBoolean, JClass, JDouble, JPackage, JString,
-                   isJVMStarted, java, shutdownJVM, startJVM)
+from jpype import (JException, JBoolean, JClass, JDouble, JPackage,
+                   JString, isJVMStarted, java, shutdownJVM, startJVM)
 from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
 
@@ -184,16 +185,15 @@ class HypergraphOfEntity(JavaIndex):
             hgoe.postProcessing()
 
             hgoe.save()
-        except JavaException as e:
+        except JException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
-
 
     async def search(self, query, offset, limit, query_type=None, task=None,
                      ranking_function=None, ranking_params=None, debug=False):
         if ranking_function:
             try:
                 ranking_function = HypergraphOfEntity.RankingFunction[ranking_function]
-            except (JavaException, KeyError) as e:
+            except (JException, KeyError) as e:
                 logger.error("Could not use '%s' as the ranking function" % ranking_function)
                 ranking_function = HypergraphOfEntity.RankingFunction['random_walk']
         else:
@@ -203,7 +203,7 @@ class HypergraphOfEntity(JavaIndex):
             if not type(query_type) is Index.QueryType:
                 try:
                     query_type = HypergraphOfEntity.QueryType[query_type]
-                except (JavaException, KeyError) as e:
+                except (JException, KeyError) as e:
                     logger.error("Could not use '%s' as a query type" % query_type)
                     query_type = HypergraphOfEntity.QueryType['keyword']
         else:
@@ -213,7 +213,7 @@ class HypergraphOfEntity(JavaIndex):
             if not type(task) is Index.RetrievalTask:
                 try:
                     task = Index.RetrievalTask[task]
-                except (JavaException, KeyError) as e:
+                except (JException, KeyError) as e:
                     logger.error("Could not use '%s' as the ranking function" % ranking_function)
                     task = Index.RetrievalTask['document_retrieval']
         else:
@@ -243,7 +243,7 @@ class HypergraphOfEntity(JavaIndex):
             trace = results.getTrace()
             results = [Result(result.getScore(), result.getID(), result.getName(), result.getType())
                        for result in itertools.islice(results, offset, offset + limit)]
-        except JavaException as e:
+        except JException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
         return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()), trace_ascii=trace.toASCII())
@@ -254,7 +254,7 @@ class HypergraphOfEntity(JavaIndex):
             self.ensure_loaded()
             hgoe = HypergraphOfEntity.INSTANCES[self.index_location]
             hgoe.inspect(feature, workdir)
-        except JavaException as e:
+        except JException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
 

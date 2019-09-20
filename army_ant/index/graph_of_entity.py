@@ -27,8 +27,8 @@ import tensorflow_ranking as tfr
 import yaml
 from aiogremlin import Cluster
 from aiohttp.client_exceptions import ClientConnectorError
-from jpype import (JavaException, JBoolean, JClass, JDouble, JPackage, JString,
-                   isJVMStarted, java, shutdownJVM, startJVM)
+from jpype import (JException, JBoolean, JClass, JDouble, JPackage,
+                   JString, isJVMStarted, java, shutdownJVM, startJVM)
 from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
 

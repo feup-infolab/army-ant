@@ -28,8 +28,8 @@ import yaml
 import yamlordereddictloader
 from aiogremlin import Cluster
 from aiohttp.client_exceptions import ClientConnectorError
-from jpype import (JavaException, JBoolean, JClass, JDouble, JPackage, JString,
-                   isJVMStarted, java, shutdownJVM, startJVM)
+from jpype import (JException, JBoolean, JClass, JDouble, JPackage,
+                   JString, isJVMStarted, java, shutdownJVM, startJVM)
 from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
 
@@ -62,17 +62,22 @@ class JavaIndex(Index):
         args_message = 'the following additional arguments: %s' % OTHER_ARGS
     else:
         args_message = 'no additional arguments'
-        OTHER_ARGS = ''
+        OTHER_ARGS = None
 
     logger.info("Starting JVM with %s MB of heap and %s" % (MEMORY_MB, args_message))
 
     if not isJVMStarted():
-        startJVM(
+        args = [
             jpype.getDefaultJVMPath(),
             '-Djava.class.path=%s' % CLASSPATH,
             '-Xms%dm' % MEMORY_MB,
-            '-Xmx%dm' % MEMORY_MB,
-            OTHER_ARGS)
+            '-Xmx%dm' % MEMORY_MB
+        ]
+
+        if OTHER_ARGS is not None:
+            args.append(OTHER_ARGS)
+
+        startJVM(*args, convertStrings = True)
 
     signal.signal(signal.SIGINT, handler)
 

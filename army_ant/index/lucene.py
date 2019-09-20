@@ -27,8 +27,8 @@ import tensorflow_ranking as tfr
 import yaml
 from aiogremlin import Cluster
 from aiohttp.client_exceptions import ClientConnectorError
-from jpype import (JavaException, JBoolean, JClass, JDouble, JPackage, JString,
-                   isJVMStarted, java, shutdownJVM, startJVM)
+from jpype import (JException, JBoolean, JClass, JDouble, JPackage,
+                   JString, isJVMStarted, java, shutdownJVM, startJVM)
 from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
 
@@ -128,7 +128,7 @@ class LuceneEngine(JavaIndex):
                 lucene.indexCorpus(java.util.Arrays.asList(corpus))
 
             lucene.close()
-        except JavaException as e:
+        except JException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
 
@@ -137,7 +137,7 @@ class LuceneEngine(JavaIndex):
         if ranking_function:
             try:
                 ranking_function = LuceneEngine.RankingFunction[ranking_function]
-            except (JavaException, KeyError) as e:
+            except (JException, KeyError) as e:
                 logger.error("Could not use '%s' as the ranking function" % ranking_function)
                 ranking_function = LuceneEngine.RankingFunction['tf_idf']
         else:
@@ -168,7 +168,7 @@ class LuceneEngine(JavaIndex):
             trace = results.getTrace()
             results = [Result(result.getScore(), result.getID(), result.getName(), result.getType())
                        for result in results]
-        except JavaException as e:
+        except JException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
         return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()), trace_ascii=trace.toASCII())
@@ -227,7 +227,7 @@ class LuceneFeaturesEngine(JavaIndex):
         if ranking_function:
             try:
                 ranking_function = LuceneEngine.RankingFunction[ranking_function]
-            except (JavaException, KeyError) as e:
+            except (JException, KeyError) as e:
                 logger.error("Could not use '%s' as the ranking function" % ranking_function)
                 ranking_function = LuceneEngine.RankingFunction['tf_idf']
         else:
@@ -255,7 +255,7 @@ class LuceneFeaturesEngine(JavaIndex):
             trace = results.getTrace()
             results = [Result(result.getScore(), result.getID(), result.getName(), result.getType())
                        for result in results]
-        except JavaException as e:
+        except JException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
         return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()), trace_ascii=trace.toASCII())

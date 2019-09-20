@@ -168,6 +168,7 @@ class CommandLineInterface(object):
         self.sampling = CommandLineInterfaceSampling()
         self.analysis = CommandLineInterfaceAnalysis()
 
+    @profile # DELETEME and check commented code on hypergraph_of_entity.py index()
     def index(self, source_path, source_reader, index_location, index_type, features_location=None,
               db_location='localhost', db_name=None, db_type='mongo', limit=None):
         try:
@@ -315,7 +316,7 @@ class CommandLineInterface(object):
             topics_path = None
             assessments_path = None
 
-        # FIXME must add query_type, ranking_function and ranking_params
+        # TODO must add query_type, ranking_function and ranking_params
         task = EvaluationTask(
             index_location=index_location,
             index_type=index_type,
