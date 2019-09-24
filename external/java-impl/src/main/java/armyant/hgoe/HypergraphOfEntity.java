@@ -900,6 +900,8 @@ public class HypergraphOfEntity extends Engine {
             return false;
         }
 
+        logger.info("Finished loading index from {}", directory.getAbsolutePath());
+
         return true;
     }
 
