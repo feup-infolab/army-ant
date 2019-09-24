@@ -1305,11 +1305,12 @@ public class HypergraphOfEntity extends Engine {
         trace.add("Random Walk Score (l = %d, r = %d, nf = %d, ef = {})", walkLength, walkRepeats, nodeFatigue,
                 edgeFatigue);
         trace.goDown();
+        trace.add("Tracing system disabling required for parallel computing blocks");
 
         seedNodeIDs.parallelStream().forEach(seedNodeID -> {
             Int2IntOpenHashMap atomVisits = new Int2IntOpenHashMap();
-            trace.add("From seed node %s", nodeIndex.getKey(seedNodeID));
-            trace.goDown();
+            /*trace.add("From seed node %s", nodeIndex.getKey(seedNodeID));
+            trace.goDown();*/
 
             for (int i = 0; i < walkRepeats; i++) {
                 grph.path.Path randomPath = randomWalk(seedNodeID, walkLength, isDirected, isWeighted, nodeFatigue,
@@ -1324,7 +1325,7 @@ public class HypergraphOfEntity extends Engine {
                     }
                     messageRandomPath.append(nodeIndex.getKey(randomPath.getVertexAt(j)).toString());
                 }
-                trace.add(messageRandomPath.toString().replace("%", "%%"));
+                //trace.add(messageRandomPath.toString().replace("%", "%%"));
                 // trace.goDown();
 
                 for (int j = 0; j < randomPath.getNumberOfVertices(); j++) {
@@ -1349,10 +1350,10 @@ public class HypergraphOfEntity extends Engine {
                 // trace.goUp();
             }
 
-            trace.goUp();
+            //trace.goUp();
 
             int maxVisits = Arrays.stream(atomVisits.values().toIntArray()).max().orElse(0);
-            trace.add("max(visits from seed node %s) = %d", nodeIndex.getKey(seedNodeID), maxVisits);
+            //trace.add("max(visits from seed node %s) = %d", nodeIndex.getKey(seedNodeID), maxVisits);
 
             /*
              * for (Map.Entry<Integer, Integer> entry : atomVisits.int2IntEntrySet()) {
@@ -1363,8 +1364,8 @@ public class HypergraphOfEntity extends Engine {
              * trace.add("Accumulating visit probability, weighted by seed node confidence"); trace.goDown();
              */
             for (int atomID : atomVisits.keySet()) {
-                atomCoverage.addTo(atomID, 1);
                 synchronized (this) {
+                    atomCoverage.addTo(atomID, 1);
                     weightedAtomVisitProbability.compute(atomID,
                             (k, v) -> (v == null ? 0 : v) + (float) atomVisits.get(atomID) / maxVisits
                                     * seedNodeWeights.getOrDefault(seedNodeID, 1d).floatValue());
