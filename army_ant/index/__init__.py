@@ -6,6 +6,7 @@ from .service_index import *
 from .gremlin_server_index import *
 from .postgresql_graph import *
 from .java_index import *
+from .null_index import *
 
 from .lucene import *
 from .tensorflow_ranking import *

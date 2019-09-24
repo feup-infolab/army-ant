@@ -86,6 +86,8 @@ class Index(object):
             return idx.LuceneEngine(reader, index_location, index_features, loop)
         elif index_type.startswith('tfr'):
             return idx.TensorFlowRanking(reader, index_location, index_features, loop)
+        elif index_type.startswith('null_index'):
+            return idx.NullIndex(reader, index_location, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 
