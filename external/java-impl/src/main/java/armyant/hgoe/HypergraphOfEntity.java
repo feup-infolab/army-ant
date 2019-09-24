@@ -1306,7 +1306,7 @@ public class HypergraphOfEntity extends Engine {
                 edgeFatigue);
         trace.goDown();
 
-        for (int seedNodeID : seedNodeIDs) {
+        seedNodeIDs.parallelStream().forEach(seedNodeID -> {
             Int2IntOpenHashMap atomVisits = new Int2IntOpenHashMap();
             trace.add("From seed node %s", nodeIndex.getKey(seedNodeID));
             trace.goDown();
@@ -1386,7 +1386,7 @@ public class HypergraphOfEntity extends Engine {
             /*
              * trace.goUp(); trace.goUp();
              */
-        }
+        });
 
         trace.goUp();
 
