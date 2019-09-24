@@ -1189,7 +1189,7 @@ engines:
             norm: [true, false]
 
   lucene-keywords-inex-2009:
-    name: INEX 2009 - Lucene
+    name: INEX 2009 - Lucene (Keywords 0.05)
     db:
       name: aa_inex
     index:
@@ -1214,7 +1214,7 @@ engines:
             N: [H1, H2, H3, Z, Disabled]
 
   hgoe-keywords-inex-2009:
-    name: INEX 2009 - Hypergraph-of-Entity
+    name: INEX 2009 - Hypergraph-of-Entity (Keywords 0.05)
     db:
       name: aa_inex
     index:
