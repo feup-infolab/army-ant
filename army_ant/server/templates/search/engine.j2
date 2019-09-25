@@ -134,9 +134,16 @@
         $('#ranking-params').append($column);
 
         for (var i=0; i < params[param].length; i++) {
-          var $param = $('<option>')
-            .attr('value', params[param][i])
-            .text(params[param][i]);
+          if (params[param][i] instanceof Object) {
+            var $param = $('<option>')
+              .attr('value', JSON.stringify(params[param][i]))
+              .text(params[param][i].type);
+          } else {
+            var $param = $('<option>')
+              .attr('value', params[param][i])
+              .text(params[param][i]);
+          }
+
           $select.append($param);
 
           {% if is_evaluation %}

@@ -93,7 +93,11 @@
         <th>Ranking Parameters</th>
         <td>
           {% for k, v in task.ranking_params.items() %}
+          {% if v[0] is mapping %}
+          {{ k }} = [{% for o in v %}{{ o.type }}{% if not loop.last %}, {% endif %}{% endfor %}]
+          {% else %}
           {{ k }} = {{ v|replace("'", "") }}
+          {% endif %}
           {% if not loop.last %} <br> {% endif %}
           {% endfor %}
         </td>
@@ -245,7 +249,8 @@
       <!-- START TASK BUTTONS -->
       <div class="column text-right">
         <div class="btn-group">
-          <button class="task-delete-btn btn btn-primary btn-sm tooltip" data-tooltip="Delete task and computed results.">
+          <button class="task-delete-btn btn btn-primary btn-sm tooltip"
+              data-tooltip="Delete task and computed results.">
             <i class="icon icon-delete"></i>
           </button>
           <button

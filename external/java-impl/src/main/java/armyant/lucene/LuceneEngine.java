@@ -1,6 +1,5 @@
 package armyant.lucene;
 
-import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Map;
@@ -15,14 +14,12 @@ import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.similarities.AfterEffect;
 import org.apache.lucene.search.similarities.BM25Similarity;
 import org.apache.lucene.search.similarities.BasicModel;
@@ -128,6 +125,8 @@ public class LuceneEngine extends Engine {
                             Map<String, String> params, Query boost) throws Exception {
         IndexReader reader = DirectoryReader.open(directory);
         IndexSearcher searcher = new IndexSearcher(reader);
+
+        System.out.println(rankingFunction);
 
         switch (rankingFunction) {
             case TF_IDF:

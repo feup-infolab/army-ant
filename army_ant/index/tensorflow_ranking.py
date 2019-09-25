@@ -15,18 +15,23 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 import tensorflow_ranking as tfr
-from jpype import java
+from jpype import java, JClass
 from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
 
 from army_ant.exception import ArmyAntException
 
-from . import JavaIndex, LuceneEngine, Result, ResultSet
+from . import Index, JavaIndex, LuceneEngine, Result, ResultSet
 
 logger = logging.getLogger(__name__)
 
 
 class TensorFlowRanking(JavaIndex):
+    class RankingFunction(Enum):
+        tf_idf = 'TF_IDF'
+        bm25 = 'BM25'
+        random_walk = 'RANDOM_WALK_SCORE'
+
     class Feature(Enum):
         keywords = 'EXTRACT_KEYWORDS'
 
@@ -41,9 +46,13 @@ class TensorFlowRanking(JavaIndex):
     HIDDEN_LAYER_DIMS = ['20', '10']
 
     JLearningToRankHelper = JavaIndex.armyant.lucene.LuceneLearningToRankHelper
+    JHypergraphOfEntity = JavaIndex.armyant.hgoe.HypergraphOfEntity
+    JHypergraphOfEntityRankingFunction = JClass("armyant.hgoe.HypergraphOfEntity$RankingFunction")
+    JLuceneEngineRankingFunction = JClass("armyant.lucene.LuceneEngine$RankingFunction")
 
     def __init__(self, reader, index_location, index_features, loop):
         super().__init__(reader, index_location, loop)
+
         self.lucene_index_location = os.path.join(index_location, 'lucene')
         self.index_features = [TensorFlowRanking.Feature[index_feature] for index_feature in index_features]
 
@@ -311,8 +320,6 @@ class TensorFlowRanking(JavaIndex):
         ltr_helper.updateDocumentFeatures(j_graph_based_features)
         train_set = self.build_train_set(ltr_helper, topics, qrels)
 
-        # print(train_set)
-
         pd_train_generator = self.pandas_generator(train_set)
 
         logger.info("Training model")
@@ -320,24 +327,53 @@ class TensorFlowRanking(JavaIndex):
         ranker = self.get_estimator(hparams)
         ranker.train(input_fn=lambda: self.input_fn(pd_train_generator), steps=100)
 
-    async def search(self, query, offset, limit, query_type=None, task=None,
-                     ranking_function=None, ranking_params=None, debug=False):
+    async def search(self, query, offset, limit, base_index_location=None, base_index_type=None,
+                     query_type=None, task=None, ranking_function=None, ranking_params=None, debug=False):
+        tf.logging.set_verbosity(tf.logging.FATAL)
+
+        assert base_index_type is None or base_index_type.startswith('hgoe'), \
+            "Only None ('lucene') or 'hgoe' values are supported. "
+
         hparams = tf.contrib.training.HParams(learning_rate=0.05)
         ranker = self.get_estimator(hparams)
 
-        k = 1000
+        k = 10000
         ltr_helper = TensorFlowRanking.JLearningToRankHelper(self.lucene_index_location)
-        doc_ids = [result.id for result in ltr_helper.search(
-            query, 0, k, task=task, ranking_function=ranking_function, ranking_params=ranking_params, debug=debug)]
+
+        if base_index_location is None or base_index_type is None:
+            logger.info("Using 'lucene' (LearningToRankHelper) as the base index")
+            base_index = ltr_helper
+        else:
+            logger.info("Using '%s' as the base index" % base_index_type)
+            base_index = Index.open(base_index_location, base_index_type, self.loop)
+
+        if type(ranking_function) is str:
+            try:
+                ranking_function = TensorFlowRanking.RankingFunction[ranking_function]
+            except KeyError:
+                ranking_function = TensorFlowRanking.RankingFunction.tf_idf
+
+        logger.info("Using %s as the ranking function" % ranking_function.value)
+        if ranking_function == TensorFlowRanking.RankingFunction.random_walk:
+            ranking_function = TensorFlowRanking.JHypergraphOfEntityRankingFunction.valueOf(ranking_function.value)
+        else:
+            ranking_function = TensorFlowRanking.JLuceneEngineRankingFunction.valueOf(ranking_function.value)
+
+        results = base_index.search(
+            query, 0, k, task=task, ranking_function=ranking_function,
+            ranking_params=ranking_params, debug=debug)
+
+        # Not LuceneLearningToRankHelper?
+        if isinstance(base_index, Index):
+            results = await results
+
+        doc_ids = [result.id if type(result) is Result else result.getID() for result in results]
 
         logger.info("Using %d documents for reranking" % len(doc_ids))
 
         doc_ids, predict_set = self.build_predict_set(ltr_helper, query, filter_by_doc_id=doc_ids)
 
-        # print(predict_set)
-
         results = ranker.predict(input_fn=lambda: (predict_set, None))
-        print(list(results))
         results = zip([next(results)[0] for i in range(k)], doc_ids)
         results = sorted(results, key=lambda d: -d[0])
 

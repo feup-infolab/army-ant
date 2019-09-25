@@ -182,9 +182,9 @@ class CommandLineInterface(object):
         except ArmyAntException as e:
             logger.error(e)
 
-    def search(self, index_location, index_type, task=None, ranking_function=None, ranking_params=None,
-               db_location='localhost', db_name=None, db_type='mongo', query=None, offset=0, limit=10,
-               interactive=False):
+    def search(self, index_location, index_type, base_index_location=None, base_index_type=None, task=None,
+               ranking_function=None, ranking_params=None, db_location='localhost', db_name=None, db_type='mongo',
+               query=None, offset=0, limit=10, interactive=False):
         if query is None and not interactive:
             logger.error("Must either use --query or --interactive")
             return
@@ -209,7 +209,7 @@ class CommandLineInterface(object):
                         ranking = re.match(r'\\set_ranking_(.*)', query)
                         if ranking:
                             ranking_function = ranking.group(1)
-                            print("===> Switched to '%s' ranking function" % ranking_function)
+                            print("==> Switched to '%s' ranking function" % ranking_function)
                             continue
 
                     try:
@@ -221,7 +221,8 @@ class CommandLineInterface(object):
                     index = Index.open(index_location, index_type, loop)
                     response = loop.run_until_complete(index.search(
                         query, offset, limit, task=task,
-                        ranking_function=ranking_function, ranking_params=ranking_params))
+                        ranking_function=ranking_function, ranking_params=ranking_params,
+                        base_index_location=base_index_location, base_index_type=base_index_type))
 
                     if db_location and db_name and db_type:
                         db = Database.factory(db_location, db_name, db_type, loop)

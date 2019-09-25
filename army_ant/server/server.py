@@ -345,6 +345,11 @@ async def evaluation_post(request):
         if k.startswith('ranking_param_'):
             _, _, param_name = k.split('_', 2)
             ranking_params[param_name] = data.getall(k)
+            if param_name == 'base_indexes':
+                ranking_params[param_name] = [
+                    json.loads(ranking_param)
+                    for ranking_param in ranking_params[param_name]
+                ]
 
     manager.add_task(EvaluationTask(
         index_location=index_location,

@@ -170,7 +170,7 @@ class HypergraphOfEntity(JavaIndex):
             ranking_function = HypergraphOfEntity.RankingFunction['random_walk']
 
         if query_type:
-            if not type(query_type) is Index.QueryType:
+            if type(query_type) is not Index.QueryType:
                 try:
                     query_type = HypergraphOfEntity.QueryType[query_type]
                 except (JException, KeyError):
@@ -180,7 +180,7 @@ class HypergraphOfEntity(JavaIndex):
             query_type = HypergraphOfEntity.QueryType['keyword']
 
         if task:
-            if not type(task) is Index.RetrievalTask:
+            if type(task) is not Index.RetrievalTask:
                 try:
                     task = Index.RetrievalTask[task]
                 except (JException, KeyError):
