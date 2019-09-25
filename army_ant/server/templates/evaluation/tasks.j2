@@ -93,7 +93,7 @@
         <th>Ranking Parameters</th>
         <td>
           {% for k, v in task.ranking_params.items() %}
-          {% if v[0] is mapping %}
+          {% if v|length > 0 and v[0] is mapping %}
           {{ k }} = [{% for o in v %}{{ o.type }}{% if not loop.last %}, {% endif %}{% endfor %}]
           {% else %}
           {{ k }} = {{ v|replace("'", "") }}

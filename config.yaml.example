@@ -987,7 +987,7 @@ engines:
             expansion: [true, false]
             directed: [true, false]
             weighted: [true, false]
-            base_indexes:
+            base_index:
               - location: /opt/army-ant/indexes/inex-2009-3t-nl/hgoe
                 type: hgoe
               - location: /opt/army-ant/indexes/inex-2009-3t-nl/hgoe-keywords

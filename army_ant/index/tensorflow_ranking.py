@@ -327,15 +327,18 @@ class TensorFlowRanking(JavaIndex):
         ranker = self.get_estimator(hparams)
         ranker.train(input_fn=lambda: self.input_fn(pd_train_generator), steps=100)
 
-    async def search(self, query, offset, limit, base_index_location=None, base_index_type=None,
-                     query_type=None, task=None, ranking_function=None, ranking_params=None, debug=False):
+    async def search(self, query, offset, limit, query_type=None, task=None,
+                     ranking_function=None, ranking_params=None, debug=False):
         tf.logging.set_verbosity(tf.logging.FATAL)
-
-        assert base_index_type is None or base_index_type.startswith('hgoe'), \
-            "Only None ('lucene') or 'hgoe' values are supported. "
 
         hparams = tf.contrib.training.HParams(learning_rate=0.05)
         ranker = self.get_estimator(hparams)
+
+        base_index_location = ranking_params.get('base_index_location')
+        base_index_type = ranking_params.get('base_index_type')
+
+        assert base_index_type is None or base_index_type.startswith('hgoe'), \
+            "Only None ('lucene') or 'hgoe' values are supported. "
 
         k = 10000
         ltr_helper = TensorFlowRanking.JLearningToRankHelper(self.lucene_index_location)
