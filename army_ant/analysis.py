@@ -11,10 +11,9 @@ import numpy as np
 import pandas as pd
 from lxml import etree
 
-from army_ant.exception import ArmyAntException
 from army_ant.index import Index
 from army_ant.util import get_first, os
-from army_ant.util.stats import gmean, kendall_w, spearman_rho, jaccard_index
+from army_ant.util.stats import gmean, jaccard_index, kendall_w, spearman_rho
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +21,7 @@ logger = logging.getLogger(__name__)
 async def rank_correlation(index_a_location, index_a_type, index_b_location, index_b_type,
                            ranking_fun_a, ranking_fun_b, ranking_params_a, ranking_params_b,
                            topics_path, output_path, cutoff, repeats, method, force, loop):
-    assert method in ('spearman')
+    assert method in 'spearman'
 
     index_a = Index.open(index_a_location, index_a_type, loop)
     index_b = Index.open(index_b_location, index_b_type, loop)
@@ -53,7 +52,7 @@ async def rank_correlation(index_a_location, index_a_type, index_b_location, ind
             filename_b = os.path.join(path, 'b_repeat_%%0%dd.csv' % len(str(repeats)) % repeat)
 
             if not force and os.path.exists(filename_a):
-                df_a = pd.read_csv(filename_a, converters = { 'id': lambda d: str(d) })
+                df_a = pd.read_csv(filename_a, converters={'id': lambda d: str(d)})
                 logger.warning("Loaded existing file for repeat %d of index A: %s (use --force to recompute)" % (
                     repeat, filename_a))
             else:
@@ -76,7 +75,7 @@ async def rank_correlation(index_a_location, index_a_type, index_b_location, ind
                 logger.info("Saved repeat %d for index A in %s" % (repeat, filename_a))
 
             if not force and os.path.exists(filename_b):
-                df_b = pd.read_csv(filename_b, converters = { 'id': lambda d: str(d) })
+                df_b = pd.read_csv(filename_b, converters={'id': lambda d: str(d)})
                 logger.warning("Loaded existing file for repeat %d of index B: %s (use --force to recompute)" % (
                     repeat, filename_b))
             else:
@@ -135,7 +134,7 @@ async def rank_correlation(index_a_location, index_a_type, index_b_location, ind
 
 async def rws_rank_concordance(index_location, index_type, rw_length, rw_repeats, topics_path, output_path,
                                cutoff, repeats, method, force, loop):
-    assert method in ('kendall_w')
+    assert method in 'kendall_w'
 
     index = Index.open(index_location, index_type, loop)
     topics = etree.parse(topics_path)

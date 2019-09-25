@@ -4,6 +4,7 @@ from . import Index
 
 logger = logging.getLogger(__name__)
 
+
 class NullIndex(Index):
     async def index(self, features_location=None):
         count = 0

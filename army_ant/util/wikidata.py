@@ -29,25 +29,40 @@ class WikidataClass(Enum):
 
 
 def entity_to_triples(entity, filter_props=None):
-    if filter_props is None: filter_props = ['ID', 'Id', 'Commons', 'image', 'equivalent']
+    if filter_props is None:
+        filter_props = ['ID', 'Id', 'Commons', 'image', 'equivalent']
 
     triples = []
 
     entity_label = entity.get('labels', {}).get('en', {}).get('value')
-    if entity_label is None: return []
+    if entity_label is None:
+        return []
 
     for prop, claim in entity.get('claims', []).items():
-        if len(claim) <= 0: continue
+        if len(claim) <= 0:
+            continue
+
         datavalue = claim[0].get('mainsnak', {}).get('datavalue', {})
         datavalue_type = datavalue.get('type')
         datavalue_value = datavalue.get('value')
+
         if datavalue_type == 'string':
-            if entity_label == datavalue_type: continue
+            if entity_label == datavalue_type:
+                continue
+
             props = get_entities([prop])
-            if not prop in props: continue
+
+            if prop not in props:
+                continue
+
             prop_label = props[prop].get('labels', {}).get('en', {}).get('value')
-            if filter_props and any([filter_prop in prop_label for filter_prop in filter_props]): continue
-            if datavalue_value is None: continue
+
+            if filter_props and any([filter_prop in prop_label for filter_prop in filter_props]):
+                continue
+
+            if datavalue_value is None:
+                continue
+
             triples.append((entity_label, prop_label, datavalue_value))
 
     return triples
@@ -107,15 +122,19 @@ def fetch_wikidata_entity_labels(wikidata_class, offset=None, limit=None):
           FILTER (langMatches(lang(?entityLabel), 'en'))
         }
     ''' % wikidata_class.value
-    if offset: query += 'OFFSET %d\n' % offset
-    if limit:  query += 'LIMIT %d' % limit
+
+    if offset:
+        query += 'OFFSET %d\n' % offset
+
+    if limit:
+        query += 'LIMIT %d' % limit
 
     sparql.setQuery(query)
 
     sparql.setReturnFormat(JSON)
     result = sparql.query()
     data = result.response.read()
-    #print(data.decode('utf-8'))
+    # print(data.decode('utf-8'))
     data = json.loads(data.decode('utf-8'))
 
     entities = []
@@ -195,7 +214,8 @@ n_triple_regex = re.compile(r'(?P<subject>%s|%s|%s) (?P<predicate>%s|%s|%s) (?P<
 
 def parse_n_triple(line):
     m = n_triple_regex.match(line.strip())
-    if m: return m.groupdict()
+    if m:
+        return m.groupdict()
 
 
 def filter_entities_by_class(wikidata_dump_location, class_uris):
@@ -204,29 +224,35 @@ def filter_entities_by_class(wikidata_dump_location, class_uris):
     with gzip.open(wikidata_dump_location, 'rt') as f:
         for line in f:
             triple = parse_n_triple(line)
-            if triple is None: continue
+
+            if triple is None:
+                continue
+
             s, p, o = triple['subject'], triple['predicate'], triple['object']
+
             if p == '<http://www.wikidata.org/prop/direct/P31>' and o in class_uris:
                 entities.append(s)
-
-            # if len(entities) > 10: break # DELETEME
 
             if len(entities) % 1000 == 0 and print_count < len(entities):
                 logger.info("%d entities found so far" % len(entities))
                 print_count = len(entities)
 
-    # return entities[0:10] # DELETEME [0:10]
     return entities
 
 
 def get_label_for_entity_uris(wikidata_dump_location, entity_uris, language='en'):
     entity_labels = {}
     count = 0
+
     with gzip.open(wikidata_dump_location, 'rt') as f:
         for line in f:
             triple = parse_n_triple(line)
-            if triple is None: continue
+
+            if triple is None:
+                continue
+
             s, p, o = triple['subject'], triple['predicate'], triple['object']
+
             for entity_uri in entity_uris:
                 if s == entity_uri and p == '<http://www.w3.org/2000/01/rdf-schema#label>':
                     m = literal_regex.match(o)
@@ -235,8 +261,12 @@ def get_label_for_entity_uris(wikidata_dump_location, entity_uris, language='en'
                         count += 1
                         if count % 1000 == 0:
                             logger.info("%d entity labels found so far" % len(entity_labels))
-            if len(entity_labels) >= len(entity_uris): break
+
+            if len(entity_labels) >= len(entity_uris):
+                break
+
     return entity_labels
+
 
 #
 # High level implementations
@@ -254,7 +284,9 @@ def get_wikidata_entities(class_name, output_location):
 
             entities = fetch_wikidata_entity_labels(WikidataClass[class_name], offset=offset, limit=limit)
 
-            if len(entities) < 1: break
+            if len(entities) < 1:
+                break
+
             count += len(entities)
 
             for entity in entities:
@@ -265,6 +297,7 @@ def get_wikidata_entities(class_name, output_location):
 
     logger.info("Wrote %d entities of class %s (%s) to %s" % (
         count, WikidataClass[class_name], class_name, output_location))
+
 
 def get_wikidata_entity_labels(input_location, output_location):
     with open(output_location, 'w') as out_file:
@@ -287,6 +320,7 @@ def get_wikidata_entity_labels(input_location, output_location):
                     batch = []
             write_batch(batch)
 
+
 def build_wikidata_dump_gazetteer(class_name, dump_location, output_location):
     with open(output_location, 'w') as f:
         logger.info("Fetching Wikidata entity classes for %s" % class_name)
@@ -304,6 +338,7 @@ def build_wikidata_dump_gazetteer(class_name, dump_location, output_location):
             f.write('%s\n' % label)
 
         logger.info("Result saved to %s" % output_location)
+
 
 if __name__ == '__main__':
     config_logger()

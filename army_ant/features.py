@@ -11,13 +11,15 @@ from collections import OrderedDict
 
 import igraph
 import langdetect
-from nltk.stem import SnowballStemmer
 from gensim.models import Word2Vec
 from langdetect.lang_detect_exception import LangDetectException
+from nltk.stem import SnowballStemmer
 
 from army_ant.exception import ArmyAntException
-from army_ant.util.text import split_sentences, get_pos_tagger, remove_by_pos_tag, filter_tokens, slot_urls, \
-    normalize_text, slot_numbers, SLOT_PREFIX, tokenize, slot_time, slot_money
+from army_ant.util.text import (SLOT_PREFIX, filter_tokens, get_pos_tagger,
+                                normalize_text, slot_money, slot_numbers,
+                                slot_time, slot_urls, split_sentences,
+                                tokenize)
 
 logger = logging.getLogger(__name__)
 
@@ -67,10 +69,10 @@ class Word2VecSimilarityNetwork(FeatureExtractor):
         pos_taggers = {}
 
         # Tags to remove: parts-of-speech, such as verbs, result a similarity network that is too dense.
-        filter_tags = {
-            'pt': ['V', 'PCP', 'VAUX', 'PREP', 'CUR', 'NUM', 'PREP|+', 'NPROP', 'PROPESS', 'ART', 'KS', 'ADV'],
-            'en': ['VB', 'VBP']
-        }
+        # filter_tags = {
+        #     'pt': ['V', 'PCP', 'VAUX', 'PREP', 'CUR', 'NUM', 'PREP|+', 'NPROP', 'PROPESS', 'ART', 'KS', 'ADV'],
+        #     'en': ['VB', 'VBP']
+        # }
 
         doc_count = 0
         for doc in self.reader:
@@ -81,14 +83,14 @@ class Word2VecSimilarityNetwork(FeatureExtractor):
             except LangDetectException:
                 lang = 'en'
 
-            if not lang in pos_taggers:
+            if lang not in pos_taggers:
                 pos_taggers[lang] = get_pos_tagger('%s-%s.pickle' % (self.pos_tagger_model_path_basename, lang), lang)
 
             for sentence in split_sentences(text):
                 # Removing verbs has low impact on vocabularity size.
-                #tokens = remove_by_pos_tag(
-                #    pos_taggers[lang], tokenize(sentence),
-                #    tags=filter_tags.get(lang, filter_tags['en']))
+                # tokens = remove_by_pos_tag(
+                #     pos_taggers[lang], tokenize(sentence),
+                #     tags=filter_tags.get(lang, filter_tags['en']))
                 tokens = tokenize(sentence)
 
                 tokenized_sentence = []
@@ -98,7 +100,8 @@ class Word2VecSimilarityNetwork(FeatureExtractor):
                     if not token.startswith(SLOT_PREFIX):
                         token = token.lower()
 
-                    if len(token) < 3: continue
+                    if len(token) < 3:
+                        continue
 
                     # Stemming has a higher impact on vocabulary size.
                     token = stemmer.stem(token)
@@ -145,8 +148,12 @@ class Word2VecSimilarityNetwork(FeatureExtractor):
         for word in self.model.wv.vocab:
             sim_words = self.model.wv.most_similar(positive=[word], topn=k)
             for (sim_word, weight) in sim_words:
-                if weight <= threshold: continue
-                if not word in graph: graph[word] = OrderedDict()
+                if weight <= threshold:
+                    continue
+
+                if word not in graph:
+                    graph[word] = OrderedDict()
+
                 graph[word][sim_word] = weight
 
         g = igraph.Graph(directed=False)

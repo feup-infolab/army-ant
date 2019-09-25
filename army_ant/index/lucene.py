@@ -4,44 +4,19 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2018-03-09 (refactor: 2019-03-14)
 
-import configparser
-import itertools
 import json
 import logging
-import math
 import os
-import re
-import signal
-import sqlite3
-from collections import Counter, OrderedDict, defaultdict
 from enum import Enum
-from statistics import mean, variance
 
-import igraph
 import jpype
-import numpy as np
 import pandas as pd
-import psycopg2
-import tensorflow as tf
-import tensorflow_ranking as tfr
-import yaml
-from aiogremlin import Cluster
-from aiohttp.client_exceptions import ClientConnectorError
-from jpype import (JException, JBoolean, JClass, JDouble, JPackage,
-                   JString, isJVMStarted, java, shutdownJVM, startJVM)
-from sklearn.externals import joblib
-from sklearn.preprocessing import MinMaxScaler
+from jpype import JClass, JException, JString, java
 
 from army_ant.exception import ArmyAntException
-from army_ant.reader import Document, Entity
-from army_ant.setup import config_logger
-from army_ant.util import load_gremlin_script, load_sql_script
 from army_ant.util.text import textrank
 
-from . import JavaIndex
-from . import Result
-from . import ResultSet
-
+from . import JavaIndex, Result, ResultSet
 
 logger = logging.getLogger(__name__)
 
@@ -50,21 +25,17 @@ class LuceneEngine(JavaIndex):
     class Feature(Enum):
         keywords = 'EXTRACT_KEYWORDS'
 
-
     class RankingFunction(Enum):
         tf_idf = 'TF_IDF'
         bm25 = 'BM25'
         dfr = 'DFR'
 
-
     JLuceneEngine = JavaIndex.armyant.lucene.LuceneEngine
     JRankingFunction = JClass("armyant.lucene.LuceneEngine$RankingFunction")
-
 
     def __init__(self, reader, index_location, index_features, loop):
         super().__init__(reader, index_location, loop)
         self.index_features = [LuceneEngine.Feature[index_feature] for index_feature in index_features]
-
 
     async def index(self, features_location=None):
         try:
@@ -131,13 +102,12 @@ class LuceneEngine(JavaIndex):
         except JException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
-
     async def search(self, query, offset, limit, query_type=None, task=None,
                      ranking_function=None, ranking_params=None, debug=False):
         if ranking_function:
             try:
                 ranking_function = LuceneEngine.RankingFunction[ranking_function]
-            except (JException, KeyError) as e:
+            except (JException, KeyError):
                 logger.error("Could not use '%s' as the ranking function" % ranking_function)
                 ranking_function = LuceneEngine.RankingFunction['tf_idf']
         else:
@@ -174,13 +144,11 @@ class LuceneEngine(JavaIndex):
         return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()), trace_ascii=trace.toASCII())
 
 
-
 class LuceneFeaturesEngine(JavaIndex):
     class Feature(Enum):
         keywords = 'EXTRACT_KEYWORDS'
 
     JFeaturesHelper = JavaIndex.armyant.lucene.LuceneFeaturesHelper
-
 
     def __init__(self, reader, index_location, index_features, loop):
         super().__init__(reader, index_location, loop)
@@ -192,7 +160,6 @@ class LuceneFeaturesEngine(JavaIndex):
             lucene_index_features.append(LuceneEngine.Feature.keywords.name)
 
         self.lucene_engine = LuceneEngine(reader, self.lucene_index_location, lucene_index_features, loop)
-
 
     def j_load_features(self, features_location):
         logger.info("Loading query-independent features from %s" % features_location)
@@ -209,7 +176,6 @@ class LuceneFeaturesEngine(JavaIndex):
 
         return j_features
 
-
     async def index(self, features_location=None):
         if not features_location:
             raise ArmyAntException("Must provide a features location with topics.txt and qrels.txt files")
@@ -221,13 +187,12 @@ class LuceneFeaturesEngine(JavaIndex):
         j_features = self.j_load_features(features_location)
         features_helper.setDocumentFeatures(j_features)
 
-
     async def search(self, query, offset, limit, query_type=None, task=None,
                      ranking_function=None, ranking_params=None, debug=False):
         if ranking_function:
             try:
                 ranking_function = LuceneEngine.RankingFunction[ranking_function]
-            except (JException, KeyError) as e:
+            except (JException, KeyError):
                 logger.error("Could not use '%s' as the ranking function" % ranking_function)
                 ranking_function = LuceneEngine.RankingFunction['tf_idf']
         else:

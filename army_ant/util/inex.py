@@ -7,10 +7,12 @@
 
 import os
 
+
 def filter_xml_files(members):
     for member in members:
         if os.path.splitext(member.name)[1] == '.xml':
             yield member
+
 
 def xlink_to_page_id(xlink):
     _, filename = os.path.split(xlink)

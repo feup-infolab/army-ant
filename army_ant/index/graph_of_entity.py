@@ -4,40 +4,18 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2018-03-09 (refactor: 2019-03-14)
 
-import configparser
-import itertools
-import json
 import logging
-import math
 import os
 import re
-import signal
-import sqlite3
-from collections import Counter, OrderedDict, defaultdict
-from enum import Enum
-from statistics import mean, variance
 
-import igraph
-import jpype
-import numpy as np
-import pandas as pd
 import psycopg2
-import tensorflow as tf
-import tensorflow_ranking as tfr
-import yaml
 from aiogremlin import Cluster
 from aiohttp.client_exceptions import ClientConnectorError
-from jpype import (JException, JBoolean, JClass, JDouble, JPackage,
-                   JString, isJVMStarted, java, shutdownJVM, startJVM)
-from sklearn.externals import joblib
-from sklearn.preprocessing import MinMaxScaler
 
 from army_ant.exception import ArmyAntException
 from army_ant.index import GremlinServerIndex, PostgreSQLGraph
 from army_ant.reader import Document, Entity
-from army_ant.setup import config_logger
-from army_ant.util import load_gremlin_script, load_sql_script
-from army_ant.util.text import analyze
+from army_ant.util import load_gremlin_script
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +114,7 @@ class GraphOfEntityBatch(PostgreSQLGraph, GraphOfEntity):
 
         if cache_key in self.vertex_cache:
             vertex_id = self.vertex_cache[cache_key]
-            if doc_id and not vertex_id in self.vertices_with_doc_id:
+            if doc_id and vertex_id not in self.vertices_with_doc_id:
                 self.update_vertex_attribute(conn, vertex_id, 'doc_id', doc_id)
                 self.vertices_with_doc_id.add(vertex_id)
         else:

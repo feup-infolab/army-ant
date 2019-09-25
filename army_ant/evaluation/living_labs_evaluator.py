@@ -1,6 +1,18 @@
+import asyncio
+import json
 import logging
-from army_ant.evaluation import Evaluator
+import os
+import pickle
+from urllib.parse import urljoin
 
+import requests
+import requests_cache
+from requests.auth import HTTPBasicAuth
+from requests.exceptions import HTTPError
+
+from army_ant.evaluation import EvaluationTaskStatus, Evaluator
+from army_ant.exception import ArmyAntException
+from army_ant.index import Index
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +69,8 @@ class LivingLabsEvaluator(Evaluator):
 
         must_have_doc_ids = self.get_doclist_doc_ids(qid)
 
-        # this first verification is required because an empty results variable is returned as a dictionary instead of a list
+        # This first verification is required because an empty results variable is returned as a dictionary
+        # instead of a list.
         if len(results) < 1:
             logging.warn("No results found, adding %d missing results with zero score" % len(must_have_doc_ids))
             results = [{'docID': doc_id} for doc_id in must_have_doc_ids]

@@ -74,13 +74,17 @@ def set_dict_defaults(d, defaults):
 
 
 def safe_div(n, d):
-    if d == 0: return 0
+    if d == 0:
+        return 0
     return n / d
 
 
 def typed_value(v):
-    if v == 'True': return True
-    if v == 'False': return False
+    if v == 'True':
+        return True
+
+    if v == 'False':
+        return False
 
     try:
         return int(v)
@@ -92,25 +96,34 @@ def typed_value(v):
 
 
 def ranking_params_to_params_id(ranking_params):
-    if ranking_params is None or len(ranking_params) < 1: return 'no_params'
+    if ranking_params is None or len(ranking_params) < 1:
+        return 'no_params'
     return '-'.join([p[0] + '_' + str(p[1]).replace('.', '~') for p in ranking_params.items()])
 
 
 def params_id_to_str(params_id):
-    if params_id == 'no_params': return "No parameters"
+    if params_id == 'no_params':
+        return "No parameters"
+
     params = []
+
     for p in params_id.split('-'):
         params.append(('%s=%s' % tuple(p.split('_', 1))).replace('~', '.'))
+
     return '(%s)' % ', '.join(params)
 
 
 def params_id_to_ranking_params(s):
-    if s == 'no_params': return []
+    if s == 'no_params':
+        return []
+
     ranking_params = []
+
     for p in s.split('-'):
         parts = p.replace('~', '.').split('_', 1)
         parts[1] = typed_value(parts[1])
         ranking_params.append(tuple(parts))
+
     return ranking_params
 
 
@@ -166,7 +179,8 @@ def fill_missing(pd_dfs, key, **kwargs):
                 missing_df[k] = 0
             elif v == FillMethod.INC_MAX:
                 df_inc_max = df[k].max() + 1
-                if np.isnan(df_inc_max): df_inc_max = 0 + 1
+                if np.isnan(df_inc_max):
+                    df_inc_max = 0 + 1
                 missing_df[k] = range(df_inc_max, df_inc_max + len(missing_keys))
 
         df = df.append(missing_df)

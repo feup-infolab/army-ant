@@ -5,4 +5,4 @@
 # José Devezas <joseluisdevezas@gmail.com>
 # 2017-10-10
 
-from .util import *
+from .util import *     # noqa

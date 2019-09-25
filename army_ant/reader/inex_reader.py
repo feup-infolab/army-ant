@@ -1,4 +1,3 @@
-import csv
 import glob
 import itertools
 import logging
@@ -6,28 +5,14 @@ import os
 import re
 import shelve
 import shutil
-import sys
 import tarfile
 import tempfile
 import time
-from urllib.error import HTTPError, URLError
-from urllib.parse import urljoin
 
-import pandas as pd
-import requests
-import requests_cache
-from bs4 import BeautifulSoup, SoupStrainer
 from lxml import etree
-from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure
-from requests.auth import HTTPBasicAuth
-from SPARQLWrapper.SPARQLExceptions import EndPointNotFound
 
-from army_ant.exception import ArmyAntException
-from army_ant.setup import config_logger
-from army_ant.util import get_first, html_to_text, inex
+from army_ant.util import get_first, inex
 from army_ant.util.dbpedia import fetch_dbpedia_triples
-from army_ant.util.text import AhoCorasickEntityExtractor
 from army_ant.reader import Reader, Document, Entity
 
 logger = logging.getLogger(__name__)
@@ -72,8 +57,8 @@ class INEXReader(Reader):
         return re.sub(r'\s+', ' ', ''.join(bdy.xpath('%s/text()' % self.doc_xpath)))
 
     def to_wikipedia_entity(self, page_id, label):
-        #return Entity(label, "https://en.wikipedia.org/wiki/%s" % label.replace(' ', '_'))
-        #return Entity(label, "https://en.wikipedia.org/?curid=%s" % page_id)
+        # return Entity(label, "https://en.wikipedia.org/wiki/%s" % label.replace(' ', '_'))
+        # return Entity(label, "https://en.wikipedia.org/?curid=%s" % page_id)
 
         # This is the required option for the evaluation module to work
         return Entity(label, "WP%s" % page_id)
@@ -123,7 +108,7 @@ class INEXReader(Reader):
                 try:
                     dbpedia_triples = list(fetch_dbpedia_triples([entity.label for entity in entities]))
                     break
-                except:
+                except Exception:
                     if retries_left > 0:
                         retry_wait += 10 * (max_retries - retries_left + 1)
                         logger.exception(

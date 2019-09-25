@@ -133,11 +133,17 @@ class INEXSampler(object):
                     if member.name.endswith('.xml'):
                         article = etree.parse(in_tar.extractfile(member), parser)
                         bdy = get_first(article.xpath('//bdy'))
-                        if bdy is None: continue
+
+                        if bdy is None:
+                            continue
+
                         for link in bdy.xpath('//link'):
                             target_doc_id = get_first(
                                 link.xpath('@xlink:href', namespaces={'xlink': 'http://www.w3.org/1999/xlink'}))
-                            if target_doc_id is None: continue
+
+                            if target_doc_id is None:
+                                continue
+
                             target_doc_id = inex.xlink_to_page_id(target_doc_id)
                             target_doc_ids.add(target_doc_id)
 

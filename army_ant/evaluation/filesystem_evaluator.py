@@ -1,41 +1,17 @@
-import asyncio
 import csv
 import itertools
-import json
 import logging
 import math
 import os
-import pickle
-import re
 import shutil
-import tempfile
-import time
-import zipfile
 from collections import OrderedDict
-from contextlib import contextmanager
-from datetime import datetime
-from enum import IntEnum
-from urllib.parse import urljoin
 
-import numpy as np
 import pandas as pd
-import pymongo
-import requests
-import requests_cache
-from bson.objectid import ObjectId
-from lxml import etree
-from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure, DuplicateKeyError
-from requests.auth import HTTPBasicAuth
-from requests.exceptions import HTTPError
 
-from army_ant.exception import ArmyAntException
-from army_ant.index import Index
-from army_ant.util import (get_first, md5, params_id_to_ranking_params,
-                           params_id_to_str, ranking_params_to_params_id,
-                           safe_div, zipdir)
-from army_ant.util.stats import gmean
 from army_ant.evaluation import Evaluator
+from army_ant.exception import ArmyAntException
+from army_ant.util import ranking_params_to_params_id, safe_div
+from army_ant.util.stats import gmean
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +29,7 @@ pd.set_option("display.max_rows", 10)
 
 def dcg(rel, p):
     return sum(rel[i-1] / math.log2(i + 1) for i in range(1, min(len(rel), p) + 1))
+
 
 class FilesystemEvaluator(Evaluator):
     def __init__(self, task, eval_location):
@@ -86,7 +63,8 @@ class FilesystemEvaluator(Evaluator):
             if f.endswith('.csv') and os.path.isfile(os.path.join(o_results_path, f))]
 
     def f_score(self, precision, recall, beta=1):
-        if precision == 0 and recall == 0: return 0
+        if precision == 0 and recall == 0:
+            return 0
         return safe_div((1 + beta ** 2) * (precision * recall), (beta ** 2 * precision) + recall)
 
     def calculate_precision_recall(self, ranking_params=None):
@@ -97,7 +75,8 @@ class FilesystemEvaluator(Evaluator):
         result_files = self.get_result_files(params_id)
 
         o_eval_details_dir = os.path.join(self.o_assessments_path, params_id)
-        if not os.path.exists(o_eval_details_dir): os.makedirs(o_eval_details_dir)
+        if not os.path.exists(o_eval_details_dir):
+            os.makedirs(o_eval_details_dir)
         o_eval_details_file = os.path.join(o_eval_details_dir, 'precision_recall_per_topic.csv')
 
         with open(o_eval_details_file, 'w') as ef:
@@ -134,7 +113,7 @@ class FilesystemEvaluator(Evaluator):
                     # Negatives are unknown, because they refer to documents in the qrels that weren't returned.
                     for doc_id, judgment in topic_doc_judgements.get(topic_id, {}).items():
                         # Skip positives
-                        if not doc_id in result_doc_ids:
+                        if doc_id not in result_doc_ids:
                             relevant = judgment > 0
                             if relevant:
                                 fn += 1
@@ -168,8 +147,8 @@ class FilesystemEvaluator(Evaluator):
 
                     writer.writerow([topic_id, tp, fp, tn, fn, precision, recall, f_0_5_score, f_1_score, f_2_score])
 
-            if not params_id in self.results: self.results[params_id] = {'ranking_params': ranking_params,
-                                                                         'metrics': {}}
+            if params_id not in self.results:
+                self.results[params_id] = {'ranking_params': ranking_params, 'metrics': {}}
             self.results[params_id]['metrics']['Micro Avg Prec'] = safe_div(sum(tps), sum(tps) + sum(fps))
             self.results[params_id]['metrics']['Micro Avg Rec'] = safe_div(sum(tps), sum(tps) + sum(fns))
             self.results[params_id]['metrics']['Macro Avg Prec'] = safe_div(sum(precisions), len(precisions))
@@ -205,7 +184,8 @@ class FilesystemEvaluator(Evaluator):
         result_files = self.get_result_files(params_id)
 
         o_eval_details_dir = os.path.join(self.o_assessments_path, params_id)
-        if not os.path.exists(o_eval_details_dir): os.makedirs(o_eval_details_dir)
+        if not os.path.exists(o_eval_details_dir):
+            os.makedirs(o_eval_details_dir)
         o_eval_details_file = os.path.join(o_eval_details_dir, 'p_at_%d-precision_at_%d_per_topic.csv' % (n, n))
 
         with open(o_eval_details_file, 'w') as ef:
@@ -226,8 +206,8 @@ class FilesystemEvaluator(Evaluator):
                     precisions_at_n.append(precision_at_n)
                     writer.writerow([topic_id, precision_at_n])
 
-            if not params_id in self.results: self.results[params_id] = {'ranking_params': ranking_params,
-                                                                         'metrics': {}}
+            if params_id not in self.results:
+                self.results[params_id] = {'ranking_params': ranking_params, 'metrics': {}}
             self.results[params_id]['metrics']['P@%d' % n] = safe_div(sum(precisions_at_n), len(precisions_at_n))
 
     def calculate_mean_average_precision(self, ranking_params=None):
@@ -236,7 +216,8 @@ class FilesystemEvaluator(Evaluator):
         result_files = self.get_result_files(params_id)
 
         o_eval_details_dir = os.path.join(self.o_assessments_path, params_id)
-        if not os.path.exists(o_eval_details_dir): os.makedirs(o_eval_details_dir)
+        if not os.path.exists(o_eval_details_dir):
+            os.makedirs(o_eval_details_dir)
         o_eval_details_file = os.path.join(o_eval_details_dir, 'map_average_precision_per_topic.csv')
 
         with open(o_eval_details_file, 'w') as ef:
@@ -263,7 +244,8 @@ class FilesystemEvaluator(Evaluator):
 
                     for i in range(1, len(results) + 1):
                         rel = results[0:i]
-                        if not rel[i-1]: continue
+                        if not rel[i-1]:
+                            continue
                         p = safe_div(sum(rel), len(rel))
                         precisions.append(p)
 
@@ -271,8 +253,8 @@ class FilesystemEvaluator(Evaluator):
                     avg_precisions.append(avg_precision)
                     writer.writerow([topic_id, avg_precision])
 
-            if not params_id in self.results: self.results[params_id] = {'ranking_params': ranking_params,
-                                                                         'metrics': {}}
+            if params_id not in self.results:
+                self.results[params_id] = {'ranking_params': ranking_params, 'metrics': {}}
             self.results[params_id]['metrics']['MAP'] = safe_div(sum(avg_precisions), len(avg_precisions))
             # This is an approximation of np.prod(avg_precision)**(1/len(avg_precision)) that works with zero values.
             self.results[params_id]['metrics']['GMAP'] = gmean(avg_precisions)
@@ -287,7 +269,7 @@ class FilesystemEvaluator(Evaluator):
         for topic_id, judgements in topic_doc_judgements.items():
             ideal_rankings[topic_id] = sorted((judgement for judgement in judgements.values()), reverse=True)
 
-            qrels[topic_id] = { 'doc_id': [], 'rel': [] }
+            qrels[topic_id] = {'doc_id': [], 'rel': []}
             for doc_id, rel in judgements.items():
                 qrels[topic_id]['doc_id'].append(doc_id)
                 qrels[topic_id]['rel'].append(rel)
@@ -297,7 +279,7 @@ class FilesystemEvaluator(Evaluator):
         for result_file in result_files:
             topic_id = self.path_to_topic_id(result_file)
 
-            df = pd.read_csv(result_file, converters = { 'doc_id': lambda d: str(d) })
+            df = pd.read_csv(result_file, converters={'doc_id': lambda d: str(d)})
             df = df.merge(qrels[topic_id], on='doc_id', how='left')
             df.rel.fillna(value=0, inplace=True)
 
@@ -305,7 +287,8 @@ class FilesystemEvaluator(Evaluator):
             idcg_p = dcg(ideal_rankings[topic_id], p)
             ndcgs.append(safe_div(dcg_p, idcg_p))
 
-        if not params_id in self.results: self.results[params_id] = {'ranking_params': ranking_params, 'metrics': {}}
+        if params_id not in self.results:
+            self.results[params_id] = {'ranking_params': ranking_params, 'metrics': {}}
         self.results[params_id]['metrics']['NDCG@%d' % p] = safe_div(sum(ndcgs), len(ndcgs))
 
     async def run_with_params(self, ranking_params=None):

@@ -14,6 +14,7 @@ from army_ant.exception import ArmyAntException
 
 logger = logging.getLogger(__name__)
 
+
 # TODO support for entity and term storage
 class Database(object):
     @staticmethod
@@ -49,7 +50,7 @@ class MongoDatabase(Database):
 
         try:
             self.client = MongoClient(db_location, db_port)
-        except ConnectionFailure as e:
+        except ConnectionFailure:
             raise ArmyAntException("Could not connect to MongoDB instance on %s:%s" % (db_location, db_port))
 
         self.db = self.client[self.db_name]

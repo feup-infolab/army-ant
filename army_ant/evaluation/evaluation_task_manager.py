@@ -7,20 +7,15 @@
 
 import asyncio
 import csv
-import itertools
 import json
 import logging
-import math
 import os
-import pickle
-import re
 import shutil
 import tempfile
 import time
 import zipfile
 from collections import OrderedDict
 from contextlib import contextmanager
-from datetime import datetime
 from enum import IntEnum
 from urllib.parse import urljoin
 
@@ -28,21 +23,15 @@ import numpy as np
 import pandas as pd
 import pymongo
 import requests
-import requests_cache
 from bson.objectid import ObjectId
-from lxml import etree
 from pymongo import MongoClient
-from pymongo.errors import DuplicateKeyError, ConnectionFailure
+from pymongo.errors import ConnectionFailure, DuplicateKeyError
 from requests.auth import HTTPBasicAuth
-from requests.exceptions import HTTPError
 
-from army_ant.exception import ArmyAntException
-from army_ant.index import Index
-from army_ant.util import md5, get_first, zipdir, safe_div
-from army_ant.util import ranking_params_to_params_id, params_id_to_str, params_id_to_ranking_params
-from army_ant.util.stats import gmean
 from army_ant.evaluation import Evaluator, LivingLabsEvaluator
-
+from army_ant.exception import ArmyAntException
+from army_ant.util import (md5, params_id_to_ranking_params, params_id_to_str,
+                           ranking_params_to_params_id, zipdir)
 
 logger = logging.getLogger(__name__)
 
@@ -80,9 +69,15 @@ class EvaluationTask(object):
         self.run_id = run_id
         self.status = EvaluationTaskStatus(status)
         self.time = time
-        if results: self.results = results
-        if stats: self.stats = stats
-        if _id: self._id = str(_id)
+
+        if results:
+            self.results = results
+
+        if stats:
+            self.stats = stats
+
+        if _id:
+            self._id = str(_id)
 
     def __repr__(self):
         return json.dumps(self.__dict__)
@@ -112,7 +107,7 @@ class EvaluationTaskManager(object):
 
         try:
             self.client = MongoClient(db_location, db_port)
-        except ConnectionFailure as e:
+        except ConnectionFailure:
             raise ArmyAntException("Could not connect to MongoDB instance on %s:%s" % (db_location, db_port))
 
         self.db = self.client[db_name]
@@ -149,7 +144,8 @@ class EvaluationTaskManager(object):
 
     def rename_task(self, task_id, run_id):
         task = self.db['evaluation_tasks'].find_one(ObjectId(task_id))
-        if task['eval_format'] == 'll-api': return False
+        if task['eval_format'] == 'll-api':
+            return False
         return self.db['evaluation_tasks'].update_one(
             {'_id': ObjectId(task_id)},
             {'$set': {'run_id': run_id}}).matched_count > 0
@@ -162,12 +158,14 @@ class EvaluationTaskManager(object):
 
     def get_waiting_task(self, task_id=None):
         query = {'status': 1}
-        if task_id: query['_id'] = task_id
+        if task_id:
+            query['_id'] = task_id
 
         task = self.db['evaluation_tasks'].find_one_and_update(
             query, {'$set': {'status': 2}},
             sort=[('time', pymongo.ASCENDING)])
-        if task: return EvaluationTask(**task)
+        if task:
+            return EvaluationTask(**task)
 
     def reset_running_tasks(self):
         logger.warning("Resetting running tasks to the WAITING status")
@@ -184,12 +182,13 @@ class EvaluationTaskManager(object):
         inserted_ids = []
         for task in self.tasks:
             run_id_error = task.run_id is None or task.run_id.strip() == ''
-            if run_id_error: continue
+            if run_id_error:
+                continue
             try:
                 task.time = int(round(time.time() * 1000))
                 result = self.db['evaluation_tasks'].insert_one(task.__dict__)
                 inserted_ids.append(result.inserted_id)
-            except DuplicateKeyError as e:
+            except DuplicateKeyError:
                 duplicate_error = True
 
         if duplicate_error:
@@ -213,57 +212,81 @@ class EvaluationTaskManager(object):
     @contextmanager
     def get_results_summary(self, headers, metrics, decimals, fmt):
         tasks = list(self.db['evaluation_tasks'].find({'results': {'$exists': 1}}))
-        if len(tasks) < 1: return
+        if len(tasks) < 1:
+            return
 
         with tempfile.NamedTemporaryFile() as tmp_file:
             columns = headers[:] if headers else []
-            if metrics: columns.extend(metrics)
+            if metrics:
+                columns.extend(metrics)
             df = pd.DataFrame(columns=columns)
 
             for task in tasks:
                 task = EvaluationTask(**task)
-                if not hasattr(task, 'results'): continue
+
+                if not hasattr(task, 'results'):
+                    continue
+
                 for result in task.results.values():
                     values = [None] * len(headers)
-                    if 'Run ID' in columns: values[columns.index('Run ID')] = task.run_id
-                    if 'Type' in columns: values[columns.index('Type')] = task.index_type
+                    if 'Run ID' in columns:
+                        values[columns.index('Run ID')] = task.run_id
+
+                    if 'Type' in columns:
+                        values[columns.index('Type')] = task.index_type
+
                     if 'Parameters' in columns:
                         params_id = ranking_params_to_params_id(result['ranking_params'])
                         values[columns.index('Parameters')] = params_id_to_str(params_id)
-                    if 'Location' in columns: values[columns.index('Location')] = task.index_location
+
+                    if 'Location' in columns:
+                        values[columns.index('Location')] = task.index_location
+
                     values.extend([
                         result['metrics'][metric]
                         if metric in result['metrics'] and result['metrics'][metric] != '' else np.nan
                         for metric in metrics
                     ])
+
                     df = df.append(pd.DataFrame([values], columns=columns))
 
             df.set_axis(axis=0, labels=range(len(df)), inplace=True)
 
             float_format_str = "%%.%df" % decimals
-            float_format = lambda v: (float_format_str % v) if type(v) in (np.float, np.float64, float) else str(v)
+
+            def float_format(v):
+                if type(v) in (np.float, np.float64, float):
+                    return float_format_str % v
+                return str(v)
 
             if fmt == 'csv':
                 tmp_file.write(df.to_csv(index=False, float_format=float_format_str).encode('utf-8'))
             elif fmt == 'tex':
                 for metric in metrics:
-                    if not metric in df: continue
+                    if metric not in df:
+                        continue
+
                     max_idx = df[metric].idxmax()
                     df.loc[max_idx, metric] = '{\\bf %s}' % float_format(df[metric][max_idx])
                     df.loc[~df.index.isin([max_idx]), metric] = df.loc[~df.index.isin([max_idx]), metric].apply(
                         float_format)
+
                 tmp_file.write(df.to_latex(index=False, escape=False).encode('utf-8'))
             elif fmt == 'html':
                 for metric in metrics:
-                    if not metric in df: continue
+                    if metric not in df:
+                        continue
+
                     max_idx = df[metric].idxmax()
                     df.loc[max_idx, metric] = '<b>%s</b>' % float_format(df[metric][max_idx])
                     df.loc[~df.index.isin([max_idx]), metric] = df.loc[~df.index.isin([max_idx]), metric].apply(
                         float_format)
+
                 if 'Parameters' in df:
                     df.Parameters = df.Parameters.apply(
                         lambda param_str: '<br>'.join(s for s in param_str[1:-1].split(', '))
                         if param_str != 'No parameters' else param_str)
+
                 tmp_file.write(df.to_html(
                     index=False,
                     escape=False,
@@ -276,7 +299,9 @@ class EvaluationTaskManager(object):
     @contextmanager
     def get_results_archive(self, task_id):
         task = self.db['evaluation_tasks'].find_one({'_id': ObjectId(task_id)})
-        if task is None: return
+
+        if task is None:
+            return
 
         task = EvaluationTask(**task)
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -320,7 +345,9 @@ class EvaluationTaskManager(object):
 
     def get_results_json(self, task_id):
         task = self.db['evaluation_tasks'].find_one({'_id': ObjectId(task_id)})
-        if task is None: return
+
+        if task is None:
+            return
 
         task = EvaluationTask(**task)
 
@@ -343,7 +370,7 @@ class EvaluationTaskManager(object):
 
         for filename in os.listdir(self.spool_dirname):
             path = os.path.join(self.spool_dirname, filename)
-            if os.path.isfile(path) and not filename in valid_spool_filenames and (
+            if os.path.isfile(path) and filename not in valid_spool_filenames and (
                     filename.startswith('eval_assessments_') or filename.startswith('eval_topics_')):
                 logger.warning("Removing unreferenced spool file '%s'" % path)
                 os.remove(path)
@@ -356,14 +383,14 @@ class EvaluationTaskManager(object):
         for filename in os.listdir(self.results_dirname):
             path = os.path.join(self.results_dirname, filename)
             # 24 is the MongoDB ObjectId default length
-            if not filename in valid_output_dirnames and len(filename) == 24:
+            if filename not in valid_output_dirnames and len(filename) == 24:
                 logger.warning("Removing unreferenced result directory '%s'" % path)
                 shutil.rmtree(path)
 
         for filename in os.listdir(self.assessments_dirname):
             path = os.path.join(self.assessments_dirname, filename)
             # 24 is the MongoDB ObjectId default length
-            if not filename in valid_output_dirnames and len(filename) == 24:
+            if filename not in valid_output_dirnames and len(filename) == 24:
                 logger.warning("Removing unreferenced assessments directory '%s'" % path)
                 shutil.rmtree(path)
 
@@ -393,10 +420,13 @@ class EvaluationTaskManager(object):
                         except ArmyAntException as e:
                             logger.error("Could not run evaluation task %s: %s" % (task._id, str(e)))
 
-                    if task_id: break
+                    if task_id:
+                        break
+
                     await asyncio.sleep(5)
                 except Exception as e:
-                    if type(e) is asyncio.CancelledError: raise
+                    if type(e) is asyncio.CancelledError:
+                        raise
                     logger.exception(e)
         except asyncio.CancelledError:
             self.reset_running_tasks()

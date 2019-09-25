@@ -1,41 +1,15 @@
 import asyncio
 import csv
-import itertools
-import json
 import logging
-import math
 import os
-import pickle
-import re
-import shutil
-import tempfile
 import time
-import zipfile
-from collections import OrderedDict
-from contextlib import contextmanager
-from datetime import datetime
-from enum import IntEnum
-from urllib.parse import urljoin
 
-import numpy as np
-import pandas as pd
-import pymongo
-import requests
-import requests_cache
-from bson.objectid import ObjectId
 from lxml import etree
-from pymongo import MongoClient
-from pymongo.errors import DuplicateKeyError, ConnectionFailure
-from requests.auth import HTTPBasicAuth
-from requests.exceptions import HTTPError
 
+from army_ant.evaluation import FilesystemEvaluator
 from army_ant.exception import ArmyAntException
 from army_ant.index import Index
-from army_ant.util import md5, get_first, zipdir, safe_div
-from army_ant.util import ranking_params_to_params_id, params_id_to_str, params_id_to_ranking_params
-from army_ant.util.stats import gmean
-from army_ant.evaluation import FilesystemEvaluator
-
+from army_ant.util import get_first, ranking_params_to_params_id
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +42,7 @@ class INEXEvaluator(FilesystemEvaluator):
                     if judgement > 0:
                         judgement = 1
 
-                if not topic_id in topic_doc_judgements:
+                if topic_id not in topic_doc_judgements:
                     topic_doc_judgements[topic_id] = {}
                 topic_doc_judgements[topic_id][id] = judgement
 
@@ -104,7 +78,7 @@ class INEXEvaluator(FilesystemEvaluator):
             xpath_topic = '//topic'
             xpath_topic_id = '@id'
 
-        if not params_id in self.stats:
+        if params_id not in self.stats:
             self.stats[params_id] = {'ranking_params': ranking_params, 'query_time': {}}
 
         for topic in topics.xpath(xpath_topic):
@@ -114,7 +88,7 @@ class INEXEvaluator(FilesystemEvaluator):
 
             topic_id = get_first(topic.xpath(xpath_topic_id))
 
-            if topic_filter and not topic_id in topic_filter:
+            if topic_filter and topic_id not in topic_filter:
                 logger.warning("Skipping topic '%s'" % topic_id)
                 continue
 

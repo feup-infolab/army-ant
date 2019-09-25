@@ -1,6 +1,14 @@
+import asyncio
+import csv
 import logging
-from army_ant.evaluation import FilesystemEvaluator
+import os
+import re
+import time
 
+from army_ant.evaluation import FilesystemEvaluator
+from army_ant.exception import ArmyAntException
+from army_ant.index import Index
+from army_ant.util import ranking_params_to_params_id
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +30,7 @@ class TRECEvaluator(FilesystemEvaluator):
             for line in f:
                 topic_id, _, id, judgement = line.split(' ')
 
-                if not topic_id in topic_doc_judgements:
+                if topic_id not in topic_doc_judgements:
                     topic_doc_judgements[topic_id] = {}
                 topic_doc_judgements[topic_id][id] = int(judgement)
 
@@ -45,7 +53,7 @@ class TRECEvaluator(FilesystemEvaluator):
         if not os.path.exists(o_results_path):
             os.makedirs(o_results_path)
 
-        if not params_id in self.stats:
+        if params_id not in self.stats:
             self.stats[params_id] = {'ranking_params': ranking_params, 'query_time': {}}
 
         with open(os.path.join(o_results_path, '%s.res' % self.task.run_id), 'w') as trec_f:
@@ -54,7 +62,7 @@ class TRECEvaluator(FilesystemEvaluator):
                     logger.warning("Evaluation task was interruped")
                     break
 
-                if topic_filter and not topic_id in topic_filter:
+                if topic_filter and topic_id not in topic_filter:
                     logger.warning("Skipping topic '%s'" % topic_id)
                     continue
 

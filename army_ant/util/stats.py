@@ -5,11 +5,8 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2018-03-02
 
-import os
-
 import numpy as np
 import pandas as pd
-
 from scipy.stats import spearmanr
 
 from army_ant.exception import ArmyAntException
@@ -50,8 +47,8 @@ if __name__ == '__main__':
         pd.DataFrame({'rank': [1, 2, 3], 'score': [100, 40, 20], 'id': ['d2', 'd1', 'd3']}),
         pd.DataFrame(columns=['rank', 'score', 'id'])
     ]
-    #filled_dfs = fill_missing(dfs, 'id', rank=FillMethod.INC_MAX, score=FillMethod.ZERO)
-    #for df in filled_dfs: print(df)
+    # filled_dfs = fill_missing(dfs, 'id', rank=FillMethod.INC_MAX, score=FillMethod.ZERO)
+    # for df in filled_dfs: print(df)
     print("Kendall's W:", kendall_w(dfs))
     print("Spearman's Rho:", spearman_rho(dfs[1], dfs[2]))
     print("Jaccard Index:", jaccard_index(dfs[1], dfs[2]))

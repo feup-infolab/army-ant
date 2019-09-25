@@ -13,7 +13,7 @@ import yaml
 import yamlordereddictloader
 from aiohttp import web
 from aiohttp.client_exceptions import ClientOSError
-from jpype import *
+from jpype import java, isJVMStarted, shutdownJVM
 
 from army_ant.database import Database
 from army_ant.evaluation import EvaluationTask, EvaluationTaskManager
@@ -28,9 +28,14 @@ logger = logging.getLogger(__name__)
 async def page_link(request):
     def _page_link(page, limit):
         query = dict(request.url.query)
+
         offset = (page - 1) * limit
-        if offset < 0: offset = 0
+
+        if offset < 0:
+            offset = 0
+
         query['offset'] = offset
+
         return request.url.with_query(query)
 
     return {'page_link': _page_link}
@@ -43,7 +48,7 @@ def timestamp_to_date(timestamp):
 def dump_json(results):
     try:
         return json.dumps([r.__dict__ for r in results])
-    except:
+    except Exception:
         return json.dumps(results)
 
 
@@ -75,7 +80,9 @@ async def search(request):
     start_time = time.time()
 
     engine = request.GET.get('engine')
-    if engine is None: engine = list(request.app['engines'].keys())[0]
+
+    if engine is None:
+        engine = list(request.app['engines'].keys())[0]
 
     index_features = request.app['engines'][engine].get('features', [])
 
@@ -115,11 +122,17 @@ async def search(request):
                 debug=(debug == 'on'))
 
             num_docs = len(engine_response['results'])
-            if engine_response['numDocs']: num_docs = engine_response['numDocs']
-            if type(num_docs) is java.lang.Long: num_docs = num_docs.longValue()
+            if engine_response['numDocs']:
+                num_docs = engine_response['numDocs']
 
-            if 'trace' in engine_response: trace = engine_response['trace']
-            if 'traceASCII' in engine_response: trace_ascii = engine_response['traceASCII']
+            if type(num_docs) is java.lang.Long:
+                num_docs = num_docs.longValue()
+
+            if 'trace' in engine_response:
+                trace = engine_response['trace']
+
+            if 'traceASCII' in engine_response:
+                trace_ascii = engine_response['traceASCII']
 
             results = engine_response['results']
             page = int((offset + limit) / limit)
@@ -188,7 +201,6 @@ async def autocomplete(request):
         engine = list(request.app['engines'].keys())[0]
 
     substring = request.GET.get('substring')
-    debug = request.GET.get('debug', 'off')
     error = None
 
     if substring:
@@ -205,7 +217,7 @@ async def autocomplete(request):
         matches = []
 
     if error:
-        respose = {
+        response = {
             'error': str(error)
         }
     else:
@@ -239,7 +251,9 @@ async def evaluation_delete(request):
     task_id = request.GET.get('task_id')
 
     success = False
-    if task_id: success = manager.del_task(task_id)
+
+    if task_id:
+        success = manager.del_task(task_id)
 
     if success:
         return web.json_response({'success': "Deleted task with task_id = %s." % task_id})
@@ -254,7 +268,9 @@ async def evaluation_reset(request):
     task_id = request.GET.get('task_id')
 
     success = False
-    if task_id: success = manager.reset_task(task_id)
+
+    if task_id:
+        success = manager.reset_task(task_id)
 
     if success:
         return web.json_response({'success': "Reset task with task_id = %s to WAITING status." % task_id})
@@ -271,9 +287,13 @@ async def evaluation_rename(request):
     run_id = request.GET.get('run_id')
 
     success = False
-    if task_id and run_id: success = manager.rename_task(task_id, run_id)
 
-    if success: return web.json_response({'success': "Renamed Run ID of task %s to '%s'." % (task_id, run_id)})
+    if task_id and run_id:
+        success = manager.rename_task(task_id, run_id)
+
+    if success:
+        return web.json_response({'success': "Renamed Run ID of task %s to '%s'." % (task_id, run_id)})
+
     return web.json_response({'error': "Could not rename Run ID of task %s to '%s'." % (task_id, run_id)}, status=404)
 
 
@@ -350,7 +370,9 @@ async def evaluation_post(request):
         error = str(e)
 
     response = await evaluation_get(request)
-    if error: response['error'] = error
+
+    if error:
+        response['error'] = error
 
     return response
 
@@ -358,7 +380,9 @@ async def evaluation_post(request):
 async def evaluation_download(request):
     headers = request.GET.get('headers')
     metrics = request.GET.get('metrics')
-    if metrics is None: return web.HTTPNotFound()
+
+    if metrics is None:
+        return web.HTTPNotFound()
 
     headers = headers.split(',') if headers else None
     metrics = metrics.split(',') if metrics else None
@@ -390,7 +414,9 @@ async def evaluation_download(request):
 
 async def evaluation_results_archive(request):
     task_id = request.GET.get('task_id')
-    if task_id is None: return web.HTTPNotFound()
+
+    if task_id is None:
+        return web.HTTPNotFound()
 
     manager = EvaluationTaskManager(
         request.app['defaults']['db']['location'],
@@ -414,13 +440,13 @@ async def evaluation_results_archive(request):
 
 async def service_ner(request):
     data = await request.post()
-    if not 'text' in data:
-        return web.json_response({ 'error': "Must provide a text parameter" }, status=404)
+    if 'text' not in data:
+        return web.json_response({'error': "Must provide a text parameter"}, status=404)
 
-    if not 'SINGLETONS' in request.app:
+    if 'SINGLETONS' not in request.app:
         request.app['SINGLETONS'] = {}
 
-    if not 'ac_ner' in request.app['SINGLETONS']:
+    if 'ac_ner' not in request.app['SINGLETONS']:
         request.app['SINGLETONS']['ac_ner'] = AhoCorasickEntityExtractor(
             list_path=request.app['defaults']['service']['ner']['entity_list'])
 
@@ -437,7 +463,9 @@ async def service_ner(request):
 @aiohttp_jinja2.template('ll_api_outcome.j2')
 async def evaluation_results_ll_api(request):
     task_id = request.GET.get('task_id')
-    if task_id is None: return web.HTTPNotFound()
+
+    if task_id is None:
+        return web.HTTPNotFound()
 
     manager = EvaluationTaskManager(
         request.app['defaults']['db']['location'],
@@ -447,7 +475,10 @@ async def evaluation_results_ll_api(request):
     data = manager.get_results_json(task_id)
 
     fmt = request.GET.get('fmt', 'json')
-    if fmt == 'html': return data
+
+    if fmt == 'html':
+        return data
+
     return web.json_response(data)
 
 
@@ -489,7 +520,8 @@ async def cleanup_background_tasks(app):
 
 async def shutdown_jvm(app):
     logger.info("Shutting down JVM")
-    if isJVMStarted(): shutdownJVM()
+    if isJVMStarted():
+        shutdownJVM()
 
 
 async def preload_engines(app):
@@ -498,7 +530,8 @@ async def preload_engines(app):
         preload = config['index'].get('preload', False)
         if preload:
             if 'preloaded_engines' in app:
-                if 'engine' in app['preloaded_engines']: continue
+                if 'engine' in app['preloaded_engines']:
+                    continue
             else:
                 app['preloaded_engines'] = {}
 
@@ -535,11 +568,17 @@ def run_app(loop, host, port, path=None):
             logger.warning("%s: %s" % (engine, app['engines'][engine]['message']))
         set_dict_defaults(app['engines'][engine], app['defaults'])
 
-    if not 'db' in app['defaults']: app['defaults']['db'] = {}
-    if not 'location' in app['defaults']['db']: app['defaults']['db'] = 'localhost'
+    if 'db' not in app['defaults']:
+        app['defaults']['db'] = {}
 
-    if not 'eval' in app['defaults']: app['defaults']['eval'] = {}
-    if not 'location' in app['defaults']['eval']: app['defaults']['eval']['location'] = tempfile.gettempdir()
+    if 'location' not in app['defaults']['db']:
+        app['defaults']['db'] = 'localhost'
+
+    if 'eval' not in app['defaults']:
+        app['defaults']['eval'] = {}
+
+    if 'location' not in app['defaults']['eval']:
+        app['defaults']['eval']['location'] = tempfile.gettempdir()
 
     aiohttp_jinja2.setup(
         app,

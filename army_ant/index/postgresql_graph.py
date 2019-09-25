@@ -4,39 +4,14 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2018-03-09 (refactor: 2019-03-14)
 
-import configparser
-import itertools
 import json
 import logging
-import math
-import os
-import re
-import signal
-import sqlite3
-from collections import Counter, OrderedDict, defaultdict
-from enum import Enum
-from statistics import mean, variance
 
-import igraph
-import jpype
-import numpy as np
-import pandas as pd
 import psycopg2
-import tensorflow as tf
-import tensorflow_ranking as tfr
-import yaml
 from aiogremlin import Cluster
-from aiohttp.client_exceptions import ClientConnectorError
-from jpype import (JException, JBoolean, JClass, JDouble, JPackage,
-                   JString, isJVMStarted, java, shutdownJVM, startJVM)
-from sklearn.externals import joblib
-from sklearn.preprocessing import MinMaxScaler
 
 from army_ant.exception import ArmyAntException
-from army_ant.reader import Document, Entity
-from army_ant.setup import config_logger
 from army_ant.util import load_gremlin_script, load_sql_script
-from army_ant.util.text import analyze
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +24,8 @@ class PostgreSQLGraph(object):
         c.execute("DROP TABLE IF EXISTS edges")
         c.execute("CREATE TABLE nodes (node_id BIGINT, label TEXT, attributes JSONB)")
         c.execute(
-            "CREATE TABLE edges (edge_id BIGINT, label TEXT, attributes JSONB, source_node_id BIGINT, target_node_id BIGINT)")
+            "CREATE TABLE edges (edge_id BIGINT, label TEXT, attributes JSONB, "
+            "source_node_id BIGINT, target_node_id BIGINT)")
         conn.commit()
 
     def create_vertex_postgres(self, conn, vertex_id, label, attributes):
@@ -68,8 +44,8 @@ class PostgreSQLGraph(object):
     def update_vertex_attribute(self, conn, vertex_id, attr_name, attr_value):
         c = conn.cursor()
         c.execute(
-            "UPDATE nodes SET attributes = jsonb_set(attributes, '{%s}', '[{\"id\": %s, \"value\": \"%s\"}]', true) WHERE node_id = %%s" % (
-                attr_name, self.next_property_id, attr_value), (vertex_id,))
+            "UPDATE nodes SET attributes = jsonb_set(attributes, '{%s}', '[{\"id\": %s, \"value\": \"%s\"}]', true) "
+            "WHERE node_id = %%s" % (attr_name, self.next_property_id, attr_value), (vertex_id,))
         self.next_property_id += 1
 
     def load_to_postgres(self, conn, doc):

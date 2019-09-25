@@ -1,11 +1,10 @@
 import json
 import logging
-import os
 import urllib.parse
 from enum import Enum
 
 import yaml
-from SPARQLWrapper import SPARQLWrapper, JSON, POSTDIRECTLY
+from SPARQLWrapper import SPARQLWrapper, JSON
 from joblib import Memory
 from pymongo import MongoClient
 from army_ant.util import chunks
@@ -14,13 +13,13 @@ logger = logging.getLogger(__name__)
 
 dbpedia_sparql_url = 'https://dbpedia.org/sparql'
 memory = Memory(cachedir='/opt/army-ant/cache/dbpedia', compress=9, verbose=0, bytes_limit=1 * 1024 * 1024 * 1024)
-#memory = Memory(cachedir='/dev/shm/army-ant/cache/dbpedia', verbose=0, bytes_limit=5 * 1024 * 1024 * 1024)
 
 
 class DBpediaClass(Enum):
     person = 'dbo:Person'
     organization = 'dbo:Organisation'
     place = 'dbo:Place'
+
 
 #
 # SPARQL API
@@ -39,16 +38,18 @@ def fetch_dbpedia_entity_labels(dbpedia_class, lang='en', offset=None, limit=Non
           FILTER (langMatches(lang(?entityLabel), '%s'))
         }
     ''' % (dbpedia_class.value, lang)
-    if offset: query += 'OFFSET %d\n' % offset
-    if limit:  query += 'LIMIT %d' % limit
 
-    #print(query)
+    if offset:
+        query += 'OFFSET %d\n' % offset
+
+    if limit:
+        query += 'LIMIT %d' % limit
+
     sparql.setQuery(query)
 
     sparql.setReturnFormat(JSON)
     result = sparql.query()
     data = result.response.read()
-    #print(data.decode('utf-8'))
     data = json.loads(data.decode('utf-8'))
 
     entities = set([])
@@ -57,6 +58,7 @@ def fetch_dbpedia_entity_labels(dbpedia_class, lang='en', offset=None, limit=Non
         entities.add(entity)
 
     return list(entities)
+
 
 def fetch_dbpedia_triples(entity_labels, ignored_properties=None):
     """
@@ -67,7 +69,9 @@ def fetch_dbpedia_triples(entity_labels, ignored_properties=None):
 
     config = yaml.load(open('config.yaml'))
     db_config = config.get('defaults', {}).get('db', {})
-    if db_config.get('type', 'mongo') != 'mongo': db_config = {}
+
+    if db_config.get('type', 'mongo') != 'mongo':
+        db_config = {}
 
     host = db_config.get('location', 'localhost')
     db_name = db_config.get('name', 'army_ant')
@@ -85,7 +89,7 @@ def fetch_dbpedia_triples(entity_labels, ignored_properties=None):
     entity_uris = set([])
     cached_count = 0
     for entity_label in entity_labels:
-        cached_entity = cache.find_one({ 'label': entity_label })
+        cached_entity = cache.find_one({'label': entity_label})
         if cached_entity:
             if 'triples' in cached_entity and len(cached_entity['triples']) > 0:
                 s = (cached_entity['uri'], cached_entity['label'])
@@ -95,11 +99,13 @@ def fetch_dbpedia_triples(entity_labels, ignored_properties=None):
                     triples.add((s, p, o))
             cached_count += 1
         else:
-            entity_uris.add('<http://dbpedia.org/resource/%s>' % urllib.parse.quote_plus(entity_label.replace(' ', '_')))
+            entity_uris.add(
+                '<http://dbpedia.org/resource/%s>' % urllib.parse.quote_plus(entity_label.replace(' ', '_')))
 
     logger.debug("%d out of %d entities with cached triples" % (cached_count, len(entity_labels)))
 
-    if len(entity_uris) == 0: return triples
+    if len(entity_uris) == 0:
+        return triples
 
     sparql = SPARQLWrapper(dbpedia_sparql_url)
 
@@ -130,17 +136,19 @@ def fetch_dbpedia_triples(entity_labels, ignored_properties=None):
         cache_data = {}
 
         for binding in data['results']['bindings']:
-            if ignored_properties and binding['p']['value'] in ignored_properties: continue
+            if ignored_properties and binding['p']['value'] in ignored_properties:
+                continue
 
             s = (binding['s']['value'], binding['sLabel']['value'])
             p = (binding['p']['value'], binding['pLabel']['value'])
             o = (binding['o']['value'], binding['oLabel']['value'])
 
-            if not s in cache_data: cache_data[s] = []
+            if s not in cache_data:
+                cache_data[s] = []
 
             cache_data[s].append({
-                'predicate': { 'uri': p[0], 'label': p[1] },
-                'object': { 'uri': o[0], 'label': o[1] }
+                'predicate': {'uri': p[0], 'label': p[1]},
+                'object':    {'uri': o[0], 'label': o[1]}
             })
 
             triples.add((s, p, o))
@@ -159,6 +167,7 @@ def fetch_dbpedia_triples(entity_labels, ignored_properties=None):
             })
 
     return list(triples)
+
 
 if __name__ == '__main__':
     dbpedia_triples = fetch_dbpedia_triples(["Mr.", "Ames, Iowa", "Barack Obama", "Portugal"])

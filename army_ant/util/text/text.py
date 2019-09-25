@@ -4,6 +4,7 @@
 # text.py
 # José Devezas <joseluisdevezas@gmail.com>
 # 2017-07-20
+
 import collections
 import itertools
 import logging
@@ -46,8 +47,10 @@ def slot_urls(text, prefix=SLOT_PREFIX):
 def slot_time(text, prefix=SLOT_PREFIX):
     return time_regex.sub('%s_TIME' % prefix, text)
 
+
 def slot_money(text, prefix=SLOT_PREFIX):
     return money_regex.sub('%s_MONEY' % prefix, text)
+
 
 def slot_numbers(text, prefix=SLOT_PREFIX):
     return num_regex.sub('%s_NUM' % prefix, text)
@@ -91,10 +94,13 @@ def filter_tokens(tokens, lang, remove_stopwords=True, remove_punctuation=True, 
 
     for token in tokens:
         if remove_stopwords:
-            if token in sw: continue
+            if token in sw:
+                continue
 
         if remove_punctuation:
-            if skip_slots and token.startswith(SLOT_PREFIX): continue
+            if skip_slots and token.startswith(SLOT_PREFIX):
+                continue
+
             for ch in string.punctuation:
                 token = token.replace(ch, '')
 
@@ -167,7 +173,7 @@ def remove_by_pos_tag(pos_tagger, tokens, tags):
     filtered_tokens = []
     tagged_tokens = pos_tagger.tag(tokens)
     for token, tag in tagged_tokens:
-        if not tag in tags:
+        if tag not in tags:
             filtered_tokens.append(token)
     return filtered_tokens
 
@@ -234,7 +240,8 @@ def textrank(text, window_size=4, ratio=0.05, cutoff=None):
                 graph[window[i]] = OrderedDict()
 
             for j in range(len(window)):
-                if i >= j: continue
+                if i >= j:
+                    continue
 
                 if not window[j] in graph:
                     graph[window[j]] = OrderedDict()
@@ -252,7 +259,8 @@ def textrank(text, window_size=4, ratio=0.05, cutoff=None):
 
     keywords = []
     for i, v in enumerate(sorted(g.vs, key=lambda v: v['pr'], reverse=True)):
-        if i >= cutoff: break
+        if i >= cutoff:
+            break
         keywords.append(v['name'])
 
     return '\n'.join(keywords)

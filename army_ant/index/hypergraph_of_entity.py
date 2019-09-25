@@ -4,43 +4,20 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2018-03-09 (refactor: 2019-03-14)
 
-import configparser
 import itertools
 import json
 import logging
-import math
 import os
-import gc
-import re
-import signal
-import sqlite3
-from collections import Counter, OrderedDict, defaultdict
 from enum import Enum
-from statistics import mean, variance
 
-import igraph
 import jpype
-import numpy as np
-import pandas as pd
-import psycopg2
-import tensorflow as tf
-import tensorflow_ranking as tfr
-import yaml
-from aiogremlin import Cluster
-from aiohttp.client_exceptions import ClientConnectorError
-from jpype import (JException, JBoolean, JClass, JDouble, JPackage,
-                   JString, isJVMStarted, java, shutdownJVM, startJVM)
-from sklearn.externals import joblib
-from sklearn.preprocessing import MinMaxScaler
+from jpype import JClass, JException, JString, java
 
 from army_ant.exception import ArmyAntException
-from army_ant.reader import Document, Entity
-from army_ant.setup import config_logger
-from army_ant.util import load_gremlin_script, load_sql_script
+from army_ant.reader import Document
 from army_ant.util.text import textrank
 
 from . import Index, JavaIndex, Result, ResultSet
-
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +34,6 @@ class HypergraphOfEntity(JavaIndex):
         related_to_by_doc = 'RELATED_TO_BY_DOC'
         related_to_by_subj = 'RELATED_TO_BY_SUBJ'
 
-
     class RankingFunction(Enum):
         entity_weight = 'ENTITY_WEIGHT'
         jaccard = 'JACCARD_SCORE'
@@ -68,11 +44,9 @@ class HypergraphOfEntity(JavaIndex):
         biased_random_walk_without_seeds = 'BIASED_RANDOM_WALK_SCORE_WITHOUT_SEEDS'
         hyperrank = 'HYPERRANK'
 
-
     class QueryType(Enum):
         keyword = 'KEYWORD_QUERY'
         entity = 'ENTITY_QUERY'
-
 
     JHypergraphOfEntityInMemory = JavaIndex.armyant.hgoe.HypergraphOfEntity
     JFeature = JClass("armyant.hgoe.HypergraphOfEntity$Feature")
@@ -80,11 +54,9 @@ class HypergraphOfEntity(JavaIndex):
     JTask = JClass("armyant.hgoe.HypergraphOfEntity$Task")
     JQueryType = JClass("armyant.hgoe.HypergraphOfEntity$QueryType")
 
-
     def __init__(self, reader, index_location, index_features, loop):
         super().__init__(reader, index_location, loop)
         self.index_features = [HypergraphOfEntity.Feature[index_feature] for index_feature in index_features]
-
 
     async def load(self):
         if self.index_location in HypergraphOfEntity.INSTANCES:
@@ -97,9 +69,8 @@ class HypergraphOfEntity(JavaIndex):
             self.index_location, java.util.Arrays.asList(features))
         HypergraphOfEntity.INSTANCES[self.index_location].prepareAutocomplete()
 
-
     def ensure_loaded(self):
-        if not self.index_location in HypergraphOfEntity.INSTANCES:
+        if self.index_location not in HypergraphOfEntity.INSTANCES:
             features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value)
                         for index_feature in self.index_features
                         if index_feature != HypergraphOfEntity.Feature.keywords]
@@ -107,7 +78,6 @@ class HypergraphOfEntity(JavaIndex):
                 self.index_location, java.util.Arrays.asList(features))
             hgoe.prepareAutocomplete()
             HypergraphOfEntity.INSTANCES[self.index_location] = hgoe
-
 
     async def index(self, features_location=None):
         try:
@@ -123,7 +93,7 @@ class HypergraphOfEntity(JavaIndex):
             if HypergraphOfEntity.Feature.context in self.index_features:
                 if features_location is None:
                     raise ArmyAntException("Must provide a features_location pointing to a directory")
-                if not 'word2vec_simnet.graphml.gz' in os.listdir(features_location):
+                if 'word2vec_simnet.graphml.gz' not in os.listdir(features_location):
                     raise ArmyAntException(
                         "Must provide a 'word2vec_simnet.graphml.gz' file within features directory")
 
@@ -193,7 +163,7 @@ class HypergraphOfEntity(JavaIndex):
         if ranking_function:
             try:
                 ranking_function = HypergraphOfEntity.RankingFunction[ranking_function]
-            except (JException, KeyError) as e:
+            except (JException, KeyError):
                 logger.error("Could not use '%s' as the ranking function" % ranking_function)
                 ranking_function = HypergraphOfEntity.RankingFunction['random_walk']
         else:
@@ -203,7 +173,7 @@ class HypergraphOfEntity(JavaIndex):
             if not type(query_type) is Index.QueryType:
                 try:
                     query_type = HypergraphOfEntity.QueryType[query_type]
-                except (JException, KeyError) as e:
+                except (JException, KeyError):
                     logger.error("Could not use '%s' as a query type" % query_type)
                     query_type = HypergraphOfEntity.QueryType['keyword']
         else:
@@ -213,7 +183,7 @@ class HypergraphOfEntity(JavaIndex):
             if not type(task) is Index.RetrievalTask:
                 try:
                     task = Index.RetrievalTask[task]
-                except (JException, KeyError) as e:
+                except (JException, KeyError):
                     logger.error("Could not use '%s' as the ranking function" % ranking_function)
                     task = Index.RetrievalTask['document_retrieval']
         else:
@@ -248,7 +218,6 @@ class HypergraphOfEntity(JavaIndex):
 
         return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()), trace_ascii=trace.toASCII())
 
-
     async def inspect(self, feature, workdir):
         try:
             self.ensure_loaded()
@@ -256,7 +225,6 @@ class HypergraphOfEntity(JavaIndex):
             hgoe.inspect(feature, workdir)
         except JException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
-
 
     async def autocomplete(self, substring):
         self.ensure_loaded()
