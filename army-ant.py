@@ -5,24 +5,18 @@
 # José Devezas (joseluisdevezas@gmail.com)
 # 2017-03-09
 
-import logging
-from army_ant.setup import config_logger
-
-config_logger(logging.INFO)
-
 import asyncio
+import logging
 import os
 import re
 import readline
 import shutil
 import tempfile
-from json import JSONDecodeError
 
 import fire
 import yaml
-from jpype import isJVMStarted, shutdownJVM
 
-from army_ant.analysis import rws_rank_concordance, rank_correlation
+from army_ant.analysis import rank_correlation, rws_rank_concordance
 from army_ant.database import Database
 from army_ant.evaluation import EvaluationTask, EvaluationTaskManager
 from army_ant.exception import ArmyAntException
@@ -32,10 +26,11 @@ from army_ant.index import Index
 from army_ant.reader import Reader
 from army_ant.sampling import INEXSampler
 from army_ant.server import run_app
-from army_ant.util.dbpedia import fetch_dbpedia_entity_labels, DBpediaClass
-from army_ant.util.wikidata import fetch_wikidata_entity_labels, get_entities, WikidataClass, \
-    fetch_wikidata_entity_subclasses, filter_entities_by_class, get_label_for_entity_uris, \
-    get_wikidata_dump_entity_labels
+from army_ant.setup import config_logger
+from army_ant.util.dbpedia import DBpediaClass, fetch_dbpedia_entity_labels
+
+config_logger(logging.INFO)
+
 
 logger = logging.getLogger(__name__)
 
@@ -58,13 +53,13 @@ class CommandLineInterfaceAnalysis(object):
                          method='spearman', force=False):
         try:
             ranking_params_a = dict(tuple(param.split('=')) for param in ranking_params_a.split(','))
-        except:
+        except Exception:
             logger.warning("Empty ranking parameters for %s" % ranking_function_a)
             ranking_params_a = {}
 
         try:
             ranking_params_b = dict(tuple(param.split('=')) for param in ranking_params_b.split(','))
-        except:
+        except Exception:
             logger.warning("Empty ranking parameters for %s" % ranking_function_b)
             ranking_params_b = {}
 
@@ -219,7 +214,7 @@ class CommandLineInterface(object):
 
                     try:
                         ranking_params = dict(tuple(param.split('=')) for param in ranking_params.split(','))
-                    except:
+                    except Exception:
                         logger.warning("Empty ranking parameters for %s" % ranking_function)
                         ranking_params = {}
 
@@ -235,8 +230,10 @@ class CommandLineInterface(object):
                         metadata = []
 
                     for (result, i) in zip(response['results'], range(offset, offset + limit)):
-                        print("===> %3d %7.2f [%s] %s" % (
-                            i + 1, result['score'], result['type'], result['name'] if result['name'] else result['id']))
+                        print(
+                            "==> %3d %7.2f [%s] %s" % (
+                                i + 1, result['score'], result['type'],
+                                result['name'] if result['name'] else result['id']))
                         doc_id = result['id']
                         if doc_id in metadata:
                             for item in metadata[doc_id].items():

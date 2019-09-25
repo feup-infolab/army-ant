@@ -10,9 +10,10 @@ import requests_cache
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import HTTPError
 
-from army_ant.evaluation import EvaluationTaskStatus, Evaluator
 from army_ant.exception import ArmyAntException
 from army_ant.index import Index
+
+from . import Evaluator
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,8 @@ class LivingLabsEvaluator(Evaluator):
             r.raise_for_status()
 
     async def run(self):
+        import army_ant.evaluation as evl
+
         queries = self.get_queries()
         try:
             for query in queries:
@@ -119,7 +122,7 @@ class LivingLabsEvaluator(Evaluator):
                 logger.info("%d results found for %s (qid=%s)" % (len(results), query['qstr'], query['qid']))
                 self.put_run(query['qid'], self.run_id, results)
 
-            return EvaluationTaskStatus.SUBMITTED
+            return evl.EvaluationTaskStatus.SUBMITTED
         except HTTPError as e:
             logger.error(e)
-            return EvaluationTaskStatus.ERROR
+            return evl.EvaluationTaskStatus.ERROR

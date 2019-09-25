@@ -28,7 +28,7 @@ from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, DuplicateKeyError
 from requests.auth import HTTPBasicAuth
 
-from army_ant.evaluation import Evaluator, LivingLabsEvaluator
+from army_ant.evaluation import Evaluator
 from army_ant.exception import ArmyAntException
 from army_ant.util import (md5, params_id_to_ranking_params, params_id_to_str,
                            ranking_params_to_params_id, zipdir)
@@ -130,9 +130,11 @@ class EvaluationTaskManager(object):
         return result
 
     def reset_task(self, task_id):
+        import army_ant.evaluation as evl
+
         if self.running:
             self.running.interrupt = True
-            if type(self.running) != LivingLabsEvaluator:
+            if type(self.running) is not evl.LivingLabsEvaluator:
                 self.running.remove_output()
 
         shutil.rmtree(os.path.join(self.eval_location, 'results', task_id), ignore_errors=True)
@@ -168,11 +170,13 @@ class EvaluationTaskManager(object):
             return EvaluationTask(**task)
 
     def reset_running_tasks(self):
+        import army_ant.evaluation as evl
+
         logger.warning("Resetting running tasks to the WAITING status")
         self.db['evaluation_tasks'].update_many(
             {'status': 2},
             {'$set': {'status': 1}})
-        if not type(self.running) is LivingLabsEvaluator and self.running:
+        if not type(self.running) is evl.LivingLabsEvaluator and self.running:
             self.running.remove_output()
 
     def queue(self):
