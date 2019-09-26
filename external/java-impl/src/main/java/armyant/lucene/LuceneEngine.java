@@ -126,8 +126,6 @@ public class LuceneEngine extends Engine {
         IndexReader reader = DirectoryReader.open(directory);
         IndexSearcher searcher = new IndexSearcher(reader);
 
-        System.out.println(rankingFunction);
-
         switch (rankingFunction) {
             case TF_IDF:
                 searcher.setSimilarity(new ClassicSimilarity());

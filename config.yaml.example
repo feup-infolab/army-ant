@@ -992,6 +992,21 @@ engines:
                 type: hgoe
               - location: /opt/army-ant/indexes/inex-2009-3t-nl/hgoe-keywords
                 type: hgoe:keywords
+          info:
+            l: Length of the random walks.
+            r: Number of repeated random walks per seed node.
+            nf: Number of cycles of node fatigue.
+            ef: Number of cycles of edge fatigue.
+            expansion: Whether or not to use query expansion to neighboring entites.
+            directed: Whether or not to respect edge direction during random walks.
+            weighted: >-
+              Wether or not to consider weights when taking each random step (i.e., biased traversal probability).
+              This should be disabled for hypergraph-of-entity indexes created without the ':weighted' feature.
+            base_index: >-
+              A list of location and types for a base index. Since TensorFlow Ranking is a learning to rank approach,
+              and these are frequently used for reranking based on an initial retrieval, this makes it possible to
+              select any other supported engine for the initial retrieval operation. Otherwise, the Lucene auxiliary
+              index will be used. That is where document features are stored for easier retrieval.
 
   hgoe-inex-2009-3t-nl:
     name: INEX 2009 3T-NL - Hypergraph-of-Entity

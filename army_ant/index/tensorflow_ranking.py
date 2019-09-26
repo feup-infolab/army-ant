@@ -11,11 +11,12 @@ from collections import OrderedDict, defaultdict
 from enum import Enum
 
 import igraph
+import jpype
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 import tensorflow_ranking as tfr
-from jpype import java, JClass
+from jpype import JClass, java
 from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
 
@@ -350,25 +351,35 @@ class TensorFlowRanking(JavaIndex):
             logger.info("Using '%s' as the base index" % base_index_type)
             base_index = Index.open(base_index_location, base_index_type, self.loop)
 
-        if type(ranking_function) is str:
-            try:
-                ranking_function = TensorFlowRanking.RankingFunction[ranking_function]
-            except KeyError:
-                ranking_function = TensorFlowRanking.RankingFunction.tf_idf
+        logger.info("Using '%s' as the ranking function" % ranking_function)
 
-        logger.info("Using %s as the ranking function" % ranking_function.value)
-        if ranking_function == TensorFlowRanking.RankingFunction.random_walk:
-            ranking_function = TensorFlowRanking.JHypergraphOfEntityRankingFunction.valueOf(ranking_function.value)
-        else:
-            ranking_function = TensorFlowRanking.JLuceneEngineRankingFunction.valueOf(ranking_function.value)
-
-        results = base_index.search(
-            query, 0, k, task=task, ranking_function=ranking_function,
-            ranking_params=ranking_params, debug=debug)
-
-        # Not LuceneLearningToRankHelper?
         if isinstance(base_index, Index):
-            results = await results
+            # Not LuceneLearningToRankHelper
+            results = await base_index.search(
+                query, 0, k, task=task, ranking_function=ranking_function,
+                ranking_params=ranking_params, debug=debug)
+        else:
+            # LuceneLearningToRankHelper
+            if type(ranking_function) is str:
+                try:
+                    ranking_function = TensorFlowRanking.RankingFunction[ranking_function]
+                except KeyError:
+                    ranking_function = TensorFlowRanking.RankingFunction.tf_idf
+
+            if ranking_function == TensorFlowRanking.RankingFunction.random_walk:
+                j_ranking_function = \
+                    TensorFlowRanking.JHypergraphOfEntityRankingFunction.valueOf(ranking_function.value)
+            else:
+                j_ranking_function = \
+                    TensorFlowRanking.JLuceneEngineRankingFunction.valueOf(ranking_function.value)
+
+            j_ranking_params = jpype.java.util.HashMap()
+            if ranking_params:
+                logger.info("Using ranking parameters %s" % ranking_params)
+                for param, val in ranking_params.items():
+                    j_ranking_params.put(param, val)
+
+            results = base_index.search(query, 0, k, j_ranking_function, j_ranking_params)
 
         doc_ids = [result.id if type(result) is Result else result.getID() for result in results]
 

@@ -1,10 +1,8 @@
 import logging
-
 from datetime import datetime
 
-from army_ant.index import Index
 from army_ant.exception import ArmyAntException
-
+from army_ant.index import Index
 
 logger = logging.getLogger(__name__)
 

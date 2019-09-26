@@ -38,6 +38,21 @@
   </div>
 </div>
 
+<div class="column d-hide">
+  <table class="table table-striped table-sm" id="ranking-function-info">
+    <thead>
+      <tr>
+        <th>Parameter</th>
+        <th>Information</ht>
+      </tr>
+    </thead>
+
+    <tbody>
+      <!-- Dynamically loaded -->
+    </tbody>
+  </table>
+</div>
+
 <script type="text/javascript">
   (function() {
     var engines = {{ app['engines']|dump_json }};
@@ -161,16 +176,55 @@
       }
     }
 
+    function updateRankingParamInfo() {
+      var engine = $('#engine').val();
+      var rankingFunction = $('#ranking-function').val();
+
+      $('#ranking-function-info')
+        .parent()
+        .addClass('d-hide');
+
+      if (!(engine in engines) || !('ranking' in engines[engine]) || !('functions' in engines[engine].ranking)) {
+        return;
+      }
+
+      var data = engines[engine].ranking.functions[rankingFunction];
+
+      if ('info' in data) {
+        $('#ranking-function-info')
+          .parent()
+          .removeClass('d-hide');
+
+        for (var param in data.info) {
+          var $tdParam = $('<td>')
+            .text(param);
+
+          var $tdInfo = $('<td>')
+            .text(data.info[param]);
+
+          var $tr = $('<tr>')
+            .append($tdParam)
+            .append($tdInfo);
+
+          $('#ranking-function-info tbody')
+            .append($tr);
+        }
+      }
+    }
+
     updateRankingFunctions();
     updateRankingParameters();
+    updateRankingParamInfo();
 
     $(document).on('change', '#engine', function(e) {
       updateRankingFunctions();
       updateRankingParameters();
+      updateRankingParamInfo();
     });
 
     $(document).on('change', '#ranking-function', function(e) {
       updateRankingParameters();
+      updateRankingParamInfo();
     });
   })();
 </script>
