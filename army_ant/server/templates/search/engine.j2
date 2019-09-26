@@ -184,6 +184,9 @@
         .parent()
         .addClass('d-hide');
 
+      $('#ranking-function-info tbody')
+        .empty();
+
       if (!(engine in engines) || !('ranking' in engines[engine]) || !('functions' in engines[engine].ranking)) {
         return;
       }

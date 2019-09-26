@@ -13,12 +13,10 @@ class NullIndex(Index):
         resume = None
         if features_location:
             path = os.path.join(features_location, "resume")
-            print(path)
             if os.path.exists(path):
-                print(path)
                 with open(path) as fp:
                     resume = int(fp.read())
-                    logger.info("Resuming from %d" % resume)
+                    logger.info("Skipping to document %d to resume collection processing" % resume)
 
         for doc in self.reader:
             count += 1
@@ -26,7 +24,8 @@ class NullIndex(Index):
                 continue
 
             if count % 1000 == 0:
-                logger.info("%d documents read" % count)
+                unprocessed_msg = " (ignored)" if count >= resume else ""
+                logger.info("%d documents read%s" % (count, unprocessed_msg))
 
             yield doc
 
