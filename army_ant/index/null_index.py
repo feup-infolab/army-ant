@@ -13,7 +13,9 @@ class NullIndex(Index):
         resume = None
         if features_location:
             path = os.path.join(features_location, "resume")
+            print(path)
             if os.path.exists(path):
+                print(path)
                 with open(path) as fp:
                     resume = int(fp.read())
                     logger.info("Resuming from %d" % resume)
