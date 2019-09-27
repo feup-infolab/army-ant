@@ -329,17 +329,15 @@ class TensorFlowRanking(JavaIndex):
         ranker.train(input_fn=lambda: self.input_fn(pd_train_generator), steps=100)
 
     async def search(self, query, offset, limit, query_type=None, task=None,
+                     base_index_location=None, base_index_type=None,
                      ranking_function=None, ranking_params=None, debug=False):
         tf.logging.set_verbosity(tf.logging.FATAL)
 
         hparams = tf.contrib.training.HParams(learning_rate=0.05)
         ranker = self.get_estimator(hparams)
 
-        base_index_location = ranking_params.get('base_index_location')
-        base_index_type = ranking_params.get('base_index_type')
-
-        assert base_index_type is None or base_index_type.startswith('hgoe'), \
-            "Only None ('lucene') or 'hgoe' values are supported. "
+        if ranking_params:
+            ranking_params = {k: v for k, v in ranking_params.items() if k != 'base_index'}
 
         k = 10000
         ltr_helper = TensorFlowRanking.JLearningToRankHelper(self.lucene_index_location)
@@ -355,23 +353,17 @@ class TensorFlowRanking(JavaIndex):
 
         if isinstance(base_index, Index):
             # Not LuceneLearningToRankHelper
+
             results = await base_index.search(
                 query, 0, k, task=task, ranking_function=ranking_function,
                 ranking_params=ranking_params, debug=debug)
         else:
             # LuceneLearningToRankHelper
-            if type(ranking_function) is str:
-                try:
-                    ranking_function = TensorFlowRanking.RankingFunction[ranking_function]
-                except KeyError:
-                    ranking_function = TensorFlowRanking.RankingFunction.tf_idf
 
-            if ranking_function == TensorFlowRanking.RankingFunction.random_walk:
-                j_ranking_function = \
-                    TensorFlowRanking.JHypergraphOfEntityRankingFunction.valueOf(ranking_function.value)
-            else:
-                j_ranking_function = \
-                    TensorFlowRanking.JLuceneEngineRankingFunction.valueOf(ranking_function.value)
+            if type(ranking_function) is str:
+                ranking_function = TensorFlowRanking.RankingFunction[ranking_function]
+
+            j_ranking_function = TensorFlowRanking.JLuceneEngineRankingFunction.valueOf(ranking_function.value)
 
             j_ranking_params = jpype.java.util.HashMap()
             if ranking_params:

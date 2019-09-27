@@ -182,9 +182,9 @@ class CommandLineInterface(object):
         except ArmyAntException as e:
             logger.error(e)
 
-    def search(self, index_location, index_type, task=None, ranking_function=None, ranking_params=None,
-               db_location='localhost', db_name=None, db_type='mongo', query=None, offset=0, limit=10,
-               interactive=False):
+    def search(self, index_location, index_type, task=None, base_index_location=None, base_index_type=None,
+               ranking_function=None, ranking_params=None, db_location='localhost', db_name=None, db_type='mongo',
+               query=None, offset=0, limit=10, interactive=False):
         if query is None and not interactive:
             logger.error("Must either use --query or --interactive")
             return
@@ -221,6 +221,7 @@ class CommandLineInterface(object):
                     index = Index.open(index_location, index_type, loop)
                     response = loop.run_until_complete(index.search(
                         query, offset, limit, task=task,
+                        base_index_location=base_index_location, base_index_type=base_index_location,
                         ranking_function=ranking_function, ranking_params=ranking_params))
 
                     if db_location and db_name and db_type:
@@ -312,12 +313,13 @@ class CommandLineInterface(object):
             topics_path = None
             assessments_path = None
 
-        # TODO must add query_type, ranking_function and ranking_params
+        # TODO must add query_type, base_indexes, ranking_function and ranking_params
         task = EvaluationTask(
             index_location=index_location,
             index_type=index_type,
             eval_format=eval_format,
             query_type=None,
+            base_indexes=None,
             ranking_function=None,
             ranking_params=None,
             topics_filename=topics_filename,

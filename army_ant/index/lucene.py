@@ -103,6 +103,7 @@ class LuceneEngine(JavaIndex):
             logger.error("Java Exception: %s" % e.stacktrace())
 
     async def search(self, query, offset, limit, query_type=None, task=None,
+                     base_index_location=None, base_index_type=None,
                      ranking_function=None, ranking_params=None, debug=False):
         if ranking_function:
             try:
@@ -188,6 +189,7 @@ class LuceneFeaturesEngine(JavaIndex):
         features_helper.setDocumentFeatures(j_features)
 
     async def search(self, query, offset, limit, query_type=None, task=None,
+                     base_index_location=None, base_index_type=None,
                      ranking_function=None, ranking_params=None, debug=False):
         if ranking_function:
             try:

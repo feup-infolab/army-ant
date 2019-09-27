@@ -159,6 +159,7 @@ class HypergraphOfEntity(JavaIndex):
             logger.error("Java Exception: %s" % e.stacktrace())
 
     async def search(self, query, offset, limit, query_type=None, task=None,
+                     base_index_location=None, base_index_type=None,
                      ranking_function=None, ranking_params=None, debug=False):
         if ranking_function:
             try:

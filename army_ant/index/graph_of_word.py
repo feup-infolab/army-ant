@@ -46,6 +46,7 @@ class GraphOfWord(GremlinServerIndex):
         await self.cluster.close()
 
     async def search(self, query, offset, limit, query_type=None, task=None,
+                     base_index_location=None, base_index_type=None,
                      ranking_function=None, ranking_params=None, debug=False):
         try:
             self.cluster = await Cluster.open(self.loop, hosts=[self.index_host], port=self.index_port)

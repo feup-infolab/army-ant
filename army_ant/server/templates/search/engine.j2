@@ -30,6 +30,9 @@
   </div>
 </div>
 
+<input type="hidden" id="base-index-location" name="base_index_location" value="">
+<input type="hidden" id="base-index-type" name="base_index_type" value="">
+
 <div class="form-group">
   <div class="column">
     <div id="ranking-params" class="columns">
@@ -38,6 +41,7 @@
   </div>
 </div>
 
+{% if is_evaluation %}
 <div class="column d-hide">
   <table class="table table-striped table-sm" id="ranking-function-info">
     <thead>
@@ -52,6 +56,7 @@
     </tbody>
   </table>
 </div>
+{% endif %}
 
 <script type="text/javascript">
   (function() {
@@ -111,10 +116,24 @@
       var defaultParams = {};
       var params = [];
 
+      var base_index_location = null;
+      var base_index_type = null;
+
+      $('#base-index-location').val(null);
+      $('#base-index-type').val(null);
+
       if (engines[engine].ranking) {
         defaultParams = engines[engine].ranking.default.params;
         if (engines[engine].ranking.functions[rankingFunction]) {
           params = engines[engine].ranking.functions[rankingFunction].params;
+        }
+
+        if (engines[engine].ranking.functions[rankingFunction].index) {
+          base_index_location = engines[engine].ranking.functions[rankingFunction].index.location;
+          base_index_type = engines[engine].ranking.functions[rankingFunction].index.type;
+
+          $('#base-index-location').val(base_index_location);
+          $('#base-index-type').val(base_index_type);
         }
       }
 

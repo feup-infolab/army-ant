@@ -114,6 +114,7 @@ class LivingLabsEvaluator(Evaluator):
                 else:
                     engine_response = await self.index.search(
                         query['qstr'], 0, 10000, task=Index.RetrievalTask.document_retrieval,
+                        base_index_location=self.task.base_index_location, base_index_type=self.task.base_index_type,
                         ranking_function=self.task.ranking_function, ranking_params=self.task.ranking_params)
                     results = engine_response['results']
                     with open(pickle_path, 'wb') as f:

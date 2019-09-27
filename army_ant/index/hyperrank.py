@@ -33,5 +33,6 @@ class HyperRank(Index):
             yield doc
 
     async def search(self, query, offset, limit, query_type=None, task=None,
+                     base_index_location=None, base_index_type=None,
                      ranking_function=None, ranking_params=None, debug=False):
         return ResultSet()

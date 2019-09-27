@@ -71,6 +71,7 @@ class TRECEvaluator(FilesystemEvaluator):
                 start_time = time.time()
                 engine_response = await self.index.search(
                     query, 0, 10000, task=Index.RetrievalTask.document_retrieval,
+                    base_index_location=self.task.base_index_location, base_index_type=self.task.base_index_type,
                     ranking_function=self.task.ranking_function, ranking_params=ranking_params)
                 end_time = int(round((time.time() - start_time) * 1000))
                 self.stats[params_id]['query_time'][topic_id] = end_time

@@ -100,8 +100,11 @@ async def search(request):
     debug = request.GET.get('debug', 'off')
 
     task = request.GET.get('task')
+    base_index_location = request.GET.get('base_index_location')
+    base_index_type = request.GET.get('base_index_type')
     query_type = request.GET.get('type')
     query = request.GET.get('query')
+
     error = None
     trace = None
     trace_ascii = None
@@ -118,6 +121,7 @@ async def search(request):
                 request.app['engines'][engine]['index']['type'], loop)
             engine_response = await index.search(
                 query, offset, limit, query_type=query_type, task=task,
+                base_index_location=base_index_location, base_index_type=base_index_type,
                 ranking_function=ranking_function, ranking_params=(ranking_params or None),
                 debug=(debug == 'on'))
 
@@ -338,6 +342,8 @@ async def evaluation_post(request):
     index_location = request.app['engines'][data['engine']]['index']['location']
     index_type = request.app['engines'][data['engine']]['index']['type']
     query_type = data.get('query_type')
+    base_index_location = data.get('base_index_location') or None
+    base_index_type = data.get('base_index_type') or None
     ranking_function = data.get('ranking_function')
 
     ranking_params = {}
@@ -356,6 +362,8 @@ async def evaluation_post(request):
         index_type=index_type,
         eval_format=data['eval-format'],
         query_type=query_type,
+        base_index_location=base_index_location,
+        base_index_type=base_index_type,
         ranking_function=ranking_function,
         ranking_params=ranking_params or None,
         topics_filename=topics_filename,

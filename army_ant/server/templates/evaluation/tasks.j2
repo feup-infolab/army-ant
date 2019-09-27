@@ -81,6 +81,20 @@
         <td>{{ task.index_type }}</td>
       </tr>
 
+      {% if task.base_index_location %}
+      <tr>
+        <th>Base Index Location</th>
+        <td>{{ task.base_index_location }}</td>
+      </tr>
+      {% endif %}
+
+      {% if task.base_index_type %}
+      <tr>
+        <th>Base Index Type</th>
+        <td>{{ task.base_index_type }}</td>
+      </tr>
+      {% endif %}
+
       {% if task.ranking_function %}
       <tr>
         <th>Ranking Function</th>

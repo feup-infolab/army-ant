@@ -127,6 +127,7 @@ class Index(object):
         raise ArmyAntException("Index not implemented for %s" % self.__class__.__name__)
 
     async def search(self, query, offset, limit, query_type=None, task=None,
+                     base_index_location=None, base_index_type=None,
                      ranking_function=None, ranking_params=None, debug=False):
         raise ArmyAntException("Search not implemented for %s" % self.__class__.__name__)
 
