@@ -122,7 +122,8 @@ class INEXEvaluator(FilesystemEvaluator):
                     doc_id = result['id']
                     score = result['score']
                     relevant = topic_doc_judgements[topic_id][doc_id] > 0 \
-                        if doc_id in topic_doc_judgements[topic_id] else False
+                        if topic_id in topic_doc_judgements and doc_id in topic_doc_judgements[topic_id] \
+                        else False
                     writer.writerow([i, score, doc_id, relevant])
 
         self.stats[params_id]['total_query_time'] = sum([t for t in self.stats[params_id]['query_time'].values()])
