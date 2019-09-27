@@ -20,12 +20,13 @@ class NullIndex(Index):
 
         for doc in self.reader:
             count += 1
-            if resume is not None and count < resume:
-                continue
 
             if count % 1000 == 0:
-                unprocessed_msg = " (ignored)" if count >= resume else ""
+                unprocessed_msg = " (ignored)" if count < resume else ""
                 logger.info("%d documents read%s" % (count, unprocessed_msg))
+
+            if resume is not None and count < resume:
+                continue
 
             yield doc
 
