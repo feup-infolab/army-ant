@@ -249,7 +249,7 @@ class FilesystemEvaluator(Evaluator):
                         p = safe_div(sum(rel), len(rel))
                         precisions.append(p)
 
-                    avg_precision = safe_div(sum(precisions), num_rel_per_topic.get('topic_id', 0))
+                    avg_precision = safe_div(sum(precisions), num_rel_per_topic[topic_id])
                     avg_precisions.append(avg_precision)
                     writer.writerow([topic_id, avg_precision])
 
@@ -278,9 +278,6 @@ class FilesystemEvaluator(Evaluator):
         ndcgs = []
         for result_file in result_files:
             topic_id = self.path_to_topic_id(result_file)
-            if topic_id not in qrels:
-                logger.warning("Topic %s has no available relevance judgments, skipping" % topic_id)
-                continue
 
             df = pd.read_csv(result_file, converters={'doc_id': lambda d: str(d)})
             df = df.merge(qrels[topic_id], on='doc_id', how='left')

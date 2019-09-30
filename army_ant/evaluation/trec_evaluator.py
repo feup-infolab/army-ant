@@ -62,6 +62,10 @@ class TRECEvaluator(FilesystemEvaluator):
                     logger.warning("Evaluation task was interruped")
                     break
 
+                if topic_id not in topic_doc_judgements:
+                    logger.warning("Skipping topic '%s', since it is not present in the assessments" % topic_id)
+                    continue
+
                 if topic_filter and topic_id not in topic_filter:
                     logger.warning("Skipping topic '%s'" % topic_id)
                     continue
