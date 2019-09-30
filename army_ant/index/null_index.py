@@ -22,7 +22,7 @@ class NullIndex(Index):
             count += 1
 
             if count % 1000 == 0:
-                unprocessed_msg = " (ignored)" if count < resume else ""
+                unprocessed_msg = " (ignored)" if count is not None and count < resume else ""
                 logger.info("%d documents read%s" % (count, unprocessed_msg))
 
             if resume is not None and count < resume:

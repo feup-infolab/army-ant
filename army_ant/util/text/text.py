@@ -220,7 +220,7 @@ def extract_entities_per_sentence(text, lib='NLTK'):
     return entities
 
 
-def textrank(text, window_size=4, ratio=0.05, cutoff=None):
+def textrank(text, window_size=4, ratio=0.05, cutoff=None, as_list=False):
     """
     Simplified version of TextRank:
       - Without POS tagging (we use every word that passes the analyzer instead);
@@ -263,6 +263,8 @@ def textrank(text, window_size=4, ratio=0.05, cutoff=None):
             break
         keywords.append(v['name'])
 
+    if as_list:
+        return keywords
     return '\n'.join(keywords)
 
 

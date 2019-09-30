@@ -60,6 +60,8 @@ class Index(object):
             return idx.TensorFlowRanking(reader, index_location, index_features, loop)
         elif index_type.startswith('null_index'):
             return idx.NullIndex(reader, index_location, loop)
+        elif index_type.startswith('text_index'):
+            return idx.TextIndex(reader, index_location, index_features, loop)
         else:
             raise ArmyAntException("Unsupported index type %s" % index_type)
 

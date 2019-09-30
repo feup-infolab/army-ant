@@ -359,6 +359,7 @@ public class HypergraphOfEntity extends Engine {
         return nodeIDs;
     }
 
+    // TODO could use directed hyperedges
     private Set<Integer> indexEntitiesUsingGroupingBySubject(Document document) {
         Set<Integer> nodeIDs = new HashSet<>();
 

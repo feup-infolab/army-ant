@@ -7,6 +7,7 @@ from .gremlin_server_index import *         # noqa
 from .postgresql_graph import *             # noqa
 from .java_index import *                   # noqa
 from .null_index import *                   # noqa
+from .text_index import *                   # noqa
 
 from .lucene import *                       # noqa
 from .tensorflow_ranking import *           # noqa

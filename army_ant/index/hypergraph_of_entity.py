@@ -82,8 +82,7 @@ class HypergraphOfEntity(JavaIndex):
     async def index(self, features_location=None):
         try:
             if HypergraphOfEntity.Feature.keywords in self.index_features:
-                    logger.info("Indexing top %.0f%% keywords per document based on TextRank" %
-                                (HypergraphOfEntity.KW_RATIO * 100))
+                    logger.info("Indexing top %.0f%% keywords per document based on TextRank" % (Index.KW_RATIO * 100))
 
             index_features_str = ':'.join([index_feature.value for index_feature in self.index_features])
             features = [HypergraphOfEntity.JFeature.valueOf(index_feature.value)
@@ -126,7 +125,7 @@ class HypergraphOfEntity(JavaIndex):
                         logger.exception(e)
 
                 if HypergraphOfEntity.Feature.keywords in self.index_features:
-                    doc.text = textrank(doc.text, ratio=HypergraphOfEntity.KW_RATIO)
+                    doc.text = textrank(doc.text, ratio=Index.KW_RATIO)
 
                 jDoc = HypergraphOfEntity.JDocument(
                     JString(doc.doc_id), doc.title, JString(doc.text), java.util.Arrays.asList(triples),
