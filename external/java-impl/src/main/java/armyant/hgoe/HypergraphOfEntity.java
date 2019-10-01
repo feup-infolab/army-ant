@@ -1159,7 +1159,7 @@ public class HypergraphOfEntity extends Engine {
         randomStep(randomNodeID, remainingSteps - 1, path, isDirected, isBiased, nodeFatigue, edgeFatigue, restartProb);
     }
 
-    public ResultSet hyperRankSearch(IntSet seedNodeIDs, Task task, float d, int n, boolean isWeighted,
+    public ResultSet hyperRankSearch(IntSet seedNodeIDs, Engine.Task task, float d, int n, boolean isWeighted,
             boolean useDegreeNormalization) {
         logger.info("Searching using HyperRank (d = {}, n = {}, weighted = {}, degree_normalization = {})", d, n,
                 isWeighted, useDegreeNormalization);
@@ -1181,7 +1181,7 @@ public class HypergraphOfEntity extends Engine {
         }
 
         for (int i = 0; i < n; i++) {
-            if (task != Task.DOCUMENT_RETRIEVAL) {
+            if (task != Engine.Task.DOCUMENT_RETRIEVAL) {
                 atomVisits.addTo(nodeID, 1);
             }
 
@@ -1209,7 +1209,7 @@ public class HypergraphOfEntity extends Engine {
                 randomEdgeID = sampleUniformlyAtRandom(edgeIDs.toIntArray());
             }
 
-            if (task == Task.DOCUMENT_RETRIEVAL) {
+            if (task == Engine.Task.DOCUMENT_RETRIEVAL) {
                 atomVisits.addTo(randomEdgeID, 1);
             }
 
@@ -1238,15 +1238,15 @@ public class HypergraphOfEntity extends Engine {
         resultSet.setTrace(trace);
 
         for (int atomID : atomVisits.keySet()) {
-            Atom atom = task == Task.DOCUMENT_RETRIEVAL ? edgeIndex.getKey(atomID) : nodeIndex.getKey(atomID);
+            Atom atom = task == Engine.Task.DOCUMENT_RETRIEVAL ? edgeIndex.getKey(atomID) : nodeIndex.getKey(atomID);
             trace.add(atom.toString().replace("%", "%%"));
             trace.goDown();
             trace.add("score = %f", atomVisits.get(atomID));
             trace.goUp();
 
-            if (task == Task.DOCUMENT_RETRIEVAL && !(atom instanceof DocumentEdge)) continue;
-            if (task == Task.ENTITY_RETRIEVAL && !(atom instanceof EntityNode)) continue;
-            if (task == Task.TERM_RETRIEVAL && !(atom instanceof TermNode)) continue;
+            if (task == Engine.Task.DOCUMENT_RETRIEVAL && !(atom instanceof DocumentEdge)) continue;
+            if (task == Engine.Task.ENTITY_RETRIEVAL && !(atom instanceof EntityNode)) continue;
+            if (task == Engine.Task.TERM_RETRIEVAL && !(atom instanceof TermNode)) continue;
 
             if (atom instanceof RankableAtom) {
                 RankableAtom rankableAtom = (RankableAtom) atom;
@@ -1254,7 +1254,7 @@ public class HypergraphOfEntity extends Engine {
 
                 double norm = 1;
                 if (useDegreeNormalization) {
-                    norm = task == Task.DOCUMENT_RETRIEVAL ? graph.getEdgeDegree(atomID)
+                    norm = task == Engine.Task.DOCUMENT_RETRIEVAL ? graph.getEdgeDegree(atomID)
                             : graph.getVertexDegree(atomID);
                 }
 
@@ -1293,7 +1293,7 @@ public class HypergraphOfEntity extends Engine {
         return resultSet;
     }
 
-    public ResultSet randomWalkSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights, Task task,
+    public ResultSet randomWalkSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights, Engine.Task task,
             int walkLength, int walkRepeats, int nodeFatigue, int edgeFatigue, boolean isDirected, boolean isWeighted) {
         logger.info(
                 "Searching using Random Walk Score (l = {}, r = {}, nf = {}, ef = {}, directed = {}, weighted = {})",
@@ -1330,7 +1330,7 @@ public class HypergraphOfEntity extends Engine {
                 // trace.goDown();
 
                 for (int j = 0; j < randomPath.getNumberOfVertices(); j++) {
-                    if (task == Task.DOCUMENT_RETRIEVAL) {
+                    if (task == Engine.Task.DOCUMENT_RETRIEVAL) {
                         if (j > 0) {
                             atomVisits.addTo(randomPath.getEdgeHeadingToVertexAt(j), 1);
                         }
@@ -1403,16 +1403,16 @@ public class HypergraphOfEntity extends Engine {
         for (int atomID : weightedAtomVisitProbability.keySet()) {
             atomCoverage.compute(atomID, (k, v) -> v / maxCoverage);
 
-            Atom atom = task == Task.DOCUMENT_RETRIEVAL ? edgeIndex.getKey(atomID) : nodeIndex.getKey(atomID);
+            Atom atom = task == Engine.Task.DOCUMENT_RETRIEVAL ? edgeIndex.getKey(atomID) : nodeIndex.getKey(atomID);
             trace.add(atom.toString().replace("%", "%%"));
             trace.goDown();
             trace.add("score = %f", weightedAtomVisitProbability.get(atomID));
             trace.add("coverage = %f", atomCoverage.get(atomID));
             trace.goUp();
 
-            if (task == Task.DOCUMENT_RETRIEVAL && !(atom instanceof DocumentEdge)) continue;
-            if (task == Task.ENTITY_RETRIEVAL && !(atom instanceof EntityNode)) continue;
-            if (task == Task.TERM_RETRIEVAL && !(atom instanceof TermNode)) continue;
+            if (task == Engine.Task.DOCUMENT_RETRIEVAL && !(atom instanceof DocumentEdge)) continue;
+            if (task == Engine.Task.ENTITY_RETRIEVAL && !(atom instanceof EntityNode)) continue;
+            if (task == Engine.Task.TERM_RETRIEVAL && !(atom instanceof TermNode)) continue;
 
             if (atom instanceof RankableAtom) {
                 RankableAtom rankableAtom = (RankableAtom) atom;
@@ -1533,7 +1533,7 @@ public class HypergraphOfEntity extends Engine {
         }).mapToDouble(f -> f).sum();
     }
 
-    public ResultSet entityIteratorSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights, Task task,
+    public ResultSet entityIteratorSearch(IntSet seedNodeIDs, Map<Integer, Double> seedNodeWeights, Engine.Task task,
             RankingFunction function) {
         ResultSet resultSet = new ResultSet();
         resultSet.setTrace(trace);
@@ -1571,17 +1571,17 @@ public class HypergraphOfEntity extends Engine {
 
     @Override
     public ResultSet search(String query, int offset, int limit) throws IOException {
-        return search(query, offset, limit, QueryType.KEYWORD_QUERY, Task.DOCUMENT_RETRIEVAL);
+        return search(query, offset, limit, Engine.QueryType.KEYWORD_QUERY, Engine.Task.DOCUMENT_RETRIEVAL);
     }
 
-    public ResultSet search(String query, int offset, int limit, QueryType queryType, Task task) throws IOException {
+    public ResultSet search(String query, int offset, int limit, Engine.QueryType queryType, Engine.Task task) throws IOException {
         Map<String, String> params = new HashMap<>();
         params.put("l", String.valueOf(DEFAULT_WALK_LENGTH));
         params.put("r", String.valueOf(DEFAULT_WALK_REPEATS));
         return search(query, offset, limit, queryType, task, RankingFunction.RANDOM_WALK_SCORE, params, false);
     }
 
-    public ResultSet search(String query, int offset, int limit, QueryType queryType, Task task,
+    public ResultSet search(String query, int offset, int limit, Engine.QueryType queryType, Engine.Task task,
             RankingFunction function, Map<String, String> params, boolean debug) throws IOException {
         long start = System.currentTimeMillis();
 
@@ -1592,7 +1592,7 @@ public class HypergraphOfEntity extends Engine {
 
         List<String> tokens;
         IntSet queryNodeIDs;
-        if (queryType == QueryType.ENTITY_QUERY) {
+        if (queryType == Engine.QueryType.ENTITY_QUERY) {
             logger.info("Query type: entity query");
             tokens = Arrays.stream(query.split("\\|\\|"))
                     .map(String::trim)
@@ -2370,16 +2370,5 @@ public class HypergraphOfEntity extends Engine {
         SKIP_RELATED_TO,
         RELATED_TO_BY_DOC,
         RELATED_TO_BY_SUBJ,
-    }
-
-    public enum Task {
-        DOCUMENT_RETRIEVAL,
-        ENTITY_RETRIEVAL,
-        TERM_RETRIEVAL,
-    }
-
-    public enum QueryType {
-        KEYWORD_QUERY,
-        ENTITY_QUERY
     }
 }

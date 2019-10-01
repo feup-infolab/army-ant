@@ -1,5 +1,7 @@
 package armyant.structures;
 
+import java.util.Objects;
+
 public class Entity {
     private String uri;
     private String label;
@@ -27,5 +29,21 @@ public class Entity {
 
     public void setLabel(String label) {
         this.label = label;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == this)
+            return true;
+        if (!(o instanceof Entity)) {
+            return false;
+        }
+        Entity entity = (Entity) o;
+        return Objects.equals(uri, entity.uri);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(uri);
     }
 }

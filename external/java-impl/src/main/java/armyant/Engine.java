@@ -47,7 +47,7 @@ import opennlp.tools.sentdetect.SentenceModel;
  * Created by jldevezas on 2017-11-10.
  */
 public abstract class Engine {
-    private static final Logger logger = LoggerFactory.getLogger(Engine.class);
+	private static final Logger logger = LoggerFactory.getLogger(Engine.class);
 
     private static final int MIN_TOKEN_LENGTH = 3;
     private static final XoRoShiRo128PlusRandom RNG = new XoRoShiRo128PlusRandom();
@@ -215,5 +215,16 @@ public abstract class Engine {
         }
 
         return sentenceTokens;
+    }
+
+    public enum Task {
+        DOCUMENT_RETRIEVAL,
+        ENTITY_RETRIEVAL,
+        TERM_RETRIEVAL,
+    }
+
+    public enum QueryType {
+        KEYWORD_QUERY,
+        ENTITY_QUERY
     }
 }
