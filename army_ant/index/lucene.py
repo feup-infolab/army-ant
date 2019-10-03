@@ -37,6 +37,45 @@ class LuceneEngine(JavaIndex):
         super().__init__(reader, index_location, loop)
         self.index_features = [LuceneEngine.Feature[index_feature] for index_feature in index_features]
 
+    def to_java_document(self, doc):
+        entities = []
+        if doc.entities:
+            for entity in doc.entities:
+                try:
+                    entities.append(JavaIndex.JEntity(entity.label, entity.uri))
+                except Exception as e:
+                    logger.warning("Entity %s skipped" % entity)
+                    logger.exception(e)
+
+        triples = []
+        for s, p, o in doc.triples:
+            try:
+                triples.append(
+                    JavaIndex.JTriple(
+                        JavaIndex.JEntity(s.label, s.uri),
+                        JavaIndex.JEntity(p.label, p.uri),
+                        JavaIndex.JEntity(o.label, o.uri)))
+            except Exception as e:
+                logger.warning("Triple (%s, %s, %s) skipped" % (s, p, o))
+                logger.exception(e)
+
+        if LuceneEngine.Feature.keywords in self.index_features:
+            j_raw_doc = LuceneEngine.JDocument(
+                JString(doc.doc_id), JString(doc.title), JString(doc.text),
+                java.util.Arrays.asList(triples), java.util.Arrays.asList(entities))
+
+            doc.text = textrank(doc.text, ratio=LuceneEngine.KW_RATIO)
+
+            j_doc = LuceneEngine.JDocument(
+                JString(doc.doc_id), JString(doc.title), JString(doc.text),
+                java.util.Arrays.asList(triples), java.util.Arrays.asList(entities))
+        else:
+            j_raw_doc = j_doc = LuceneEngine.JDocument(
+                JString(doc.doc_id), JString(doc.title), JString(doc.text),
+                java.util.Arrays.asList(triples), java.util.Arrays.asList(entities))
+
+        return j_doc, j_raw_doc
+
     async def index(self, features_location=None):
         try:
             if LuceneEngine.Feature.keywords in self.index_features:
@@ -50,34 +89,9 @@ class LuceneEngine(JavaIndex):
             for doc in self.reader:
                 logger.debug("Preloading document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
 
-                entities = []
-                if doc.entities:
-                    for entity in doc.entities:
-                        try:
-                            entities.append(JavaIndex.JEntity(entity.label, entity.uri))
-                        except Exception as e:
-                            logger.warning("Entity %s skipped" % entity)
-                            logger.exception(e)
+                j_doc, _ = self.to_java_document(doc)
+                corpus.append(j_doc)
 
-                triples = []
-                for s, p, o in doc.triples:
-                    try:
-                        triples.append(
-                            JavaIndex.JTriple(
-                                JavaIndex.JEntity(s.label, s.uri),
-                                JavaIndex.JEntity(p.label, p.uri),
-                                JavaIndex.JEntity(o.label, o.uri)))
-                    except Exception as e:
-                        logger.warning("Triple (%s, %s, %s) skipped" % (s, p, o))
-                        logger.exception(e)
-
-                if LuceneEngine.Feature.keywords in self.index_features:
-                    doc.text = textrank(doc.text, ratio=LuceneEngine.KW_RATIO)
-
-                jDoc = LuceneEngine.JDocument(
-                    JString(doc.doc_id), doc.title, JString(doc.text), java.util.Arrays.asList(triples),
-                    java.util.Arrays.asList(entities))
-                corpus.append(jDoc)
                 if len(corpus) % (LuceneEngine.BLOCK_SIZE // 10) == 0:
                     logger.info("%d documents preloaded" % len(corpus))
 
@@ -86,12 +100,6 @@ class LuceneEngine(JavaIndex):
                     lucene.indexCorpus(java.util.Arrays.asList(corpus))
                     corpus = []
 
-                # yield Document(
-                #     doc_id=doc.doc_id,
-                #     metadata={
-                #         'url': doc.metadata.get('url'),
-                #         'name': doc.metadata.get('name')
-                #     })
                 yield doc
 
             if len(corpus) > 0:
@@ -102,6 +110,99 @@ class LuceneEngine(JavaIndex):
         except JException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
+    async def search(self, query, offset, limit, query_type=None, task=None,
+                     base_index_location=None, base_index_type=None,
+                     ranking_function=None, ranking_params=None, debug=False):
+        if ranking_function:
+            try:
+                ranking_function = LuceneEngine.RankingFunction[ranking_function]
+            except (JException, KeyError):
+                logger.error("Could not use '%s' as the ranking function" % ranking_function)
+                ranking_function = LuceneEngine.RankingFunction['tf_idf']
+        else:
+            ranking_function = LuceneEngine.RankingFunction['tf_idf']
+
+        logger.info("Using '%s' as ranking function" % ranking_function.value)
+        ranking_function = LuceneEngine.JRankingFunction.valueOf(ranking_function.value)
+
+        j_ranking_params = jpype.java.util.HashMap()
+        if ranking_params:
+            logger.info("Using ranking parameters %s" % ranking_params)
+            for k, v in ranking_params.items():
+                j_ranking_params.put(k, v)
+        ranking_params = j_ranking_params
+
+        results = []
+        num_docs = 0
+        trace = None
+        try:
+            if self.index_location in LuceneEngine.INSTANCES:
+                lucene = LuceneEngine.INSTANCES[self.index_location]
+            else:
+                lucene = LuceneEngine.JLuceneEngine(self.index_location)
+                LuceneEngine.INSTANCES[self.index_location] = lucene
+
+            results = lucene.search(query, offset, limit, ranking_function, ranking_params)
+            num_docs = results.getNumDocs()
+            trace = results.getTrace()
+            results = [Result(result.getScore(), result.getID(), result.getName(), result.getType())
+                       for result in results]
+        except JException as e:
+            logger.error("Java Exception: %s" % e.stacktrace())
+
+        return ResultSet(results, num_docs, trace=json.loads(trace.toJSON()), trace_ascii=trace.toASCII())
+
+
+class LuceneEntitiesEngine(LuceneEngine):
+    class Feature(Enum):
+        keywords = 'EXTRACT_KEYWORDS'
+
+    class RankingFunction(Enum):
+        tf_idf = 'TF_IDF'
+        bm25 = 'BM25'
+        dfr = 'DFR'
+
+    JLuceneEntitiesEngine = JavaIndex.armyant.lucene.LuceneEntitiesEngine
+
+    async def index(self, features_location=None):
+        try:
+            if LuceneEntitiesEngine.Feature.keywords in self.index_features:
+                    logger.info("Indexing top %.0f%% keywords per document based on TextRank" %
+                                (LuceneEntitiesEngine.KW_RATIO * 100))
+
+            lucene = LuceneEngine.JLuceneEntitiesEngine(self.index_location)
+            lucene.open()
+
+            corpus = []
+            for doc in self.reader:
+                logger.debug("Preloading document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
+
+                _, j_doc_raw = self.to_java_document(doc, include_raw_doc=True)
+                corpus.append(j_doc_raw)
+
+                if len(corpus) % (LuceneEngine.BLOCK_SIZE // 10) == 0:
+                    logger.info("%d documents preloaded" % len(corpus))
+
+                if len(corpus) >= LuceneEngine.BLOCK_SIZE:
+                    logger.info("Indexing batch of %d documents" % len(corpus))
+                    lucene.indexCorpus(java.util.Arrays.asList(corpus))
+                    lucene.collectEntities(java.util.Arrays.asList(corpus))
+                    corpus = []
+
+                yield doc
+
+            if len(corpus) > 0:
+                logger.info("Indexing batch of %d documents" % len(corpus))
+                lucene.indexCorpus(java.util.Arrays.asList(corpus))
+                lucene.collectEntities(java.util.Arrays.asList(corpus))
+
+            lucene.indexEntities()
+
+            lucene.close()
+        except JException as e:
+            logger.error("Java Exception: %s" % e.stacktrace())
+
+    # TODO FIXME
     async def search(self, query, offset, limit, query_type=None, task=None,
                      base_index_location=None, base_index_type=None,
                      ranking_function=None, ranking_params=None, debug=False):

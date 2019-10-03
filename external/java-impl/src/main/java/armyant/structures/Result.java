@@ -11,6 +11,7 @@ public class Result {
     private String id;
     private String name;
     private String type;
+    private String text;
     private Map<String, Double> components;
 
     public Result(double score, String id, String name) {
@@ -27,6 +28,7 @@ public class Result {
         this.name = name;
         this.type = type;
         this.components = components;
+        this.text = null;
     }
 
     public double getScore() {
@@ -59,6 +61,18 @@ public class Result {
 
     public void setType(String type) {
         this.type = type;
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    public void setText(String text) {
+        this.text = text;
+    }
+
+    public boolean hasText() {
+        return this.text != null;
     }
 
     public Map<String, Double> getComponents() {

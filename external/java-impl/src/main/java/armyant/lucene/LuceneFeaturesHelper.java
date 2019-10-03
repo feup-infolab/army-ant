@@ -115,6 +115,6 @@ public class LuceneFeaturesHelper extends LuceneEngine {
         params.remove("a");
 
         Query boost = featureName == null ? null : FeatureField.newSigmoidQuery("features", featureName, w, k, a);
-        return search(query, offset, limit, rankingFunction, params, boost);
+        return search(query, offset, limit, rankingFunction, params, boost, false);
     }
 }

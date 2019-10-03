@@ -119,11 +119,11 @@ public class LuceneEngine extends Engine {
 
     public ResultSet search(String query, int offset, int limit, RankingFunction rankingFunction,
                             Map<String, String> params) throws Exception {
-        return search(query, offset, limit, rankingFunction, params, null);
+        return search(query, offset, limit, rankingFunction, params, null, false);
     }
 
     protected ResultSet search(String query, int offset, int limit, RankingFunction rankingFunction,
-                            Map<String, String> params, Query boost) throws Exception {
+                            Map<String, String> params, Query boost, boolean includeText) throws Exception {
         IndexReader reader = DirectoryReader.open(directory);
         IndexSearcher searcher = new IndexSearcher(reader);
 
@@ -184,7 +184,12 @@ public class LuceneEngine extends Engine {
             org.apache.lucene.document.Document doc = searcher.doc(hits.scoreDocs[i].doc);
             String docID = doc.get("doc_id");
             String title = doc.get("title");
-            results.addResult(new Result(hits.scoreDocs[i].score, docID, title));
+            Result result = new Result(hits.scoreDocs[i].score, docID, title);
+            if (includeText) {
+                String text = doc.get("text");
+                result.setText(text);
+            }
+            results.addResult(result);
         }
 
         reader.close();

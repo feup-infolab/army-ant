@@ -58,20 +58,21 @@ public abstract class Engine {
     private static Pattern moneyPattern = Pattern.compile("([$€£]\\d*\\.?\\d+)|(\\d*\\.\\d+[$€£])");
     private static Pattern numPattern = Pattern.compile("\\d*\\.\\d+");
 
+    private static LanguageDetector languageDetector;
 
-    private LanguageDetector languageDetector;
     private SentenceDetectorME sentenceDetector;
 
-    public Engine() {
+    static {
         try {
             List<LanguageProfile> languageProfiles = new LanguageProfileReader().readAllBuiltIn();
-            languageDetector = LanguageDetectorBuilder.create(NgramExtractors.standard())
-                    .withProfiles(languageProfiles)
+            languageDetector = LanguageDetectorBuilder.create(NgramExtractors.standard()).withProfiles(languageProfiles)
                     .build();
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
         }
+    }
 
+    public Engine() {
         this.sentenceDetector = null;
     }
 
@@ -149,7 +150,7 @@ public abstract class Engine {
         return formatter.print(duration.toPeriod());
     }
 
-    public CharArraySet getStopwords(String language) {
+    public static CharArraySet getStopwords(String language) {
         StringWriter writer = new StringWriter();
 
         logger.debug("Fetching stopwords for {} language", language);
@@ -158,10 +159,10 @@ public abstract class Engine {
         String filename = String.format("/stopwords/%s.stopwords", language);
 
         try {
-            InputStream inputStream = getClass().getResourceAsStream(filename);
+            InputStream inputStream = Engine.class.getResourceAsStream(filename);
             if (inputStream == null) {
                 //logger.warn("Could not load '{}' stopwords, using 'en' as default", language);
-                inputStream = getClass().getResourceAsStream(defaultFilename);
+                inputStream = Engine.class.getResourceAsStream(defaultFilename);
             }
             IOUtils.copy(inputStream, writer, "UTF-8");
             return new CharArraySet(Arrays.asList(writer.toString().split("\n")), true);
@@ -171,7 +172,11 @@ public abstract class Engine {
         }
     }
 
-    public List<String> analyze(String text) throws IOException {
+    public static List<String> analyze(String text) throws IOException {
+        return analyze(text, true);
+    }
+
+    public static List<String> analyze(String text, boolean useDelexicalization) throws IOException {
         AttributeFactory factory = AttributeFactory.DEFAULT_ATTRIBUTE_FACTORY;
 
         StandardTokenizer tokenizer = new StandardTokenizer(factory);
@@ -180,13 +185,19 @@ public abstract class Engine {
         String language = languageDetector.detect(text).or(LdLocale.fromString("en")).getLanguage();
 
         TokenStream filter = new LowerCaseFilter(tokenizer);
+
         filter = new StopFilter(filter, getStopwords(language));
         filter = new LengthFilter(filter, MIN_TOKEN_LENGTH, Integer.MAX_VALUE);
-        filter = new PatternReplaceFilter(filter, urlPattern, "SLOT_URL", true);
-        filter = new PatternReplaceFilter(filter, timePattern, "SLOT_TIME", true);
-        filter = new PatternReplaceFilter(filter, moneyPattern, "SLOT_MONEY", true);
-        filter = new PatternReplaceFilter(filter, numPattern, "SLOT_NUM", true);
+
+        if (useDelexicalization) {
+            filter = new PatternReplaceFilter(filter, urlPattern, "SLOT_URL", true);
+            filter = new PatternReplaceFilter(filter, timePattern, "SLOT_TIME", true);
+            filter = new PatternReplaceFilter(filter, moneyPattern, "SLOT_MONEY", true);
+            filter = new PatternReplaceFilter(filter, numPattern, "SLOT_NUM", true);
+        }
+
         filter = new PorterStemFilter(filter);
+
         filter.reset();
 
         List<String> tokens = new ArrayList<>();

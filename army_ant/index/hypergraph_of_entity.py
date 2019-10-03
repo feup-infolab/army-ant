@@ -51,8 +51,8 @@ class HypergraphOfEntity(JavaIndex):
     JHypergraphOfEntityInMemory = JavaIndex.armyant.hgoe.HypergraphOfEntity
     JFeature = JClass("armyant.hgoe.HypergraphOfEntity$Feature")
     JRankingFunction = JClass("armyant.hgoe.HypergraphOfEntity$RankingFunction")
-    JTask = JClass("armyant.hgoe.HypergraphOfEntity$Task")
-    JQueryType = JClass("armyant.hgoe.HypergraphOfEntity$QueryType")
+    JTask = JClass("armyant.Engine$Task")
+    JQueryType = JClass("armyant.Engine$QueryType")
 
     def __init__(self, reader, index_location, index_features, loop):
         super().__init__(reader, index_location, loop)
