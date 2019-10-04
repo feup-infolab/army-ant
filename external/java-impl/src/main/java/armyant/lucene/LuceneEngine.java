@@ -27,6 +27,7 @@ import org.apache.lucene.search.similarities.BasicModel;
 import org.apache.lucene.search.similarities.ClassicSimilarity;
 import org.apache.lucene.search.similarities.DFRSimilarity;
 import org.apache.lucene.search.similarities.Normalization;
+import org.apache.lucene.search.similarities.Similarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.slf4j.Logger;
@@ -114,16 +115,13 @@ public class LuceneEngine extends Engine {
         });
     }
 
-    public static void setSimilarity(IndexSearcher searcher, RankingFunction rankingFunction,
-            Map<String, String> params) throws Exception {
+    public static Similarity getSimilarity(RankingFunction rankingFunction, Map<String, String> params)
+            throws Exception {
         switch (rankingFunction) {
         case TF_IDF:
-            searcher.setSimilarity(new ClassicSimilarity());
-            break;
+            return new ClassicSimilarity();
         case BM25:
-            searcher.setSimilarity(
-                    new BM25Similarity(Float.parseFloat(params.get("k1")), Float.parseFloat(params.get("b"))));
-            break;
+            return new BM25Similarity(Float.parseFloat(params.get("k1")), Float.parseFloat(params.get("b")));
         case DFR:
             BasicModel basicModel = (BasicModel) Class
                     .forName("org.apache.lucene.search.similarities.BasicModel" + params.get("BM")).newInstance();
@@ -144,10 +142,9 @@ public class LuceneEngine extends Engine {
                         .forName("org.apache.lucene.search.similarities.Normalization" + params.get("N")).newInstance();
             }
 
-            searcher.setSimilarity(new DFRSimilarity(basicModel, afterEffect, normalization));
-            break;
+            return new DFRSimilarity(basicModel, afterEffect, normalization);
         default:
-            searcher.setSimilarity(new ClassicSimilarity());
+            return new ClassicSimilarity();
         }
     }
 
@@ -165,7 +162,7 @@ public class LuceneEngine extends Engine {
                             Map<String, String> params, Query boost, boolean includeText) throws Exception {
         IndexReader reader = DirectoryReader.open(directory);
         IndexSearcher searcher = new IndexSearcher(reader);
-        setSimilarity(searcher, rankingFunction, params);
+        searcher.setSimilarity(getSimilarity(rankingFunction, params));
 
         QueryParser parser = new QueryParser("text", analyzer);
         Query luceneQuery = parser.parse(query);

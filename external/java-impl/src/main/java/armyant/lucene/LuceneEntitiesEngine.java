@@ -215,6 +215,7 @@ public class LuceneEntitiesEngine extends LuceneEngine {
         MoreLikeThis moreLikeThis = new MoreLikeThis(indexReader);
         moreLikeThis.setMinTermFreq(1);
         moreLikeThis.setMinDocFreq(1);
+        moreLikeThis.setAnalyzer(analyzer);
 
         Reader reader = new StringReader(query.toString());
         return moreLikeThis.like("text", reader);
@@ -224,7 +225,7 @@ public class LuceneEntitiesEngine extends LuceneEngine {
             RankingFunction rankingFunction, Map<String, String> params) throws Exception {
         IndexReader reader = DirectoryReader.open(this.entityProfileEngine.directory);
         IndexSearcher searcher = new IndexSearcher(reader);
-        setSimilarity(searcher, rankingFunction, params);
+        searcher.setSimilarity(getSimilarity(rankingFunction, params));
 
         Query luceneQuery = buildListQuery(entityLabels, reader, searcher);
 
