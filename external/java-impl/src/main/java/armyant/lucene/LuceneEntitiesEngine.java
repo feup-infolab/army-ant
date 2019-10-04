@@ -172,7 +172,7 @@ public class LuceneEntitiesEngine extends LuceneEngine {
             Map<String, String> params) throws Exception {
         IndexReader reader = DirectoryReader.open(this.entityProfileEngine.directory);
         IndexSearcher searcher = new IndexSearcher(reader);
-        setSimilarity(searcher, rankingFunction, params);
+        searcher.setSimilarity(LuceneEngine.getSimilarity(rankingFunction, params));
 
         QueryParser parser = new QueryParser("text", analyzer);
         Query luceneQuery = parser.parse(query);
