@@ -1,6 +1,6 @@
 package armyant.lucene;
 
-import java.io.IOException;
+import java.io.File;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Map;
@@ -60,6 +60,7 @@ public class LuceneEngine extends Engine {
     protected Analyzer analyzer;
     protected Directory directory;
     protected IndexWriter writer;
+    protected boolean indexExists;
 
     protected long counter = 0;
     protected long totalTime = 0;
@@ -67,6 +68,7 @@ public class LuceneEngine extends Engine {
 
     public LuceneEngine(String path) throws Exception {
         this.path = path;
+        indexExists = new File(path).exists();
         directory = FSDirectory.open(Paths.get(path));
         analyzer = new StandardAnalyzer();
     }

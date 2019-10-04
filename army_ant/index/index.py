@@ -54,10 +54,10 @@ class Index(object):
             return idx.HypergraphOfEntity(reader, index_location, index_features, loop)
         elif index_type.startswith('lucene_features'):
             return idx.LuceneFeaturesEngine(reader, index_location, index_features, loop)
-        elif index_type.startswith('lucene'):
-            return idx.LuceneEngine(reader, index_location, index_features, loop)
         elif index_type.startswith('lucene_entities'):
             return idx.LuceneEntitiesEngine(reader, index_location, index_features, loop)
+        elif index_type.startswith('lucene'):
+            return idx.LuceneEngine(reader, index_location, index_features, loop)
         elif index_type.startswith('tfr'):
             return idx.TensorFlowRanking(reader, index_location, index_features, loop)
         elif index_type.startswith('null_index'):
@@ -94,10 +94,10 @@ class Index(object):
         elif index_type.startswith('hgoe'):
             return idx.HypergraphOfEntity(None, index_location, index_features, loop)
         elif index_type.startswith('lucene_features'):
-            return idx.LuceneFeaturesEngine(None, index_location, index_features, loop)
-        elif index_type.startswith('lucene'):
             return idx.LuceneEngine(None, index_location, index_features, loop)
         elif index_type.startswith('lucene_entities'):
+            return idx.LuceneFeaturesEngine(None, index_location, index_features, loop)
+        elif index_type.startswith('lucene'):
             return idx.LuceneEntitiesEngine(None, index_location, index_features, loop)
         elif index_type.startswith('tfr'):
             return idx.TensorFlowRanking(None, index_location, index_features, loop)

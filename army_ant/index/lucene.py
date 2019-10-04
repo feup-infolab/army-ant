@@ -170,14 +170,20 @@ class LuceneEntitiesEngine(LuceneEngine):
                     logger.info("Indexing top %.0f%% keywords per document based on TextRank" %
                                 (LuceneEntitiesEngine.KW_RATIO * 100))
 
-            lucene = LuceneEngine.JLuceneEntitiesEngine(self.index_location)
+            lucene = LuceneEntitiesEngine.JLuceneEntitiesEngine(self.index_location)
             lucene.open()
+
+            if lucene.docIndexExists():
+                logger.warning(
+                    "Document index already exists at '%s'', using current version (delete it to recreate)",
+                    lucene.getDocIndexPath());
+                logger.info("Preloading documents to collect all unique entities")
 
             corpus = []
             for doc in self.reader:
                 logger.debug("Preloading document %s (%d triples)" % (doc.doc_id, len(doc.triples)))
 
-                _, j_doc_raw = self.to_java_document(doc, include_raw_doc=True)
+                _, j_doc_raw = self.to_java_document(doc)
                 corpus.append(j_doc_raw)
 
                 if len(corpus) % (LuceneEngine.BLOCK_SIZE // 10) == 0:
@@ -185,7 +191,8 @@ class LuceneEntitiesEngine(LuceneEngine):
 
                 if len(corpus) >= LuceneEngine.BLOCK_SIZE:
                     logger.info("Indexing batch of %d documents" % len(corpus))
-                    lucene.indexCorpus(java.util.Arrays.asList(corpus))
+                    if not lucene.docIndexExists():
+                        lucene.indexCorpus(java.util.Arrays.asList(corpus))
                     lucene.collectEntities(java.util.Arrays.asList(corpus))
                     corpus = []
 
@@ -193,11 +200,14 @@ class LuceneEntitiesEngine(LuceneEngine):
 
             if len(corpus) > 0:
                 logger.info("Indexing batch of %d documents" % len(corpus))
-                lucene.indexCorpus(java.util.Arrays.asList(corpus))
+                if not lucene.docIndexExists():
+                    lucene.indexCorpus(java.util.Arrays.asList(corpus))
                 lucene.collectEntities(java.util.Arrays.asList(corpus))
 
-            lucene.indexEntities()
+            lucene.close()
 
+            lucene.open()
+            lucene.indexEntities()
             lucene.close()
         except JException as e:
             logger.error("Java Exception: %s" % e.stacktrace())

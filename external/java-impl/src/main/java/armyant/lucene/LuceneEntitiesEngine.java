@@ -1,14 +1,10 @@
 package armyant.lucene;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,19 +27,26 @@ import opennlp.tools.sentdetect.SentenceModel;
 public class LuceneEntitiesEngine extends LuceneEngine {
     private static final Logger logger = LoggerFactory.getLogger(LuceneEntitiesEngine.class);
 
-    protected float avgTimePerEntity = 0;
+    protected String docIndexPath;
     protected String entityIndexPath;
-    protected boolean entityProfileIndexExisted;
+    protected boolean docIndexExists;
     protected LuceneEngine entityProfileEngine;
     protected KeySetView<Entity, ?> entitySet;
+
+    protected long entityCounter = 0;
+    protected long entityTotalTime = 0;
+    protected float avgTimePerEntity = 0;
 
     public LuceneEntitiesEngine(String path) throws Exception {
         super(Paths.get(path, "docidx").toString());
 
         this.entitySet = ConcurrentHashMap.newKeySet();
 
+        this.docIndexPath = Paths.get(path, "docidx").toString();
         this.entityIndexPath = Paths.get(path, "entidx").toString();
-        this.entityProfileIndexExisted = new File(this.entityIndexPath).exists();
+
+        this.docIndexExists = this.indexExists;
+
         this.entityProfileEngine = new LuceneEngine(this.entityIndexPath);
     }
 
@@ -72,24 +75,25 @@ public class LuceneEntitiesEngine extends LuceneEngine {
     }
 
     public String buildEntityProfile(Entity entity) throws Exception {
+        //logger.info("Building entity profile for {} ({})", entity.getLabel(), entity.getURI());
+
         StringBuilder entityProfile = new StringBuilder();
 
-        try (InputStream modelIn = new FileInputStream("en-sent.bin")) {
-            SentenceModel model = new SentenceModel(modelIn);
-            SentenceDetectorME sentenceDetector = new SentenceDetectorME(model);
+        InputStream modelIn = getClass().getResourceAsStream("/opennlp/en-sent.bin");
+        SentenceModel model = new SentenceModel(modelIn);
+        SentenceDetectorME sentenceDetector = new SentenceDetectorME(model);
 
-            ResultSet mentionDocs = this.entityProfileEngine.search("\"" + entity.getLabel() + "\"", 0, 1000);
+        ResultSet mentionDocs = this.search(
+            "\"" + entity.getLabel() + "\"", 0, 1000, LuceneEngine.RankingFunction.TF_IDF, null, null, true);
 
-            List<String> sentences = new ArrayList<>();
-            for (Result result : mentionDocs) {
-                System.out.println(result.getText());
-                sentences.addAll(Arrays.asList(sentenceDetector.sentDetect(result.getText())));
-            }
+        List<String> sentences = new ArrayList<>();
+        for (Result result : mentionDocs) {
+            sentences.addAll(Arrays.asList(sentenceDetector.sentDetect(result.getText())));
+        }
 
-            for (String sentence : sentences) {
-                if (sentence.contains(entity.getLabel())) {
-                    entityProfile.append(sentence).append('\n');
-                }
+        for (String sentence : sentences) {
+            if (sentence.contains(entity.getLabel())) {
+                entityProfile.append(sentence).append('\n');
             }
         }
 
@@ -97,27 +101,36 @@ public class LuceneEntitiesEngine extends LuceneEngine {
     }
 
     public void indexEntity(Entity entity) throws Exception {
+        long startTime = System.currentTimeMillis();
+
         org.apache.lucene.document.Document luceneDocument = new org.apache.lucene.document.Document();
 
         String entityProfile = buildEntityProfile(entity);
-        System.out.println(entity.getLabel() + ":\n" + entityProfile + "\n");
         TextRank textRank = new TextRank(entityProfile);
         entityProfile = String.join("\n", textRank.getKeywords());
-        System.out.println(entity.getLabel() + " (keywords):\n" + entityProfile + "\n");
 
         luceneDocument.add(new StringField("uri", entity.getURI(), Field.Store.YES));
         luceneDocument.add(new Field("text", entityProfile, DEFAULT_FIELD_TYPE));
 
         this.entityProfileEngine.writer.addDocument(luceneDocument);
+
+        long time = System.currentTimeMillis() - startTime;
+        entityTotalTime += time;
+
+        entityCounter++;
+        avgTimePerEntity = entityCounter > 1 ? (avgTimePerEntity * (entityCounter - 1) + time) / entityCounter : time;
+
+        if (entityCounter % 100 == 0) {
+            logger.info("{} indexed entities in {} ({}/ent, {} ents/h)", entityCounter, formatMillis(entityTotalTime),
+                    formatMillis(avgTimePerEntity), entityCounter * 3600000 / entityTotalTime);
+        }
+
     }
 
     public void indexEntities() {
-        if (this.entityProfileIndexExisted) {
-            logger.warn(
-                "Entity index already exists at '{}'', using current version (delete it to recreate)",
-                this.entityIndexPath);
-            return;
-        }
+        logger.info(
+            "Building entity profiles, applying keyword extraction and indexing {} entities",
+            this.entitySet.size());
 
         entitySet.parallelStream().forEach(entity -> {
             try {
@@ -127,6 +140,18 @@ public class LuceneEntitiesEngine extends LuceneEngine {
                     String.format("Error indexing entity %s (%s), skpping", entity.getURI(), entity.getLabel()), e);
             }
         });
+    }
+
+    public boolean docIndexExists() {
+        return this.docIndexExists;
+    }
+
+    public String getDocIndexPath() {
+        return this.docIndexPath;
+    }
+
+    public String getEntityIndexPath() {
+        return this.entityIndexPath;
     }
 
     public ResultSet search(String query, int offset, int limit, Engine.QueryType queryType, Engine.Task task,
