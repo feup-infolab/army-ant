@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentHashMap.KeySetView;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.index.DirectoryReader;
@@ -98,7 +99,7 @@ public class LuceneEntitiesEngine extends LuceneEngine {
         SentenceModel model = new SentenceModel(modelIn);
         SentenceDetectorME sentenceDetector = new SentenceDetectorME(model);
 
-        ResultSet mentionDocs = this.search("\"" + entity.getLabel() + "\"", 0, 1000,
+        ResultSet mentionDocs = super.search("\"" + entity.getLabel() + "\"", 0, 1000,
                 LuceneEngine.RankingFunction.TF_IDF, null, null, true);
 
         List<String> sentences = new ArrayList<>();
@@ -247,6 +248,23 @@ public class LuceneEntitiesEngine extends LuceneEngine {
         reader.close();
 
         return results;
+    }
+
+    @Override
+    public ResultSet search(String query, int offset, int limit) throws Exception {
+        throw new NotImplementedException("This overloading of search() is not supported by lucene_entities engine");
+    }
+
+    @Override
+    public ResultSet search(String query, int offset, int limit, RankingFunction rankingFunction,
+            Map<String, String> params) throws Exception {
+        throw new NotImplementedException("This overloading of search() is not supported by lucene_entities engine");
+    }
+
+    @Override
+    protected ResultSet search(String query, int offset, int limit, RankingFunction rankingFunction,
+                            Map<String, String> params, Query boost, boolean includeText) throws Exception {
+        throw new NotImplementedException("This overloading of search() is not supported by lucene_entities engine");
     }
 
     public ResultSet search(String query, int offset, int limit, Engine.QueryType queryType,

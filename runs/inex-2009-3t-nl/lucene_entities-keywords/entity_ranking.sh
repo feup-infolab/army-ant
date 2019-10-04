@@ -5,4 +5,4 @@ time ./army-ant.py search \
     --index-type "lucene_entities:keywords" \
     --query-type "keyword" \
     --db-name "aa_inex" \
-    --query "rock music"
+    --query "music"

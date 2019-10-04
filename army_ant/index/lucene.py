@@ -163,6 +163,7 @@ class LuceneEntitiesEngine(LuceneEngine):
         dfr = 'DFR'
 
     JLuceneEntitiesEngine = JavaIndex.armyant.lucene.LuceneEntitiesEngine
+    JQueryType = JClass("armyant.Engine$QueryType")
 
     async def index(self, features_location=None):
         try:
@@ -234,6 +235,7 @@ class LuceneEntitiesEngine(LuceneEngine):
                     query_type = Index.QueryType['keyword']
         else:
             query_type = Index.QueryType['keyword']
+        query_type = LuceneEntitiesEngine.JQueryType.valueOf(query_type.value)
 
         logger.info("Using '%s' as ranking function" % ranking_function.value)
         ranking_function = LuceneEngine.JRankingFunction.valueOf(ranking_function.value)
@@ -255,7 +257,7 @@ class LuceneEntitiesEngine(LuceneEngine):
                 lucene = LuceneEntitiesEngine.JLuceneEntitiesEngine(self.index_location)
                 LuceneEntitiesEngine.INSTANCES[self.index_location] = lucene
 
-            results = lucene.search(query, offset, limit, ranking_function, ranking_params)
+            results = lucene.search(query, offset, limit, query_type, ranking_function, ranking_params)
             num_docs = results.getNumDocs()
             trace = results.getTrace()
             results = [Result(result.getScore(), result.getID(), result.getName(), result.getType())

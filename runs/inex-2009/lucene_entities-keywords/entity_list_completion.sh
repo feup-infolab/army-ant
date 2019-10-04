@@ -5,4 +5,4 @@ time ./army-ant.py search \
     --index-type "lucene_entities:keywords" \
     --query-type "entity" \
     --db-name "aa_inex" \
-    --query "rock music||heavy metal||alternative rock"
+    --query "La Bamba||Mr. Tambourine Man"
