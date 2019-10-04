@@ -96,7 +96,7 @@ class Index(object):
         elif index_type.startswith('lucene_features'):
             return idx.LuceneEngine(None, index_location, index_features, loop)
         elif index_type.startswith('lucene_entities'):
-            return idx.LuceneFeaturesEngine(None, index_location, index_features, loop)
+            return idx.LuceneEntitiesEngine(None, index_location, index_features, loop)
         elif index_type.startswith('lucene'):
             return idx.LuceneEntitiesEngine(None, index_location, index_features, loop)
         elif index_type.startswith('tfr'):

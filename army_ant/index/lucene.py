@@ -16,7 +16,7 @@ from jpype import JClass, JException, JString, java
 from army_ant.exception import ArmyAntException
 from army_ant.util.text import textrank
 
-from . import JavaIndex, Result, ResultSet
+from . import Index, JavaIndex, Result, ResultSet
 
 logger = logging.getLogger(__name__)
 
@@ -212,7 +212,6 @@ class LuceneEntitiesEngine(LuceneEngine):
         except JException as e:
             logger.error("Java Exception: %s" % e.stacktrace())
 
-    # TODO FIXME
     async def search(self, query, offset, limit, query_type=None, task=None,
                      base_index_location=None, base_index_type=None,
                      ranking_function=None, ranking_params=None, debug=False):
@@ -224,6 +223,16 @@ class LuceneEntitiesEngine(LuceneEngine):
                 ranking_function = LuceneEngine.RankingFunction['tf_idf']
         else:
             ranking_function = LuceneEngine.RankingFunction['tf_idf']
+
+        if query_type:
+            if type(query_type) is not Index.QueryType:
+                try:
+                    query_type = Index.QueryType[query_type]
+                except (JException, KeyError):
+                    logger.error("Could not use '%s' as a query type" % query_type)
+                    query_type = Index.QueryType['keyword']
+        else:
+            query_type = Index.QueryType['keyword']
 
         logger.info("Using '%s' as ranking function" % ranking_function.value)
         ranking_function = LuceneEngine.JRankingFunction.valueOf(ranking_function.value)
@@ -239,11 +248,11 @@ class LuceneEntitiesEngine(LuceneEngine):
         num_docs = 0
         trace = None
         try:
-            if self.index_location in LuceneEngine.INSTANCES:
-                lucene = LuceneEngine.INSTANCES[self.index_location]
+            if self.index_location in LuceneEntitiesEngine.INSTANCES:
+                lucene = LuceneEntitiesEngine.INSTANCES[self.index_location]
             else:
-                lucene = LuceneEngine.JLuceneEngine(self.index_location)
-                LuceneEngine.INSTANCES[self.index_location] = lucene
+                lucene = LuceneEntitiesEngine.JLuceneEntitiesEngine(self.index_location)
+                LuceneEntitiesEngine.INSTANCES[self.index_location] = lucene
 
             results = lucene.search(query, offset, limit, ranking_function, ranking_params)
             num_docs = results.getNumDocs()

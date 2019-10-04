@@ -114,6 +114,43 @@ public class LuceneEngine extends Engine {
         });
     }
 
+    public static void setSimilarity(IndexSearcher searcher, RankingFunction rankingFunction,
+            Map<String, String> params) throws Exception {
+        switch (rankingFunction) {
+        case TF_IDF:
+            searcher.setSimilarity(new ClassicSimilarity());
+            break;
+        case BM25:
+            searcher.setSimilarity(
+                    new BM25Similarity(Float.parseFloat(params.get("k1")), Float.parseFloat(params.get("b"))));
+            break;
+        case DFR:
+            BasicModel basicModel = (BasicModel) Class
+                    .forName("org.apache.lucene.search.similarities.BasicModel" + params.get("BM")).newInstance();
+
+            AfterEffect afterEffect;
+            if (params.get("AE").equals("Disabled")) {
+                afterEffect = new AfterEffect.NoAfterEffect();
+            } else {
+                afterEffect = (AfterEffect) Class
+                        .forName("org.apache.lucene.search.similarities.AfterEffect" + params.get("AE")).newInstance();
+            }
+
+            Normalization normalization;
+            if (params.get("N").equals("Disabled")) {
+                normalization = new Normalization.NoNormalization();
+            } else {
+                normalization = (Normalization) Class
+                        .forName("org.apache.lucene.search.similarities.Normalization" + params.get("N")).newInstance();
+            }
+
+            searcher.setSimilarity(new DFRSimilarity(basicModel, afterEffect, normalization));
+            break;
+        default:
+            searcher.setSimilarity(new ClassicSimilarity());
+        }
+    }
+
     @Override
     public ResultSet search(String query, int offset, int limit) throws Exception {
         return search(query, offset, limit, RankingFunction.TF_IDF, null);
@@ -128,41 +165,7 @@ public class LuceneEngine extends Engine {
                             Map<String, String> params, Query boost, boolean includeText) throws Exception {
         IndexReader reader = DirectoryReader.open(directory);
         IndexSearcher searcher = new IndexSearcher(reader);
-
-        switch (rankingFunction) {
-            case TF_IDF:
-                searcher.setSimilarity(new ClassicSimilarity());
-                break;
-            case BM25:
-                searcher.setSimilarity(new BM25Similarity(
-                        Float.parseFloat(params.get("k1")),
-                        Float.parseFloat(params.get("b"))));
-                break;
-            case DFR:
-                BasicModel basicModel = (BasicModel) Class.forName("org.apache.lucene.search.similarities.BasicModel" +
-                                                                   params.get("BM")).newInstance();
-
-                AfterEffect afterEffect;
-                if (params.get("AE").equals("Disabled")) {
-                    afterEffect = new AfterEffect.NoAfterEffect();
-                } else {
-                    afterEffect = (AfterEffect) Class.forName("org.apache.lucene.search.similarities.AfterEffect" +
-                                                              params.get("AE")).newInstance();
-                }
-
-                Normalization normalization;
-                if (params.get("N").equals("Disabled")) {
-                    normalization = new Normalization.NoNormalization();
-                } else {
-                    normalization = (Normalization) Class.forName("org.apache.lucene.search.similarities.Normalization" +
-                                                                  params.get("N")).newInstance();
-                }
-
-                searcher.setSimilarity(new DFRSimilarity(basicModel, afterEffect, normalization));
-                break;
-            default:
-                searcher.setSimilarity(new ClassicSimilarity());
-        }
+        setSimilarity(searcher, rankingFunction, params);
 
         QueryParser parser = new QueryParser("text", analyzer);
         Query luceneQuery = parser.parse(query);
