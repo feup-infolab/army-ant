@@ -940,6 +940,31 @@ engines:
             AE: [L, B, Disabled]
             N: [H1, H2, H3, Z, Disabled]
 
+  lucene-entities-keywords-inex-2009-3t-nl:
+    name: INEX 2009 3T-NL - Lucene Entities (Keywords 0.05)
+    db:
+      name: aa_inex
+    index:
+      type: lucene_entities:keywords
+      location: /opt/army-ant/indexes/inex-2009-3t-nl/lucene_entities-keywords
+    ranking:
+      default:
+        id: tf_idf
+      functions:
+        tf_idf:
+          name: TF-IDF
+        bm25:
+          name: BM25
+          params:
+            k1: [1, 1.2, 1.8]
+            b: [0.5, 0.75, 1]
+        dfr:
+          name: DFR
+          params:
+            BM: [BE, G, P, D, In, Ine, IF]
+            AE: [L, B, Disabled]
+            N: [H1, H2, H3, Z, Disabled]
+
   tfr-inex-2009-3t-nl:
     name: INEX 2009 3T-NL - TFR Reranker
     db:
@@ -1242,6 +1267,31 @@ engines:
     index:
       type: lucene:keywords
       location: /opt/army-ant/indexes/inex-2009/lucene-keywords
+    ranking:
+      default:
+        id: tf_idf
+      functions:
+        tf_idf:
+          name: TF-IDF
+        bm25:
+          name: BM25
+          params:
+            k1: [1, 1.2, 1.8]
+            b: [0.5, 0.75, 1]
+        dfr:
+          name: DFR
+          params:
+            BM: [BE, G, P, D, In, Ine, IF]
+            AE: [L, B, Disabled]
+            N: [H1, H2, H3, Z, Disabled]
+
+  lucene-entities-keywords-inex-2009:
+    name: INEX 2009 - Lucene Entities (Keywords 0.05)
+    db:
+      name: aa_inex
+    index:
+      type: lucene_entities:keywords
+      location: /opt/army-ant/indexes/inex-2009/lucene_entities-keywords
     ranking:
       default:
         id: tf_idf
