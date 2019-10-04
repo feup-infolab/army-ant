@@ -153,8 +153,7 @@ public class LuceneEntitiesEngine extends LuceneEngine {
         logger.info("Building entity profiles, applying keyword extraction and indexing {} entities",
                 this.entitySet.size());
 
-        // DELETEME limit
-        entitySet.parallelStream().limit(500).forEach(entity -> {
+        entitySet.parallelStream().forEach(entity -> {
             try {
                 indexEntity(entity);
             } catch (Exception e) {
