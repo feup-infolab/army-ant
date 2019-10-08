@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -48,6 +47,7 @@ public class LuceneEntitiesEngine extends LuceneEngine {
     protected boolean docIndexExists;
     protected LuceneEngine entityProfileEngine;
     protected KeySetView<Entity, ?> entitySet;
+    protected SentenceDetectorME sentenceDetector;
 
     protected long entityCounter = 0;
     protected long entityTotalTime = 0;
@@ -55,6 +55,10 @@ public class LuceneEntitiesEngine extends LuceneEngine {
 
     public LuceneEntitiesEngine(String path) throws Exception {
         super(Paths.get(path, "docidx").toString());
+
+        InputStream modelIn = getClass().getResourceAsStream("/opennlp/en-sent.bin");
+        SentenceModel model = new SentenceModel(modelIn);
+        this.sentenceDetector = new SentenceDetectorME(model);
 
         this.entitySet = ConcurrentHashMap.newKeySet();
 
@@ -95,21 +99,18 @@ public class LuceneEntitiesEngine extends LuceneEngine {
 
         StringBuilder entityProfile = new StringBuilder();
 
-        InputStream modelIn = getClass().getResourceAsStream("/opennlp/en-sent.bin");
-        SentenceModel model = new SentenceModel(modelIn);
-        SentenceDetectorME sentenceDetector = new SentenceDetectorME(model);
+        String query = "\"" + entity.getLabel() + "\"";
+        ResultSet mentionDocs = super.search(query, 0, 1000, LuceneEngine.RankingFunction.TF_IDF, null, null, true);
 
-        ResultSet mentionDocs = super.search("\"" + entity.getLabel() + "\"", 0, 1000,
-                LuceneEngine.RankingFunction.TF_IDF, null, null, true);
-
-        List<String> sentences = new ArrayList<>();
         for (Result result : mentionDocs) {
-            sentences.addAll(Arrays.asList(sentenceDetector.sentDetect(result.getText())));
-        }
-
-        for (String sentence : sentences) {
-            if (sentence.contains(entity.getLabel())) {
-                entityProfile.append(sentence).append('\n');
+            String[] sentences = new String[0];
+            synchronized(this) {
+                sentences = sentenceDetector.sentDetect(result.getText());
+            }
+            for (String sentence : sentences) {
+                if (sentence.contains(entity.getLabel())) {
+                    entityProfile.append(sentence).append('\n');
+                }
             }
         }
 
