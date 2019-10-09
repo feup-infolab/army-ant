@@ -207,9 +207,8 @@ class LuceneEntitiesEngine(LuceneEngine):
 
             lucene.close()
 
-            # TODO make it respect Index.KW_RATIO (using 0.05 on the Java side)
             lucene.open()
-            lucene.indexEntities()
+            lucene.indexEntities(Index.KW_RATIO)
             lucene.close()
         except JException as e:
             logger.error("Java Exception: %s" % e.stacktrace())

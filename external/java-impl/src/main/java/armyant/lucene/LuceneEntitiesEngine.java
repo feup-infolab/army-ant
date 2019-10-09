@@ -7,7 +7,6 @@ import java.io.StringReader;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -53,6 +52,11 @@ public class LuceneEntitiesEngine extends LuceneEngine {
     protected long entityTotalTime = 0;
     protected float avgTimePerEntity = 0;
 
+    protected long collectDocumentCounter = 0;
+    protected long collectEntityCounter = 0;
+    protected long collectDocumentTotalTime = 0;
+    protected long collectAvgTimePerDocument = 0;
+
     public LuceneEntitiesEngine(String path) throws Exception {
         super(Paths.get(path, "docidx").toString());
 
@@ -84,14 +88,37 @@ public class LuceneEntitiesEngine extends LuceneEngine {
 
     public void collectEntities(Collection<Document> corpus) {
         corpus.parallelStream().forEach(document -> {
+            long startTime = System.currentTimeMillis();
+
             try {
                 for (Entity entity : document.getEntities()) {
                     entitySet.add(entity);
+                    collectEntityCounter++;
                 }
             } catch (Exception e) {
                 logger.warn("Error indexing entities for document {}, skpping", document.getDocID(), e);
             }
+
+            synchronized(this) {
+                long time = System.currentTimeMillis() - startTime;
+                collectDocumentTotalTime += time;
+
+                collectDocumentCounter++;
+                collectAvgTimePerDocument = collectDocumentCounter > 1 ?
+                    (collectAvgTimePerDocument * (collectDocumentCounter - 1) + time) / collectDocumentCounter : time;
+
+                if (collectDocumentCounter % 1000 == 0) {
+                    logger.info("{} documents processed: {} collected entities ({} unique) in {} ({}/doc, {} docs/h)",
+                            collectDocumentCounter, collectEntityCounter, entitySet.size(),
+                            formatMillis(collectDocumentTotalTime), formatMillis(collectAvgTimePerDocument),
+                            collectDocumentCounter * 3600000 / collectDocumentTotalTime);
+                }
+            }
         });
+
+        logger.info("{} documents processed: {} collected entities ({} unique) in {} ({}/doc, {} docs/h)",
+                collectDocumentCounter, collectEntityCounter, entitySet.size(), formatMillis(collectDocumentTotalTime),
+                formatMillis(collectAvgTimePerDocument), collectDocumentCounter * 3600000 / collectDocumentTotalTime);
     }
 
     public String buildEntityProfile(Entity entity) throws Exception {
@@ -103,13 +130,11 @@ public class LuceneEntitiesEngine extends LuceneEngine {
         ResultSet mentionDocs = super.search(query, 0, 1000, LuceneEngine.RankingFunction.TF_IDF, null, null, true);
 
         for (Result result : mentionDocs) {
-            String[] sentences = new String[0];
-            synchronized(this) {
-                sentences = sentenceDetector.sentDetect(result.getText());
-            }
-            for (String sentence : sentences) {
-                if (sentence.contains(entity.getLabel())) {
-                    entityProfile.append(sentence).append('\n');
+            synchronized(this.sentenceDetector) {
+                for (String sentence : sentenceDetector.sentDetect(result.getText())) {
+                    if (sentence.contains(entity.getLabel())) {
+                        entityProfile.append(sentence).append('\n');
+                    }
                 }
             }
         }
@@ -117,14 +142,14 @@ public class LuceneEntitiesEngine extends LuceneEngine {
         return entityProfile.toString();
     }
 
-    public void indexEntity(Entity entity) throws Exception {
+    public void indexEntity(Entity entity, float keywordsRatio) throws Exception {
         long startTime = System.currentTimeMillis();
 
         org.apache.lucene.document.Document luceneDocument = new org.apache.lucene.document.Document();
 
         String entityProfile = buildEntityProfile(entity);
         TextRank textRank = new TextRank(entityProfile);
-        entityProfile = String.join("\n", textRank.getKeywords());
+        entityProfile = String.join("\n", textRank.getKeywords(keywordsRatio));
 
         luceneDocument.add(new StringField("uri", entity.getURI(), Field.Store.YES));
         luceneDocument.add(new StringField("label", entity.getLabel(), Field.Store.YES));
@@ -145,15 +170,18 @@ public class LuceneEntitiesEngine extends LuceneEngine {
     }
 
     public void indexEntities() {
-        logger.info("Building entity profiles, applying keyword extraction and indexing {} entities",
-                this.entitySet.size());
+        indexEntities(0.05f);
+    }
+
+    public void indexEntities(float keywordsRatio) {
+        logger.info("Building entity profiles, applying keyword extraction (ratio = {}) and indexing {} entities",
+                keywordsRatio, this.entitySet.size());
 
         entitySet.parallelStream().forEach(entity -> {
             try {
-                indexEntity(entity);
+                indexEntity(entity, keywordsRatio);
             } catch (Exception e) {
-                logger.warn(
-                    String.format("Error indexing entity %s (%s), skpping", entity.getURI(), entity.getLabel()), e);
+                logger.warn("Error indexing entity {} ({}), skpping", entity.getURI(), entity.getLabel());
             }
         });
     }
