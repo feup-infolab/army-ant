@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.zip.GZIPInputStream;
@@ -316,6 +317,17 @@ public class HypergraphOfEntity extends Engine {
             }
 
             addNodesToUndirectedHyperEdge(documentEdgeID, targetTermNodeIDs);
+        } else if (features.contains(Feature.TF_BINS)) {
+            List<String> tokens = analyze(document.getText());
+            if (tokens.isEmpty()) return;
+
+            // TODO Apache Commons Frequency
+            Map<String, Long> tf = tokens.stream()
+                .collect(Collectors.groupingBy(
+                    Function.identity(),
+                    Collectors.counting()));
+
+
         } else {
             List<String> tokens = analyze(document.getText());
             if (tokens.isEmpty()) return;
@@ -2365,6 +2377,7 @@ public class HypergraphOfEntity extends Engine {
         SENTENCES,
         SYNONYMS,
         CONTEXT,
+        TF_BINS,
         WEIGHT,
         PRUNE,
         SKIP_RELATED_TO,
