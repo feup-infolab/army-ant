@@ -28,6 +28,7 @@ class HypergraphOfEntity(JavaIndex):
         sents = 'SENTENCES'
         syns = 'SYNONYMS'
         context = 'CONTEXT'
+        tf_bins = 'TF_BINS'
         weight = 'WEIGHT'
         prune = 'PRUNE'
         skip_related_to = 'SKIP_RELATED_TO'

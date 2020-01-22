@@ -20,11 +20,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IntSummaryStatistics;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.zip.GZIPInputStream;
@@ -43,6 +43,8 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.math3.analysis.function.Sigmoid;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.io.IoCore;
@@ -60,6 +62,7 @@ import armyant.hgoe.edges.Edge;
 import armyant.hgoe.edges.RelatedToEdge;
 import armyant.hgoe.edges.SentenceEdge;
 import armyant.hgoe.edges.SynonymEdge;
+import armyant.hgoe.edges.TFBinEdge;
 import armyant.hgoe.exceptions.HypergraphException;
 import armyant.hgoe.nodes.EntityNode;
 import armyant.hgoe.nodes.Node;
@@ -71,6 +74,7 @@ import armyant.structures.ResultSet;
 import armyant.structures.Trace;
 import armyant.structures.Triple;
 import armyant.structures.yaml.PruneConfig;
+import armyant.structures.yaml.TFBinsConfig;
 import armyant.util.ClusteringCoefficientAccumulator;
 import edu.mit.jwi.IRAMDictionary;
 import edu.mit.jwi.RAMDictionary;
@@ -127,6 +131,7 @@ public class HypergraphOfEntity extends Engine {
     private List<Feature> features;
     private String featuresPath;
     private EntityIndexingStrategy entityIndexingStrategy;
+    private int tfBins;
     private File directory;
     private InMemoryGrph graph;
     private NumericalProperty nodeWeights;
@@ -173,6 +178,17 @@ public class HypergraphOfEntity extends Engine {
         } else {
             // Default here
             this.entityIndexingStrategy = EntityIndexingStrategy.GROUP_BY_SUBJECT;
+        }
+
+        if (this.features.contains(Feature.TF_BINS)) {
+            File config = Paths.get(featuresPath, "tf_bins.yml").toFile();
+            try {
+                tfBins = TFBinsConfig.load(config).getBins();
+                logger.info("Using {} TF-bins per document", tfBins);
+            } catch (IOException e) {
+                tfBins = 2;
+                logger.warn("Using default of {} TF-bins per document", tfBins);
+            }
         }
 
         this.directory = new File(path);
@@ -317,17 +333,6 @@ public class HypergraphOfEntity extends Engine {
             }
 
             addNodesToUndirectedHyperEdge(documentEdgeID, targetTermNodeIDs);
-        } else if (features.contains(Feature.TF_BINS)) {
-            List<String> tokens = analyze(document.getText());
-            if (tokens.isEmpty()) return;
-
-            // TODO Apache Commons Frequency
-            Map<String, Long> tf = tokens.stream()
-                .collect(Collectors.groupingBy(
-                    Function.identity(),
-                    Collectors.counting()));
-
-
         } else {
             List<String> tokens = analyze(document.getText());
             if (tokens.isEmpty()) return;
@@ -337,6 +342,43 @@ public class HypergraphOfEntity extends Engine {
                 return getOrCreateNode(termNode);
             }).collect(Collectors.toSet());
             addNodesToUndirectedHyperEdge(documentEdgeID, targetTermNodeIDs);
+
+            if (features.contains(Feature.TF_BINS)) {
+                Map<Integer, Long> tf = tokens.stream().collect(Collectors.groupingBy(token -> {
+                    TermNode termNode = new TermNode(token);
+                    return getOrCreateNode(termNode);
+                }, Collectors.counting()));
+
+                Map<Integer, Long> sortedTF = tf.entrySet().stream().sorted(Map.Entry.comparingByValue())
+                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
+                                (oldValue, newValue) -> oldValue, LinkedHashMap::new));
+
+                double[] data = sortedTF.values().stream().mapToDouble(Long::doubleValue).toArray();
+                DescriptiveStatistics ds = new DescriptiveStatistics(data);
+
+                double left = Double.MIN_VALUE;
+                double right = 0;
+                for (int i = 1; i <= this.tfBins; i++) {
+                    TFBinEdge tfBinEdge = new TFBinEdge();
+                    int tfBinEdgeID = getOrCreateUndirectedEdge(tfBinEdge);
+                    double percentile = 100d / this.tfBins * i;
+                    float weight = (float) i / this.tfBins;
+
+                    left = right;
+                    right = ds.getPercentile(percentile);
+
+                    // logger.info("percentile: {} | weight: {} | Interval: ({}, {}]", percentile, weight, left, right);
+
+                    final double fLeft = left;
+                    final double fRight = right;
+                    Set<Integer> currentBinTermNodeIDs = sortedTF.entrySet().stream()
+                            .filter(e -> e.getValue() > fLeft && e.getValue() <= fRight).map(Map.Entry::getKey)
+                            .collect(Collectors.toSet());
+
+                    addNodesToUndirectedHyperEdge(tfBinEdgeID, currentBinTermNodeIDs);
+                    edgeWeights.setValue(tfBinEdgeID, weight);
+                }
+            }
         }
 
         numDocs++;
