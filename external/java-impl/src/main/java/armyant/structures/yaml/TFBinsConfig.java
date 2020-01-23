@@ -11,7 +11,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
  * Created by jldevezas on 2018-04-05.
  */
 public class TFBinsConfig {
-    private Integer bins;
+    private int bins;
 
     public static TFBinsConfig load(String path) throws IOException {
         return load(new File(path));

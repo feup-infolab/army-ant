@@ -6,8 +6,8 @@ import org.testng.annotations.Test;
  * Created by José Devezas
  * 2019-05-31
  */
-@Test
 public class ClusteringCoefficientAccumulatorTest {
+    @Test
     public void testAddClusteringCoefficient() {
         ClusteringCoefficientAccumulator accumulator = new ClusteringCoefficientAccumulator(1/3f);
         accumulator = accumulator.addClusteringCoefficient(new ClusteringCoefficientAccumulator(1/3f));

@@ -9,7 +9,6 @@ import org.testng.annotations.Test;
 /**
  * Created by jldevezas on 2018-04-05.
  */
-@Test
 public class EngineTest {
     private static final int RANDOM_ITERATIONS = 50_000_000;
     private static final Int2FloatOpenHashMap valuesProbs = new Int2FloatOpenHashMap();
@@ -24,6 +23,7 @@ public class EngineTest {
         valuesProbs.put(6, 0.5f);
     }
 
+    @Test
     public void testSampleNonUniformlyAtRandom() {
         Int2IntOpenHashMap count = new Int2IntOpenHashMap();
         long start = System.currentTimeMillis();
@@ -42,6 +42,7 @@ public class EngineTest {
                 "Took %,dms to sample %,d random elements non-uniformly at random", end - start, RANDOM_ITERATIONS));
     }
 
+    @Test
     public void testSampleUniformlyAtRandom() {
         Int2IntOpenHashMap count = new Int2IntOpenHashMap();
         long start = System.currentTimeMillis();

@@ -10,8 +10,8 @@ import java.io.IOException;
 /**
  * Created by jldevezas on 2018-04-05.
  */
-@Test
 public class PruneConfigTest {
+    @Test
     public void loadTest() throws IOException {
         PruneConfig pruneConfig = PruneConfig.load("/opt/army-ant/features/inex_2009_3t_nl/prune.yml");
 

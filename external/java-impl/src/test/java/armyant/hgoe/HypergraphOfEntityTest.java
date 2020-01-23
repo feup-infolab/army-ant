@@ -20,6 +20,8 @@ import grph.path.ArrayListPath;
 import grph.path.Path;
 import grph.properties.NumericalProperty;
 import it.unimi.dsi.fastutil.ints.IntSet;
+
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.testng.annotations.Test;
 
 import java.io.File;
@@ -29,7 +31,6 @@ import java.util.*;
 /**
  * Created by jldevezas on 2017-11-29.
  */
-@Test
 public class HypergraphOfEntityTest {
     public static final Document document1 = new Document(
         "D1",
@@ -94,6 +95,7 @@ public class HypergraphOfEntityTest {
     );
     private static String dbPath = "/tmp/hgoe-inmemory";
 
+    @Test
     public void testIndex() throws Exception {
         HypergraphOfEntity hgoe = new HypergraphOfEntity(
                 dbPath, new ArrayList<>(), null, true);
@@ -104,6 +106,7 @@ public class HypergraphOfEntityTest {
         hgoe.save();
     }
 
+    @Test
     public void testSearch() throws IOException, HypergraphException {
         HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
 
@@ -120,6 +123,7 @@ public class HypergraphOfEntityTest {
         }
     }
 
+    @Test
     public void testTrace() throws IOException, HypergraphException {
         HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
 
@@ -134,6 +138,7 @@ public class HypergraphOfEntityTest {
         resultSet.getTrace().toASCII();
     }
 
+    @Test
     public void testContainsNode() throws HypergraphException {
         HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
         String[] terms = {"ca", "calif.", "drug"};
@@ -143,6 +148,7 @@ public class HypergraphOfEntityTest {
 
     }
 
+    @Test
     public void testAtomInstanceOf() {
         Edge edge = new DocumentEdge();
         Atom atom = edge;
@@ -157,6 +163,7 @@ public class HypergraphOfEntityTest {
      */
 
     // How does a Path work in Grph?
+    @Test
     public void testPath() {
         Path path = new ArrayListPath();
         path.setSource(10);
@@ -170,6 +177,7 @@ public class HypergraphOfEntityTest {
         System.out.println("Edge leading to vertex 20: " + path.getEdgeHeadingToVertexAt(path.indexOfVertex(20)));
     }
 
+    @Test
     public void testWordNet() throws IOException {
         String[] terms = {"terms", "results", "system", "web", "meaning", "searcher", "understanding"};
 
@@ -198,6 +206,7 @@ public class HypergraphOfEntityTest {
 
     // Can Grph support a hypergraph with both directed and undirected hyperedges?
     // How does traversal work in mixed hypergraphs? Difference between incident to, in and out edges.
+    @Test
     public void testMixedEdgeHypergraph() {
         Grph g = new InMemoryGrph();
 
@@ -322,26 +331,31 @@ public class HypergraphOfEntityTest {
          */
     }
 
+    @Test
     public void testExportStats() throws HypergraphException, IOException {
         HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
         hgoe.export("export-stats", "/tmp/hgoe-stats");
     }
 
+    @Test
     public void testExportRandomHypergraphStats() throws HypergraphException, IOException {
         HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
         hgoe.export("export-random-hypergraph-stats", "/tmp/hgoe-stats");
     }
 
+    @Test
     public void testExportNodeDegree() throws HypergraphException, IOException {
         HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
         hgoe.export("export-node-degree", "/tmp/hgoe-stats");
     }
 
+    @Test
     public void testExportEdgeCardinality() throws HypergraphException, IOException {
         HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
         hgoe.export("export-edge-cardinality", "/tmp/hgoe-stats");
     }
 
+    @Test
     public void testExportSpaceUsage() throws HypergraphException, IOException {
         HypergraphOfEntity hgoe = new HypergraphOfEntity(dbPath);
         hgoe.export("export-space-usage", "/tmp/hgoe-stats");

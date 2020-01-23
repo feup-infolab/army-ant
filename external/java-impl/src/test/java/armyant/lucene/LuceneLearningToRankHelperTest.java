@@ -9,7 +9,6 @@ import org.testng.annotations.Test;
 import armyant.structures.Result;
 import armyant.structures.ResultSet;
 
-@Test
 public class LuceneLearningToRankHelperTest {
     private LuceneLearningToRankHelper ltrHelper;
 
@@ -18,10 +17,12 @@ public class LuceneLearningToRankHelperTest {
         ltrHelper = new LuceneLearningToRankHelper("/tmp/tfr_index/lucene");
     }
 
+    @Test
     public void testComputeDocumentFeatures() throws Exception {
         ltrHelper.computeDocumentFeatures();
     }
 
+    @Test
     public void testComputeQueryDocumentFeatures() throws Exception {
         String query = "great rock music";
 

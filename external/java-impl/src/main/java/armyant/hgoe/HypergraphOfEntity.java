@@ -43,6 +43,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.math3.analysis.function.Sigmoid;
+import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 import org.apache.tinkerpop.gremlin.structure.Direction;
@@ -124,6 +125,8 @@ public class HypergraphOfEntity extends Engine {
     private static final float DEFAULT_DAMPING_FACTOR = 0.85f;
     private static final int DEFAULT_MAX_ITERATIONS = 10000;
 
+    private static final int DEFAULT_TF_BINS = 2;
+
     private static final float PROBABILITY_THRESHOLD = 0.005f;
 
     private static final String CONTEXT_FEATURES_FILENAME = "word2vec_simnet.graphml.gz";
@@ -186,7 +189,7 @@ public class HypergraphOfEntity extends Engine {
                 tfBins = TFBinsConfig.load(config).getBins();
                 logger.info("Using {} TF-bins per document", tfBins);
             } catch (IOException e) {
-                tfBins = 2;
+                tfBins = DEFAULT_TF_BINS;
                 logger.warn("Using default of {} TF-bins per document", tfBins);
             }
         }
@@ -349,33 +352,38 @@ public class HypergraphOfEntity extends Engine {
                     return getOrCreateNode(termNode);
                 }, Collectors.counting()));
 
-                Map<Integer, Long> sortedTF = tf.entrySet().stream().sorted(Map.Entry.comparingByValue())
+                /*Map<Integer, Long> sortedTF = tf.entrySet().stream().sorted(Map.Entry.comparingByValue())
                         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
-                                (oldValue, newValue) -> oldValue, LinkedHashMap::new));
+                                (oldValue, newValue) -> oldValue, LinkedHashMap::new));*/
 
-                double[] data = sortedTF.values().stream().mapToDouble(Long::doubleValue).toArray();
-                DescriptiveStatistics ds = new DescriptiveStatistics(data);
+                double[] data = tf.values().stream().mapToDouble(Long::doubleValue).toArray();
 
                 double left = Double.MIN_VALUE;
                 double right = 0;
                 for (int i = 1; i <= this.tfBins; i++) {
-                    TFBinEdge tfBinEdge = new TFBinEdge();
-                    int tfBinEdgeID = getOrCreateUndirectedEdge(tfBinEdge);
                     double percentile = 100d / this.tfBins * i;
                     float weight = (float) i / this.tfBins;
 
                     left = right;
-                    right = ds.getPercentile(percentile);
-
-                    // logger.info("percentile: {} | weight: {} | Interval: ({}, {}]", percentile, weight, left, right);
+                    right = StatUtils.percentile(data, percentile);
 
                     final double fLeft = left;
                     final double fRight = right;
-                    Set<Integer> currentBinTermNodeIDs = sortedTF.entrySet().stream()
+                    Set<Integer> currentBinTermNodeIDs = tf.entrySet().stream()
                             .filter(e -> e.getValue() > fLeft && e.getValue() <= fRight).map(Map.Entry::getKey)
                             .collect(Collectors.toSet());
 
+
+                    // System.out.println("Percentile: " + percentile + ", weight: " + weight + ", Interval: (" + left
+                    //         + ", " + right + "]");
+
+                    if (currentBinTermNodeIDs.isEmpty()) continue;
+
+                    TFBinEdge tfBinEdge = new TFBinEdge();
+                    int tfBinEdgeID = getOrCreateUndirectedEdge(tfBinEdge);
                     addNodesToUndirectedHyperEdge(tfBinEdgeID, currentBinTermNodeIDs);
+                    // System.out.println("Doc: " + documentEdgeID + ", TFbin: " + tfBinEdgeID + ", Count: "
+                    //         + currentBinTermNodeIDs.size());
                     edgeWeights.setValue(tfBinEdgeID, weight);
                 }
             }

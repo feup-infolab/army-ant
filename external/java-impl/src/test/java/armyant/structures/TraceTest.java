@@ -6,7 +6,6 @@ import org.testng.annotations.Test;
 /**
  * Created by jldevezas on 2017-11-30.
  */
-@Test
 public class TraceTest {
     public static Trace trace = new Trace("root");
 
@@ -20,10 +19,12 @@ public class TraceTest {
         trace.add("level1.2");
     }
 
+    @Test
     public void testToASCII() {
         System.out.println(trace.toASCII());
     }
 
+    @Test
     public void testToJSON() {
         System.out.println(trace.toJSON());
     }

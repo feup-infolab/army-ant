@@ -20,7 +20,6 @@ import org.apache.lucene.search.similarities.BM25Similarity;
 import org.apache.lucene.store.FSDirectory;
 import org.testng.annotations.Test;
 
-@Test
 public class LuceneFeaturesHelperTest {
     public void testWriteFeatureFields() throws Exception {
         IndexWriterConfig writerConfig = new IndexWriterConfig(new StandardAnalyzer());
@@ -40,6 +39,7 @@ public class LuceneFeaturesHelperTest {
         writer.close();
     }
 
+    @Test
     public void testReadFeatureFields() throws Exception {
         IndexReader reader = DirectoryReader.open(FSDirectory.open(Paths.get("/tmp/lucene-index")));
         System.out.println(reader.totalTermFreq(new Term("features", "indegree")));
@@ -58,29 +58,27 @@ public class LuceneFeaturesHelperTest {
         return (float) Math.pow((score / w * Math.pow(k, a)) / (1 - score / w), 1 / a);
     }
 
+    @Test
     public void testRankByFeatureFields() throws Exception {
-    IndexReader reader = DirectoryReader.open(FSDirectory.open(Paths.get("/tmp/lucene-index")));
+        IndexReader reader = DirectoryReader.open(FSDirectory.open(Paths.get("/tmp/lucene-index")));
 
-    IndexSearcher searcher = new IndexSearcher(reader);
-    searcher.setSimilarity(new BM25Similarity(1.2f, 0.75f));
+        IndexSearcher searcher = new IndexSearcher(reader);
+        searcher.setSimilarity(new BM25Similarity(1.2f, 0.75f));
 
-    float w = 1.8f;
-    float k = 1f;
-    float a = 0.6f;
+        float w = 1.8f;
+        float k = 1f;
+        float a = 0.6f;
 
-    Query query = FeatureField.newSigmoidQuery("features", "indegree", w, k, a);
-    TopDocs hits = searcher.search(query, 5);
+        Query query = FeatureField.newSigmoidQuery("features", "indegree", w, k, a);
+        TopDocs hits = searcher.search(query, 5);
 
-    for (int i = 0; i < hits.scoreDocs.length; i++) {
-        Document doc = searcher.doc(hits.scoreDocs[i].doc);
-        float featureValue = (float) Math.pow(
-            (hits.scoreDocs[i].score / w * Math.pow(k, a))
-            / (1 - hits.scoreDocs[i].score / w),
-            1 / a
-        );
-        System.out.println(featureValue + "\t" + StringUtils.abbreviate(doc.get("title"), "...", 80));
-    }
+        for (int i = 0; i < hits.scoreDocs.length; i++) {
+            Document doc = searcher.doc(hits.scoreDocs[i].doc);
+            float featureValue = (float) Math
+                    .pow((hits.scoreDocs[i].score / w * Math.pow(k, a)) / (1 - hits.scoreDocs[i].score / w), 1 / a);
+            System.out.println(featureValue + "\t" + StringUtils.abbreviate(doc.get("title"), "...", 80));
+        }
 
-    reader.close();
+        reader.close();
     }
 }
