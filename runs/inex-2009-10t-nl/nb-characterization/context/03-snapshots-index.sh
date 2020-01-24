@@ -8,4 +8,4 @@ index_type="hgoe:context"
 snapshots_num_docs="1 2 3 4 5 10 25 50 100 1000 2000 3000 5000 8000"
 extra_args='--features-location "/opt/army-ant/features/inex_2009_52t_nl"'
 
-snapshots_index $source_path $index_path $index_type "$snapshots_num_docs" $extra_args
+snapshots_index $source_path $index_path $index_type "$snapshots_num_docs" "$extra_args"
