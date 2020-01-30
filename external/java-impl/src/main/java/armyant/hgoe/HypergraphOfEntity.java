@@ -1975,6 +1975,40 @@ public class HypergraphOfEntity extends Engine {
         return g;
     }
 
+    public void exportWordNetNounSynsDistr(String workdir) throws IOException {
+        String now = isoDateFormat.format(new Date());
+
+        Path path = Paths.get(workdir, String.format("wordnet-noun-syns-distr-%s.csv", now));
+        logger.info("Saving WordNet noun synonyms distribution to {}", path);
+        try (BufferedWriter writer = Files.newBufferedWriter(path);
+                CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("Word", "SynsCount"))) {
+            IRAMDictionary dict = null;
+            try {
+                dict = new RAMDictionary(new File("/usr/share/wordnet"), ILoadPolicy.NO_LOAD);
+                dict.open();
+
+                Iterator<IIndexWord> it=dict.getIndexWordIterator(POS.NOUN);
+
+                while (it.hasNext()) {
+                    IIndexWord idxWord = it.next();
+                    List<IWordID> senses = idxWord.getWordIDs();
+                    IWordID wordID = senses.get(0);
+                    IWord word = dict.getWord(wordID);
+                    ISynset synset = word.getSynset();
+
+                    csvPrinter.printRecord(word.getLemma(), synset.getWords().size());
+                }
+                csvPrinter.flush();
+            } catch (IOException e) {
+                logger.error(e.getMessage(), e);
+            } finally {
+                if (dict != null) {
+                    dict.close();
+                }
+            }
+        }
+    }
+
     public void exportNodeWeights(String workdir) throws IOException {
         String now = isoDateFormat.format(new Date());
 
@@ -2368,6 +2402,9 @@ public class HypergraphOfEntity extends Engine {
             exportSpaceUsage(workdir);
         } else if (feature.equals("export-random-hypergraph-stats")) {
             exportRandomHypergraphStats(workdir);
+        } else if (feature.equals("export-wordnet-noun-syns-distr")) {
+            // TODO This should move into another place (maybe Engine), since it doesn't depend on the index.
+            exportWordNetNounSynsDistr(workdir);
         } else {
             logger.error("Invalid feature {}", feature);
         }
