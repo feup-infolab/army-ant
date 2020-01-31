@@ -2420,6 +2420,8 @@ public class HypergraphOfEntity extends Engine {
             trace = getSummaryByUndirectedEdgeType(TermNode.class, SynonymEdge.class);
         } else if (feature.equals("context-summary")) {
             trace = getSummaryByUndirectedEdgeType(TermNode.class, ContextEdge.class);
+        } else if (feature.equals("tfbin-summary")) {
+            trace = getSummaryByUndirectedEdgeType(TermNode.class, TFBinEdge.class);
         } else if (feature.equals("list-nodes")) {
             trace = getNodeList();
         } else if (feature.equals("list-hyperedges")) {
