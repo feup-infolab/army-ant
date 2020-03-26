@@ -77,6 +77,7 @@ import armyant.structures.Triple;
 import armyant.structures.yaml.PruneConfig;
 import armyant.structures.yaml.TFBinsConfig;
 import armyant.util.ClusteringCoefficientAccumulator;
+import armyant.util.DecompressibleInputStream;
 import edu.mit.jwi.IRAMDictionary;
 import edu.mit.jwi.RAMDictionary;
 import edu.mit.jwi.data.ILoadPolicy;
@@ -904,7 +905,7 @@ public class HypergraphOfEntity extends Engine {
 
         File nodeIndexFile = new File(directory, "node.idx");
         try {
-            ObjectInputStream input = new ObjectInputStream(new FileInputStream(nodeIndexFile));
+            ObjectInputStream input = new DecompressibleInputStream(new FileInputStream(nodeIndexFile));
             this.nodeIndex = (BidiMap) input.readObject();
             input.close();
         } catch (ClassNotFoundException | IOException e) {
@@ -914,7 +915,7 @@ public class HypergraphOfEntity extends Engine {
 
         File edgeIndexFile = new File(directory, "edge.idx");
         try {
-            ObjectInputStream input = new ObjectInputStream(new FileInputStream(edgeIndexFile));
+            ObjectInputStream input = new DecompressibleInputStream(new FileInputStream(edgeIndexFile));
             this.edgeIndex = (BidiMap) input.readObject();
             input.close();
         } catch (ClassNotFoundException | IOException e) {
@@ -924,7 +925,7 @@ public class HypergraphOfEntity extends Engine {
 
         File reachabilityIndexFile = new File(directory, "reachability.idx");
         try {
-            ObjectInputStream input = new ObjectInputStream(new FileInputStream(reachabilityIndexFile));
+            ObjectInputStream input = new DecompressibleInputStream(new FileInputStream(reachabilityIndexFile));
             this.reachabilityIndex = (Map) input.readObject();
             input.close();
         } catch (ClassNotFoundException | IOException e) {
@@ -934,7 +935,7 @@ public class HypergraphOfEntity extends Engine {
 
         File nodeWeightsFile = new File(directory, "node_weights.prp");
         try {
-            ObjectInputStream input = new ObjectInputStream(new FileInputStream(nodeWeightsFile));
+            ObjectInputStream input = new DecompressibleInputStream(new FileInputStream(nodeWeightsFile));
             this.nodeWeights = (NumericalProperty) input.readObject();
             input.close();
         } catch (ClassNotFoundException | IOException e) {
@@ -944,7 +945,7 @@ public class HypergraphOfEntity extends Engine {
 
         File edgeWeightsFile = new File(directory, "edge_weights.prp");
         try {
-            ObjectInputStream input = new ObjectInputStream(new FileInputStream(edgeWeightsFile));
+            ObjectInputStream input = new DecompressibleInputStream(new FileInputStream(edgeWeightsFile));
             this.edgeWeights = (NumericalProperty) input.readObject();
             input.close();
         } catch (ClassNotFoundException | IOException e) {
@@ -954,7 +955,7 @@ public class HypergraphOfEntity extends Engine {
 
         File hypergraphFile = new File(directory, "hypergraph.graph");
         try {
-            ObjectInputStream input = new ObjectInputStream(new FileInputStream(hypergraphFile));
+            ObjectInputStream input = new DecompressibleInputStream(new FileInputStream(hypergraphFile));
             this.graph = (InMemoryGrph) input.readObject();
             this.graph.initAlgorithms();
             input.close();
