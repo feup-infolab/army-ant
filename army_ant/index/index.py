@@ -98,7 +98,7 @@ class Index(object):
         elif index_type.startswith('lucene_entities'):
             return idx.LuceneEntitiesEngine(None, index_location, index_features, loop)
         elif index_type.startswith('lucene'):
-            return idx.LuceneEntitiesEngine(None, index_location, index_features, loop)
+            return idx.LuceneEngine(None, index_location, index_features, loop)
         elif index_type.startswith('tfr'):
             return idx.TensorFlowRanking(None, index_location, index_features, loop)
         else:
