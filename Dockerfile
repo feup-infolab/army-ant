@@ -25,6 +25,7 @@ COPY package-lock.json .
 RUN npm install && npm cache clean --force
 
 # Install Python
+# FIXME Replace by miniconda and environment creation (will have dependencies)
 ENV PYENV_ROOT $HOME/.pyenv
 ENV PATH $PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH
 RUN git clone git://github.com/yyuu/pyenv.git $HOME/.pyenv
@@ -34,6 +35,7 @@ RUN pyenv rehash
 RUN pyenv global $(cat .python-version)
 
 # Install TensorFlow Ranking
+# FIXME Delete this block, if using Conda instead.
 RUN curl -L https://github.com/bazelbuild/bazel/releases/download/0.18.1/bazel_0.18.1-linux-x86_64.deb \
     --output /tmp/bazel_0.18.1-linux-x86_64.deb
 RUN dpkg -i --force-depends /tmp/bazel_0.18.1-linux-x86_64.deb
@@ -47,6 +49,7 @@ RUN pip install /tmp/ranking_pip/tensorflow_ranking*.whl
 RUN rm -rf /tmp/bazel* /tmp/ranking*
 
 # Install Python dependencies
+# FIXME Delete this block, if using Conda instead.
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
