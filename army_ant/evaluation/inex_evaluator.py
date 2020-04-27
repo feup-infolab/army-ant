@@ -59,9 +59,23 @@ class INEXEvaluator(FilesystemEvaluator):
 
             return valid_ids
 
+    def get_valid_categories_per_id(self):
+        if self.task.valid_categories_per_id_path and os.path.exists(self.task.valid_categories_per_id_path):
+            logger.info("Loading valid categories per ID to filter results")
+            valid_categories_per_id = {}
+
+            with open(self.task.id_categories_path, 'r') as csv_f:
+                csv_r = csv.DictReader(csv_f)
+                for row in csv_r:
+                    valid_categories_per_id[row['id']] = \
+                        row['categories'].split(',') if row['categories'].strip() else []
+
+            return valid_categories_per_id
+
     async def get_topic_results(self, ranking_params=None, topic_filter=None):
         topic_doc_judgements = self.get_topic_assessments()
         valid_ids = self.get_valid_ids()
+        valid_categories_per_id = self.get_valid_categories_per_id()
 
         topics = etree.parse(self.task.topics_path)
 
@@ -96,13 +110,13 @@ class INEXEvaluator(FilesystemEvaluator):
                 logger.warning("Skipping topic '%s'" % topic_id)
                 continue
 
-            query = get_first(topic.xpath('title/text()'))
-            if self.retrieval_task == Index.RetrievalTask.entity_retrieval:
-                if self.query_type == Index.QueryType.entity:
-                    query = '||'.join(topic.xpath('entities/entity/text()'))
-                else:
-                    categories = topic.xpath('categories/category/text()')
-                    query += ' %s' % ' '.join(categories)
+            if self.retrieval_task == Index.RetrievalTask.entity_retrieval \
+                and self.query_type == Index.QueryType.entity:
+                # Related Entity Finding / Entity List Completion
+                query = '||'.join(topic.xpath('entities/entity/text()'))
+            else:
+                # Document Retrieval / Entity Retrieval
+                query = get_first(topic.xpath('title/text()'))
 
             logger.info("Obtaining results for query '%s' of topic '%s' using '%s' index at '%s'" % (
                 query, topic_id, self.task.index_type, self.task.index_location))
@@ -115,9 +129,21 @@ class INEXEvaluator(FilesystemEvaluator):
             self.stats[params_id]['query_time'][topic_id] = end_time
 
             results = engine_response['results']
+
+            # Filtering by valid IDs (e.g., for some entities that are not explicitly a part of the collection)
             if valid_ids:
-                logger.info("Filtering results (only %d IDs are valid)" % (len(valid_ids)))
+                logger.info("Filtering results with valid IDs (only %d IDs are valid)" % len(valid_ids))
                 results = [result for result in results if result['id'] in valid_ids]
+
+            # Filtering by categories (only considers results with a category matching the query category)
+            if valid_categories_per_id:
+                logger.info("Filtering results by category (based on a dictionary for %d documents)"
+                            % len(valid_categories_per_id))
+
+                categories = set(topic.xpath('categories/category/text()'))
+                results = [
+                    result for result in results
+                    if len(categories.intersection(valid_categories_per_id.get(result['id'], []))) > 0]
 
             with open(os.path.join(o_results_path, '%s.csv' % topic_id), 'w', newline='') as f:
                 writer = csv.writer(f)

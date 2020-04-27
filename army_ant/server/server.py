@@ -334,6 +334,16 @@ async def evaluation_post(request):
         valid_ids_filename = None
         valid_ids_path = None
 
+    if len(data['valid_categories_per_id']) > 0:
+        with tempfile.NamedTemporaryFile(dir=os.path.join(request.app['defaults']['eval']['location'], 'spool'),
+                                         prefix='valid_categories_per_id_', delete=False) as fp:
+            fp.write(data['valid_categories_per_id'].file.read())
+            valid_categories_per_id_filename = data['valid_categories_per_id'].filename
+            valid_categories_per_id_path = fp.name
+    else:
+        valid_categories_per_id_filename = None
+        valid_categories_per_id_path = None
+
     manager = EvaluationTaskManager(
         request.app['defaults']['db']['location'],
         request.app['defaults']['db']['name'],
@@ -372,6 +382,8 @@ async def evaluation_post(request):
         assessments_path=assessments_path,
         valid_ids_filename=valid_ids_filename,
         valid_ids_path=valid_ids_path,
+        valid_categories_per_id_filename=valid_categories_per_id_filename,
+        valid_categories_per_id_path=valid_categories_per_id_path,
         base_url=data['base-url'] if data['base-url'].strip() != '' else None,
         api_key=data['api-key'] if data['api-key'].strip() != '' else None,
         run_id=data['run-id']))

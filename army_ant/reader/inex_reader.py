@@ -161,6 +161,7 @@ class INEXReader(Reader):
 
             page_id = inex.xlink_to_page_id(get_first(article.xpath('//header/id/text()')))
             title = get_first(article.xpath('//header/title/text()'))
+            categories = article.xpath('//header/categories/category/text()')
 
             bdy = get_first(article.xpath('//bdy'))
             if bdy is None:
@@ -177,7 +178,7 @@ class INEXReader(Reader):
                 links=links,
                 entities=entities,
                 triples=triples,
-                metadata={'url': url, 'name': title})
+                metadata={'url': url, 'name': title, 'categories': categories})
 
         self.tar.close()
         if type(self.title_index) is shelve.DbfilenameShelf:

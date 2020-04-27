@@ -1336,6 +1336,7 @@ public class HypergraphOfEntity extends Engine {
 
         trace.goUp();
 
+        // Note: actually collecting is done in the previous block of code.
         trace.add("Collecting results (task=%s)", task);
         trace.goDown();
 

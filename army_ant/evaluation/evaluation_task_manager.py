@@ -48,8 +48,9 @@ class EvaluationTask(object):
     def __init__(self, index_location, index_type, eval_format, query_type=None, base_index_location=None,
                  base_index_type=None, ranking_function=None, ranking_params=None, topics_filename=None,
                  topics_path=None, assessments_filename=None, assessments_path=None, valid_ids_filename=None,
-                 valid_ids_path=None, base_url=None, api_key=None, run_id=None, status=EvaluationTaskStatus.WAITING,
-                 topics_md5=None, assessments_md5=None, time=None, _id=None, results=None, stats=None):
+                 valid_ids_path=None, valid_categories_per_id_filename=None, valid_categories_per_id_path=None,
+                 base_url=None, api_key=None, run_id=None, status=EvaluationTaskStatus.WAITING, topics_md5=None,
+                 assessments_md5=None, time=None, _id=None, results=None, stats=None):
         self.index_location = index_location
         self.index_type = index_type
         self.eval_format = eval_format
@@ -66,6 +67,8 @@ class EvaluationTask(object):
         self.assessments_md5 = assessments_md5 or (md5(assessments_path) if assessments_path else None)
         self.valid_ids_filename = valid_ids_filename
         self.valid_ids_path = valid_ids_path
+        self.valid_categories_per_id_filename = valid_categories_per_id_filename
+        self.valid_categories_per_id_path = valid_categories_per_id_path
         self.base_url = base_url
         self.api_key = api_key
         self.run_id = run_id
