@@ -4,4 +4,5 @@ Some of the features, like pruning on the hypergraph-of-entity (i.e., `--index-t
 
 Available examples within this directory include:
 
-* `prune.xml` for `prune` index feature.
+- `prune.xml` for `prune` index feature.
+- `tf_bins.yml` for `tf_bins` index feature.
