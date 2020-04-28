@@ -64,7 +64,7 @@ class INEXEvaluator(FilesystemEvaluator):
             logger.info("Loading valid categories per ID to filter results")
             valid_categories_per_id = {}
 
-            with open(self.task.id_categories_path, 'r') as csv_f:
+            with open(self.task.valid_categories_per_id_path, 'r') as csv_f:
                 csv_r = csv.DictReader(csv_f)
                 for row in csv_r:
                     valid_categories_per_id[row['id']] = \

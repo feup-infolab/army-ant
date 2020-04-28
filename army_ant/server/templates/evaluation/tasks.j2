@@ -195,8 +195,23 @@
 
         {% if task.eval_format == "inex-xer" %}
         <tr>
-          <th>Filter by ID Filename</th>
-          <td>{{ task.valid_ids_filename}}</td>
+          <th>Filter by ID Path</th>
+          <td>
+            <div class="columns">
+              <div class="column">{{ task.valid_ids_path }}</div>
+              <div class="column text-right">{{ task.valid_ids_filename }}</div>
+            </div>
+          </td>
+        </tr>
+
+        <tr>
+          <th>Filter by Category Path</th>
+          <td>
+            <div class="columns">
+              <div class="column">{{ task.valid_categories_per_id_path }}</div>
+              <div class="column text-right">{{ task.valid_categories_per_id_filename }}</div>
+            </div>
+          </td>
         </tr>
         {% endif %}
       </table>
