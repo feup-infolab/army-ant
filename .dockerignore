@@ -1,5 +1,11 @@
+.git/
+.idea/
+.vscode/
+.gitignore
+.gitmodules
+config/
+notebooks/
 output/
 experiments/
 node_modules/
 resources/
-test.py

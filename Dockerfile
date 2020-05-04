@@ -1,15 +1,13 @@
 # I would use Alpine, if I could compile igraph without glibc...
 FROM debian:stretch
 
+SHELL ["/bin/bash", "-c"]
+
 # Build configurations
 ENV host 0.0.0.0
 ENV port 8080
-ENV user army-ant
 
-# Prepare working directory
-RUN useradd -m ${user}
-ENV HOME /home/${user}
-WORKDIR $HOME
+WORKDIR /root/army-ant
 
 # Install system dependencies
 #RUN echo deb http://deb.debian.org/debian/ jessie-backports main >> /etc/apt/sources.list
@@ -24,48 +22,31 @@ COPY package.json .
 COPY package-lock.json .
 RUN npm install && npm cache clean --force
 
-# Install Python
-# FIXME Replace by miniconda and environment creation (will have dependencies)
-ENV PYENV_ROOT $HOME/.pyenv
-ENV PATH $PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH
-RUN git clone git://github.com/yyuu/pyenv.git $HOME/.pyenv
-COPY .python-version .
-RUN pyenv install
-RUN pyenv rehash
-RUN pyenv global $(cat .python-version)
+# Install miniconda
+RUN curl -OL https://repo.anaconda.com/miniconda/Miniconda3-py37_4.8.2-Linux-x86_64.sh
+RUN bash Miniconda3-py37_4.8.2-Linux-x86_64.sh -b
+RUN rm -f Miniconda3-py37_4.8.2-Linux-x86_64.sh
 
-# Install TensorFlow Ranking
-# FIXME Delete this block, if using Conda instead.
-RUN curl -L https://github.com/bazelbuild/bazel/releases/download/0.18.1/bazel_0.18.1-linux-x86_64.deb \
-    --output /tmp/bazel_0.18.1-linux-x86_64.deb
-RUN dpkg -i --force-depends /tmp/bazel_0.18.1-linux-x86_64.deb
-RUN apt-get -y install -f
-RUN git clone https://github.com/tensorflow/ranking.git /tmp/ranking
-RUN cd /tmp/ranking && git checkout 099b17b11e7f699f30bcdea18a4323df7827fde8
-RUN cd /tmp/ranking && bazel build //tensorflow_ranking/tools/pip_package:build_pip_package
-RUN pip install wheel
-RUN cd /tmp/ranking && bazel-bin/tensorflow_ranking/tools/pip_package/build_pip_package /tmp/ranking_pip
-RUN pip install /tmp/ranking_pip/tensorflow_ranking*.whl
-RUN rm -rf /tmp/bazel* /tmp/ranking*
-
-# Install Python dependencies
-# FIXME Delete this block, if using Conda instead.
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install conda environment and dependencies
+COPY environment.yml .
+ENV PATH ~/miniconda3/bin:$PATH
+RUN conda init bash
+RUN conda env create -f environment.yml
 
 # Build java implementation and clean maven dependencies
 COPY external/lib/Grph external/lib/Grph
 RUN cd external/lib/Grph && mvn install
 COPY external/java-impl external/java-impl
 RUN cd external/java-impl && mvn compile assembly:single
-RUN rm -rf $HOME/.m2
+RUN rm -rf ~/.m2
 
 # Copy code, configuration and data
 COPY . .
-RUN rm -rf config
 
 # Start the server
-CMD python -u army-ant.py server --host=${host} --port=${port}
+CMD source ~/.bashrc \
+    && conda activate py36-armyant \
+    && python -u army-ant.py server --host=${host} --port=${port}
 
 # Expose the configured port
 EXPOSE ${port}
