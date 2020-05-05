@@ -181,7 +181,7 @@ public class HypergraphOfEntity extends Engine {
             this.entityIndexingStrategy = EntityIndexingStrategy.GROUP_BY_SUBJECT;
         } else {
             // Default here
-            this.entityIndexingStrategy = EntityIndexingStrategy.DOCUMENT_COOCCURRENCE;
+            this.entityIndexingStrategy = EntityIndexingStrategy.GROUP_BY_SUBJECT;
         }
 
         if (this.features.contains(Feature.TF_BINS)) {

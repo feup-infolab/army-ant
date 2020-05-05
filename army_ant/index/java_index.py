@@ -40,16 +40,16 @@ class JavaIndex(Index):
     logger.info("Starting JVM with %s" % args_message)
 
     if not isJVMStarted():
-        args = [
+        jvm_args = [
             jpype.getDefaultJVMPath(),
             '-Djava.class.path=%s' % CLASSPATH,
         ]
 
         if JVM_ARGS is not None:
-            for other_arg in re.split(r'[ ]+', JVM_ARGS):
-                args.append(other_arg)
+            for jvm_arg in re.split(r'[ ]+', JVM_ARGS):
+                jvm_args.append(jvm_arg)
 
-        startJVM(*args, convertStrings=False, ignoreUnrecognized=True)
+        startJVM(*jvm_args, convertStrings=False, ignoreUnrecognized=False)
 
     signal.signal(signal.SIGINT, handler)
 
