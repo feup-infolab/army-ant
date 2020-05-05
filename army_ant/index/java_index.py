@@ -5,12 +5,13 @@
 # 2018-03-09 (refactor: 2019-03-14)
 
 import logging
+import re
 import signal
 
 import jpype
 import yaml
 import yamlordereddictloader
-from jpype import (JPackage, isJVMStarted, startJVM)
+from jpype import JPackage, isJVMStarted, startJVM
 
 from . import Index
 
@@ -48,7 +49,8 @@ class JavaIndex(Index):
         ]
 
         if OTHER_ARGS is not None:
-            args.append(OTHER_ARGS)
+            for other_arg in re.split(r'[ ]+', OTHER_ARGS):
+                args.append(other_arg)
 
         startJVM(*args, convertStrings=True)
 
