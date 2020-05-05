@@ -29,30 +29,27 @@ class JavaIndex(Index):
 
     config = yaml.load(open('config.yaml'), Loader=yamlordereddictloader.Loader)
     jvm_config = config['defaults'].get('jvm', {})
-    MEMORY_MB = int(jvm_config.get('memory', '5120'))
-    OTHER_ARGS = jvm_config.get('other_args')
+    JVM_ARGS = jvm_config.get('args')
 
-    if OTHER_ARGS and len(OTHER_ARGS) > 0:
-        args_message = 'the following additional arguments: %s' % OTHER_ARGS
+    if JVM_ARGS and len(JVM_ARGS) > 0:
+        args_message = 'the following arguments: %s' % JVM_ARGS
     else:
-        args_message = 'no additional arguments'
-        OTHER_ARGS = None
+        args_message = 'default arguments'
+        JVM_ARGS = None
 
-    logger.info("Starting JVM with %s MB of heap and %s" % (MEMORY_MB, args_message))
+    logger.info("Starting JVM with %s" % args_message)
 
     if not isJVMStarted():
         args = [
             jpype.getDefaultJVMPath(),
             '-Djava.class.path=%s' % CLASSPATH,
-            '-Xms%dm' % MEMORY_MB,
-            '-Xmx%dm' % MEMORY_MB
         ]
 
-        if OTHER_ARGS is not None:
-            for other_arg in re.split(r'[ ]+', OTHER_ARGS):
+        if JVM_ARGS is not None:
+            for other_arg in re.split(r'[ ]+', JVM_ARGS):
                 args.append(other_arg)
 
-        startJVM(*args, convertStrings=True)
+        startJVM(*args, convertStrings=False, ignoreUnrecognized=True)
 
     signal.signal(signal.SIGINT, handler)
 

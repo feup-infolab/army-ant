@@ -129,7 +129,7 @@ class HypergraphOfEntity(JavaIndex):
                     doc.text = textrank(doc.text, ratio=Index.KW_RATIO)
 
                 jDoc = HypergraphOfEntity.JDocument(
-                    JString(doc.doc_id), doc.title, JString(doc.text), java.util.Arrays.asList(triples),
+                    JString(doc.doc_id), JString(doc.title), JString(doc.text), java.util.Arrays.asList(triples),
                     java.util.Arrays.asList(entities))
                 corpus.append(jDoc)
 
