@@ -79,8 +79,8 @@ class LuceneEngine(JavaIndex):
     async def index(self, features_location=None):
         try:
             if LuceneEngine.Feature.keywords in self.index_features:
-                    logger.info("Indexing top %.0f%% keywords per document based on TextRank" %
-                                (LuceneEngine.KW_RATIO * 100))
+                logger.info("Indexing top %.0f%% keywords per document based on TextRank" %
+                            (LuceneEngine.KW_RATIO * 100))
 
             lucene = LuceneEngine.JLuceneEngine(self.index_location)
             lucene.open()
@@ -168,8 +168,8 @@ class LuceneEntitiesEngine(LuceneEngine):
     async def index(self, features_location=None):
         try:
             if LuceneEntitiesEngine.Feature.keywords in self.index_features:
-                    logger.info("Indexing top %.0f%% keywords per document based on TextRank" %
-                                (LuceneEntitiesEngine.KW_RATIO * 100))
+                logger.info("Indexing top %.0f%% keywords per document based on TextRank" %
+                            (LuceneEntitiesEngine.KW_RATIO * 100))
 
             lucene = LuceneEntitiesEngine.JLuceneEntitiesEngine(self.index_location)
             lucene.open()
