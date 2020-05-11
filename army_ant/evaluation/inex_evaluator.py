@@ -82,7 +82,6 @@ class INEXEvaluator(FilesystemEvaluator):
         # Substring match
         for doc_cat in doc_categories:
             for val_cat in valid_categories:
-                print(doc_cat, val_cat)
                 if doc_cat.lower() in val_cat.lower():
                     return True
 
