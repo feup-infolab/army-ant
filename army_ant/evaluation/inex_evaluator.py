@@ -72,13 +72,17 @@ class INEXEvaluator(FilesystemEvaluator):
 
             return valid_categories_per_id
 
-    def is_valid_categories(self, doc_categories, valid_categories):
+    def is_valid_categories(self, doc_categories, valid_categories, match='substring'):
+        assert match in ['exact', 'substring'], "match must be one of 'exact' or 'substring'"
+
         # Exact match
-        # return len(doc_categories.intersection(valid_categories)) > 0
+        if match == 'exact':
+            return len(doc_categories.intersection(valid_categories)) > 0
 
         # Substring match
         for doc_cat in doc_categories:
             for val_cat in valid_categories:
+                print(doc_cat, val_cat)
                 if doc_cat.lower() in val_cat.lower():
                     return True
 
@@ -157,7 +161,8 @@ class INEXEvaluator(FilesystemEvaluator):
                     result for result in results
                     if self.is_valid_categories(
                         categories,
-                        valid_categories_per_id.get(result['id'], []))
+                        valid_categories_per_id.get(result['id'], []),
+                        match='substring')
                 ]
 
             with open(os.path.join(o_results_path, '%s.csv' % topic_id), 'w', newline='') as f:
