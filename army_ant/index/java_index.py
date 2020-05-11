@@ -49,7 +49,7 @@ class JavaIndex(Index):
             for jvm_arg in re.split(r'[ ]+', JVM_ARGS):
                 jvm_args.append(jvm_arg)
 
-        startJVM(*jvm_args, convertStrings=False, ignoreUnrecognized=False)
+        startJVM(*jvm_args, convertStrings=True, ignoreUnrecognized=False)
 
     signal.signal(signal.SIGINT, handler)
 
