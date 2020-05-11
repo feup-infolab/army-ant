@@ -579,7 +579,7 @@ async def error_middleware(request, handler):
 def run_app(loop, host, port, path=None):
     config = yaml.load(open('config.yaml'), Loader=yamlordereddictloader.Loader)
 
-    app = web.Application(client_max_size=50 * 1024 * 1024, middlewares=[error_middleware], loop=loop)
+    app = web.Application(client_max_size=500 * 1024 * 1024, middlewares=[error_middleware], loop=loop)
 
     app['defaults'] = config.get('defaults', {})
 
