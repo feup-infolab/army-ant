@@ -1,0 +1,241 @@
+defaults:
+  db:
+    location: localhost
+    name: army_ant
+    type: mongo
+  eval:
+    metrics:
+      favorite: [GMAP, MAP, NDCG@10, P@10]
+    location: /opt/army-ant/eval
+  service:
+    ner:
+      entity_list: /opt/army-ant/gazetteers/en-all.txt
+  depend:
+    stanford-ner: /opt/stanford-ner-2015-12-09
+  jvm:
+    # -Xmx5120m | -Xmx15360m | -Xmx30720m | -Xmx96256m (30 GB RAM + 64 GB SWAP)
+    args: >-
+      -Xms30720m -Xmx96256m -XX:+AggressiveOpts -XX:ParallelGCThreads=3 -XX:+UseConcMarkSweepGC
+      -XX:+UnlockExperimentalVMOptions -XX:+UseParNewGC -XX:+ExplicitGCInvokesConcurrent -XX:MaxGCPauseMillis=10
+      -XX:GCPauseIntervalMillis=50 -XX:+UseFastAccessorMethods -XX:+OptimizeStringConcat -XX:NewSize=84m
+      -XX:+UseAdaptiveGCBoundary -XX:NewRatio=3 -Dfml.readTimeout=90 -Ddeployment.trace=true -Ddeployment.log=true
+      -Ddeployment.trace.level=all"
+
+engines:
+  lucene-keywords-inex-2009:
+    name: INEX 2009 - Lucene (Keywords 0.05)
+    db:
+      name: aa_inex
+    index:
+      type: lucene:keywords
+      location: /opt/army-ant/indexes/inex-2009/lucene-keywords_5
+    ranking:
+      default:
+        id: tf_idf
+      functions:
+        tf_idf:
+          name: TF-IDF
+        bm25:
+          name: BM25
+          params:
+            k1: [1, 1.2, 1.8]
+            b: [0.5, 0.75, 1]
+        dfr:
+          name: DFR
+          params:
+            BM: [BE, G, P, D, In, Ine, IF]
+            AE: [L, B, Disabled]
+            N: [H1, H2, H3, Z, Disabled]
+
+  lucene-entities-keywords-inex-2009:
+    name: INEX 2009 - Lucene Entities (Keywords 0.05)
+    db:
+      name: aa_inex
+    index:
+      type: lucene_entities:keywords
+      location: /opt/army-ant/indexes/inex-2009/lucene_entities-keywords_5
+    ranking:
+      default:
+        id: tf_idf
+      functions:
+        tf_idf:
+          name: TF-IDF
+        bm25:
+          name: BM25
+          params:
+            k1: [1, 1.2, 1.8]
+            b: [0.5, 0.75, 1]
+        dfr:
+          name: DFR
+          params:
+            BM: [BE, G, P, D, In, Ine, IF]
+            AE: [L, B, Disabled]
+            N: [H1, H2, H3, Z, Disabled]
+
+  hgoe-keywords-inex-2009:
+    name: INEX 2009 - Hypergraph-of-Entity (Keywords 0.05)
+    db:
+      name: aa_inex
+    index:
+      type: hgoe:keywords
+      location: /opt/army-ant/indexes/inex-2009/hgoe-keywords_5
+      preload: false
+    ranking:
+      default:
+        id: random_walk
+        params:
+          l: 2
+          r: 100
+          nf: 0
+          ef: 0
+          d: 0.15
+          n: 100000
+          norm: false
+          expansion: true
+          directed: true
+          weighted: false
+      functions:
+        random_walk:
+          name: Random Walk Score
+          params:
+            l: [1, 2, 3, 4, 5, 6]
+            r: [10, 100, 250, 500, 750, 1000, 2500, 5000, 10000, 25000, 50000, 100000]
+            nf: [0, 10, 100, 500, 1000]
+            ef: [0, 10, 100, 500, 1000]
+            expansion: [true, false]
+            directed: [true, false]
+            weighted: [true, false]
+        hyperrank:
+          name: HyperRank
+          params:
+            d: [0, 0.15, 0.25, 0.5, 0.75, 0.85, 1]
+            n: [1000, 10000, 100000, 1000000]
+            expansion: [true, false]
+            weighted: [true, false]
+            norm: [true, false]
+
+hgoe-keywords-syns-inex-2009:
+    name: INEX 2009 - Hypergraph-of-Entity (Syns; Keywords 0.05)
+    db:
+      name: aa_inex
+    index:
+      type: hgoe:keywords:syns
+      location: /opt/army-ant/indexes/inex-2009/hgoe-keywords_5-syns
+      preload: false
+    ranking:
+      default:
+        id: random_walk
+        params:
+          l: 2
+          r: 100
+          nf: 0
+          ef: 0
+          d: 0.15
+          n: 100000
+          norm: false
+          expansion: true
+          directed: true
+          weighted: false
+      functions:
+        random_walk:
+          name: Random Walk Score
+          params:
+            l: [1, 2, 3, 4, 5, 6]
+            r: [10, 100, 250, 500, 750, 1000, 2500, 5000, 10000, 25000, 50000, 100000]
+            nf: [0, 10, 100, 500, 1000]
+            ef: [0, 10, 100, 500, 1000]
+            expansion: [true, false]
+            directed: [true, false]
+            weighted: [true, false]
+        hyperrank:
+          name: HyperRank
+          params:
+            d: [0, 0.15, 0.25, 0.5, 0.75, 0.85, 1]
+            n: [1000, 10000, 100000, 1000000]
+            expansion: [true, false]
+            weighted: [true, false]
+            norm: [true, false]
+
+hgoe-keywords-context-52t-nl-inex-2009:
+    name: INEX 2009 - Hypergraph-of-Entity (Context 52T-NL; Keywords 0.05)
+    db:
+      name: aa_inex
+    index:
+      type: hgoe:keywords:context
+      location: /opt/army-ant/indexes/inex-2009/hgoe-keywords_5-context_52t_nl
+      preload: false
+    ranking:
+      default:
+        id: random_walk
+        params:
+          l: 2
+          r: 100
+          nf: 0
+          ef: 0
+          d: 0.15
+          n: 100000
+          norm: false
+          expansion: true
+          directed: true
+          weighted: false
+      functions:
+        random_walk:
+          name: Random Walk Score
+          params:
+            l: [1, 2, 3, 4, 5, 6]
+            r: [10, 100, 250, 500, 750, 1000, 2500, 5000, 10000, 25000, 50000, 100000]
+            nf: [0, 10, 100, 500, 1000]
+            ef: [0, 10, 100, 500, 1000]
+            expansion: [true, false]
+            directed: [true, false]
+            weighted: [true, false]
+        hyperrank:
+          name: HyperRank
+          params:
+            d: [0, 0.15, 0.25, 0.5, 0.75, 0.85, 1]
+            n: [1000, 10000, 100000, 1000000]
+            expansion: [true, false]
+            weighted: [true, false]
+            norm: [true, false]
+
+hgoe-keywords-tf-bins-inex-2009:
+    name: INEX 2009 - Hypergraph-of-Entity (TF-bins 2; Keywords 0.05)
+    db:
+      name: aa_inex
+    index:
+      type: hgoe:keywords:tf_bins
+      location: /opt/army-ant/indexes/inex-2009/hgoe-keywords_5-tf_bins_2
+      preload: false
+    ranking:
+      default:
+        id: random_walk
+        params:
+          l: 2
+          r: 100
+          nf: 0
+          ef: 0
+          d: 0.15
+          n: 100000
+          norm: false
+          expansion: true
+          directed: true
+          weighted: false
+      functions:
+        random_walk:
+          name: Random Walk Score
+          params:
+            l: [1, 2, 3, 4, 5, 6]
+            r: [10, 100, 250, 500, 750, 1000, 2500, 5000, 10000, 25000, 50000, 100000]
+            nf: [0, 10, 100, 500, 1000]
+            ef: [0, 10, 100, 500, 1000]
+            expansion: [true, false]
+            directed: [true, false]
+            weighted: [true, false]
+        hyperrank:
+          name: HyperRank
+          params:
+            d: [0, 0.15, 0.25, 0.5, 0.75, 0.85, 1]
+            n: [1000, 10000, 100000, 1000000]
+            expansion: [true, false]
+            weighted: [true, false]
+            norm: [true, false]
