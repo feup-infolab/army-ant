@@ -72,6 +72,18 @@ class INEXEvaluator(FilesystemEvaluator):
 
             return valid_categories_per_id
 
+    def is_valid_categories(self, doc_categories, valid_categories):
+        # Exact match
+        # return len(doc_categories.intersection(valid_categories)) > 0
+
+        # Substring match
+        for doc_cat in doc_categories:
+            for val_cat in valid_categories:
+                if doc_cat.lower() in val_cat.lower():
+                    return True
+
+        return False
+
     async def get_topic_results(self, ranking_params=None, topic_filter=None):
         topic_doc_judgements = self.get_topic_assessments()
         valid_ids = self.get_valid_ids()
@@ -111,7 +123,7 @@ class INEXEvaluator(FilesystemEvaluator):
                 continue
 
             if self.retrieval_task == Index.RetrievalTask.entity_retrieval \
-                and self.query_type == Index.QueryType.entity:
+                    and self.query_type == Index.QueryType.entity:
                 # Related Entity Finding / Entity List Completion
                 query = '||'.join(topic.xpath('entities/entity/text()'))
             else:
@@ -137,13 +149,16 @@ class INEXEvaluator(FilesystemEvaluator):
 
             # Filtering by categories (only considers results with a category matching the query category)
             if valid_categories_per_id:
-                logger.info("Filtering results by category (based on a dictionary for %d documents)"
+                logger.info("Filtering results by category (based on a dictionary with %d entries)"
                             % len(valid_categories_per_id))
 
                 categories = set(topic.xpath('categories/category/text()'))
                 results = [
                     result for result in results
-                    if len(categories.intersection(valid_categories_per_id.get(result['id'], []))) > 0]
+                    if self.is_valid_categories(
+                        categories,
+                        valid_categories_per_id.get(result['id'], []))
+                ]
 
             with open(os.path.join(o_results_path, '%s.csv' % topic_id), 'w', newline='') as f:
                 writer = csv.writer(f)
