@@ -7,10 +7,9 @@ import java.io.StringReader;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentHashMap.KeySetView;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang.NotImplementedException;
@@ -45,7 +44,7 @@ public class LuceneEntitiesEngine extends LuceneEngine {
     protected String entityIndexPath;
     protected boolean docIndexExists;
     protected LuceneEngine entityProfileEngine;
-    protected KeySetView<Entity, ?> entitySet;
+    protected Set<Entity> entitySet;
     protected SentenceDetectorME sentenceDetector;
 
     protected long entityCounter = 0;
@@ -64,7 +63,7 @@ public class LuceneEntitiesEngine extends LuceneEngine {
         SentenceModel model = new SentenceModel(modelIn);
         this.sentenceDetector = new SentenceDetectorME(model);
 
-        this.entitySet = ConcurrentHashMap.newKeySet();
+        this.entitySet = new HashSet<>();
 
         this.docIndexPath = Paths.get(path, "docidx").toString();
         this.entityIndexPath = Paths.get(path, "entidx").toString();
