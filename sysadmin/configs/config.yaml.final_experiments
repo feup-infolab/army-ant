@@ -114,7 +114,7 @@ engines:
             weighted: [true, false]
             norm: [true, false]
 
-hgoe-keywords-syns-inex-2009:
+  hgoe-keywords-syns-inex-2009:
     name: INEX 2009 - Hypergraph-of-Entity (Syns; Keywords 0.05)
     db:
       name: aa_inex
@@ -156,7 +156,7 @@ hgoe-keywords-syns-inex-2009:
             weighted: [true, false]
             norm: [true, false]
 
-hgoe-keywords-context-52t-nl-inex-2009:
+  hgoe-keywords-context-52t-nl-inex-2009:
     name: INEX 2009 - Hypergraph-of-Entity (Context 52T-NL; Keywords 0.05)
     db:
       name: aa_inex
@@ -198,7 +198,7 @@ hgoe-keywords-context-52t-nl-inex-2009:
             weighted: [true, false]
             norm: [true, false]
 
-hgoe-keywords-tf-bins-inex-2009:
+  hgoe-keywords-tf-bins-inex-2009:
     name: INEX 2009 - Hypergraph-of-Entity (TF-bins 2; Keywords 0.05)
     db:
       name: aa_inex
