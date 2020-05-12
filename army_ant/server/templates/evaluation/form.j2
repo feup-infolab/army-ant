@@ -47,11 +47,11 @@
       <input class="form-input input-sm" type="file" id="valid_ids" name="valid_ids" value="">
     </div>
 
-    <div class="col-1">
+    <div class="col-1 dynamic-block inex-xer-block">
       <label class="form-label label-sm" for="valid_categories_per_id" title="Filter by categories">
         Filter by cat.</label>
     </div>
-    <div class="column">
+    <div class="column dynamic-block inex-xer-block">
       <input class="form-input input-sm" type="file"
         id="valid_categories_per_id" name="valid_categories_per_id" value="">
     </div>
@@ -91,8 +91,11 @@
   (function() {
     $(document).on('change', '#eval-format', function(e) {
       let evalFormat = $(this).val();
+
       $('.dynamic-block').addClass('d-hide');
+
       $('.' + evalFormat + '-block').removeClass('d-hide');
+
       if (evalFormat === 'll-api') {
         $('#ranking-params select')
           .css('height', null)
@@ -101,6 +104,7 @@
         $('#ranking-params select')
           .css('height', '8em')
           .attr('multiple', 'multiple');
+
         $('#ranking-params option')
           .prop('selected', true)
       }
