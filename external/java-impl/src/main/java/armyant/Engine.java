@@ -25,6 +25,7 @@ import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.LowerCaseFilter;
 import org.apache.lucene.analysis.StopFilter;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.en.PorterStemFilter;
 import org.apache.lucene.analysis.miscellaneous.LengthFilter;
 import org.apache.lucene.analysis.pattern.PatternReplaceFilter;
@@ -179,7 +180,7 @@ public abstract class Engine {
     public static List<String> analyze(String text, boolean useDelexicalization) throws IOException {
         AttributeFactory factory = AttributeFactory.DEFAULT_ATTRIBUTE_FACTORY;
 
-        StandardTokenizer tokenizer = new StandardTokenizer(factory);
+        Tokenizer tokenizer = new StandardTokenizer(factory);
         tokenizer.setReader(new StringReader(text));
 
         String language = languageDetector.detect(text).or(LdLocale.fromString("en")).getLanguage();
