@@ -205,7 +205,7 @@ public class LuceneEntitiesEngine extends LuceneEngine {
         searcher.setSimilarity(LuceneEngine.getSimilarity(rankingFunction, params));
 
         QueryParser parser = new QueryParser("text", analyzer);
-        Query luceneQuery = parser.parse(query);
+        Query luceneQuery = parser.parse(String.join(" ", Engine.analyze(query)));
 
         TopDocs hits = searcher.search(luceneQuery, offset + limit);
 
