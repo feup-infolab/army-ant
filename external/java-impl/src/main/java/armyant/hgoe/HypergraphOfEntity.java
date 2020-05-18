@@ -211,8 +211,8 @@ public class HypergraphOfEntity extends Engine {
         }
 
         this.graph = new InMemoryGrph();
-        this.nodeWeights = new NumericalProperty("weight");
-        this.edgeWeights = new NumericalProperty("weight");
+        this.nodeWeights = new NumericalProperty("weight", 32, Float.floatToIntBits(0.5f));
+        this.edgeWeights = new NumericalProperty("weight", 32, Float.floatToIntBits(0.5f));
         this.nodeFatigueStatus = new HashMap<>();
         this.edgeFatigueStatus = new HashMap<>();
         this.synEdgeAux = new HashMap<>();
