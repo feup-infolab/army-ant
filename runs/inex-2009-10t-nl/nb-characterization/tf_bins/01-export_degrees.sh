@@ -1,6 +1,7 @@
 #!/bin/sh
 
 . $(dirname "$0")/../../../lib/nb-characterization/common.sh
+STATS_CSV="$HOME/army_ant-run_stats-tf_bins.csv"
 
 bin_sizes=$(printf "%.2d\n" $(seq 2 10))
 

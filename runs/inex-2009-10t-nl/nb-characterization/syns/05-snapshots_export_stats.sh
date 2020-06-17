@@ -1,6 +1,7 @@
 #!/bin/sh
 
 . $(dirname "$0")/../../../lib/nb-characterization/common.sh
+STATS_CSV="$HOME/army_ant-run_stats-syns.csv"
 
 base_dir="/opt/army-ant/indexes/inex-2009-10t-nl/hgoe-syns-snapshots"
 index_type="hgoe:syns"
