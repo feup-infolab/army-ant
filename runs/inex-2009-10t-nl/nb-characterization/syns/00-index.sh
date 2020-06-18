@@ -11,4 +11,4 @@ time=$(ms_time ./army-ant.py index \
     --index-location "$index_path" \
     --index-type "hgoe:syns")
 
-echo $index_path,creation,$time
+echo $index_path,creation,$time >> $STATS_CSV
