@@ -16,11 +16,11 @@ do
     time=$(ms_time ./army-ant.py index \
         --source-path "/opt/army-ant/collections/inex-2009-10t-nl/corpus" \
         --source-reader "inex_dir" \
-        --index-location "$base_path_$bin_size" \
+        --index-location "${base_path}_${bin_size}" \
         --index-type "hgoe:tf_bins" \
         --features-location "$config_dir")
 
-    echo $base_path_$bin_size,creation,$time >> $STATS_CSV
+    echo ${base_path}_${bin_size},creation,$time >> $STATS_CSV
 done
 
 rm -rf "$features_path"
