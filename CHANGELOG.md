@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.6
+
+* Created a Jupyter notebook for query log analysis, including entity-level analysis.
+* Created a script to count the number of entities per sentence in CoNLL 2003 training set.
+* Implemented the entity list completion frontend and backend, including entity name completion for entity selection.
+* Implemented optional keyword-based document profiles using a simplified version of TextRank.
+* Created a runs directory, with an organization that enables index runs to be perfectly repeatable (as was already the case with ranked retrieval runs).
+* Upgraded Python<->Java connection to jpype 0.7.0.
+* Added Lucene baselines for the entity list completion and related entity finding tasks, using entity profiles based on entity mentions.
+* Implemented a new hypergraph-of-entity index extension called TF-bins, which introduces new hyperedges based on the discretization of the term frequency.
+* Replicated the Jupyter notebook used to analyze the hypergraph-of-entity over different index extensions.
+* Migrated to the Anaconda environment.
+* Added substring matching based on Aho-Corasick for filtering categories in the INEX evaluator, for the tasks that require it.
+
+## 0.5.1
+
+* Refactored the index package to separate engines.
+* Initiated several experiments: HyperRank, tensor representation, random model for hypergraphs.
+* Improved the Python analyzer.
+* Added several analysis methods to the hypergraph-of-entity engine.
+* Created a Jupyter notebook that relies on the exported statistics by the analysis methods to characterize the hypergraph-of-entity.
+* Implemented approximated approaches to compute shortest paths, clustering coefficient, and density.
+* Improved ranking function parameterization, which enabled the merging of different configurations of the same function.
+
 ## 0.5
 
 * Fixed several major bugs with the evaluation module, where the metrics were not being correctly computed.
