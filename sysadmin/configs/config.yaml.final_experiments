@@ -14,8 +14,9 @@ defaults:
     stanford-ner: /opt/stanford-ner-2015-12-09
   jvm:
     # -Xmx5120m | -Xmx15360m | -Xmx30720m | -Xmx79872m (30 GB RAM + 48 GB SWAP) | -Xmx96256m (30 GB RAM + 64 GB SWAP)
+    # -Xms61440m -Xmx110592m (60 GB RAM + 48 GB SWAP)
     args: >-
-      -Xms30720m -Xmx79872m -XX:+AggressiveOpts -XX:ParallelGCThreads=3 -XX:+UseConcMarkSweepGC
+      -Xms61440m -Xmx61440m -XX:+AggressiveOpts -XX:ParallelGCThreads=3 -XX:+UseConcMarkSweepGC
       -XX:+UnlockExperimentalVMOptions -XX:+UseParNewGC -XX:+ExplicitGCInvokesConcurrent -XX:MaxGCPauseMillis=10
       -XX:GCPauseIntervalMillis=50 -XX:+UseFastAccessorMethods -XX:+OptimizeStringConcat -XX:NewSize=84m
       -XX:+UseAdaptiveGCBoundary -XX:NewRatio=3 -Dfml.readTimeout=90 -Ddeployment.trace=true -Ddeployment.log=true
