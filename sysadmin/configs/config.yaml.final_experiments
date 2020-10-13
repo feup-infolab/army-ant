@@ -50,6 +50,9 @@ engines:
 
   lucene-entities-inex-2009:
     name: INEX 2009 - Lucene Entities
+    message: >-
+      Lucene Entities index requires the document index to be
+      present in docidx/ before entidx/ is created.
     db:
       name: aa_inex
     index:

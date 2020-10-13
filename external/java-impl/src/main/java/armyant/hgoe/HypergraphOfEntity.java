@@ -1372,7 +1372,7 @@ public class HypergraphOfEntity extends Engine {
         trace.goDown();
         trace.add("Tracing system disabling required for parallel computing blocks");
 
-        seedNodeIDs.parallelStream().forEach(seedNodeID -> {
+        seedNodeIDs.stream().forEach(seedNodeID -> {
             Int2IntOpenHashMap atomVisits = new Int2IntOpenHashMap();
             /*trace.add("From seed node %s", nodeIndex.getKey(seedNodeID));
             trace.goDown();*/
