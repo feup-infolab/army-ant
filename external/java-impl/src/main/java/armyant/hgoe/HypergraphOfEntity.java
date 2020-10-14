@@ -1134,8 +1134,8 @@ public class HypergraphOfEntity extends Engine {
         return path;
     }
 
-    private void randomStep(int nodeID, int remainingSteps, grph.path.Path path, boolean isDirected, boolean isBiased,
-            int nodeFatigue, int edgeFatigue, float restartProb) {
+    private synchronized void randomStep(int nodeID, int remainingSteps, grph.path.Path path, boolean isDirected,
+            boolean isBiased, int nodeFatigue, int edgeFatigue, float restartProb) {
         if (remainingSteps == 0 || nodeFatigueStatus.containsKey(nodeID)) return;
 
         if (nodeFatigue > 0) {
@@ -1372,7 +1372,7 @@ public class HypergraphOfEntity extends Engine {
         trace.goDown();
         trace.add("Tracing system disabling required for parallel computing blocks");
 
-        seedNodeIDs.stream().forEach(seedNodeID -> {
+        seedNodeIDs.parallelStream().forEach(seedNodeID -> {
             Int2IntOpenHashMap atomVisits = new Int2IntOpenHashMap();
             /*trace.add("From seed node %s", nodeIndex.getKey(seedNodeID));
             trace.goDown();*/
@@ -1429,11 +1429,15 @@ public class HypergraphOfEntity extends Engine {
              * trace.add("Accumulating visit probability, weighted by seed node confidence"); trace.goDown();
              */
             for (int atomID : atomVisits.keySet()) {
-                atomCoverage.addTo(atomID, 1);
+                synchronized (atomCoverage) {
+                    atomCoverage.addTo(atomID, 1);
+                }
 
-                weightedAtomVisitProbability.compute(atomID,
-                        (k, v) -> (v == null ? 0 : v) + (float) atomVisits.get(atomID) / maxVisits
-                                * seedNodeWeights.getOrDefault(seedNodeID, 1d).floatValue());
+                synchronized (weightedAtomVisitProbability) {
+                    weightedAtomVisitProbability.compute(atomID,
+                            (k, v) -> (v == null ? 0 : v) + (float) atomVisits.get(atomID) / maxVisits
+                                    * seedNodeWeights.getOrDefault(seedNodeID, 1d).floatValue());
+                }
 
                 /*
                  * trace.add("score(%s) += visits(%s) * w(%s)", nodeIndex.getKey(nodeID), nodeIndex.getKey(nodeID),
