@@ -1372,7 +1372,7 @@ public class HypergraphOfEntity extends Engine {
         trace.goDown();
         trace.add("Tracing system disabling required for parallel computing blocks");
 
-        seedNodeIDs.parallelStream().forEach(seedNodeID -> {
+        seedNodeIDs.stream().forEach(seedNodeID -> {
             Int2IntOpenHashMap atomVisits = new Int2IntOpenHashMap();
             /*trace.add("From seed node %s", nodeIndex.getKey(seedNodeID));
             trace.goDown();*/
@@ -1429,15 +1429,12 @@ public class HypergraphOfEntity extends Engine {
              * trace.add("Accumulating visit probability, weighted by seed node confidence"); trace.goDown();
              */
             for (int atomID : atomVisits.keySet()) {
-                synchronized (atomCoverage) {
-                    atomCoverage.addTo(atomID, 1);
-                }
+                atomCoverage.addTo(atomID, 1);
 
-                synchronized (weightedAtomVisitProbability) {
-                    weightedAtomVisitProbability.compute(atomID,
-                            (k, v) -> (v == null ? 0 : v) + (float) atomVisits.get(atomID) / maxVisits
-                                    * seedNodeWeights.getOrDefault(seedNodeID, 1d).floatValue());
-                }
+                weightedAtomVisitProbability.compute(atomID,
+                        (k, v) -> (v == null ? 0 : v) + (float) atomVisits.get(atomID) / maxVisits
+                                * seedNodeWeights.getOrDefault(seedNodeID, 1d).floatValue());
+
                 /*
                  * trace.add("score(%s) += visits(%s) * w(%s)", nodeIndex.getKey(nodeID), nodeIndex.getKey(nodeID),
                  * nodeIndex.getKey(seedNodeID)); trace.goDown(); trace.add("P(visit(%s)) = %f",
